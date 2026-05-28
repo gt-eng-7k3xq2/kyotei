@@ -5,174 +5,163 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>G. 予想エンジン</title>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-body{background:#080a0f;color:#c8c8d0;font-family:-apple-system,sans-serif;min-height:100vh;padding:16px 14px 60px;}
+body{background:#0d0f14;color:#e0e4f0;font-family:'Noto Sans JP',-apple-system,sans-serif;min-height:100vh;padding:20px 16px 80px;}
+
 /* HEADER */
-.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid #141820;}
-.logo{font-size:22px;font-weight:800;color:#c9a84c;letter-spacing:-0.5px;}
-.logo span{color:#444;font-weight:300;font-size:13px;margin-left:6px;letter-spacing:0;}
-.ver{font-size:10px;color:#333;border:1px solid #222;padding:2px 7px;border-radius:10px;}
-/* API KEY */
-.api-row{display:flex;gap:8px;margin-bottom:16px;align-items:center;}
-.api-input{flex:1;background:#0f1218;border:1px solid #1e2230;border-radius:8px;color:#888;font-size:11px;padding:10px 12px;outline:none;font-family:monospace;}
-.api-input:focus{border-color:#3a4a60;}
-.api-input.saved{border-color:#2a4a2a;color:#4c9;}
-.api-save{background:#1a2a1a;color:#4c9;border:1px solid #2a4a2a;padding:10px 14px;border-radius:8px;font-size:12px;font-weight:700;-webkit-appearance:none;white-space:nowrap;}
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#c9a84c,#e8c56a);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#0d0f14;}
+.logo-text{font-size:18px;font-weight:700;color:#fff;letter-spacing:-0.3px;}
+.logo-sub{font-size:11px;color:#556;font-weight:400;margin-top:1px;}
+.ver{font-size:11px;color:#556;background:#161921;border:1px solid #252a38;padding:4px 10px;border-radius:20px;}
+
 /* SECTION */
-.sec{background:#0f1218;border:1px solid #1a2030;border-radius:12px;padding:14px;margin-bottom:12px;}
-.sec-label{font-size:10px;color:#445;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;font-weight:600;}
+.sec{background:#161921;border:1px solid #222840;border-radius:14px;padding:16px;margin-bottom:14px;}
+.sec-label{font-size:11px;color:#c9a84c;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:12px;}
+
+/* API KEY */
+.api-row{display:flex;gap:8px;align-items:stretch;}
+.api-input{flex:1;background:#0d0f14;border:1px solid #252a38;border-radius:10px;color:#e0e4f0;font-size:13px;padding:12px 14px;outline:none;font-family:monospace;letter-spacing:1px;}
+.api-input:focus{border-color:#c9a84c;}
+.api-input.saved{border-color:#2a6a3a;color:#5dc87a;}
+.api-save{background:#c9a84c;color:#0d0f14;border:none;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:700;-webkit-appearance:none;white-space:nowrap;font-family:'Noto Sans JP',sans-serif;}
+.api-save:active{opacity:0.8;}
+
 /* RACE INFO */
-.race-row{display:flex;gap:8px;margin-bottom:10px;}
-.sel{flex:1;background:#080a0f;border:1px solid #1a2030;border-radius:8px;color:#aaa;font-size:13px;padding:10px;-webkit-appearance:none;outline:none;}
+.race-row{display:flex;gap:10px;}
+.sel-wrap{flex:1;position:relative;}
+.sel-wrap::after{content:'▾';position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#667;font-size:12px;pointer-events:none;}
+.sel{width:100%;background:#0d0f14;border:1px solid #252a38;border-radius:10px;color:#e0e4f0;font-size:14px;font-weight:500;padding:12px 30px 12px 14px;-webkit-appearance:none;outline:none;font-family:'Noto Sans JP',sans-serif;}
+
 /* TEXTAREA */
-textarea{width:100%;background:#080a0f;border:1px solid #1a2030;border-radius:8px;color:#aaa;font-size:11px;padding:12px;resize:none;outline:none;font-family:monospace;line-height:1.6;}
-textarea:focus{border-color:#3a4a60;}
-textarea::placeholder{color:#2a3040;}
-/* BUTTONS */
-.gen-btn{width:100%;padding:16px;background:linear-gradient(135deg,#c9a84c,#a87c2a);color:#080a0f;font-size:15px;font-weight:800;border:none;border-radius:10px;-webkit-appearance:none;letter-spacing:0.5px;margin-top:4px;}
-.gen-btn:active{opacity:0.8;}
-.gen-btn:disabled{background:#1a2030;color:#333;}
-/* OUTPUT */
-.out-box{background:#080a0f;border:1px solid #1a2030;border-radius:10px;padding:14px;margin-top:12px;display:none;}
-.out-box.show{display:block;}
-.out-text{font-size:12px;color:#a0a8b8;line-height:1.9;white-space:pre-wrap;word-break:break-all;}
-.copy-btn{width:100%;margin-top:12px;padding:12px;background:#111820;color:#c9a84c;border:1px solid #2a3040;border-radius:8px;font-size:13px;font-weight:700;-webkit-appearance:none;}
-.copy-btn.ok{background:#1a2a1a;color:#4c9;border-color:#2a4a2a;}
-/* LOADING */
-.loading{text-align:center;padding:30px 0;display:none;}
-.loading.show{display:block;}
-.spinner{width:28px;height:28px;border:2px solid #1a2030;border-top-color:#c9a84c;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 10px;}
-@keyframes spin{to{transform:rotate(360deg);}}
-.loading-txt{font-size:12px;color:#445;}
+.textarea-wrap{position:relative;}
+textarea{width:100%;background:#0d0f14;border:1px solid #252a38;border-radius:10px;color:#c8d0e8;font-size:12px;padding:14px;resize:none;outline:none;font-family:monospace;line-height:1.8;min-height:140px;}
+textarea:focus{border-color:#3a4a70;}
+textarea::placeholder{color:#333a50;font-family:'Noto Sans JP',sans-serif;font-size:12px;}
+
+/* GENERATE BUTTON */
+.gen-btn{width:100%;padding:18px;background:linear-gradient(135deg,#c9a84c 0%,#e8c56a 50%,#c9a84c 100%);color:#0d0f14;font-size:16px;font-weight:800;border:none;border-radius:12px;-webkit-appearance:none;letter-spacing:0.5px;font-family:'Noto Sans JP',sans-serif;margin-top:4px;box-shadow:0 4px 20px rgba(201,168,76,0.3);}
+.gen-btn:active{opacity:0.85;transform:scale(0.99);}
+.gen-btn:disabled{background:#1e2330;color:#334;box-shadow:none;}
+
 /* STATUS */
-.status{font-size:11px;padding:8px 12px;border-radius:6px;margin-bottom:10px;display:none;}
-.status.err{display:block;background:#1a0808;color:#e55;border:1px solid #3a1010;}
-.status.ok{display:block;background:#081a08;color:#4c9;border:1px solid #1a4a1a;}
-/* TABS */
-.tabs{display:flex;gap:4px;margin-bottom:12px;}
-.tab{flex:1;padding:8px 4px;background:#0a0c12;border:1px solid #1a2030;border-radius:6px;font-size:11px;color:#445;text-align:center;-webkit-appearance:none;}
-.tab.active{background:#1a2030;color:#c9a84c;border-color:#3a4a2a;}
+.status{font-size:12px;font-weight:500;padding:10px 14px;border-radius:10px;margin-bottom:12px;display:none;line-height:1.5;}
+.status.err{display:block;background:#1a0a0a;color:#ff6b6b;border:1px solid #4a1515;}
+.status.ok{display:block;background:#0a1a10;color:#5dc87a;border:1px solid #1a4a28;}
+
+/* LOADING */
+.loading{text-align:center;padding:32px 0;display:none;}
+.loading.show{display:block;}
+.spinner{width:32px;height:32px;border:2px solid #252a38;border-top-color:#c9a84c;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-txt{font-size:13px;color:#556;font-weight:500;}
+
+/* OUTPUT */
+.out-wrap{display:none;margin-top:14px;}
+.out-wrap.show{display:block;}
+.out-header{font-size:11px;color:#c9a84c;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:10px;}
+.out-text{background:#0d0f14;border:1px solid #222840;border-radius:12px;padding:16px;font-size:13px;color:#d0d8f0;line-height:2;white-space:pre-wrap;word-break:break-all;font-family:'Noto Sans JP',sans-serif;}
+.copy-btn{width:100%;margin-top:10px;padding:14px;background:#161921;color:#c9a84c;border:1px solid #2a3050;border-radius:10px;font-size:14px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;}
+.copy-btn:active{opacity:0.8;}
+.copy-btn.ok{background:#0a1a10;color:#5dc87a;border-color:#1a4a28;}
+
+/* DIVIDER */
+.divider{height:1px;background:linear-gradient(90deg,transparent,#252a38,transparent);margin:4px 0 14px;}
 </style>
 </head>
 <body>
 
 <div class="hdr">
-  <div class="logo">G. <span>予想エンジン</span></div>
-  <div class="ver">v1.0</div>
+  <div class="logo">
+    <div class="logo-icon">G</div>
+    <div>
+      <div class="logo-text">予想エンジン</div>
+      <div class="logo-sub">Powered by Gemini</div>
+    </div>
+  </div>
+  <div class="ver">v1.1</div>
 </div>
 
-<!-- API KEY -->
 <div class="sec">
   <div class="sec-label">Gemini API Key</div>
   <div class="api-row">
-    <input type="password" class="api-input" id="apiKey" placeholder="AIza...（メモアプリからペースト）">
+    <input type="password" class="api-input" id="apiKey" placeholder="AIza... をペースト">
     <button class="api-save" onclick="saveKey()">保存</button>
   </div>
 </div>
 
-<!-- RACE INFO -->
 <div class="sec">
   <div class="sec-label">レース情報</div>
   <div class="race-row">
-    <select class="sel" id="venue">
-      <option value="">場所</option>
-      <option>桐生</option><option>戸田</option><option>江戸川</option><option>平和島</option><option>多摩川</option>
-      <option>浜名湖</option><option>蒲郡</option><option>常滑</option><option>津</option><option>三国</option>
-      <option>びわこ</option><option>住之江</option><option>尼崎</option><option>鳴門</option><option>丸亀</option>
-      <option>児島</option><option>宮島</option><option>徳山</option><option>下関</option><option>若松</option>
-      <option>芦屋</option><option>福岡</option><option>唐津</option><option>大村</option>
-    </select>
-    <select class="sel" id="raceNum">
-      <option value="">R</option>
-      <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option>
-      <option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option>
-    </select>
+    <div class="sel-wrap">
+      <select class="sel" id="venue">
+        <option value="">場所を選択</option>
+        <option>桐生</option><option>戸田</option><option>江戸川</option><option>平和島</option><option>多摩川</option>
+        <option>浜名湖</option><option>蒲郡</option><option>常滑</option><option>津</option><option>三国</option>
+        <option>びわこ</option><option>住之江</option><option>尼崎</option><option>鳴門</option><option>丸亀</option>
+        <option>児島</option><option>宮島</option><option>徳山</option><option>下関</option><option>若松</option>
+        <option>芦屋</option><option>福岡</option><option>唐津</option><option>大村</option>
+      </select>
+    </div>
+    <div class="sel-wrap" style="flex:0 0 90px">
+      <select class="sel" id="raceNum">
+        <option value="">R</option>
+        <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option>
+        <option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option>
+      </select>
+    </div>
   </div>
 </div>
 
-<!-- DATA INPUT TABS -->
 <div class="sec">
-  <div class="tabs">
-    <button class="tab active" onclick="setTab(0)">枠別勝率</button>
-    <button class="tab" onclick="setTab(1)">今節成績</button>
-    <button class="tab" onclick="setTab(2)">直前情報</button>
-    <button class="tab" onclick="setTab(3)">オッズ</button>
-  </div>
-  <div id="tab0"><div class="sec-label">枠別勝率データ</div><textarea id="d0" rows="5" placeholder="データ抽出BMの枠別勝率タブ→コピーしたテキストを貼り付け"></textarea></div>
-  <div id="tab1" style="display:none"><div class="sec-label">今節成績データ</div><textarea id="d1" rows="5" placeholder="データ抽出BMの今節成績タブ→コピー"></textarea></div>
-  <div id="tab2" style="display:none"><div class="sec-label">直前情報データ</div><textarea id="d2" rows="5" placeholder="データ抽出BMの直前情報タブ→コピー"></textarea></div>
-  <div id="tab3" style="display:none"><div class="sec-label">オッズデータ（任意）</div><textarea id="d3" rows="5" placeholder="配当整列ツールでコピーしたテキストを貼り付け（省略可）"></textarea></div>
+  <div class="sec-label">レースデータ</div>
+  <textarea id="d0" placeholder="データ抽出BMで4タブ収集 → 📋コピー → ここに貼り付け"></textarea>
 </div>
 
 <div class="status" id="status"></div>
 
-<button class="gen-btn" id="genBtn" onclick="generate()">⚡ 予想を生成する</button>
+<button class="gen-btn" id="genBtn" onclick="generate()">⚡　予想を生成する</button>
 
 <div class="loading" id="loading">
   <div class="spinner"></div>
   <div class="loading-txt">Gemini が予想を生成中...</div>
 </div>
 
-<div class="out-box" id="outBox">
+<div class="out-wrap" id="outWrap">
+  <div class="divider"></div>
+  <div class="out-header">予想結果</div>
   <div class="out-text" id="outText"></div>
-  <button class="copy-btn" id="copyBtn" onclick="copyOut()">📋 X投稿用にコピー</button>
+  <button class="copy-btn" id="copyBtn" onclick="copyOut()">📋　X投稿用にコピー</button>
 </div>
 
 <script>
-var SYSTEM_PROMPT = `あなたは競艇予想の専門AIです。以下のルール（v1.2）に従って予想を出力してください。
-
-【出力フォーマット】
-◎○▲△× の順で予想印を付ける
-信頼度：HIGH/MID/LOW
-展開：（レース展開の読み）
-注目：（注目ポイント）
-
-【買い目】（必ず8点）
-本線：◎-[今節得点率1位]-[3着候補] ×4点
-抑え：[今節得点率2位]-◎-[3着候補] ×4点
-※表記は「1-2-3」形式（丸数字不可）
-
-【X投稿コメント】
-約100文字、断定トーン、展開→主軸根拠→3着読み→ヒモ理由の順、苗字のみ、舟番号なし
-
-【予想ルール】
-- 逃げ率ソース：当地10戦以上なら当地優先、それ以外は直近6ヶ月
-- 今節得点率：A=7点以上 B=5-6点 C=4点以下
-- 展示ST・タイム：候補選定と機力スコアのみに使用（単独足切り基準にしない）
-- 信頼度C：◎は多数決ルールで変更
-- 1着候補：今節得点率1位・2位を必ず2着候補に含める
-- 足切り基準（明示すること）：今節3連対率0%、今節平均ST0.25以上、機力AND得点率両方最下位
-- 荒れ判定後：荒れ指数8以上かつ二次足切りクリア→⚠️荒れ転用可を出力
-- F持ちペナルティ：F保持=-2、F保持平均ST0.20超なら追加-1
-- 賞除選手：得点0で通常評価
-- 3艇同点タイ：3着候補スロット追加
-- 2着候補選定：機力ランキング込みのスコアテーブルで判定`;
+var SYSTEM_PROMPT = 'あなたは競艇予想の専門AIです。以下のルール（v1.2）に従って予想を出力してください。\n\n【出力フォーマット】\n◎○▲△× の順で予想印を付ける\n信頼度：HIGH/MID/LOW\n展開：（レース展開の読み）\n注目：（注目ポイント）\n\n【買い目】（必ず8点）\n本線：◎-[今節得点率1位]-[3着候補] ×4点\n抑え：[今節得点率2位]-◎-[3着候補] ×4点\n※表記は「1-2-3」形式（丸数字不可）\n\n【X投稿コメント】\n約100文字、断定トーン、展開→主軸根拠→3着読み→ヒモ理由の順、苗字のみ、舟番号なし\n\n【予想ルール】\n- 逃げ率ソース：当地10戦以上なら当地優先、それ以外は直近6ヶ月\n- 今節得点率：A=7点以上 B=5-6点 C=4点以下\n- 展示ST・タイム：候補選定と機力スコアのみに使用\n- 足切り基準（明示）：今節3連対率0%、今節平均ST0.25以上、機力AND得点率両方最下位\n- 荒れ指数8以上かつ二次足切りクリア→⚠️荒れ転用可を出力\n- F保持=-2、F保持平均ST0.20超なら追加-1\n- 賞除選手：得点0で通常評価\n- 3艇同点タイ：3着候補スロット追加\n- 2着候補選定：機力ランキング込みのスコアテーブルで判定';
 
 function saveKey(){
   var k=document.getElementById('apiKey').value.trim();
-  if(!k){return;}
+  if(!k)return;
   localStorage.setItem('gemini_key',k);
-  document.getElementById('apiKey').classList.add('saved');
-  document.getElementById('apiKey').value='保存済み（変更する場合は入力）';
+  var el=document.getElementById('apiKey');
+  el.classList.add('saved');
+  el.value='保存済み（変更する場合は入力）';
   showStatus('APIキーを保存しました','ok');
 }
 
 function loadKey(){
   var k=localStorage.getItem('gemini_key');
-  if(k){document.getElementById('apiKey').value='保存済み（変更する場合は入力）';document.getElementById('apiKey').classList.add('saved');}
+  if(k){
+    var el=document.getElementById('apiKey');
+    el.value='保存済み（変更する場合は入力）';
+    el.classList.add('saved');
+  }
 }
 
 function getKey(){
   var el=document.getElementById('apiKey');
-  if(el.classList.contains('saved')){return localStorage.getItem('gemini_key')||'';}
+  if(el.classList.contains('saved'))return localStorage.getItem('gemini_key')||'';
   return el.value.trim();
-}
-
-function setTab(n){
-  for(var i=0;i<4;i++){
-    document.getElementById('tab'+i).style.display=i===n?'block':'none';
-    document.querySelectorAll('.tab')[i].className='tab'+(i===n?' active':'');
-  }
 }
 
 function showStatus(msg,type){
@@ -185,21 +174,14 @@ async function generate(){
   if(!key){showStatus('APIキーを入力・保存してください','err');return;}
   var venue=document.getElementById('venue').value;
   var raceNum=document.getElementById('raceNum').value;
-  var d0=document.getElementById('d0').value.trim();
-  var d1=document.getElementById('d1').value.trim();
-  var d2=document.getElementById('d2').value.trim();
-  var d3=document.getElementById('d3').value.trim();
-  if(!d0&&!d1&&!d2){showStatus('データを1つ以上入力してください','err');return;}
+  var data=document.getElementById('d0').value.trim();
+  if(!data){showStatus('レースデータを入力してください','err');return;}
 
-  var userMsg='【'+(venue||'?')+' '+(raceNum||'?')+'R】の予想を出力してください。\n\n';
-  if(d0)userMsg+='=== 枠別勝率 ===\n'+d0+'\n\n';
-  if(d1)userMsg+='=== 今節成績 ===\n'+d1+'\n\n';
-  if(d2)userMsg+='=== 直前情報 ===\n'+d2+'\n\n';
-  if(d3)userMsg+='=== オッズ ===\n'+d3+'\n\n';
+  var userMsg='【'+(venue||'?')+' '+(raceNum||'?')+'R】の予想を出力してください。\n\n=== レースデータ ===\n'+data;
 
   document.getElementById('genBtn').disabled=true;
   document.getElementById('loading').classList.add('show');
-  document.getElementById('outBox').classList.remove('show');
+  document.getElementById('outWrap').classList.remove('show');
   document.getElementById('status').className='status';
 
   try{
@@ -213,11 +195,11 @@ async function generate(){
       })
     });
     var json=await res.json();
-    if(!res.ok){throw new Error(json.error&&json.error.message||'APIエラー');}
-    var text=json.candidates&&json.candidates[0]&&json.candidates[0].content&&json.candidates[0].content.parts&&json.candidates[0].content.parts[0]&&json.candidates[0].content.parts[0].text;
-    if(!text){throw new Error('レスポンスが空です');}
+    if(!res.ok)throw new Error(json.error&&json.error.message||'APIエラー');
+    var text=json.candidates&&json.candidates[0]&&json.candidates[0].content&&json.candidates[0].content.parts[0].text;
+    if(!text)throw new Error('レスポンスが空です');
     document.getElementById('outText').textContent=text;
-    document.getElementById('outBox').classList.add('show');
+    document.getElementById('outWrap').classList.add('show');
     showStatus('生成完了','ok');
   }catch(e){
     showStatus('エラー: '+e.message,'err');
@@ -232,8 +214,8 @@ function copyOut(){
   var btn=document.getElementById('copyBtn');
   if(navigator.clipboard){
     navigator.clipboard.writeText(text).then(function(){
-      btn.textContent='✅ コピー完了';btn.classList.add('ok');
-      setTimeout(function(){btn.textContent='📋 X投稿用にコピー';btn.classList.remove('ok');},2000);
+      btn.textContent='✅　コピー完了';btn.classList.add('ok');
+      setTimeout(function(){btn.textContent='📋　X投稿用にコピー';btn.classList.remove('ok');},2000);
     });
   }
 }
