@@ -3,72 +3,76 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>G. 予想エンジン</title>
+<title>G. 予想エンジン v2.0</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-body{background:#0d0f14;color:#e0e4f0;font-family:'Noto Sans JP',-apple-system,sans-serif;min-height:100vh;padding:20px 16px 80px;}
 
-/* HEADER */
-.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:#0d0f14;color:#e0e4f0;font-family:-apple-system,sans-serif;min-height:100vh;padding:20px 16px 80px;}
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
 .logo{display:flex;align-items:center;gap:10px;}
 .logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#c9a84c,#e8c56a);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#0d0f14;}
-.logo-text{font-size:18px;font-weight:700;color:#fff;letter-spacing:-0.3px;}
-.logo-sub{font-size:11px;color:#556;font-weight:400;margin-top:1px;}
+.logo-text{font-size:18px;font-weight:700;color:#fff;}
+.logo-sub{font-size:11px;color:#556;margin-top:1px;}
 .ver{font-size:11px;color:#556;background:#161921;border:1px solid #252a38;padding:4px 10px;border-radius:20px;}
-
-/* SECTION */
 .sec{background:#161921;border:1px solid #222840;border-radius:14px;padding:16px;margin-bottom:14px;}
 .sec-label{font-size:11px;color:#c9a84c;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:12px;}
-
-/* API KEY */
-.api-row{display:flex;gap:8px;align-items:stretch;}
-.api-input{flex:1;background:#0d0f14;border:1px solid #252a38;border-radius:10px;color:#e0e4f0;font-size:13px;padding:12px 14px;outline:none;font-family:monospace;letter-spacing:1px;}
-.api-input:focus{border-color:#c9a84c;}
+.mode-row{display:flex;gap:8px;margin-bottom:12px;}
+.mode-btn{flex:1;padding:12px;border-radius:10px;font-size:13px;font-weight:700;-webkit-appearance:none;cursor:pointer;font-family:-apple-system,sans-serif;}
+.mode-btn.active{background:#c9a84c;color:#0d0f14;border:none;}
+.mode-btn.inactive{background:#0d0f14;color:#888;border:1px solid #222840;}
+.race-row{display:flex;gap:8px;}
+.sel-w{flex:1;position:relative;}
+.sel-w::after{content:'▾';position:absolute;right:10px;top:50%;transform:translateY(-50%);color:#667;font-size:11px;pointer-events:none;}
+.sel{width:100%;background:#0d0f14;border:1px solid #252a38;border-radius:10px;color:#e0e4f0;font-size:13px;padding:11px 28px 11px 12px;-webkit-appearance:none;outline:none;}
+textarea{width:100%;background:#0d0f14;border:1px solid #252a38;border-radius:10px;color:#c8d0e8;font-size:11px;padding:12px;resize:none;outline:none;font-family:monospace;line-height:1.8;min-height:110px;}
+textarea::placeholder{color:#333a50;font-size:11px;}
+.calc-btn{width:100%;padding:13px;background:#1a2a4a;color:#7aabee;font-size:13px;font-weight:700;border:1px solid #2a3a6a;border-radius:10px;-webkit-appearance:none;margin-top:10px;}
+.gen-btn{width:100%;padding:16px;background:linear-gradient(135deg,#c9a84c,#e8c56a);color:#080a0f;font-size:15px;font-weight:800;border:none;border-radius:12px;-webkit-appearance:none;margin-top:4px;}
+.gen-btn:disabled{background:#1e2330;color:#333;}
+.api-row{display:flex;gap:8px;}
+.api-input{flex:1;background:#0d0f14;border:1px solid #252a38;border-radius:10px;color:#e0e4f0;font-size:13px;padding:11px 12px;outline:none;font-family:monospace;}
 .api-input.saved{border-color:#2a6a3a;color:#5dc87a;}
-.api-save{background:#c9a84c;color:#0d0f14;border:none;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:700;-webkit-appearance:none;white-space:nowrap;font-family:'Noto Sans JP',sans-serif;}
-.api-save:active{opacity:0.8;}
-
-/* RACE INFO */
-.race-row{display:flex;gap:10px;}
-.sel-wrap{flex:1;position:relative;}
-.sel-wrap::after{content:'▾';position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#667;font-size:12px;pointer-events:none;}
-.sel{width:100%;background:#0d0f14;border:1px solid #252a38;border-radius:10px;color:#e0e4f0;font-size:14px;font-weight:500;padding:12px 30px 12px 14px;-webkit-appearance:none;outline:none;font-family:'Noto Sans JP',sans-serif;}
-
-/* TEXTAREA */
-.textarea-wrap{position:relative;}
-textarea{width:100%;background:#0d0f14;border:1px solid #252a38;border-radius:10px;color:#c8d0e8;font-size:12px;padding:14px;resize:none;outline:none;font-family:monospace;line-height:1.8;min-height:140px;}
-textarea:focus{border-color:#3a4a70;}
-textarea::placeholder{color:#333a50;font-family:'Noto Sans JP',sans-serif;font-size:12px;}
-
-/* GENERATE BUTTON */
-.gen-btn{width:100%;padding:18px;background:linear-gradient(135deg,#c9a84c 0%,#e8c56a 50%,#c9a84c 100%);color:#0d0f14;font-size:16px;font-weight:800;border:none;border-radius:12px;-webkit-appearance:none;letter-spacing:0.5px;font-family:'Noto Sans JP',sans-serif;margin-top:4px;box-shadow:0 4px 20px rgba(201,168,76,0.3);}
-.gen-btn:active{opacity:0.85;transform:scale(0.99);}
-.gen-btn:disabled{background:#1e2330;color:#334;box-shadow:none;}
-
-/* STATUS */
-.status{font-size:12px;font-weight:500;padding:10px 14px;border-radius:10px;margin-bottom:12px;display:none;line-height:1.5;}
-.status.err{display:block;background:#1a0a0a;color:#ff6b6b;border:1px solid #4a1515;}
-.status.ok{display:block;background:#0a1a10;color:#5dc87a;border:1px solid #1a4a28;}
-
-/* LOADING */
-.loading{text-align:center;padding:32px 0;display:none;}
+.api-save{background:#c9a84c;color:#0d0f14;border:none;padding:11px 16px;border-radius:10px;font-size:12px;font-weight:700;-webkit-appearance:none;}
+.calc-result{background:#0d0f14;border:1px solid #1a2030;border-radius:12px;padding:14px;margin-top:12px;display:none;}
+.calc-result.show{display:block;}
+.cr-sec{font-size:11px;color:#c9a84c;font-weight:700;letter-spacing:1px;margin:10px 0 8px;}
+.cr-table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:6px;}
+.cr-table th{background:#161921;color:#c9a84c;padding:5px 6px;text-align:center;border-bottom:1px solid #1a2030;font-size:10px;}
+.cr-table td{padding:5px 6px;border-bottom:1px solid #111820;text-align:center;color:#8090b0;}
+.cr-table tr.best td{color:#f0d878;font-weight:700;}
+.tot{color:#aaa !important;}
+.info-row{font-size:11px;color:#667;margin:6px 0;}
+.info-row b{color:#aab;}
+.are-box{background:#0d0f14;border:1px solid #1a2030;border-radius:8px;padding:10px;margin:8px 0;}
+.are-score{font-size:26px;font-weight:800;}
+.score-pass{color:#5dc87a;}
+.score-fail{color:#e55;}
+.are-label{font-size:10px;color:#556;}
+.bd-list{font-size:11px;color:#778;margin-top:6px;line-height:1.9;}
+.bd-list span{color:#aab;}
+.furikiri{padding:10px 12px;border-radius:8px;font-size:13px;font-weight:700;margin:8px 0;}
+.furikiri.pass{background:#0a1a10;color:#5dc87a;border:1px solid #1a4a28;}
+.furikiri.fail{background:#1a0808;color:#e55;border:1px solid #4a1515;}
+.cand-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;}
+.chip{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.c1{background:rgba(201,168,76,0.15);color:#c9a84c;border:1px solid rgba(201,168,76,0.3);}
+.c2{background:rgba(85,136,224,0.12);color:#88aaee;border:1px solid rgba(85,136,224,0.25);}
+.status{font-size:12px;font-weight:500;padding:10px 12px;border-radius:10px;margin-bottom:12px;display:none;}
+.status.err{display:block;background:#1a0808;color:#ff6b6b;border:1px solid #4a1515;}
+.status.ok{display:block;background:#081a10;color:#5dc87a;border:1px solid #1a4a28;}
+.loading{text-align:center;padding:24px 0;display:none;}
 .loading.show{display:block;}
-.spinner{width:32px;height:32px;border:2px solid #252a38;border-top-color:#c9a84c;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px;}
+.spinner{width:26px;height:26px;border:2px solid #252a38;border-top-color:#c9a84c;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 8px;}
 @keyframes spin{to{transform:rotate(360deg);}}
-.loading-txt{font-size:13px;color:#556;font-weight:500;}
-
-/* OUTPUT */
+.loading-txt{font-size:11px;color:#556;}
 .out-wrap{display:none;margin-top:14px;}
 .out-wrap.show{display:block;}
-.out-header{font-size:11px;color:#c9a84c;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:10px;}
-.out-text{background:#0d0f14;border:1px solid #222840;border-radius:12px;padding:16px;font-size:13px;color:#d0d8f0;line-height:2;white-space:pre-wrap;word-break:break-all;font-family:'Noto Sans JP',sans-serif;}
-.copy-btn{width:100%;margin-top:10px;padding:14px;background:#161921;color:#c9a84c;border:1px solid #2a3050;border-radius:10px;font-size:14px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;}
-.copy-btn:active{opacity:0.8;}
-.copy-btn.ok{background:#0a1a10;color:#5dc87a;border-color:#1a4a28;}
+.out-hdr{font-size:11px;color:#c9a84c;letter-spacing:1px;font-weight:700;margin-bottom:8px;}
+.out-text{background:#0d0f14;border:1px solid #222840;border-radius:10px;padding:14px;font-size:12px;color:#c8d0e8;line-height:1.9;white-space:pre-wrap;word-break:break-word;}
+.copy-btn{width:100%;margin-top:10px;padding:12px;background:#161921;color:#c9a84c;border:1px solid #2a3050;border-radius:10px;font-size:13px;font-weight:700;-webkit-appearance:none;}
+.copy-btn.ok{background:#081a10;color:#5dc87a;border-color:#1a4a28;}
+.div{height:1px;background:linear-gradient(90deg,transparent,#252a38,transparent);margin:4px 0 14px;}
 
-/* DIVIDER */
-.divider{height:1px;background:linear-gradient(90deg,transparent,#252a38,transparent);margin:4px 0 14px;}
 </style>
 </head>
 <body>
@@ -76,26 +80,27 @@ textarea::placeholder{color:#333a50;font-family:'Noto Sans JP',sans-serif;font-s
 <div class="hdr">
   <div class="logo">
     <div class="logo-icon">G</div>
-    <div>
-      <div class="logo-text">予想エンジン</div>
-      <div class="logo-sub">Powered by Gemini</div>
-    </div>
+    <div><div class="logo-text">予想エンジン</div><div class="logo-sub">JS計算 + AI生成 v2.0</div></div>
   </div>
-  <div class="ver">v1.1</div>
+  <div class="ver">v2.0</div>
 </div>
 
 <div class="sec">
   <div class="sec-label">Gemini API Key</div>
   <div class="api-row">
-    <input type="password" class="api-input" id="apiKey" placeholder="AIza... をペースト">
+    <input type="password" class="api-input" id="apiKey" placeholder="AIza...">
     <button class="api-save" onclick="saveKey()">保存</button>
   </div>
 </div>
 
 <div class="sec">
-  <div class="sec-label">レース情報</div>
+  <div class="sec-label">モード・レース情報</div>
+  <div class="mode-row">
+    <button class="mode-btn active" id="modeNormal" onclick="setMode('normal')">通常 v4.7</button>
+    <button class="mode-btn inactive" id="modeAre" onclick="setMode('are')">荒れ v2.3</button>
+  </div>
   <div class="race-row">
-    <div class="sel-wrap">
+    <div class="sel-w">
       <select class="sel" id="venue">
         <option value="">場所を選択</option>
         <option>桐生</option><option>戸田</option><option>江戸川</option><option>平和島</option><option>多摩川</option>
@@ -105,7 +110,7 @@ textarea::placeholder{color:#333a50;font-family:'Noto Sans JP',sans-serif;font-s
         <option>芦屋</option><option>福岡</option><option>唐津</option><option>大村</option>
       </select>
     </div>
-    <div class="sel-wrap" style="flex:0 0 90px">
+    <div class="sel-w" style="flex:0 0 80px">
       <select class="sel" id="raceNum">
         <option value="">R</option>
         <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option>
@@ -116,17 +121,17 @@ textarea::placeholder{color:#333a50;font-family:'Noto Sans JP',sans-serif;font-s
 </div>
 
 <div class="sec">
-  <div class="sec-label">レースデータ</div>
-  <textarea id="d0" placeholder="データ抽出BMで4タブ収集 → 📋コピー → ここに貼り付け"></textarea>
+  <div class="sec-label">レースデータ（データ抽出BMでコピー）</div>
+  <textarea id="raceData" rows="7" placeholder="データ抽出BMで4タブ収集 → コピー → ここに貼り付け"></textarea>
+  <button class="calc-btn" onclick="runCalc()">⚡ データを解析する</button>
+  <div class="calc-result" id="calcResult">
+    <div style="font-size:11px;color:#c9a84c;font-weight:700;margin-bottom:8px;">📊 解析結果（AIに送信する前に確認）</div>
+    <div id="calcContent"></div>
+  </div>
 </div>
 
 <div class="status" id="status"></div>
-
-<div style="display:flex;gap:8px;margin-bottom:12px;">
-  <button id="modeNormal" onclick="setMode('normal')" style="flex:1;padding:12px;border-radius:10px;font-size:13px;font-weight:700;-webkit-appearance:none;background:#c9a84c;color:#0d0f14;border:none;">通常 v4.7</button>
-  <button id="modeAre" onclick="setMode('are')" style="flex:1;padding:12px;border-radius:10px;font-size:13px;font-weight:700;-webkit-appearance:none;background:#161921;color:#888;border:1px solid #222840;">荒れ v2.3</button>
-</div>
-<button class="gen-btn" id="genBtn" onclick="generate()">⚡　予想を生成する</button>
+<button class="gen-btn" id="genBtn" onclick="generate()" disabled>🎯 予想を生成する</button>
 
 <div class="loading" id="loading">
   <div class="spinner"></div>
@@ -134,87 +139,496 @@ textarea::placeholder{color:#333a50;font-family:'Noto Sans JP',sans-serif;font-s
 </div>
 
 <div class="out-wrap" id="outWrap">
-  <div class="divider"></div>
-  <div class="out-header">予想結果</div>
+  <div class="div"></div>
+  <div class="out-hdr">予想結果</div>
   <div class="out-text" id="outText"></div>
-  <button class="copy-btn" id="copyBtn" onclick="copyOut()">📋　X投稿用にコピー</button>
+  <button class="copy-btn" id="copyBtn" onclick="copyOut()">📋 X投稿用にコピー</button>
 </div>
 
 <script>
-var PROMPTS = {
-  normal: "\u7af6\u8247\u30c7\u30fc\u30bf\u89e3\u6790\u30d7\u30ed\u30b0\u30e9\u30e0 \u901a\u5e38\u30e2\u30fc\u30c9 ver.4.7\n\n\u5185\u90e8\u8a08\u7b97\uff08\u51fa\u529b\u3057\u306a\u3044\uff09\uff1a\u9003\u3052\u7387\u30fb\u5f97\u70b9\u7387\u30fbST\u30fb\u8352\u308c\u6307\u6570\u30fb\u4fe1\u983c\u5ea6\u30fb\u8cb7\u3044\u76ee\n\n\u51fa\u529b\u30eb\u30fc\u30eb\uff1a\n- \u898b\u9001\u308a\u306e\u5834\u5408\u306f\u300c\u8352\u308c\u6307\u6570X\u70b9 \u2192 \u898b\u9001\u308a\u63a8\u5968\u300d\u306e1\u884c\u306e\u307f\u51fa\u529b\u3057\u3066\u7d42\u4e86\n- \u305d\u308c\u4ee5\u5916\u306f\u4ee5\u4e0b\u30d5\u30a9\u30fc\u30de\u30c3\u30c8\u306e\u307f\u51fa\u529b\n\n\u3010\u30a4\u30f3\u4fe1\u983c\u5ea6\u3011A/B/C\uff08\u9003\u3052\u7387X% ST:X.XX\uff09\n\u3010\u8352\u308c\u6307\u6570\u3011X\u70b9\uff08\u8ee2\u7528\u53ef or \u8ee2\u7528\u4e0d\u53ef\uff09\n\u3010\u7279\u8a18\u3011\uff081\u884c\u3002\u306a\u3051\u308c\u3070\u7701\u7565\uff09\n\n\u3010\u8cb7\u3044\u76ee\u30118\u70b9\n\u672c\u7dda\n1-X-X\n1-X-X\n1-X-X\n1-X-X\n\u6291\u3048\n1-X-X\n1-X-X\n1-X-X\n1-X-X\n\n\u3010\u8a55\u4fa1\u3011\n\u25ceX \u82d7\u5b57\uff08\u77ed\u8a55\uff09\n\u25cbX \u82d7\u5b57\uff08\u77ed\u8a55\uff09\n\u25b2X \u82d7\u5b57\uff08\u77ed\u8a55\uff09\n\u25b3X \u82d7\u5b57\uff08\u77ed\u8a55\uff09\n\u00d7X \u82d7\u5b57\uff08\u77ed\u8a55\uff09\n\u00d7X \u82d7\u5b57\uff08\u77ed\u8a55\uff09\n\n\u3010X\u30b5\u30de\u30ea\u30fc\u3011\n\uff08\u5834\u540dR\uff09\n\uff08\u65ad\u5b9a\u53e3\u8abf\u30fb\u82d7\u5b57\u306e\u307f\u30fb\u2776\u301c\u277b\u4f7f\u7528\u30fb3\u884c\u4ee5\u5185\u30fb\u8cb7\u3044\u76ee\u306e\u8247\u306e\u307f\uff09\n\u672c\u7dda\u30001-X-X/1-X-X/1-X-X/1-X-X\n\u6291\u3048\u30001-X-X/1-X-X/1-X-X/1-X-X\nG.\n\n\u8a08\u7b97\u30eb\u30fc\u30eb\uff1a\n\u30a4\u30f3\u4fe1\u983c\u5ea6 A=\u9003\u3052\u738765%\u4ee5\u4e0a\u304b\u3064ST0.15\u4ee5\u5185 B=55-65% C=55%\u672a\u6e80\u307e\u305f\u306fST0.18\u4ee5\u4e0a\n\u8cb7\u3044\u76ee A/B\u2192\u672c\u7dda1-A-C/1-A-D/1-B-C/1-B-D \u6291\u30481-A-E/1-A-F/1-B-E/1-B-F\nC\u2192\u672c\u7dda1\u982d\u672c\u547d2\u70b9+\u9006\u8ee22\u70b9 \u6291\u3048\u30c0\u30c3\u30b7\u30e5\u9023\u52d54\u70b9\n\u8352\u308c\u6307\u65708\u70b9\u4ee5\u4e0a\u304b\u3064\u4e8c\u6b21\u8db3\u5207\u308a\u30af\u30ea\u30a2\u2192\u8352\u308c\u8ee2\u7528\u53ef\n\u9003\u3052\u7387\u30bd\u30fc\u30b9\uff1a\u5f53\u573010\u6226\u4ee5\u4e0a\u512a\u5148\u3001\u305d\u308c\u4ee5\u5916\u76f4\u8fd16\u30f6\u6708",
-  are: "\u7af6\u8247\u8352\u308c\u30e2\u30fc\u30c9 v2.3\n\n\u5185\u90e8\u8a08\u7b97\uff08\u51fa\u529b\u3057\u306a\u3044\uff09\uff1a\u6a5f\u529b\u30b9\u30b3\u30a2\u30fb\u8352\u308c\u6307\u6570\u30fb\u8db3\u5207\u308a\u5224\u5b9a\u30fb\u5019\u88dc\u9078\u5b9a\n\n\u51fa\u529b\u30eb\u30fc\u30eb\uff1a\n- \u8352\u308c\u6307\u65708\u70b9\u672a\u6e80 \u2192 \u300c\u8352\u308c\u6307\u6570X\u70b9\uff08\u5185\u8a33\uff09\u2192 \u898b\u9001\u308a\u63a8\u5968\u300d\u306e1\u884c\u306e\u307f\u51fa\u529b\u3057\u3066\u7d42\u4e86\n- \u4e8c\u6b21\u8db3\u5207\u308a\u8a72\u5f53 \u2192 \u300c\u8352\u308c\u6307\u6570X\u70b9 \u4e8c\u6b21\u8db3\u5207\u308a\uff08\u7406\u7531\uff09\u2192 \u898b\u9001\u308a\u63a8\u5968\u300d\u306e1\u884c\u306e\u307f\u51fa\u529b\u3057\u3066\u7d42\u4e86\n- \u30af\u30ea\u30a2\u306e\u5834\u5408\u306e\u307f\u4ee5\u4e0b\u30d5\u30a9\u30fc\u30de\u30c3\u30c8\u3092\u51fa\u529b\n\n\u3010\u8352\u308c\u6307\u6570\u3011X\u70b9\uff08\u5185\u8a33\uff09\n\u3010\u6a5f\u529b\u9806\u4f4d\u30111\u4f4d:X\u53f7\u8247 2\u4f4d:X\u53f7\u8247 3\u4f4d:X\u53f7\u8247 4\u4f4d:X\u53f7\u8247 5\u4f4d:X\u53f7\u8247 6\u4f4d:X\u53f7\u8247\n\u3010\u7279\u8a18\u3011\uff08\u6fc0\u5909\u8247\u30fb\u8cde\u9664\u8247\u7b49\u3002\u306a\u3051\u308c\u3070\u7701\u7565\uff09\n\n\u3010\u8cb7\u3044\u76ee\u3011\n\u672c\u7dda\nX-X-X\nX-X-X\nX-X-X\nX-X-X\n\u6291\u3048\nX-X-X\nX-X-X\nX-X-X\nX-X-X\n\n\u3010\u8a55\u4fa1\u3011\n\u25ceX \u82d7\u5b57\uff08\u77ed\u8a55\uff09\n\u25cbX \u82d7\u5b57\uff08\u77ed\u8a55\uff09\n\u25b2X \u82d7\u5b57\uff08\u77ed\u8a55\uff09\n\u25b3X \u82d7\u5b57\uff08\u77ed\u8a55\uff09\n\u00d7X \u82d7\u5b57\uff08\u77ed\u8a55\uff09\n\u00d7X \u82d7\u5b57\uff08\u77ed\u8a55\uff09\n\n\u3010X\u30b5\u30de\u30ea\u30fc\u3011\n\uff08\u5834\u540dR\uff09\n\uff08\u2776\u301c\u277b\u30fb\u82d7\u5b57\u306e\u307f\u30fb\u65ad\u5b9a\u53e3\u8abf\u30fb3\u884c\u4ee5\u5185\u30fb\u8cb7\u3044\u76ee\u306e\u8247\u306e\u307f\uff09\n\u672c\u7dda\u3000X-X-X/X-X-X/X-X-X/X-X-X\n\u6291\u3048\u3000X-X-X/X-X-X/X-X-X/X-X-X\nG.\n\n\u8a08\u7b97\u30eb\u30fc\u30eb\uff1a\n\u6a5f\u529b\u30b9\u30b3\u30a2=\u5e73\u5747\u5c55\u793a+\u5e73\u5747\u5468\u8db3+\u5e73\u5747\u76f4\u7dda+\u76f4\u524d\u5c55\u793a+\u76f4\u524d\u5468\u8db3+\u76f4\u524d\u76f4\u7dda\uff08\u5c0f\u3055\u3044\u307b\u3069\u9ad8\u8a55\u4fa1\uff09\n\u30bf\u30a4\u30e0\u306f\u5168\u3066\u5c0f\u3055\u3044\u307b\u3069\u901f\u3044\uff1d\u9ad8\u8a55\u4fa1\uff08\u4f8b\u5916\u306a\u3057\uff09\n1\u30b3\u30fc\u30b9\u306f1\u7740\u5019\u88dc\u304b\u3089\u5b8c\u5168\u9664\u5916\n1\u77402\u8247\u4f75\u7528\u6642\u306f\u25ce-\u25cb\u3068\u25cb-\u25ce\u306e\u4e21\u65b9\u5fc5\u9808\n\u8cb7\u3044\u76ee\u306f1\u884c1\u70b9\u30fb12\u70b9\u4ee5\u5185\n\u9003\u3052\u7387\u30bd\u30fc\u30b9\uff1a\u5f53\u573010\u6226\u4ee5\u4e0a\u512a\u5148\u3001\u305d\u308c\u4ee5\u5916\u76f4\u8fd16\u30f6\u6708\nF\u4fdd\u6301=-2\u70b9\uff08\u5e73\u5747ST0.20\u8d85\u306a\u3089\u8ffd\u52a0-1\u70b9\uff09"
-};
-var currentMode = 'normal';
-var SYSTEM_PROMPT = PROMPTS[currentMode];
 
-function setMode(mode){
-  currentMode = mode;
-  SYSTEM_PROMPT = PROMPTS[mode];
-  var n = document.getElementById('modeNormal');
-  var a = document.getElementById('modeAre');
-  if(mode === 'normal'){
-    n.style.background='#c9a84c'; n.style.color='#0d0f14'; n.style.border='none';
-    a.style.background='#161921'; a.style.color='#888'; a.style.border='1px solid #222840';
-  } else {
-    a.style.background='#c9a84c'; a.style.color='#0d0f14'; a.style.border='none';
-    n.style.background='#161921'; n.style.color='#888'; n.style.border='1px solid #222840';
-  }
-}
+var currentMode = 'normal';
+var calcData = null;
 
 function saveKey(){
   var k=document.getElementById('apiKey').value.trim();
   if(!k)return;
   localStorage.setItem('gemini_key',k);
-  var el=document.getElementById('apiKey');
-  el.classList.add('saved');
-  el.value='保存済み（変更する場合は入力）';
+  document.getElementById('apiKey').classList.add('saved');
+  document.getElementById('apiKey').value='保存済み';
   showStatus('APIキーを保存しました','ok');
 }
-
 function loadKey(){
-  var k=localStorage.getItem('gemini_key');
-  if(k){
-    var el=document.getElementById('apiKey');
-    el.value='保存済み（変更する場合は入力）';
-    el.classList.add('saved');
+  if(localStorage.getItem('gemini_key')){
+    document.getElementById('apiKey').value='保存済み';
+    document.getElementById('apiKey').classList.add('saved');
   }
 }
-
 function getKey(){
   var el=document.getElementById('apiKey');
   if(el.classList.contains('saved'))return localStorage.getItem('gemini_key')||'';
   return el.value.trim();
 }
-
+function setMode(m){
+  currentMode=m;
+  document.getElementById('modeNormal').className='mode-btn '+(m==='normal'?'active':'inactive');
+  document.getElementById('modeAre').className='mode-btn '+(m==='are'?'active':'inactive');
+  if(calcData)displayCalcResults(calcData);
+}
 function showStatus(msg,type){
   var el=document.getElementById('status');
   el.textContent=msg;el.className='status '+type;
+  el.style.display='block';
 }
 
+/* ===== PARSER ===== */
+function parseData(raw){
+  var lines=raw.replace(/\r/g,'').split('\n');
+  var boats=[];
+  for(var i=0;i<6;i++){
+    boats.push({n:i+1,name:'',fKi:0,fZen:0,soyoRate:0,stKoki:null,
+      tokuten:null,avgST:null,exhibRank:null,winsRate:null,
+      avgEx:null,avgLap:null,avgStr:null,
+      nyuse:i+1,exT:null,lapT:null,strT:null,st:null,stF:false,tilt:0,
+      kiryoku:null,kiryokuRank:null});
+  }
+  var section='',nigeContext='';
+  var nigeRate6M=null,nigeRateLocal=null,nigeRateKoki=null,localCount=0;
+  var afterFrank=false,afterNigeRow=false;
+
+  function v6(line){
+    var cols=line.split('\t'),out=[];
+    for(var ci=1;ci<cols.length&&out.length<6;ci++){
+      var v=(cols[ci]||'').trim();
+      if(!v||v==='-'){out.push(null);continue;}
+      var clean=v.replace(/[%（）()]/g,'').replace(/^F/,'');
+      if(clean.startsWith('.'))clean='0'+clean;
+      var n=parseFloat(clean);
+      out.push(isNaN(n)?null:n);
+    }
+    while(out.length<6)out.push(null);
+    return out;
+  }
+  function stv6(line){
+    var cols=line.split('\t'),vals=[],flags=[];
+    for(var ci=1;ci<cols.length&&vals.length<6;ci++){
+      var v=(cols[ci]||'').trim();
+      var isF=v.startsWith('F');
+      flags.push(isF);
+      var clean=v.replace(/^F/,'');
+      if(clean.startsWith('.'))clean='0'+clean;
+      var n=parseFloat(clean);
+      vals.push(isNaN(n)?null:n);
+    }
+    while(vals.length<6){vals.push(null);flags.push(false);}
+    return{vals,flags};
+  }
+
+  for(var idx=0;idx<lines.length;idx++){
+    var line=lines[idx].trim();
+    var cols=line.split('\t');
+    var label=(cols[0]||'').trim().replace(/\s+/g,'');
+
+    // Section
+    var sm=line.match(/=== (.+?) ===/);
+    if(sm){section=sm[1].trim().replace(/\s/g,'');afterFrank=false;afterNigeRow=false;continue;}
+
+    if(section==='基本情報'){
+      if(label.includes('基本情報')||label.includes('基本')){
+        var nc=line.split('\t').slice(1);
+        for(var j=0;j<6&&j<nc.length;j++){var nm=nc[j].trim();if(nm)boats[j].name=nm;}
+      }
+      if(label==='フライング')afterFrank=true;
+      if(afterFrank&&label==='今期'){
+        var fv=v6(line);for(var j=0;j<6;j++)boats[j].fKi=fv[j]||0;afterFrank=false;
+      }
+      if(label==='前期'){var fv2=v6(line);for(var j=0;j<6;j++)boats[j].fZen=fv2[j]||0;}
+      if(label==='事故率'){var sv=v6(line);for(var j=0;j<6;j++)boats[j].soyoRate=sv[j]||0;}
+      // 今期平均ST (基本情報内の平均ST→今期行)
+      if(label==='今期'&&!afterFrank){
+        var sv2=v6(line);
+        var allSmall=sv2.filter(v=>v!==null).every(v=>v<1.0);
+        if(allSmall)for(var j=0;j<6;j++)if(sv2[j]!==null)boats[j].stKoki=sv2[j];
+      }
+    }
+
+    if(section==='今節成績'){
+      if(label==='得点率'){var tv=v6(line);for(var j=0;j<6;j++)boats[j].tokuten=tv[j];}
+      if(label==='平均ST'){var sv3=v6(line);for(var j=0;j<6;j++)if(sv3[j]!==null)boats[j].avgST=sv3[j];}
+      if(label==='展示順位'||label==='平均展示順位'){var ev=v6(line);for(var j=0;j<6;j++)boats[j].exhibRank=ev[j];}
+      if(label==='1着率'){var wv=v6(line);for(var j=0;j<6;j++)boats[j].winsRate=wv[j];}
+      if(label==='平均展示'){var av=v6(line);for(var j=0;j<6;j++)if(av[j])boats[j].avgEx=av[j];}
+      if(label==='平均周足'||label==='平均周り足'){var lv=v6(line);for(var j=0;j<6;j++)if(lv[j])boats[j].avgLap=lv[j];}
+      if(label==='平均直線'){var dv=v6(line);for(var j=0;j<6;j++)if(dv[j])boats[j].avgStr=dv[j];}
+    }
+
+    if(section==='直前情報'){
+      if(label==='進入'){var nv=v6(line);for(var j=0;j<6;j++)if(nv[j])boats[j].nyuse=Math.round(nv[j]);}
+      if(label==='展示'){var etv=v6(line);for(var j=0;j<6;j++)if(etv[j])boats[j].exT=etv[j];}
+      if(label==='周り足'||label==='周り足'){var ltv=v6(line);for(var j=0;j<6;j++)if(ltv[j])boats[j].lapT=ltv[j];}
+      if(label==='直線'){var stv=v6(line);for(var j=0;j<6;j++)if(stv[j])boats[j].strT=stv[j];}
+      if(label==='ST'){var sf=stv6(line);for(var j=0;j<6;j++)if(sf.vals[j]!==null){boats[j].st=sf.vals[j];boats[j].stF=sf.flags[j];}}
+      if(label==='チルト'){var cv=v6(line);for(var j=0;j<6;j++)if(cv[j]!==null)boats[j].tilt=cv[j];}
+    }
+
+    if(section==='枠別勝率'){
+      // 当地カウント
+      if(label==='当地'&&line.includes('(')){var cm=line.match(/\((\d+)\)/);if(cm)localCount=parseInt(cm[1]);}
+      // nigeコンテキスト
+      if(line.includes('直近6ヶ月')||line.includes('直近 6ヶ月')||line.includes('直近６ヶ月'))nigeContext='6M';
+      else if(line.includes('直近1年')||line.includes('直近 1年')||line.includes('直近１年'))nigeContext='1Y';
+      else if(label==='当地'&&!line.includes('%'))nigeContext='local';
+      else if(label==='今期'&&nigeContext==='')nigeContext='koki';
+      // 逃げ率2行パターン
+      if(label.startsWith('逃げ')&&!line.includes('%')){afterNigeRow=true;}
+      else if(afterNigeRow){
+        var pct=parseFloat((line.split('\t')[0]||'').replace(/%/,''));
+        if(!isNaN(pct)){
+          if(nigeContext==='6M'&&nigeRate6M===null)nigeRate6M=pct;
+          else if(nigeContext==='local'&&nigeRateLocal===null)nigeRateLocal=pct;
+          else if(nigeContext==='koki'&&nigeRateKoki===null)nigeRateKoki=pct;
+        }
+        afterNigeRow=false;
+      }
+    }
+  }
+
+  // 逃げ率決定
+  var nigeRate=null,nigeRateSrc='';
+  if(localCount>=10&&nigeRateLocal!==null){nigeRate=nigeRateLocal;nigeRateSrc='当地('+localCount+'戦)';}
+  else if(nigeRate6M!==null){nigeRate=nigeRate6M;nigeRateSrc='直近6M';}
+  else if(nigeRateKoki!==null){nigeRate=nigeRateKoki;nigeRateSrc='今期';}
+
+  return{boats,nigeRate,nigeRateSrc,localCount};
+}
+
+/* ===== 機力スコア ===== */
+function calcKiryoku(boats){
+  boats.forEach(function(b){
+    var avgE=b.avgEx!==null?b.avgEx:b.exT;
+    var avgL=b.avgLap!==null?b.avgLap:b.lapT;
+    var avgS=b.avgStr!==null?b.avgStr:b.strT;
+    var dirE=b.exT,dirL=b.lapT,dirS=b.strT;
+    if(dirE!==null&&dirL!==null&&dirS!==null){
+      b.kiryoku=(avgE||dirE)+(avgL||dirL)+(avgS||dirS)+dirE+dirL+dirS;
+    }else if(dirE!==null&&dirL!==null){
+      b.kiryoku=(avgE||dirE)*2+(avgL||dirL)*2;
+    }
+  });
+  var valid=boats.filter(b=>b.kiryoku!==null).sort((a,b)=>a.kiryoku-b.kiryoku);
+  valid.forEach((b,i)=>b.kiryokuRank=i+1);
+}
+
+/* ===== 荒れ指数 ===== */
+function calcAreIndex(boats,nigeRate){
+  var score=0,bd=[];
+  var b1=boats.find(b=>b.nyuse===1)||boats[0];
+  var innerBoats=boats.filter(b=>[1,2,3].includes(b.nyuse));
+  var outerBoats=boats.filter(b=>b.nyuse>=4);
+
+  // F今期
+  var fKi123=innerBoats.filter(b=>b.fKi>=1);
+  if(b1.fKi>=1){score+=3;bd.push('1コース今期F持ち +3');}
+  else if(fKi123.length>=2){score+=3;bd.push('1〜3コース今期F複数 +3');}
+  else if(fKi123.length===1){score+=1;bd.push('2〜3コース今期F1艇 +1');}
+
+  // 展示F
+  var exF123=innerBoats.filter(b=>b.stF);
+  if(b1.stF){score+=1;bd.push('1コース展示F +1');}
+  if(!b1.stF&&exF123.length>=2){score+=1;bd.push('1〜3コース展示F複数 +1');}
+
+  // 今節実績
+  if(b1.exhibRank!==null&&b1.exhibRank>=5){score+=3;bd.push('1コース今節展示'+b1.exhibRank+'位 +3');}
+  if(b1.winsRate!==null&&b1.winsRate===0){score+=3;bd.push('1コース今節1着率0% +3');}
+  var allTok=boats.map(b=>b.tokuten).filter(v=>v!==null);
+  if(allTok.length>=2&&b1.tokuten!==null){
+    var sortedT=allTok.slice().sort((a,b)=>a-b);
+    if(b1.tokuten<=sortedT[1]){score+=2;bd.push('1コース今節得点率下位2 +2');}
+  }
+  var allAvgST=boats.map(b=>b.avgST).filter(v=>v!==null);
+  if(allAvgST.length>=2&&b1.avgST!==null){
+    if(b1.avgST===Math.max(...allAvgST)){score+=2;bd.push('1コース今節平均ST最遅 +2');}
+  }
+
+  // 逃げ率・ST
+  if(nigeRate!==null){
+    if(nigeRate<30){score+=3;bd.push('逃げ率'+nigeRate+'%<30% +3');}
+    else if(nigeRate<50){score+=2;bd.push('逃げ率'+nigeRate+'%<50% +2');}
+  }
+  var stFallback=b1.avgST!==null?b1.avgST:b1.stKoki;
+  if(stFallback!==null&&stFallback>=0.18){score+=2;bd.push('1コース平均ST'+stFallback+'≥0.18 +2');}
+  if(allTok.length>=2&&b1.tokuten!==null){
+    var sortedT2=allTok.slice().sort((a,b)=>a-b);
+    var mid=sortedT2[Math.floor(sortedT2.length/2)];
+    if(b1.tokuten<mid){score+=1;bd.push('1コース今節得点率下位半分 +1');}
+  }
+
+  // 外コース優位性
+  var allExRank=boats.map(b=>b.exhibRank).filter(v=>v!==null);
+  if(outerBoats.some(b=>b.exhibRank===1&&allExRank.length)){score+=2;bd.push('外枠今節展示1位 +2');}
+  if(allTok.length){
+    var maxTok=Math.max(...allTok);
+    if(outerBoats.some(b=>b.tokuten===maxTok&&maxTok>0)){score+=2;bd.push('外枠今節得点率1位 +2');}
+  }
+  var inSTs=innerBoats.map(b=>b.avgST||b.stKoki).filter(v=>v!==null);
+  var outSTs=outerBoats.map(b=>b.avgST||b.stKoki).filter(v=>v!==null);
+  if(inSTs.length&&outSTs.length){
+    var avgIn=inSTs.reduce((s,v)=>s+v,0)/inSTs.length;
+    var avgOut=outSTs.reduce((s,v)=>s+v,0)/outSTs.length;
+    if(avgOut<avgIn-0.01){score+=1;bd.push('外枠平均ST優秀 +1');}
+  }
+  if(outerBoats.some(b=>b.stF)){score+=1;bd.push('外枠展示F +1');}
+
+  // 進入変更
+  if(boats.some(b=>b.nyuse!==b.n)){score+=3;bd.push('進入変更 +3');}
+
+  // 賞除艇（前期F2本以上 = 今期賞除の可能性）
+  var shojoOuter=outerBoats.filter(b=>b.fZen>=2);
+  if(shojoOuter.length){score+=3;bd.push('外枠賞除疑い艇（前期F≥2） +3');}
+
+  return{score,breakdown:bd};
+}
+
+/* ===== 足切り ===== */
+function checkFurikiri(areScore,boats,nigeRate){
+  if(areScore<8)return{pass:false,stage:1,reason:'荒れ指数'+areScore+'点（8点未満）'};
+  var b1=boats.find(b=>b.nyuse===1)||boats[0];
+  function ex(){
+    if(boats.some(b=>b.nyuse!==b.n))return true;
+    var allT=boats.map(b=>b.tokuten).filter(v=>v!==null);
+    if(allT.length&&b1.tokuten!==null){
+      var s=allT.slice().sort((a,b)=>a-b);
+      var th=s[Math.floor(s.length*0.3)];
+      var stc=b1.avgST!==null?b1.avgST:b1.stKoki;
+      if(b1.tokuten<=th&&stc!==null&&stc>=0.18)return true;
+    }
+    if(b1.exhibRank!==null&&b1.exhibRank>=5)return true;
+    if(b1.winsRate!==null&&b1.winsRate===0)return true;
+    return false;
+  }
+  if(nigeRate!==null&&nigeRate>=60&&!ex())return{pass:false,stage:2,reason:'逃げ率'+nigeRate+'%（≥60%）'};
+  var allT2=boats.map(b=>b.tokuten).filter(v=>v!==null);
+  if(allT2.length&&b1.tokuten!==null&&b1.tokuten===Math.max(...allT2)&&!ex())
+    return{pass:false,stage:2,reason:'1コース今節得点率1位'};
+  if(b1.kiryokuRank===1&&!ex())
+    return{pass:false,stage:2,reason:'1コース機力1位'};
+  return{pass:true};
+}
+
+/* ===== 1着候補 ===== */
+function select1st(boats){
+  var cands=[];
+  var b1=boats.find(b=>b.nyuse===1)||boats[0];
+  // 外枠展示F
+  boats.filter(b=>b.nyuse>=4&&b.stF).forEach(b=>{
+    if(b.nyuse<=5&&b.kiryokuRank<=3)cands.push({n:b.n,reason:b.nyuse+'コース展示F・機力'+b.kiryokuRank+'位'});
+    else if(b.nyuse===6&&b.kiryokuRank===1&&b.st!==null&&b.st<=0.05)cands.push({n:b.n,reason:'6コース展示F・機力1位・ST優秀'});
+  });
+  // 今節得点率上位（1・6コース除く）
+  var allT=boats.map(b=>b.tokuten).filter(v=>v!==null);
+  if(allT.length){
+    var sortedT=allT.slice().sort((a,b)=>b-a);
+    var top3=sortedT.slice(0,3);
+    var bot30=sortedT[Math.floor(sortedT.length*0.7)]||0;
+    boats.forEach(b=>{
+      if(b.nyuse===1||b.nyuse===6)return;
+      if(b.tokuten!==null&&top3.includes(b.tokuten)&&b.tokuten>bot30){
+        if(!cands.find(c=>c.n===b.n))cands.push({n:b.n,reason:b.nyuse+'コース今節得点率上位'});
+      }
+    });
+  }
+  // 2・3コース例外
+  boats.filter(b=>b.nyuse<=3&&b.nyuse>1).forEach(b=>{
+    if(b.kiryokuRank===1){
+      var allT2=boats.map(x=>x.tokuten).filter(v=>v!==null);
+      if(allT2.length){
+        var st=allT2.slice().sort((a,b)=>b-a).slice(0,3);
+        if(b.tokuten!==null&&st.includes(b.tokuten)&&!cands.find(c=>c.n===b.n))
+          cands.push({n:b.n,reason:b.nyuse+'コース機力1位＋得点率上位'});
+      }
+    }
+    if(b1.st!==null&&b1.st>=0.25&&b.nyuse===2&&!cands.find(c=>c.n===b.n))
+      cands.push({n:b.n,reason:'1コースST0.25以上→2コース昇格'});
+  });
+  return cands.slice(0,2);
+}
+
+/* ===== 通常モード ===== */
+function calcNormal(boats,nigeRate){
+  var b1=boats.find(b=>b.nyuse===1)||boats[0];
+  var st=b1.avgST!==null?b1.avgST:b1.stKoki;
+  var shinkido='B';
+  if(nigeRate!==null&&st!==null){
+    if(nigeRate>=65&&st<=0.15)shinkido='A';
+    else if(nigeRate<55||(st!==null&&st>=0.18))shinkido='C';
+  }
+  // 2着候補
+  var sorted=boats.filter(b=>b.nyuse!==1).sort((a,b)=>{
+    var ta=a.tokuten||0,tb=b.tokuten||0;
+    if(Math.abs(ta-tb)>0.5)return tb-ta;
+    var sa=a.avgST||a.stKoki||0.2,sb=b.avgST||b.stKoki||0.2;
+    return sa-sb;
+  });
+  var ab=sorted.slice(0,2).map((b,i)=>({n:b.n,reason:'2着候補'+(i===0?'A':'B')}));
+  return{shinkido,ab};
+}
+
+/* ===== メイン計算 ===== */
+function runCalc(){
+  var raw=document.getElementById('raceData').value.trim();
+  if(!raw){showStatus('データを貼り付けてください','err');return;}
+  var parsed=parseData(raw);
+  calcKiryoku(parsed.boats);
+  var areResult=calcAreIndex(parsed.boats,parsed.nigeRate);
+  var furikiriResult=checkFurikiri(areResult.score,parsed.boats,parsed.nigeRate);
+  var cands1st=select1st(parsed.boats);
+  var normalResult=calcNormal(parsed.boats,parsed.nigeRate);
+  calcData={parsed,areResult,furikiriResult,cands1st,normalResult};
+  displayCalcResults(calcData);
+  document.getElementById('calcResult').classList.add('show');
+  document.getElementById('genBtn').disabled=false;
+  document.getElementById('genBtn').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+/* ===== 表示 ===== */
+function displayCalcResults(data){
+  var{parsed,areResult,furikiriResult,cands1st,normalResult}=data;
+  var{boats,nigeRate,nigeRateSrc}=parsed;
+  var html='';
+
+  // 機力スコア表
+  html+='<div class="cr-sec">機力スコア</div>';
+  html+='<table class="cr-table"><thead><tr><th>順</th><th>艇</th><th>選手</th><th>展示</th><th>周足</th><th>直線</th><th>合計</th></tr></thead><tbody>';
+  var sk=boats.slice().sort((a,b)=>(a.kiryokuRank||99)-(b.kiryokuRank||99));
+  sk.forEach(function(b){
+    var cl=b.kiryokuRank===1?'best':'';
+    html+='<tr class="'+cl+'"><td>'+(b.kiryokuRank||'-')+'</td><td>'+b.n+'</td><td>'+b.name+'</td><td>'+(b.exT!==null?b.exT.toFixed(2):'-')+'</td><td>'+(b.lapT!==null?b.lapT.toFixed(2):'-')+'</td><td>'+(b.strT!==null?b.strT.toFixed(2):'-')+'</td><td class="tot">'+(b.kiryoku!==null?b.kiryoku.toFixed(2):'-')+'</td></tr>';
+  });
+  html+='</tbody></table>';
+
+  // 逃げ率
+  html+='<div class="info-row">1コース逃げ率: <b>'+(nigeRate!==null?nigeRate+'% ('+nigeRateSrc+')':'取得できず')+'</b></div>';
+
+  if(currentMode==='are'){
+    // 荒れ指数
+    var cls=areResult.score>=8?'score-pass':'score-fail';
+    html+='<div class="are-box"><div style="display:flex;align-items:baseline;gap:8px;"><span class="are-score '+cls+'">'+areResult.score+'点</span><span class="are-label">荒れ指数</span></div>';
+    html+='<div class="bd-list">';
+    if(areResult.breakdown.length)areResult.breakdown.forEach(b=>{html+='<span>'+b+'</span> ';});
+    else html+='<span style="color:#445;">加算なし</span>';
+    html+='</div></div>';
+
+    // 足切り
+    var fpass=furikiriResult.pass;
+    html+='<div class="furikiri '+(fpass?'pass':'fail')+'">';
+    if(fpass)html+='✅ 足切りクリア → 予想生成可';
+    else html+='❌ 見送り推奨: '+furikiriResult.reason;
+    html+='</div>';
+
+    if(fpass){
+      html+='<div class="cr-sec">1着候補</div><div class="cand-row">';
+      if(cands1st.length)cands1st.forEach(c=>{html+='<span class="chip c1">'+c.n+'号艇（'+c.reason+'）</span>';});
+      else html+='<span style="font-size:11px;color:#e55;">外枠条件未達</span>';
+      html+='</div>';
+    }
+  } else {
+    // 通常モード
+    html+='<div class="are-box"><div style="display:flex;align-items:baseline;gap:8px;"><span class="are-score" style="font-size:22px;color:#c9a84c;">【'+normalResult.shinkido+'】</span><span class="are-label">イン信頼度</span></div></div>';
+    html+='<div class="info-row">荒れ指数: <b>'+areResult.score+'点</b> → '+(areResult.score>=8?'⚠️ 荒れ転用可':'転用不可')+'</div>';
+    html+='<div class="cr-sec">2着候補</div><div class="cand-row">';
+    normalResult.ab.forEach(c=>{html+='<span class="chip c2">'+c.n+'号艇（'+c.reason+'）</span>';});
+    html+='</div>';
+  }
+
+  document.getElementById('calcContent').innerHTML=html;
+}
+
+/* ===== AIプロンプト構築 ===== */
+function buildPrompt(){
+  var venue=document.getElementById('venue').value||'?';
+  var raceNum=document.getElementById('raceNum').value||'?';
+  var{parsed,areResult,furikiriResult,cands1st,normalResult}=calcData;
+  var{boats,nigeRate,nigeRateSrc}=parsed;
+  var p='';
+
+  if(currentMode==='are'){
+    if(!furikiriResult.pass){
+      p='以下の1行のみ出力してください。余計な説明不要:\n';
+      p+=venue+raceNum+'R 荒れ指数'+areResult.score+'点（'+areResult.breakdown.join('、')+'）→ '+furikiriResult.reason+' → 見送り推奨';
+      return p;
+    }
+    p='荒れモード v2.3 で予想を出力してください。以下のJS計算済みデータを使用してください（機力スコアや荒れ指数の再計算不要）。\n\n';
+    p+='レース: '+venue+' '+raceNum+'R\n';
+    p+='逃げ率: '+(nigeRate!==null?nigeRate+'% ('+nigeRateSrc+')':'取得できず')+'\n\n';
+    p+='【機力スコア順位（変更禁止）】\n';
+    boats.slice().sort((a,b)=>(a.kiryokuRank||99)-(b.kiryokuRank||99)).forEach(b=>{
+      p+=b.kiryokuRank+'位 '+b.n+'号艇 '+b.name+' 合計'+(b.kiryoku!==null?b.kiryoku.toFixed(2):'-')+'\n';
+    });
+    p+='\n【荒れ指数】'+areResult.score+'点\n内訳: '+areResult.breakdown.join(' / ')+'\n';
+    p+='【足切り】クリア\n\n';
+    p+='【1着候補（JS算出）】\n';
+    if(cands1st.length)cands1st.forEach(c=>{p+=c.n+'号艇（'+c.reason+'）\n';});
+    else p+='外枠条件未達 → データから判断してください\n';
+    p+='\n【各艇データ】\n';
+    boats.forEach(function(b){
+      var st=b.avgST!==null?b.avgST:(b.stKoki!==null?b.stKoki:null);
+      p+=b.n+'号 '+b.name+' コース'+b.nyuse+' 今節得点率'+(b.tokuten!==null?b.tokuten:'-')+' 平均ST'+(st!==null?st:'-')+' 直前ST'+(b.st!==null?(b.stF?'F':'')+b.st:'-')+' F今期'+b.fKi+' 機力'+b.kiryokuRank+'位\n';
+    });
+    p+='\n【出力フォーマット（必須・この順で）】\n';
+    p+='【荒れ指数】'+areResult.score+'点（上記内訳）\n';
+    p+='【機力順位】上記の通り\n';
+    p+='【特記】（1行。なければ省略）\n\n';
+    p+='【買い目】（必ず1行1点・12点以内）\n本線\nX-X-X\n（4点）\n抑え\nX-X-X\n（4〜8点）\n\n';
+    p+='【評価】\n◎X 苗字（短評）×6艇\n\n';
+    p+='【Xサマリー】\n'+venue+raceNum+'R\n（❶〜❻丸数字・苗字のみ・断定口調・3行以内・買い目の艇のみ）\n本線　X-X-X/X-X-X/X-X-X/X-X-X\n抑え　X-X-X/X-X-X/X-X-X/X-X-X\nG.';
+  } else {
+    p='通常モード ver.4.7 で予想を出力してください。以下のJS計算済みデータを使用してください。\n\n';
+    p+='レース: '+venue+' '+raceNum+'R\n';
+    var b1=boats.find(b=>b.nyuse===1)||boats[0];
+    var st1=b1.avgST!==null?b1.avgST:b1.stKoki;
+    p+='逃げ率: '+(nigeRate!==null?nigeRate+'% ('+nigeRateSrc+')':'取得できず')+'\n';
+    p+='1コース平均ST: '+(st1!==null?st1:'-')+'\n';
+    p+='【イン信頼度: '+normalResult.shinkido+'】（変更禁止）\n';
+    p+='荒れ指数: '+areResult.score+'点 '+(areResult.score>=8?'→ ⚠️荒れ転用可':'→ 転用不可')+'\n\n';
+    p+='【機力スコア順位】\n';
+    boats.slice().sort((a,b)=>(a.kiryokuRank||99)-(b.kiryokuRank||99)).forEach(b=>{
+      p+=b.kiryokuRank+'位 '+b.n+'号艇 '+b.name+'\n';
+    });
+    p+='\n【各艇データ】\n';
+    boats.forEach(function(b){
+      var st=b.avgST!==null?b.avgST:(b.stKoki!==null?b.stKoki:null);
+      p+=b.n+'号 '+b.name+' 今節得点率'+(b.tokuten!==null?b.tokuten:'-')+' 平均ST'+(st!==null?st:'-')+' 直前ST'+(b.st!==null?(b.stF?'F':'')+b.st:'-')+' F今期'+b.fKi+'\n';
+    });
+    p+='\n2着候補A: '+normalResult.ab[0].n+'号艇\n';
+    if(normalResult.ab[1])p+='2着候補B: '+normalResult.ab[1].n+'号艇\n';
+    p+='\n【出力フォーマット（必須・この順で）】\n';
+    p+='【イン信頼度】'+normalResult.shinkido+'（逃げ率'+(nigeRate||'?')+'% ST'+(st1||'?')+'）\n';
+    p+='【荒れ指数】'+areResult.score+'点（'+(areResult.score>=8?'転用可':'転用不可')+'）\n';
+    p+='【特記】\n\n';
+    p+='【最終買い目】8点\n本線\n1-X-X\n1-X-X\n1-X-X\n1-X-X\n抑え\n1-X-X\n1-X-X\n1-X-X\n1-X-X\n\n';
+    p+='【評価】\n◎X 苗字（短評）×6艇\n\n';
+    p+='【Xサマリー】\n'+venue+raceNum+'R\n通常モード。イン信頼度【'+normalResult.shinkido+'】\n（展開核心1行）\n（狙い目1行）\n本線　1-X-X/1-X-X/1-X-X/1-X-X\n抑え　1-X-X/1-X-X/1-X-X/1-X-X\nG.';
+  }
+  return p;
+}
+
+/* ===== API呼び出し ===== */
 async function generate(){
+  if(!calcData){showStatus('先にデータを解析してください','err');return;}
   var key=getKey();
-  if(!key){showStatus('APIキーを入力・保存してください','err');return;}
-  var venue=document.getElementById('venue').value;
-  var raceNum=document.getElementById('raceNum').value;
-  var data=document.getElementById('d0').value.trim();
-  if(!data){showStatus('レースデータを入力してください','err');return;}
-
-  var userMsg='【'+(venue||'?')+' '+(raceNum||'?')+'R】の予想を出力してください。\n\n=== レースデータ ===\n'+data;
-
+  if(!key){showStatus('APIキーを保存してください','err');return;}
+  var prompt=buildPrompt();
   document.getElementById('genBtn').disabled=true;
   document.getElementById('loading').classList.add('show');
   document.getElementById('outWrap').classList.remove('show');
-  document.getElementById('status').className='status';
-
+  document.getElementById('status').style.display='none';
   try{
     var res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        system_instruction:{parts:[{text:PROMPTS[currentMode]}]},
-        contents:[{role:'user',parts:[{text:userMsg}]}],
-        generationConfig:{temperature:0.3,maxOutputTokens:16000}
+        contents:[{role:'user',parts:[{text:prompt}]}],
+        generationConfig:{temperature:0.15,maxOutputTokens:4000}
       })
     });
     var json=await res.json();
@@ -224,9 +638,8 @@ async function generate(){
     document.getElementById('outText').textContent=text;
     document.getElementById('outWrap').classList.add('show');
     showStatus('生成完了','ok');
-  }catch(e){
-    showStatus('エラー: '+e.message,'err');
-  }finally{
+  }catch(e){showStatus('エラー: '+e.message,'err');}
+  finally{
     document.getElementById('genBtn').disabled=false;
     document.getElementById('loading').classList.remove('show');
   }
@@ -235,15 +648,10 @@ async function generate(){
 function copyOut(){
   var text=document.getElementById('outText').textContent;
   var btn=document.getElementById('copyBtn');
-  if(navigator.clipboard){
-    navigator.clipboard.writeText(text).then(function(){
-      btn.textContent='✅　コピー完了';btn.classList.add('ok');
-      setTimeout(function(){btn.textContent='📋　X投稿用にコピー';btn.classList.remove('ok');},2000);
-    });
-  }
+  if(navigator.clipboard){navigator.clipboard.writeText(text).then(function(){btn.textContent='✅ コピー完了';btn.classList.add('ok');setTimeout(function(){btn.textContent='📋 X投稿用にコピー';btn.classList.remove('ok');},2000);});}
 }
-
 loadKey();
+
 </script>
 </body>
 </html>
