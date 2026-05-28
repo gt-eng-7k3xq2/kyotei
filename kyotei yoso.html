@@ -143,6 +143,7 @@ textarea::placeholder{color:#333a50;font-size:11px;}
   <div class="out-hdr">予想結果</div>
   <div class="out-text" id="outText"></div>
   <button class="copy-btn" id="copyBtn" onclick="copyOut()">📋 X投稿用にコピー</button>
+<button class="copy-btn" id="bridgeBtn" onclick="saveToBridge()" style="margin-top:8px;background:#0a1a2a;color:#7aabee;border-color:#2a3a6a;">📤 G. Toolsに連携</button>
 </div>
 
 <script>
@@ -650,6 +651,31 @@ function copyOut(){
   var btn=document.getElementById('copyBtn');
   if(navigator.clipboard){navigator.clipboard.writeText(text).then(function(){btn.textContent='✅ コピー完了';btn.classList.add('ok');setTimeout(function(){btn.textContent='📋 X投稿用にコピー';btn.classList.remove('ok');},2000);});}
 }
+
+function saveToBridge(){
+  var text = document.getElementById('outText').textContent;
+  if(!text){showStatus('先に予想を生成してください','err');return;}
+  var venue = document.getElementById('venue').value || '';
+  var raceNum = document.getElementById('raceNum').value || '';
+  var bridge = {
+    ts: Date.now(),
+    venue: venue,
+    raceNum: raceNum,
+    outputText: text,
+    mode: currentMode
+  };
+  localStorage.setItem('yoso_bridge', JSON.stringify(bridge));
+  var btn = document.getElementById('bridgeBtn');
+  btn.textContent = '✅ G. Toolsに連携済み';
+  btn.style.color = '#5dc87a';
+  btn.style.borderColor = '#1a4a28';
+  setTimeout(function(){
+    btn.textContent = '📤 G. Toolsに連携';
+    btn.style.color = '#7aabee';
+    btn.style.borderColor = '#2a3a6a';
+  }, 3000);
+}
+
 loadKey();
 
 </script>
