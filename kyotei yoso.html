@@ -191,7 +191,7 @@ async function generate(){
       body:JSON.stringify({
         system_instruction:{parts:[{text:SYSTEM_PROMPT}]},
         contents:[{role:'user',parts:[{text:userMsg}]}],
-        generationConfig:{temperature:0.3,maxOutputTokens:1500}
+        generationConfig:{temperature:0.3,maxOutputTokens:4000}
       })
     });
     var json=await res.json();
