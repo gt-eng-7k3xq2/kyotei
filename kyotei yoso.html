@@ -123,7 +123,7 @@ textarea::placeholder{color:#333a50;font-size:11px;}
 <div class="sec">
   <div class="sec-label">レースデータ（データ抽出BMでコピー）</div>
   <textarea id="raceData" rows="7" placeholder="データ抽出BMで4タブ収集 → コピー → ここに貼り付け"></textarea>
-  <button class="calc-btn" onclick="runCalc()">⚡ データを解析する</button>
+  <div style="display:flex;gap:8px;margin-top:10px;"><button class="calc-btn" style="margin-top:0;" onclick="runCalc()">⚡ データを解析する</button><button onclick="clearAll()" style="padding:13px 14px;background:#1a1a2a;color:#556;border:1px solid #252a38;border-radius:10px;font-size:13px;-webkit-appearance:none;flex-shrink:0;">✕ クリア</button></div>
   <div class="calc-result" id="calcResult">
     <div style="font-size:11px;color:#c9a84c;font-weight:700;margin-bottom:8px;">📊 解析結果（AIに送信する前に確認）</div>
     <div id="calcContent"></div>
@@ -151,6 +151,18 @@ textarea::placeholder{color:#333a50;font-size:11px;}
 var currentMode = 'normal';
 var calcData = null;
 
+function clearAll(){
+  document.getElementById('raceData').value='';
+  document.getElementById('calcResult').classList.remove('show');
+  document.getElementById('calcContent').innerHTML='';
+  document.getElementById('outWrap').classList.remove('show');
+  document.getElementById('outText').textContent='';
+  document.getElementById('status').style.display='none';
+  document.getElementById('genBtn').disabled=true;
+  document.getElementById('venue').value='';
+  document.getElementById('raceNum').value='';
+  calcData=null;
+}
 function saveKey(){
   var k=document.getElementById('apiKey').value.trim();
   if(!k)return;
@@ -604,8 +616,7 @@ function buildPrompt(){
     p+='【荒れ指数】'+areResult.score+'点（'+(areResult.score>=8?'転用可':'転用不可')+'）\n';
     p+='【特記】\n\n';
     p+='【最終買い目】8点\n本線\n1-X-X\n1-X-X\n1-X-X\n1-X-X\n抑え\n1-X-X\n1-X-X\n1-X-X\n1-X-X\n\n';
-    p+='【評価】\n◎X 苗字（短評）×6艇\n\n';
-    p+='【Xサマリー】\n'+venue+raceNum+'R\n通常モード。イン信頼度【'+normalResult.shinkido+'】\n（展開核心1行）\n（狙い目1行）\n本線　1-X-X/1-X-X/1-X-X/1-X-X\n抑え　1-X-X/1-X-X/1-X-X/1-X-X\nG.';
+    p+='【総合評価】（G.Tools連携用・必ず以下フォーマットで6艇全員出力）\\n1位　X号艇　◎\\n2位　X号艇　○\\n3位　X号艇　▲\\n4位　X号艇　△\\n5位　X号艇　×\\n6位　X号艇　×\\n\\n【評価】(印は◎○▲△××のみ。注・穴などの表記は禁止)\\n◎X 苗字（短評）\\n○X 苗字（短評）\\n▲X 苗字（短評）\\n△X 苗字（短評）\\n×X 苗字（短評）\\n×X 苗字（短評）\\n\\n';\n    p+='【Xサマリー】\\n'+venue+raceNum+'R\\n通常モード。イン信頼度【'+normalResult.shinkido+'】\\n（展開核心1行）\\n（狙い目1行）\\n本線　1-X-X/1-X-X/1-X-X/1-X-X\\n抑え　1-X-X/1-X-X/1-X-X/1-X-X\\nG.';
   }
   return p;
 }
