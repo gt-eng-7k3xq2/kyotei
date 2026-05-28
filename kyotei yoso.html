@@ -499,11 +499,11 @@ function displayCalcResults(data){
 
   // 機力スコア表
   html+='<div class="cr-sec">機力スコア</div>';
-  html+='<table class="cr-table"><thead><tr><th>順</th><th>艇</th><th>選手</th><th>均展</th><th>均周</th><th>均直</th><th>直展</th><th>直周</th><th>直直</th><th>計</th></tr></thead><tbody>';
+  html+='<table class="cr-table"><thead><tr><th>順</th><th>艇</th><th>選手</th><th>展示</th><th>周足</th><th>直線</th><th>合計</th></tr></thead><tbody>';
   var sk=boats.slice().sort((a,b)=>(a.kiryokuRank||99)-(b.kiryokuRank||99));
   sk.forEach(function(b){
     var cl=b.kiryokuRank===1?'best':'';
-    html+='<tr class="'+cl+'"><td>'+(b.kiryokuRank||'-')+'</td><td>'+b.n+'</td><td>'+b.name+'</td><td>'+(b.avgEx!==null?b.avgEx.toFixed(2):'=直')+'</td><td>'+(b.avgLap!==null?b.avgLap.toFixed(2):'=直')+'</td><td>'+(b.avgStr!==null?b.avgStr.toFixed(2):'=直')+'</td><td>'+(b.exT!==null?b.exT.toFixed(2):'-')+'</td><td>'+(b.lapT!==null?b.lapT.toFixed(2):'-')+'</td><td>'+(b.strT!==null?b.strT.toFixed(2):'-')+'</td><td class="tot">'+(b.kiryoku!==null?b.kiryoku.toFixed(2):'-')+'</td></tr>';
+    html+='<tr class="'+cl+'"><td>'+(b.kiryokuRank||'-')+'</td><td>'+b.n+'</td><td>'+b.name+'</td><td>'+(b.exT!==null?b.exT.toFixed(2):'-')+'</td><td>'+(b.lapT!==null?b.lapT.toFixed(2):'-')+'</td><td>'+(b.strT!==null?b.strT.toFixed(2):'-')+'</td><td class="tot">'+(b.kiryoku!==null?b.kiryoku.toFixed(2):'-')+'</td></tr>';
   });
   html+='</tbody></table>';
 
@@ -580,8 +580,8 @@ function buildPrompt(){
     p+='【機力順位】上記の通り\n';
     p+='【特記】（1行。なければ省略）\n\n';
     p+='【買い目構築（厳守）】\\n1着2艇(◎と○)の場合 本線は必ず6点この順で:\\n本線1:◎-○-3着A\\n本線2:◎-○-3着B\\n本線3:○-◎-3着A\\n本線4:○-◎-3着B\\n本線5:◎-1コース-3着A\\n本線6:◎-1コース-3着B\\n抑え:○-1コース-3着他 4〜6点 合計12点以内\\n\\n【買い目】(1行1点)\\n本線(6点)\\nX-X-X\\nX-X-X\\nX-X-X\\nX-X-X\\nX-X-X\\nX-X-X\\n抑え(4〜6点)\\nX-X-X\\n\\n';
-    p+='【評価】\n◎X 苗字（短評）×6艇\n\n';
-    p+='【Xサマリー】\n'+venue+raceNum+'R\n（❶〜❻丸数字・苗字のみ・断定口調・3行以内・買い目の艇のみ）\n本線　X-X-X/X-X-X/X-X-X/X-X-X\n抑え　X-X-X/X-X-X/X-X-X/X-X-X\nG.';
+    p+='【評価】(印は◎○▲△××のみ。注・穴などの表記は禁止)\\n◎X 苗字（短評）\\n○X 苗字（短評）\\n▲X 苗字（短評）\\n△X 苗字（短評）\\n×X 苗字（短評）\\n×X 苗字（短評）\\n\\n';
+    p+='【Xサマリー】\n'+venue+raceNum+'R\n（❶〜❻丸数字・苗字のみ・断定口調・3行以内・買い目の艇のみ）\n本線　X-X-X/X-X-X/X-X-X/X-X-X/X-X-X/X-X-X\n抑え　X-X-X/X-X-X/X-X-X/X-X-X\nG.';
   } else {
     p='通常モード ver.4.7 で予想を出力してください。以下のJS計算済みデータを使用してください。\n\n';
     p+='レース: '+venue+' '+raceNum+'R\n';
@@ -657,13 +657,7 @@ function saveToBridge(){
   if(!text){showStatus('先に予想を生成してください','err');return;}
   var venue = document.getElementById('venue').value || '';
   var raceNum = document.getElementById('raceNum').value || '';
-  var bridge = {
-    ts: Date.now(),
-    venue: venue,
-    raceNum: raceNum,
-    outputText: text,
-    mode: currentMode
-  };
+  var bridge = {ts:Date.now(),venue:venue,raceNum:raceNum,outputText:text,mode:currentMode};
   localStorage.setItem('yoso_bridge', JSON.stringify(bridge));
   var btn = document.getElementById('bridgeBtn');
   btn.textContent = '✅ G. Toolsに連携済み';
