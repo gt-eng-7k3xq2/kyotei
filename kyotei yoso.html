@@ -629,7 +629,7 @@ async function generate(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         contents:[{role:'user',parts:[{text:prompt}]}],
-        generationConfig:{temperature:0.15,maxOutputTokens:4000}
+        generationConfig:{temperature:0.15,maxOutputTokens:8000}
       })
     });
     var json=await res.json();
