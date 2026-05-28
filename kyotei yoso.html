@@ -498,11 +498,11 @@ function displayCalcResults(data){
 
   // 機力スコア表
   html+='<div class="cr-sec">機力スコア</div>';
-  html+='<table class="cr-table"><thead><tr><th>順</th><th>艇</th><th>選手</th><th>展示</th><th>周足</th><th>直線</th><th>合計</th></tr></thead><tbody>';
+  html+='<table class="cr-table"><thead><tr><th>順</th><th>艇</th><th>選手</th><th>均展</th><th>均周</th><th>均直</th><th>直展</th><th>直周</th><th>直直</th><th>計</th></tr></thead><tbody>';
   var sk=boats.slice().sort((a,b)=>(a.kiryokuRank||99)-(b.kiryokuRank||99));
   sk.forEach(function(b){
     var cl=b.kiryokuRank===1?'best':'';
-    html+='<tr class="'+cl+'"><td>'+(b.kiryokuRank||'-')+'</td><td>'+b.n+'</td><td>'+b.name+'</td><td>'+(b.exT!==null?b.exT.toFixed(2):'-')+'</td><td>'+(b.lapT!==null?b.lapT.toFixed(2):'-')+'</td><td>'+(b.strT!==null?b.strT.toFixed(2):'-')+'</td><td class="tot">'+(b.kiryoku!==null?b.kiryoku.toFixed(2):'-')+'</td></tr>';
+    html+='<tr class="'+cl+'"><td>'+(b.kiryokuRank||'-')+'</td><td>'+b.n+'</td><td>'+b.name+'</td><td>'+(b.avgEx!==null?b.avgEx.toFixed(2):'=直')+'</td><td>'+(b.avgLap!==null?b.avgLap.toFixed(2):'=直')+'</td><td>'+(b.avgStr!==null?b.avgStr.toFixed(2):'=直')+'</td><td>'+(b.exT!==null?b.exT.toFixed(2):'-')+'</td><td>'+(b.lapT!==null?b.lapT.toFixed(2):'-')+'</td><td>'+(b.strT!==null?b.strT.toFixed(2):'-')+'</td><td class="tot">'+(b.kiryoku!==null?b.kiryoku.toFixed(2):'-')+'</td></tr>';
   });
   html+='</tbody></table>';
 
