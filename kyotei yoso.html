@@ -686,7 +686,15 @@ async function generate(){
         if(mA&&mB&&mC){
         var allBoats=['1','2','3','4','5','6'];
         var ranked2=calcData.parsed&&calcData.parsed.boats?calcData.parsed.boats.slice().sort(function(a,b){return (a.kiryokuRank||99)-(b.kiryokuRank||99);}):[];
+        // AI総合評価の×印艇をngBoatsとして使用
         var ngBoats=ranked2.length>=6?[String(ranked2[5].n)]:[];
+        var ngFromAI=[];
+        var aiLines=text.split('\n');
+        aiLines.forEach(function(ln){
+          var m=ln.match(/^(\d)位[\s　]*(\d)号艇[\s　]*×/);
+          if(m)ngFromAI.push(m[2]);
+        });
+        if(ngFromAI.length>0)ngBoats=ngFromAI;
         // ×印以外の◎○以外の艇
         var okOthers=allBoats.filter(function(b){return b!==maru&&b!==shiro&&ngBoats.indexOf(b)<0;});
         // C(2着追加)が◎○なら代替
