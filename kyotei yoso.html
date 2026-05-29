@@ -672,6 +672,9 @@ function buildPrompt(){
     });
     p+='\n2着候補A: '+normalResult.ab[0].n+'号艇\n';
     if(normalResult.ab[1])p+='2着候補B: '+normalResult.ab[1].n+'号艇\n';
+    if(normalResult.shinkido==='C'&&normalResult.ab[1]){
+      p+='【イン信頼度C注意】1号艇の逃げは薄い。2着候補B（'+normalResult.ab[1].n+'号艇）を◎評価、2着候補A（'+normalResult.ab[0].n+'号艇）を○評価とすること。\n';
+    }
     p+='\n【重要】買い目はシステムが自動生成する。以下のパラメータのみ出力せよ。\n';
     p+='【賞除艇の扱い】今節得点率が「-」の艇は賞除。レース出走可能。得点率項目のみ0点扱いで他は通常評価すること。足や実績が良ければ積極的に評価すること。\n';
     p+='3着A・3着Bは必ず異なる艇番にすること。\n';
@@ -804,6 +807,12 @@ async function generate(){
       var shinkido=calcData.normalResult.shinkido;
       var abA=ab[0]?String(ab[0].n):null;
       var abB=ab[1]?String(ab[1].n):null;
+      // 信頼度CのときAI出力の◎→abB、○→abAとして上書き
+      if(shinkido==='C'){
+        var mMaru2=text.match(/1位[\s　]*(\d)号艇[\s　]*◎/);
+        var mShiro2=text.match(/2位[\s　]*(\d)号艇[\s　]*○/);
+        if(mMaru2&&mShiro2){abB=mMaru2[1];abA=mShiro2[1];}
+      }
       // ngBoats収集（forceNG + AI×印）
       var ngNormal=[];
       if(calcData.parsed&&calcData.parsed.boats){
