@@ -670,6 +670,11 @@ async function generate(){
     if(currentMode==='are'&&calcData&&calcData.cands1st&&calcData.cands1st.length>=2){
       var maru=String(calcData.cands1st[0].n);
       var shiro=String(calcData.cands1st[1].n);
+      // AI総合評価の◎○を優先してmaru/shiroを上書き
+      var mMaru=text.match(/1位[\s　]*(\d)号艇[\s　]*◎/);
+      var mShiro=text.match(/2位[\s　]*(\d)号艇[\s　]*○/);
+      if(mMaru&&mShiro){maru=mMaru[1];shiro=mShiro[1];}
+
       var mA=text.match(/3着A[:：]\s*(\d)号艇/);
       var mB=text.match(/3着B[:：]\s*(\d)号艇/);
       var mC=text.match(/2着追加[:：]\s*(\d)号艇/);
