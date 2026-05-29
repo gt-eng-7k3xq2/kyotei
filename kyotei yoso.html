@@ -446,6 +446,23 @@ function checkFurikiri(areScore,boats,nigeRate){
   return{pass:true};
 }
 
+/* ===== JS強制×判定 ===== */
+function calcForceNG(boats){
+  var allTok=boats.map(b=>b.tokuten).filter(v=>v!==null);
+  var minTok=allTok.length?Math.min(...allTok):null;
+  var maxKiryokuRank=Math.max(...boats.map(b=>b.kiryokuRank||0));
+  boats.forEach(function(b){
+    b.forceNG=false;
+    var st=b.avgST!==null?b.avgST:(b.stKoki!==null?b.stKoki:null);
+    // 今節平均ST 0.25以上
+    if(st!==null&&st>=0.25){b.forceNG=true;b.forceNGReason='平均ST'+st+'≥0.25';return;}
+    // 得点率最下位かつ機力最下位
+    if(minTok!==null&&b.tokuten===minTok&&b.kiryokuRank===maxKiryokuRank){b.forceNG=true;b.forceNGReason='得点率最下位＋機力最下位';return;}
+    // 得点率2.00以下かつ1着率0%
+    if(b.tokuten!==null&&b.tokuten<=2.00&&b.winsRate===0){b.forceNG=true;b.forceNGReason='得点率'+b.tokuten+'以下＋1着率0%';return;}
+  });
+}
+
 /* ===== 1着候補 ===== */
 function select1st(boats){
   var cands=[];
@@ -510,6 +527,7 @@ function runCalc(){
   if(!raw){showStatus('データを貼り付けてください','err');return;}
   var parsed=parseData(raw);
   calcKiryoku(parsed.boats);
+  calcForceNG(parsed.boats);
   var areResult=calcAreIndex(parsed.boats,parsed.nigeRate);
   var furikiriResult=checkFurikiri(areResult.score,parsed.boats,parsed.nigeRate);
   var cands1st=select1st(parsed.boats);
@@ -603,7 +621,7 @@ function buildPrompt(){
     p+='\n【各艇データ】\n';
     boats.forEach(function(b){
       var st=b.avgST!==null?b.avgST:(b.stKoki!==null?b.stKoki:null);
-      p+=b.n+'号 '+b.name+' コース'+b.nyuse+' 今節得点率'+(b.tokuten!==null?b.tokuten:'-')+' 平均ST'+(st!==null?st:'-')+' 直前ST'+(b.st!==null?(b.stF?'F':'')+b.st:'-')+' F今期'+b.fKi+' 機力'+b.kiryokuRank+'位\n';
+      p+=b.n+'号 '+b.name+' コース'+b.nyuse+' 今節得点率'+(b.tokuten!==null?b.tokuten:'-')+' 平均ST'+(st!==null?st:'-')+' 直前ST'+(b.st!==null?(b.stF?'F':'')+b.st:'-')+' F今期'+b.fKi+' 機力'+b.kiryokuRank+'位'+(b.forceNG?' 【JS強制×: '+b.forceNGReason+'】':'')+'\n';
     });
     p+='\n【×評価の基準（必ず適用・変更禁止）】\n';
     p+='以下に該当する艇は必ず×評価とし、買い目から除外すること：\n';
@@ -691,15 +709,22 @@ async function generate(){
         if(mA&&mB&&mC){
         var allBoats=['1','2','3','4','5','6'];
         var ranked2=calcData.parsed&&calcData.parsed.boats?calcData.parsed.boats.slice().sort(function(a,b){return (a.kiryokuRank||99)-(b.kiryokuRank||99);}):[];
-        // AI総合評価の×印艇をngBoatsとして使用
-        var ngBoats=ranked2.length>=6?[String(ranked2[5].n)]:[];
-        var ngFromAI=[];
-        var aiLines=text.split('\n');
-        aiLines.forEach(function(ln){
-          var m=ln.match(/^(\d)位[\s　]*(\d)号艇[\s　]*×/);
-          if(m)ngFromAI.push(m[2]);
-        });
-        if(ngFromAI.length>0)ngBoats=ngFromAI;
+        // JS強制×判定を最優先でngBoatsにセット
+        var ngBoats=[];
+        if(calcData.parsed&&calcData.parsed.boats){
+          calcData.parsed.boats.forEach(function(b){if(b.forceNG)ngBoats.push(String(b.n));});
+        }
+        // JS強制×がない場合はAI×印を使用、それもない場合は機力最下位
+        if(ngBoats.length===0){
+          var ngFromAI=[];
+          var aiLines=text.split('\n');
+          aiLines.forEach(function(ln){
+            var m=ln.match(/^(\d)位[\s　]*(\d)号艇[\s　]*×/);
+            if(m)ngFromAI.push(m[2]);
+          });
+          if(ngFromAI.length>0)ngBoats=ngFromAI;
+          else if(ranked2.length>=6)ngBoats=[String(ranked2[5].n)];
+        }
         // ×印以外の◎○以外の艇
         var okOthers=allBoats.filter(function(b){return b!==maru&&b!==shiro&&ngBoats.indexOf(b)<0;});
         // C(2着追加)が◎○なら代替
