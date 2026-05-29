@@ -516,12 +516,21 @@ function calcNormal(boats,nigeRate){
     if(nigeRate>=65&&st<=0.15)shinkido='A';
     else if(nigeRate<55||(st!==null&&st>=0.18))shinkido='C';
   }
-  // 2着候補（forceNG艇は除外）
+  // 2着候補（forceNG艇は除外・得点率＋ST＋機力の総合スコアで選定）
   var sorted=boats.filter(b=>b.nyuse!==1&&!b.forceNG).sort((a,b)=>{
-    var ta=a.tokuten||0,tb=b.tokuten||0;
-    if(Math.abs(ta-tb)>0.5)return tb-ta;
-    var sa=a.avgST||a.stKoki||0.2,sb=b.avgST||b.stKoki||0.2;
-    return sa-sb;
+    // 総合スコア：得点率(40%) + ST速さ(30%) + 機力順位の良さ(30%)
+    var allTok=boats.map(x=>x.tokuten).filter(v=>v!==null);
+    var maxTok=allTok.length?Math.max(...allTok):1;
+    var maxKr=Math.max(...boats.map(x=>x.kiryokuRank||6));
+    function score(b){
+      var tok=(b.tokuten||0)/Math.max(maxTok,1)*40;
+      var st=b.avgST!==null?b.avgST:(b.stKoki!==null?b.stKoki:0.2);
+      var stScore=(0.3-Math.min(st,0.3))/0.3*30;
+      var kr=b.kiryokuRank||maxKr;
+      var krScore=(maxKr-kr)/Math.max(maxKr-1,1)*30;
+      return tok+stScore+krScore;
+    }
+    return score(b)-score(a);
   });
   var ab=sorted.slice(0,2).map((b,i)=>({n:b.n,reason:'2着候補'+(i===0?'A':'B')}));
   return{shinkido,ab};
