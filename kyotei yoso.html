@@ -791,7 +791,8 @@ async function generate(){
       var abB=ab[1]?String(ab[1].n):null;
       var mA2=text.match(/3着A[:：]\s*(\d)号艇/);
       var mB2=text.match(/3着B[:：]\s*(\d)号艇/);
-      var nA=mA2?mA2[1]:null, nB=mB2?mB2[1]:null;
+      var nA=mA2&&/^\d$/.test(mA2[1])?mA2[1]:null;
+      var nB=mB2&&/^\d$/.test(mB2[1])?mB2[1]:null;
       var allBoats2=['1','2','3','4','5','6'];
       var ngNormal=[];
       if(calcData.parsed&&calcData.parsed.boats){
