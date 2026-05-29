@@ -800,25 +800,47 @@ async function generate(){
         return !m||ok1st.indexOf(m[1])>=0;
       }).join('\n');
     }
-    // 通常モード後処理：重複除去・3着流し制限
+    // 通常モード後処理：重複除去・3着流し制限（買い目行 + Xサマリー行）
     if(currentMode==='normal'){
+      // 重複除去・3着流し制限の共通関数
+      function cleanBets(bets){
+        var seen={},axisCount={},result=[];
+        bets.forEach(function(bet){
+          var m=bet.match(/^(\d)-(\d)-(\d)$/);
+          if(!m){result.push(bet);return;}
+          var key=bet,axis=m[1]+'-'+m[2];
+          if(seen[key])return;
+          if((axisCount[axis]||0)>=2)return;
+          seen[key]=true;
+          axisCount[axis]=(axisCount[axis]||0)+1;
+          result.push(bet);
+        });
+        return result;
+      }
+      // 買い目行（1行1点形式）の重複除去
       var lines=text.split('\n');
-      var seenBets={};
-      var axis12count={};// "1着-2着"ごとの出現数カウント
-      var newLines=[];
+      var seenBets={},axis12count={},newLines=[];
       lines.forEach(function(ln){
         var m=ln.match(/^(\d)-(\d)-(\d)$/);
         if(m){
-          var key=m[1]+'-'+m[2]+'-'+m[3];
-          var axisKey=m[1]+'-'+m[2];
-          if(seenBets[key])return;// 重複除去
-          if((axis12count[axisKey]||0)>=2)return;// 同軸3着流し制限（2点まで）
+          var key=ln.trim(),axis=m[1]+'-'+m[2];
+          if(seenBets[key])return;
+          if((axis12count[axis]||0)>=2)return;
           seenBets[key]=true;
-          axis12count[axisKey]=(axis12count[axisKey]||0)+1;
+          axis12count[axis]=(axis12count[axis]||0)+1;
         }
         newLines.push(ln);
       });
       text=newLines.join('\n');
+      // Xサマリーの本線・抑え行（スラッシュ区切り）も整理
+      text=text.replace(/(本線[\u3000 \t])([0-9\-\/]+)/g,function(all,prefix,betsStr){
+        var bets=betsStr.split('/');
+        return prefix+cleanBets(bets).join('/');
+      });
+      text=text.replace(/(抑え[\u3000 \t])([0-9\-\/]+)/g,function(all,prefix,betsStr){
+        var bets=betsStr.split('/');
+        return prefix+cleanBets(bets).join('/');
+      });
     }
     document.getElementById('outText').textContent=text;
     document.getElementById('outWrap').classList.add('show');
