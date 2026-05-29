@@ -789,11 +789,12 @@ async function generate(){
       var shinkido=calcData.normalResult.shinkido;
       var abA=ab[0]?String(ab[0].n):null;
       var abB=ab[1]?String(ab[1].n):null;
+      // 3着パラメータをAI出力からパース（数字以外は無効）
       var mA2=text.match(/3着A[:：]\s*(\d)号艇/);
       var mB2=text.match(/3着B[:：]\s*(\d)号艇/);
       var nA=mA2&&/^\d$/.test(mA2[1])?mA2[1]:null;
       var nB=mB2&&/^\d$/.test(mB2[1])?mB2[1]:null;
-      var allBoats2=['1','2','3','4','5','6'];
+      // ngBoats収集（forceNG + AI×印）
       var ngNormal=[];
       if(calcData.parsed&&calcData.parsed.boats){
         calcData.parsed.boats.forEach(function(b){if(b.forceNG)ngNormal.push(String(b.n));});
@@ -802,11 +803,19 @@ async function generate(){
         var m=ln.match(/^(\d)位[\s　]*(\d)号艇[\s　]*×/);
         if(m&&ngNormal.indexOf(m[2])<0)ngNormal.push(m[2]);
       });
-      var okThird=allBoats2.filter(function(b){return b!==abA&&b!=='1'&&ngNormal.indexOf(b)<0;});
-      if(!nA||ngNormal.indexOf(nA)>=0)nA=okThird[0]||'2';
-      if(!nB||ngNormal.indexOf(nB)>=0||nB===nA)nB=okThird.filter(function(x){return x!==nA;})[0]||'3';
+      // 3着候補（1号艇・2着候補A・2着候補B・ng艇を除く）
+      var allBoats2=['1','2','3','4','5','6'];
+      var okThird=allBoats2.filter(function(b){
+        return b!=='1'&&b!==abA&&b!==abB&&ngNormal.indexOf(b)<0;
+      });
+      // nA・nBが無効なら okThird からフォールバック
+      if(!nA||nA==='1'||nA===abA||nA===abB||ngNormal.indexOf(nA)>=0)nA=okThird[0]||'2';
+      if(!nB||nB==='1'||nB===abA||nB===abB||ngNormal.indexOf(nB)>=0||nB===nA)
+        nB=okThird.filter(function(x){return x!==nA;})[0]||String(parseInt(nA)%6+1);
+      // 買い目生成
       var honsen=[],osaee=[];
       if(shinkido==='C'&&abB){
+        // 非逃げ6点（abB軸）＋逃げ2点
         honsen.push(abB+'-'+abA+'-'+nA);
         honsen.push(abB+'-'+abA+'-'+nB);
         honsen.push(abB+'-'+nA+'-'+abA);
@@ -816,6 +825,7 @@ async function generate(){
         osaee.push('1-'+abA+'-'+nA);
         osaee.push('1-'+abA+'-'+nB);
       } else {
+        // A/B：1着固定
         honsen.push('1-'+abA+'-'+nA);
         honsen.push('1-'+abA+'-'+nB);
         if(abB){
@@ -826,19 +836,20 @@ async function generate(){
           osaee.push('1-'+nA+'-'+abB);
           osaee.push('1-'+nB+'-'+abB);
         } else {
-          honsen.push('1-'+abA+'-'+nA);
-          honsen.push('1-'+abA+'-'+nB);
+          // abBなし：abA軸で3着4種
+          osaee.push('1-'+abA+'-'+nA);
+          osaee.push('1-'+abA+'-'+nB);
           osaee.push('1-'+nA+'-'+abA);
           osaee.push('1-'+nB+'-'+abA);
-          osaee.push('1-'+nA+'-'+nB);
-          osaee.push('1-'+nB+'-'+nA);
         }
       }
+      // 重複除去して各4点
       function uniq2(arr){var s={};return arr.filter(function(x){if(s[x])return false;s[x]=true;return true;});}
       honsen=uniq2(honsen).slice(0,4);
       osaee=uniq2(osaee).slice(0,4);
       var honsenStr=honsen.join('/'),osaeeStr=osaee.join('/');
       var betBlock='\n【最終買い目】8点\n本線\n'+honsen.join('\n')+'\n抑え\n'+osaee.join('\n')+'\n';
+      // パラメータブロックの直後に挿入
       var pi=text.indexOf('【買い目パラメータ】');
       if(pi>=0){
         var ni2=text.indexOf('\n3着B',pi);
@@ -847,6 +858,7 @@ async function generate(){
       } else {
         text=betBlock+'\n'+text;
       }
+      // XサマリーのプレースホルダをJS生成買い目に置換
       text=text.replace('HONSEN',honsenStr);
       text=text.replace('OSAEE',osaeeStr);
     }
