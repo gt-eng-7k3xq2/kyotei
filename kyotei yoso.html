@@ -664,10 +664,10 @@ function buildPrompt(){
     if(normalResult.ab[1])p+='2着候補B: '+normalResult.ab[1].n+'号艇\n';
     p+='\n【買い目生成ルール（絶対厳守）】\n';
     if(normalResult.shinkido==='C'){
-      p+='イン信頼度Cのため逃げ・非逃げ両立構成で出力すること。\n';
-      p+='本線4点：1号艇逃げ想定2点（1-2着候補A-X × 2）＋2着候補B1着想定2点（2着候補B-X-X × 2）\n';
-      p+='抑え4点：逃げ2点（1-X-X）＋非逃げ2点（2着候補B-X-X）\n';
+      p+='イン信頼度Cのため非逃げ重視構成で出力すること。\n';
+      p+='合計8点：非逃げ6点（2着候補B-X-X）＋逃げ2点（1-X-X）\n';
       p+='※非逃げ買い目の1着は必ず2着候補B固定。\n';
+      p+='※逃げ2点は1号艇1着で2着・3着を有力艇から選ぶ。\n';
       p+='※3着は◎○▲の中から有力2艇に絞ること。全通り禁止。\n';
     } else {
       p+='1着は全て1号艇固定。\n';
@@ -682,7 +682,7 @@ function buildPrompt(){
     p+='【荒れ指数】'+areResult.score+'点（'+(areResult.score>=8?'転用可':'転用不可')+'）\n';
     p+='【特記】\n\n';
     if(normalResult.shinkido==='C'){
-      p+='【最終買い目】8点\n本線\n1-X-X\n1-X-X\nX-X-X\nX-X-X\n抑え\n1-X-X\n1-X-X\nX-X-X\nX-X-X\n\n';
+      p+='【最終買い目】8点\n本線\nX-X-X\nX-X-X\nX-X-X\nX-X-X\n抑え\nX-X-X\nX-X-X\n1-X-X\n1-X-X\n\n';
     } else {
       p+='【最終買い目】8点\n本線\n1-X-X\n1-X-X\n1-X-X\n1-X-X\n抑え\n1-X-X\n1-X-X\n1-X-X\n1-X-X\n\n';
     }
