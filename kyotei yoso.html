@@ -451,16 +451,22 @@ function calcForceNG(boats){
   var allTok=boats.map(b=>b.tokuten).filter(v=>v!==null);
   var minTok=allTok.length?Math.min(...allTok):null;
   var maxKiryokuRank=Math.max(...boats.map(b=>b.kiryokuRank||0));
+  var candidates=[];
   boats.forEach(function(b){
-    b.forceNG=false;
+    b.forceNG=false;b.forceNGReason='';
     var st=b.avgST!==null?b.avgST:(b.stKoki!==null?b.stKoki:null);
-    // 今節平均ST 0.25以上
-    if(st!==null&&st>=0.25){b.forceNG=true;b.forceNGReason='平均ST'+st+'≥0.25';return;}
-    // 得点率最下位かつ機力最下位
-    if(minTok!==null&&b.tokuten===minTok&&b.kiryokuRank===maxKiryokuRank){b.forceNG=true;b.forceNGReason='得点率最下位＋機力最下位';return;}
-    // 得点率2.00以下かつ1着率0%
-    if(b.tokuten!==null&&b.tokuten<=2.00&&b.winsRate===0){b.forceNG=true;b.forceNGReason='得点率'+b.tokuten+'以下＋1着率0%';return;}
+    var score=0,reason='';
+    if(st!==null&&st>=0.25){score+=3;reason='平均ST'+st+'≥0.25';}
+    if(minTok!==null&&b.tokuten===minTok&&b.kiryokuRank===maxKiryokuRank){score+=2;reason=reason||'得点率最下位＋機力最下位';}
+    if(b.tokuten!==null&&b.tokuten<=2.00&&b.winsRate===0){score+=2;reason=reason||'得点率'+b.tokuten+'以下＋1着率0%';}
+    if(score>0)candidates.push({b:b,score:score,reason:reason});
   });
+  // 最もスコアが高い1艇だけ強制×
+  if(candidates.length>0){
+    candidates.sort(function(a,b){return b.score-a.score;});
+    candidates[0].b.forceNG=true;
+    candidates[0].b.forceNGReason=candidates[0].reason;
+  }
 }
 
 /* ===== 1着候補 ===== */
