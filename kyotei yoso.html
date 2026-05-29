@@ -816,34 +816,62 @@ async function generate(){
       if(!validThird(nB)||nB===nA)nB=okThird.filter(function(x){return x!==nA;})[0]||okThird[1]||'3';
       // 買い目生成（3艇すべて異なることを保証）
       function vb(a,b,c){return a&&b&&c&&a!==b&&b!==c&&a!==c;}
-      var honsen=[],osaee=[],allBets={};
-      function push(arr,a,b,c){
+      var honsen=[],osaee=[];
+      var honsenBets={},osaeBets={};
+      function pushH(a,b,c){
         if(!vb(a,b,c))return;
         var k=a+'-'+b+'-'+c;
-        if(allBets[k])return;
-        allBets[k]=true;
-        arr.push(k);
+        if(honsenBets[k])return;
+        honsenBets[k]=true;
+        honsen.push(k);
+      }
+      function pushO(a,b,c){
+        if(!vb(a,b,c))return;
+        var k=a+'-'+b+'-'+c;
+        if(osaeBets[k]||honsenBets[k])return;
+        osaeBets[k]=true;
+        osaee.push(k);
       }
       if(shinkido==='C'&&abB){
         // 非逃げ6点（abB軸）＋逃げ2点
-        push(honsen,abB,abA,nA); push(honsen,abB,abA,nB);
-        push(honsen,abB,nA,abA); push(honsen,abB,nB,abA);
-        push(osaee,abB,nA,nB);   push(osaee,abB,nB,nA);
-        push(osaee,'1',abA,nA);  push(osaee,'1',abA,nB);
+        pushH(abB,abA,nA); pushH(abB,abA,nB);
+        pushH(abB,nA,abA); pushH(abB,nB,abA);
+        pushO(abB,nA,nB);   pushO(abB,nB,nA);
+        pushO('1',abA,nA);  pushO('1',abA,nB);
       } else {
         // A/B：1着固定
-        push(honsen,'1',abA,nA); push(honsen,'1',abA,nB);
+        pushH('1',abA,nA); pushH('1',abA,nB);
         if(abB){
-          push(honsen,'1',abB,nA); push(honsen,'1',abB,nB);
-          push(osaee,'1',abA,abB); push(osaee,'1',abB,abA);
-          push(osaee,'1',abA,nA);  push(osaee,'1',abB,nB);
+          pushH('1',abB,nA); pushH('1',abB,nB);
+          // 抑え：abA・abB軸でnA・nBを交差させて本線と異なる組み合わせを確保
+          pushO('1',abA,abB); pushO('1',abB,abA);
+          pushO('1',abA,nB);  pushO('1',abB,nA);
+          // 4点未満の場合の追加候補
+          pushO('1',abA,nA);  pushO('1',abB,nB);
         } else {
-          push(osaee,'1',nA,abA); push(osaee,'1',nB,abA);
-          push(osaee,'1',abA,nA); push(osaee,'1',abA,nB);
+          pushO('1',nA,abA); pushO('1',nB,abA);
+          pushO('1',abA,nA); pushO('1',abA,nB);
         }
       }
       honsen=honsen.slice(0,4);
       osaee=osaee.slice(0,4);
+      // 抑えが4点未満の場合、abA・abB軸でokThirdから補完
+      if(osaee.length<4){
+        var extraThird=['1','2','3','4','5','6'].filter(function(b){
+          return b!=='1'&&ngNormal.indexOf(b)<0;
+        });
+        [abA,abB].forEach(function(ax){
+          if(!ax)return;
+          extraThird.forEach(function(b2){
+            if(osaee.length>=4)return;
+            extraThird.forEach(function(b3){
+              if(osaee.length>=4)return;
+              pushO('1',ax,b3);
+            });
+          });
+        });
+        osaee=osaee.slice(0,4);
+      }
       var honsenStr=honsen.join('/'),osaeeStr=osaee.join('/');
       var betBlock='\n【最終買い目】8点\n本線\n'+honsen.join('\n')+'\n抑え\n'+osaee.join('\n')+'\n';
       var pi=text.indexOf('【買い目パラメータ】');
