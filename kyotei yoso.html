@@ -680,10 +680,22 @@ async function generate(){
         add(osaee,maru,B,A);  add(osaee,shiro,B,A);
         var ex2=[[maru,shiro,A],[maru,shiro,B],[shiro,maru,A],[shiro,maru,B]];
         for(var j=0;j<ex2.length&&osaee.length<6;j++)add(osaee,ex2[j][0],ex2[j][1],ex2[j][2]);
+        // それでも6点未満なら全okFor3rdの組み合わせで補完
+        if(osaee.length<6){
+          var all3=[A,B].concat(okFor3rd.filter(function(x){return x!==A&&x!==B;}));
+          for(var p=0;p<all3.length&&osaee.length<6;p++){
+            add(osaee,maru,C,all3[p]);
+            if(osaee.length<6)add(osaee,shiro,C,all3[p]);
+          }
+        }
         osaee=osaee.slice(0,6);
         var bet='\n【買い目】\n本線('+honsen.length+'点)\n'+honsen.join('\n')+'\n抑え('+osaee.length+'点)\n'+osaee.join('\n')+'\n';
+        var honsenStr=honsen.join('/');
+        var osaeeStr=osaee.join('/');
         var ii=text.indexOf('2着追加');
         if(ii>=0){var ni=text.indexOf('\n',ii);if(ni>=0)text=text.slice(0,ni+1)+bet+text.slice(ni+1);}
+        text=text.replace(/本線[\u3000 ][X0-9\-\/]+/,'本線\u3000'+honsenStr);
+        text=text.replace(/抑え[\u3000 ][X0-9\-\/]+/,'抑え\u3000'+osaeeStr);
       }
     }
     document.getElementById('outText').textContent=text;
