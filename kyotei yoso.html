@@ -646,56 +646,38 @@ async function generate(){
       var mB=text.match(/3着B[:：]\s*(\d)号艇/);
       var mC=text.match(/2着追加[:：]\s*(\d)号艇/);
       if(mA&&mB&&mC){
-        var A=mA[1],B=mB[1],C=mC[1];
         var allBoats=['1','2','3','4','5','6'];
-        // ×印艇（機力5位・6位）を3着候補から除外
         var ranked2=calcData.parsed&&calcData.parsed.boats?calcData.parsed.boats.slice().sort(function(a,b){return (a.kiryokuRank||99)-(b.kiryokuRank||99);}):[];
-        var ngBoats=ranked2.length>=6?[String(ranked2[4].n),String(ranked2[5].n)]:[];
-        var okFor3rd=allBoats.filter(function(b){return b!==maru&&b!==shiro&&ngBoats.indexOf(b)<0;});
-        if(ngBoats.indexOf(A)>=0&&okFor3rd.length>0)A=okFor3rd[0];
-        if(ngBoats.indexOf(B)>=0&&okFor3rd.length>1)B=okFor3rd[1];
-        if(A===B&&okFor3rd.length>1)B=okFor3rd.filter(function(b){return b!==A&&b!==C;})[0]||B;
-        if(C===maru||C===shiro){
-          var ranked=calcData.parsed&&calcData.parsed.boats?calcData.parsed.boats.slice().sort(function(a,b){return (a.kiryokuRank||99)-(b.kiryokuRank||99);}):[];
-          for(var ri=0;ri<ranked.length;ri++){var rn=String(ranked[ri].n);if(rn!==maru&&rn!==shiro){C=rn;break;}}
-        }
-        // Aが◎○Cと被ったら代替
-        if(A===maru||A===shiro||A===C){
-          for(var ai=0;ai<okFor3rd.length;ai++){var an=okFor3rd[ai];if(an!==C&&an!==B){A=an;break;}}
-        }
-        // Bが◎○CAと被ったら代替
-        if(B===maru||B===shiro||B===C||B===A){
-          for(var bi=0;bi<okFor3rd.length;bi++){var bn=okFor3rd[bi];if(bn!==C&&bn!==A){B=bn;break;}}
-        }
+        var ngBoats=ranked2.length>=6?[String(ranked2[5].n)]:[];
+        // ×印以外の◎○以外の艇
+        var okOthers=allBoats.filter(function(b){return b!==maru&&b!==shiro&&ngBoats.indexOf(b)<0;});
+        // C(2着追加)が◎○なら代替
+        var C=mC[1];
+        if(C===maru||C===shiro){for(var ri=0;ri<okOthers.length;ri++){C=okOthers[ri];break;}}
+        // 全有効買い目を生成
         function vbet(a,b,c){return a!==b&&b!==c&&a!==c;}
-        var honsen=[],osaee=[],seen={};
-        function add(arr,a,b,c){if(!vbet(a,b,c))return;var k=a+'-'+b+'-'+c;if(!seen[k]){seen[k]=true;arr.push(k);}}
-        add(honsen,maru,shiro,A); add(honsen,maru,shiro,B);
-        add(honsen,shiro,maru,A); add(honsen,shiro,maru,B);
-        add(honsen,maru,C,A);     add(honsen,maru,C,B);
-        var ex1=[[shiro,C,A],[shiro,C,B],[maru,A,B],[shiro,A,B]];
-        for(var i=0;i<ex1.length&&honsen.length<6;i++)add(honsen,ex1[i][0],ex1[i][1],ex1[i][2]);
-        add(osaee,shiro,C,A); add(osaee,shiro,C,B);
-        add(osaee,maru,A,B);  add(osaee,shiro,A,B);
-        add(osaee,maru,B,A);  add(osaee,shiro,B,A);
-        var ex2=[[maru,shiro,A],[maru,shiro,B],[shiro,maru,A],[shiro,maru,B]];
-        for(var j=0;j<ex2.length&&osaee.length<6;j++)add(osaee,ex2[j][0],ex2[j][1],ex2[j][2]);
-        // それでも6点未満なら全okFor3rdの組み合わせで補完
-        if(osaee.length<6){
-          var all3=[A,B].concat(okFor3rd.filter(function(x){return x!==A&&x!==B;}));
-          for(var p=0;p<all3.length&&osaee.length<6;p++){
-            add(osaee,maru,C,all3[p]);
-            if(osaee.length<6)add(osaee,shiro,C,all3[p]);
-          }
-        }
-        osaee=osaee.slice(0,6);
+        var seen={},allBets=[];
+        function tryAdd(a,b,c){if(!vbet(a,b,c))return;var k=a+'-'+b+'-'+c;if(!seen[k]){seen[k]=true;allBets.push(k);}}
+        // 優先順位順に生成
+        var A=mA[1],B=mB[1];
+        if(ngBoats.indexOf(A)>=0)A=okOthers.filter(function(x){return x!==B;})[0]||okOthers[0];
+        if(ngBoats.indexOf(B)>=0||B===A)B=okOthers.filter(function(x){return x!==A;})[0]||okOthers[1]||okOthers[0];
+        // 本線優先（◎-○, ○-◎, ◎-C の組み合わせ）
+        var honsen=[];
+        [A,B].forEach(function(t){tryAdd(maru,shiro,t);tryAdd(shiro,maru,t);tryAdd(maru,C,t);tryAdd(shiro,C,t);});
+        honsen=allBets.splice(0,Math.min(6,allBets.length));
+        // 抑え: 残り全組み合わせ
+        var mid2=[maru,shiro];
+        var mid3=okOthers.concat([]);
+        mid2.forEach(function(h){mid3.forEach(function(m){okOthers.forEach(function(t){tryAdd(h,m,t);});});});
+        // 全組み合わせからhonsenを除いた残りを抑えに
+        var osaee=allBets.slice(0,6);
+        var honsenStr=honsen.join('/'),osaeeStr=osaee.join('/');
         var bet='\n【買い目】\n本線('+honsen.length+'点)\n'+honsen.join('\n')+'\n抑え('+osaee.length+'点)\n'+osaee.join('\n')+'\n';
-        var honsenStr=honsen.join('/');
-        var osaeeStr=osaee.join('/');
         var ii=text.indexOf('2着追加');
         if(ii>=0){var ni=text.indexOf('\n',ii);if(ni>=0)text=text.slice(0,ni+1)+bet+text.slice(ni+1);}
-        text=text.replace(/本線[\u3000 ][X0-9\-\/]+/,'本線\u3000'+honsenStr);
-        text=text.replace(/抑え[\u3000 ][X0-9\-\/]+/,'抑え\u3000'+osaeeStr);
+        text=text.replace(/本線[\u3000 ][X0-9\-\/]+/g,'本線\u3000'+honsenStr);
+        text=text.replace(/抑え[\u3000 ][X0-9\-\/]+/g,'抑え\u3000'+osaeeStr);
       }
     }
     document.getElementById('outText').textContent=text;
