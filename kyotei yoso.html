@@ -827,12 +827,18 @@ async function generate(){
       var mB2=text.match(/3着B[:：]\s*(\d)号艇/);
       var nA=mA2?mA2[1]:null;
       var nB=mB2?mB2[1]:null;
-      // 3着候補として使える艇（1・abA・abB・ng除外）
+      // 3着候補として使える艇（abA・abB・ng除外。A/Bは1号艇も除外、Cは1号艇OK）
       var okThird=['1','2','3','4','5','6'].filter(function(b){
-        return b!=='1'&&b!==abA&&b!==abB&&ngNormal.indexOf(b)<0;
+        if(b===abA||b===abB||ngNormal.indexOf(b)>=0)return false;
+        if(shinkido!=='C'&&b==='1')return false;
+        return true;
       });
-      // nA・nBのバリデーション（使用禁止艇はokThirdで上書き）
-      function validThird(v){return v&&v!=='1'&&v!==abA&&v!==abB&&ngNormal.indexOf(v)<0;}
+      // nA・nBのバリデーション
+      function validThird(v){
+        if(!v||v===abA||v===abB||ngNormal.indexOf(v)>=0)return false;
+        if(shinkido!=='C'&&v==='1')return false;
+        return true;
+      }
       if(!validThird(nA))nA=okThird[0]||'2';
       if(!validThird(nB)||nB===nA)nB=okThird.filter(function(x){return x!==nA;})[0]||okThird[1]||'3';
       // 買い目生成（3艇すべて異なることを保証）
@@ -858,7 +864,7 @@ async function generate(){
         pushH(abB,abA,nA); pushH(abB,abA,nB);
         pushH(abB,nA,abA); pushH(abB,nB,abA);
         pushO(abB,nA,nB);  pushO(abB,nB,nA);
-        pushO('1',abA,nA); pushO('1',abA,nB);
+        pushO('1',abA,nA); pushO('1',nA,abA);
       } else {
         // A/B：1着固定
         // 本線：abA軸2点 + abB軸2点
