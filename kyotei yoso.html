@@ -516,8 +516,8 @@ function calcNormal(boats,nigeRate){
     if(nigeRate>=65&&st<=0.15)shinkido='A';
     else if(nigeRate<55||(st!==null&&st>=0.18))shinkido='C';
   }
-  // 2着候補
-  var sorted=boats.filter(b=>b.nyuse!==1).sort((a,b)=>{
+  // 2着候補（forceNG艇は除外）
+  var sorted=boats.filter(b=>b.nyuse!==1&&!b.forceNG).sort((a,b)=>{
     var ta=a.tokuten||0,tb=b.tokuten||0;
     if(Math.abs(ta-tb)>0.5)return tb-ta;
     var sa=a.avgST||a.stKoki||0.2,sb=b.avgST||b.stKoki||0.2;
