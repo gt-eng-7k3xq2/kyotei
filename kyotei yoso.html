@@ -621,6 +621,8 @@ function buildPrompt(){
     });
     p+='\n【荒れ指数】'+areResult.score+'点\n内訳: '+areResult.breakdown.join(' / ')+'\n';
     p+='【足切り】クリア\n\n';
+    p+='【6号艇評価ルール（厳守）】\n';
+    p+='6号艇は展開上1着が難しいため、機力・足が優秀でも◎○評価は禁止。必ず▲以下で評価すること。2・3着での絡みは積極的に考慮してよい。\n\n';
     p+='【1着候補（JS算出）】\n';
     if(cands1st.length)cands1st.forEach(c=>{p+=c.n+'号艇（'+c.reason+'）\n';});
     else p+='外枠条件未達 → データから判断してください\n';
