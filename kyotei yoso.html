@@ -725,12 +725,7 @@ async function generate(){
       var mA=text.match(/3着A[:：]\s*(\d)号艇/);
       var mB=text.match(/3着B[:：]\s*(\d)号艇/);
       var mC=text.match(/2着追加[:：]\s*(\d)号艇/);
-        // fallback: AIがパラメータを出さなかった場合
-        if(!mA||!mB||!mC){
-          var fb=[okOthers[0]||'1', okOthers[1]||okOthers[0]||'5', okOthers[0]||'1'];
-          if(!mA)mA={1:fb[0]};if(!mB)mB={1:fb[1]};if(!mC)mC={1:fb[2]};
-        }
-        if(mA&&mB&&mC){
+      {
         var allBoats=['1','2','3','4','5','6'];
         var ranked2=calcData.parsed&&calcData.parsed.boats?calcData.parsed.boats.slice().sort(function(a,b){return (a.kiryokuRank||99)-(b.kiryokuRank||99);}):[];
         // JS強制×判定を最優先でngBoatsにセット
@@ -751,6 +746,10 @@ async function generate(){
         }
         // ×印以外の◎○以外の艇
         var okOthers=allBoats.filter(function(b){return b!==maru&&b!==shiro&&ngBoats.indexOf(b)<0;});
+        // fallback: AIがパラメータを出さなかった場合（okOthers定義後）
+        if(!mA)mA={1:okOthers[0]||'3'};
+        if(!mB)mB={1:okOthers[1]||okOthers[0]||'4'};
+        if(!mC)mC={1:okOthers[0]||'1'};
         // C(2着追加)が◎○なら代替
         var C=mC[1];
         if(C===maru||C===shiro){for(var ri=0;ri<okOthers.length;ri++){C=okOthers[ri];break;}}
@@ -772,14 +771,12 @@ async function generate(){
         var mid2=[maru,shiro];
         var mid3=okOthers.concat([]);
         mid2.forEach(function(h){mid3.forEach(function(m){okOthers.forEach(function(t){tryAdd(h,m,t);});});});
-        // 抑えが6点未満の場合、ng以外の全艇で補完
+        // 抑えが6点未満の場合、全艇で補完
         if(allBets.length<6){
           var allBoatsArr=['1','2','3','4','5','6'];
           mid2.forEach(function(h){
-            allBoatsArr.forEach(function(m){
-              allBoatsArr.forEach(function(t){
-                tryAdd(h,m,t);
-              });
+            allBoatsArr.forEach(function(m2){
+              allBoatsArr.forEach(function(t){tryAdd(h,m2,t);});
             });
           });
         }
@@ -870,19 +867,14 @@ async function generate(){
       }
       honsen=honsen.slice(0,4);
       osaee=osaee.slice(0,4);
-      // 抑えが4点未満の場合、abA・abB軸でokThirdから補完
+      // 抑えが4点未満の場合、1着固定で全2着・3着の組み合わせから補完
       if(osaee.length<4){
-        var extraThird=['1','2','3','4','5','6'].filter(function(b){
-          return b!=='1'&&ngNormal.indexOf(b)<0;
-        });
-        [abA,abB].forEach(function(ax){
-          if(!ax)return;
-          extraThird.forEach(function(b2){
+        var allN=['1','2','3','4','5','6'];
+        allN.forEach(function(b2){
+          if(osaee.length>=4)return;
+          allN.forEach(function(b3){
             if(osaee.length>=4)return;
-            extraThird.forEach(function(b3){
-              if(osaee.length>=4)return;
-              pushO('1',ax,b3);
-            });
+            pushO('1',b2,b3);
           });
         });
         osaee=osaee.slice(0,4);
