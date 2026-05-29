@@ -654,19 +654,18 @@ async function generate(){
         var okFor3rd=allBoats.filter(function(b){return b!==maru&&b!==shiro&&ngBoats.indexOf(b)<0;});
         if(ngBoats.indexOf(A)>=0&&okFor3rd.length>0)A=okFor3rd[0];
         if(ngBoats.indexOf(B)>=0&&okFor3rd.length>1)B=okFor3rd[1];
-        if(A===B&&okFor3rd.length>1)B=okFor3rd.filter(function(b){return b!==A;})[0]||B;
-        // Cが◎○と被ったら機力順で代替
+        if(A===B&&okFor3rd.length>1)B=okFor3rd.filter(function(b){return b!==A&&b!==C;})[0]||B;
         if(C===maru||C===shiro){
           var ranked=calcData.parsed&&calcData.parsed.boats?calcData.parsed.boats.slice().sort(function(a,b){return (a.kiryokuRank||99)-(b.kiryokuRank||99);}):[];
           for(var ri=0;ri<ranked.length;ri++){var rn=String(ranked[ri].n);if(rn!==maru&&rn!==shiro){C=rn;break;}}
         }
         // Aが◎○Cと被ったら代替
         if(A===maru||A===shiro||A===C){
-          for(var ai=0;ai<allBoats.length;ai++){var an=allBoats[ai];if(an!==maru&&an!==shiro&&an!==C&&an!==B){A=an;break;}}
+          for(var ai=0;ai<okFor3rd.length;ai++){var an=okFor3rd[ai];if(an!==C&&an!==B){A=an;break;}}
         }
         // Bが◎○CAと被ったら代替
         if(B===maru||B===shiro||B===C||B===A){
-          for(var bi=0;bi<allBoats.length;bi++){var bn=allBoats[bi];if(bn!==maru&&bn!==shiro&&bn!==C&&bn!==A){B=bn;break;}}
+          for(var bi=0;bi<okFor3rd.length;bi++){var bn=okFor3rd[bi];if(bn!==C&&bn!==A){B=bn;break;}}
         }
         function vbet(a,b,c){return a!==b&&b!==c&&a!==c;}
         var honsen=[],osaee=[],seen={};
