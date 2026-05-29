@@ -672,7 +672,10 @@ function buildPrompt(){
     p+='\n2着候補A: '+normalResult.ab[0].n+'号艇\n';
     if(normalResult.ab[1])p+='2着候補B: '+normalResult.ab[1].n+'号艇\n';
     p+='\n【重要】買い目はシステムが自動生成する。以下のパラメータのみ出力せよ。\n';
-    p+='3着候補は×印以外から2艇選ぶこと。\n\n';
+    p+='3着A・3着Bは必ず異なる艇番にすること。\n';
+    p+='3着A・3着Bに使用禁止の艇番：1号艇、2着候補A（'+normalResult.ab[0].n+'号艇）';
+    if(normalResult.ab[1])p+='、2着候補B（'+normalResult.ab[1].n+'号艇）';
+    p+='、×評価の艇。\n\n';
     p+='【出力フォーマット（必須・この順で）】\n';
     p+='【イン信頼度】'+normalResult.shinkido+'（逃げ率'+(nigeRate||'?')+'% ST'+(st1||'?')+'）\n';
     p+='【荒れ指数】'+areResult.score+'点（'+(areResult.score>=8?'転用可':'転用不可')+'）\n';
@@ -845,16 +848,16 @@ async function generate(){
           addBet(osaee,'1',nB,abA);
         }
       }
-      // 重複除去して各4点、足りない場合は補完
+      // 重複除去して各4点
       function uniq2(arr){var s={};return arr.filter(function(x){if(s[x])return false;s[x]=true;return true;});}
       honsen=uniq2(honsen).slice(0,4);
       osaee=uniq2(osaee).slice(0,4);
-      // 4点未満の場合、全組み合わせから補完
+      // 4点未満の場合、全組み合わせから補完（本線・抑えで独立管理）
       var allC=['2','3','4','5','6'];
-      var used={};
-      honsen.concat(osaee).forEach(function(b){used[b]=true;});
-      function fill(arr,axis1,max){
-        if(arr.length>=max)return;
+      function fillArr(arr,axis1,max,exclude){
+        var used={};
+        arr.forEach(function(b){used[b]=true;});
+        if(exclude)exclude.forEach(function(b){used[b]=true;});
         allC.forEach(function(b2){
           if(arr.length>=max)return;
           allC.forEach(function(b3){
@@ -865,8 +868,8 @@ async function generate(){
         });
       }
       var axis1st=shinkido==='C'&&abB?abB:'1';
-      fill(honsen,axis1st,4);
-      fill(osaee,shinkido==='C'&&abB?abB:'1',4);
+      fillArr(honsen,axis1st,4,null);
+      fillArr(osaee,axis1st,4,honsen);
       var honsenStr=honsen.join('/'),osaeeStr=osaee.join('/');
       var betBlock='\n【最終買い目】8点\n本線\n'+honsen.join('\n')+'\n抑え\n'+osaee.join('\n')+'\n';
       // パラメータブロックの直後に挿入
