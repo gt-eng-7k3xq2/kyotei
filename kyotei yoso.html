@@ -732,6 +732,11 @@ async function generate(){
       var mA=text.match(/3着A[:：]\s*(\d)号艇/);
       var mB=text.match(/3着B[:：]\s*(\d)号艇/);
       var mC=text.match(/2着追加[:：]\s*(\d)号艇/);
+      // 総合評価の▲△から3着候補を固定取得
+      var rSan=text.match(/3位\s*(\d)号艇/);
+      var rYon=text.match(/4位\s*(\d)号艇/);
+      if(rSan&&(!mA||mA[1]===maru||mA[1]===shiro))mA={1:rSan[1]};
+      if(rYon&&(!mB||mB[1]===maru||mB[1]===shiro||mB[1]===(mA?mA[1]:null)))mB={1:rYon[1]};
       {
         var allBoats=['1','2','3','4','5','6'];
         var ranked2=calcData.parsed&&calcData.parsed.boats?calcData.parsed.boats.slice().sort(function(a,b){return (a.kiryokuRank||99)-(b.kiryokuRank||99);}):[];
@@ -807,115 +812,55 @@ async function generate(){
     }
     // 通常モードJS自動生成
     if(currentMode==='normal'&&calcData){
-      var ab=calcData.normalResult.ab;
       var shinkido=calcData.normalResult.shinkido;
-      var abA=ab[0]?String(ab[0].n):null;
-      var abB=ab[1]?String(ab[1].n):null;
-      // 信頼度CのときAI出力の◎→abB、○→abAとして上書き
-      if(shinkido==='C'){
-        var mMaru2=text.match(/1位[\s　]*(\d)号艇[\s　]*◎/);
-        var mShiro2=text.match(/2位[\s　]*(\d)号艇[\s　]*○/);
-        if(mMaru2&&mShiro2){abB=mMaru2[1];abA=mShiro2[1];}
+      // 総合評価1〜5位をパース（完全固定）
+      var r1=text.match(/1位\s*(\d)号艇/);
+      var r2=text.match(/2位\s*(\d)号艇/);
+      var r3=text.match(/3位\s*(\d)号艇/);
+      var r4=text.match(/4位\s*(\d)号艇/);
+      var r5=text.match(/5位\s*(\d)号艇/);
+      var p1=r1?r1[1]:'1';
+      var p2=r2?r2[1]:null;
+      var p3=r3?r3[1]:null;
+      var p4=r4?r4[1]:null;
+      var p5=r5?r5[1]:null;
+      // パース失敗時補完
+      var ab=calcData.normalResult.ab;
+      var usedP=[];
+      function nextUnused(arr){
+        var def=['2','3','4','5','6'];
+        return def.filter(function(x){return arr.indexOf(x)<0;})[0]||'2';
       }
-      // ngBoats収集（forceNG + AI×印）
-      var ngNormal=[];
-      if(calcData.parsed&&calcData.parsed.boats){
-        calcData.parsed.boats.forEach(function(b){if(b.forceNG)ngNormal.push(String(b.n));});
-      }
-      text.split('\n').forEach(function(ln){
-        var m=ln.match(/(\d)位[\s　]*(\d)号艇[\s　]*×/);
-        if(m&&ngNormal.indexOf(m[2])<0)ngNormal.push(m[2]);
-      });
-      // 3着パラメータをAI出力からパース
-      var mA2=text.match(/3着A[:：]\s*(\d)号艇/);
-      var mB2=text.match(/3着B[:：]\s*(\d)号艇/);
-      var nA=mA2?mA2[1]:null;
-      var nB=mB2?mB2[1]:null;
-      // 3着候補として使える艇（abA・abB・ng除外。A/Bは1号艇も除外、Cは1号艇OK）
-      var okThird=['1','2','3','4','5','6'].filter(function(b){
-        if(b===abA||b===abB||ngNormal.indexOf(b)>=0)return false;
-        if(shinkido!=='C'&&b==='1')return false;
-        return true;
-      });
-      // nA・nBのバリデーション
-      function validThird(v){
-        if(!v||v===abA||v===abB||ngNormal.indexOf(v)>=0)return false;
-        if(shinkido!=='C'&&v==='1')return false;
-        return true;
-      }
-      if(!validThird(nA))nA=okThird[0]||null;
-      if(!validThird(nB)||nB===nA)nB=okThird.filter(function(x){return x!==nA;})[0]||null;
-      // nA・nBがnullの場合、ng以外・1以外・abA以外・abB以外から補完
-      var allCands=['2','3','4','5','6'].filter(function(x){
-        return x!==abA&&x!==abB&&ngNormal.indexOf(x)<0;
-      });
-      if(!nA)nA=allCands[0]||'2';
-      if(!nB||nB===nA){
-        nB=allCands.filter(function(x){return x!==nA;})[0]||null;
-        // allCandsに候補がない場合、ngを許可して別の艇を使う
-        if(!nB){
-          var ngAllowed=['2','3','4','5','6'].filter(function(x){return x!==abA&&x!==abB&&x!==nA;});
-          nB=ngAllowed[0]||nA;
-        }
-      }
-      // 買い目生成（3艇すべて異なることを保証）
+      usedP.push(p1);
+      if(!p2){p2=ab[0]?String(ab[0].n):nextUnused(usedP);}usedP.push(p2);
+      if(!p3){p3=ab[1]?String(ab[1].n):nextUnused(usedP);}usedP.push(p3);
+      if(!p4){p4=nextUnused(usedP);}usedP.push(p4);
+      if(!p5){p5=nextUnused(usedP);}
+      // 買い目生成（完全固定ルール）
       function vb(a,b,c){return a&&b&&c&&a!==b&&b!==c&&a!==c;}
       var honsen=[],osaee=[];
-      var honsenBets={},osaeBets={};
-      function pushH(a,b,c){
+      var bets={};
+      function add(arr,a,b,c){
         if(!vb(a,b,c))return;
         var k=a+'-'+b+'-'+c;
-        if(honsenBets[k])return;
-        honsenBets[k]=true;
-        honsen.push(k);
+        if(bets[k])return;
+        bets[k]=true;
+        arr.push(k);
       }
-      function pushO(a,b,c){
-        if(!vb(a,b,c))return;
-        var k=a+'-'+b+'-'+c;
-        if(osaeBets[k]||honsenBets[k])return;
-        osaeBets[k]=true;
-        osaee.push(k);
-      }
-      if(shinkido==='C'&&abB){
-        // 総合評価から◎○▲△をパース
-        var cMaru=text.match(/1位\s*(\d)号艇\s*◎/);
-        var cShiro=text.match(/2位\s*(\d)号艇\s*○/);
-        var cSan=text.match(/3位\s*(\d)号艇\s*▲/);
-        var cYon=text.match(/4位\s*(\d)号艇\s*△/);
-        var b1c=cMaru?cMaru[1]:abB;
-        var b2c=cShiro?cShiro[1]:abA;
-        var b3c=cSan?cSan[1]:null;
-        var b4c=cYon?cYon[1]:null;
-        // b3cがnullまたはng・◎○と重複する場合はokThirdから補完
-        if(!b3c||b3c===b1c||b3c===b2c||ngNormal.indexOf(b3c)>=0)
-          b3c=okThird.filter(function(x){return x!==b1c&&x!==b2c;})[0]||'3';
-        if(!b4c||b4c===b1c||b4c===b2c||b4c===b3c||ngNormal.indexOf(b4c)>=0)
-          b4c=okThird.filter(function(x){return x!==b1c&&x!==b2c&&x!==b3c;})[0]||null;
-        // 本線4点：◎○▲ボックス上位4通り（◎1着優先）
-        pushH(b1c,b2c,b3c); pushH(b1c,b3c,b2c);
-        pushH(b2c,b1c,b3c); pushH(b2c,b3c,b1c);
-        // 抑え4点：◎○▲ボックス残り2点 + ◎-△折り返し2点
-        pushO(b3c,b1c,b2c); pushO(b3c,b2c,b1c);
-        if(b4c){pushO(b1c,b3c,b4c); pushO(b1c,b4c,b3c);}
-        else{pushO(b1c,b2c,b3c); pushO(b2c,b1c,b3c);}// b4cなしの場合は逃げ2点
+      if(shinkido==='C'){
+        // C：◎○▲ボックス4点（本線）＋残り2点＋◎△折り返し2点（抑え）
+        add(honsen,p1,p2,p3); add(honsen,p1,p3,p2);
+        add(honsen,p2,p1,p3); add(honsen,p2,p3,p1);
+        add(osaee,p3,p1,p2);  add(osaee,p3,p2,p1);
+        add(osaee,p1,p3,p4);  add(osaee,p1,p4,p3);
       } else {
-        // A/B：1着固定
-        // 本線：abA軸2点 + abB軸2点
-        pushH('1',abA,nA); pushH('1',abA,nB);
-        if(abB){
-          pushH('1',abB,nA); pushH('1',abB,nB);
-          // 抑え：abA-abB逆軸2点 ＋ nA/nB-abA/abB軸2点（本線と被らない）
-          pushO('1',abA,abB); pushO('1',abB,abA);
-          pushO('1',nA,abA);  pushO('1',nB,abB);
-        } else {
-          // abBなし：本線abA-nA/nB軸、抑えnA/nB-abA逆順＋別3着
-          pushH('1',abA,nA); pushH('1',abA,nB);
-          pushH('1',nA,abA); pushH('1',nB,abA);
-          // 抑えはng以外のabA・nA・nB以外の艇を3着に使う
-          var extra=['2','3','4','5','6'].filter(function(x){return x!==abA&&x!==nA&&x!==nB&&ngNormal.indexOf(x)<0;});
-          pushO('1',abA,extra[0]||nA); pushO('1',abA,extra[1]||nB);
-          pushO('1',nA,extra[0]||abA); pushO('1',nB,extra[0]||abA);
-        }
+        // A/B：1号艇1着固定
+        // 本線：1-○-▲, 1-▲-○, 1-○-△, 1-▲-△
+        add(honsen,'1',p2,p3); add(honsen,'1',p3,p2);
+        add(honsen,'1',p2,p4); add(honsen,'1',p3,p4);
+        // 抑え：1-○-△△5位, 1-▲-△△5位, 1-△-○, 1-△-▲
+        add(osaee,'1',p2,p5);  add(osaee,'1',p3,p5);
+        add(osaee,'1',p4,p2);  add(osaee,'1',p4,p3);
       }
       honsen=honsen.slice(0,4);
       osaee=osaee.slice(0,4);
@@ -929,9 +874,7 @@ async function generate(){
       } else {
         text=betBlock+'\n'+text;
       }
-      text=text.replace('HONSEN',honsenStr);
-      text=text.replace('OSAEE',osaeeStr);
-      // XサマリーのAI生成買い目行をJS生成買い目で強制上書き
+      // XサマリーをJS生成買い目で完全固定
       text=text.replace(/本線[\u3000 \t][^\n]*/g,'本線　'+honsenStr);
       text=text.replace(/抑え[\u3000 \t][^\n]*/g,'抑え　'+osaeeStr);
     }
