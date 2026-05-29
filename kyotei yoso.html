@@ -810,7 +810,7 @@ async function generate(){
       });
       // nA・nBが無効なら okThird からフォールバック
       if(!nA||nA==='1'||nA===abA||nA===abB||ngNormal.indexOf(nA)>=0)nA=okThird[0]||'2';
-      if(!nB||nB==='1'||nB===abA||nB===abB||ngNormal.indexOf(nB)>=0||nB===nA)
+      if(!nB||nB==='1'||nB===abA||nB===abB||nB===nA||ngNormal.indexOf(nB)>=0)
         nB=okThird.filter(function(x){return x!==nA;})[0]||String(parseInt(nA)%6+1);
       // 買い目生成（全艇番が異なることを保証）
       function validBet(a,b,c){return a&&b&&c&&a!==b&&b!==c&&a!==c;}
@@ -845,10 +845,28 @@ async function generate(){
           addBet(osaee,'1',nB,abA);
         }
       }
-      // 重複除去して各4点
+      // 重複除去して各4点、足りない場合は補完
       function uniq2(arr){var s={};return arr.filter(function(x){if(s[x])return false;s[x]=true;return true;});}
       honsen=uniq2(honsen).slice(0,4);
       osaee=uniq2(osaee).slice(0,4);
+      // 4点未満の場合、全組み合わせから補完
+      var allC=['2','3','4','5','6'];
+      var used={};
+      honsen.concat(osaee).forEach(function(b){used[b]=true;});
+      function fill(arr,axis1,max){
+        if(arr.length>=max)return;
+        allC.forEach(function(b2){
+          if(arr.length>=max)return;
+          allC.forEach(function(b3){
+            if(arr.length>=max)return;
+            var bet=axis1+'-'+b2+'-'+b3;
+            if(validBet(axis1,b2,b3)&&!used[bet]){used[bet]=true;arr.push(bet);}
+          });
+        });
+      }
+      var axis1st=shinkido==='C'&&abB?abB:'1';
+      fill(honsen,axis1st,4);
+      fill(osaee,shinkido==='C'&&abB?abB:'1',4);
       var honsenStr=honsen.join('/'),osaeeStr=osaee.join('/');
       var betBlock='\n【最終買い目】8点\n本線\n'+honsen.join('\n')+'\n抑え\n'+osaee.join('\n')+'\n';
       // パラメータブロックの直後に挿入
