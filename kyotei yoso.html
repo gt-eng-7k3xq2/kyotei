@@ -812,35 +812,37 @@ async function generate(){
       if(!nA||nA==='1'||nA===abA||nA===abB||ngNormal.indexOf(nA)>=0)nA=okThird[0]||'2';
       if(!nB||nB==='1'||nB===abA||nB===abB||ngNormal.indexOf(nB)>=0||nB===nA)
         nB=okThird.filter(function(x){return x!==nA;})[0]||String(parseInt(nA)%6+1);
-      // 買い目生成
+      // 買い目生成（全艇番が異なることを保証）
+      function validBet(a,b,c){return a&&b&&c&&a!==b&&b!==c&&a!==c;}
+      function addBet(arr,a,b,c){if(validBet(a,b,c))arr.push(a+'-'+b+'-'+c);}
       var honsen=[],osaee=[];
       if(shinkido==='C'&&abB){
         // 非逃げ6点（abB軸）＋逃げ2点
-        honsen.push(abB+'-'+abA+'-'+nA);
-        honsen.push(abB+'-'+abA+'-'+nB);
-        honsen.push(abB+'-'+nA+'-'+abA);
-        honsen.push(abB+'-'+nB+'-'+abA);
-        osaee.push(abB+'-'+nA+'-'+nB);
-        osaee.push(abB+'-'+nB+'-'+nA);
-        osaee.push('1-'+abA+'-'+nA);
-        osaee.push('1-'+abA+'-'+nB);
+        addBet(honsen,abB,abA,nA);
+        addBet(honsen,abB,abA,nB);
+        addBet(honsen,abB,nA,abA);
+        addBet(honsen,abB,nB,abA);
+        addBet(osaee,abB,nA,nB);
+        addBet(osaee,abB,nB,nA);
+        addBet(osaee,'1',abA,nA);
+        addBet(osaee,'1',abA,nB);
       } else {
         // A/B：1着固定
-        honsen.push('1-'+abA+'-'+nA);
-        honsen.push('1-'+abA+'-'+nB);
+        addBet(honsen,'1',abA,nA);
+        addBet(honsen,'1',abA,nB);
         if(abB){
-          honsen.push('1-'+abB+'-'+nA);
-          honsen.push('1-'+abB+'-'+nB);
-          osaee.push('1-'+abA+'-'+abB);
-          osaee.push('1-'+abB+'-'+abA);
-          osaee.push('1-'+nA+'-'+abB);
-          osaee.push('1-'+nB+'-'+abB);
+          addBet(honsen,'1',abB,nA);
+          addBet(honsen,'1',abB,nB);
+          addBet(osaee,'1',abA,abB);
+          addBet(osaee,'1',abB,abA);
+          addBet(osaee,'1',nA,abB);
+          addBet(osaee,'1',nB,abB);
         } else {
           // abBなし：abA軸で3着4種
-          osaee.push('1-'+abA+'-'+nA);
-          osaee.push('1-'+abA+'-'+nB);
-          osaee.push('1-'+nA+'-'+abA);
-          osaee.push('1-'+nB+'-'+abA);
+          addBet(osaee,'1',abA,nA);
+          addBet(osaee,'1',abA,nB);
+          addBet(osaee,'1',nA,abA);
+          addBet(osaee,'1',nB,abA);
         }
       }
       // 重複除去して各4点
