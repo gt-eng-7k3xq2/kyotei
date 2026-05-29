@@ -865,10 +865,10 @@ async function generate(){
       }
       if(shinkido==='C'&&abB){
         // 総合評価から◎○▲△をパース
-        var cMaru=text.match(/1位[\s　]*(\d)号艇[\s　]*◎/);
-        var cShiro=text.match(/2位[\s　]*(\d)号艇[\s　]*○/);
-        var cSan=text.match(/3位[\s　]*(\d)号艇[\s　]*▲/);
-        var cYon=text.match(/4位[\s　]*(\d)号艇[\s　]*△/);
+        var cMaru=text.match(/1位\s*(\d)号艇\s*◎/);
+        var cShiro=text.match(/2位\s*(\d)号艇\s*○/);
+        var cSan=text.match(/3位\s*(\d)号艇\s*▲/);
+        var cYon=text.match(/4位\s*(\d)号艇\s*△/);
         var b1c=cMaru?cMaru[1]:abB;
         var b2c=cShiro?cShiro[1]:abA;
         var b3c=cSan?cSan[1]:null;
