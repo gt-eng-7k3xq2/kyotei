@@ -729,14 +729,10 @@ async function generate(){
       var mShiro=text.match(/2位[\s　]*(\d)号艇[\s　]*○/);
       if(mMaru&&mShiro){maru=mMaru[1];shiro=mShiro[1];}
 
-      var mA=text.match(/3着A[:：]\s*(\d)号艇/);
-      var mB=text.match(/3着B[:：]\s*(\d)号艇/);
-      var mC=text.match(/2着追加[:：]\s*(\d)号艇/);
-      // 総合評価の▲△から3着候補を固定取得
+      // 総合評価▲△から3着候補を完全固定取得
       var rSan=text.match(/3位\s*(\d)号艇/);
       var rYon=text.match(/4位\s*(\d)号艇/);
-      if(rSan&&(!mA||mA[1]===maru||mA[1]===shiro))mA={1:rSan[1]};
-      if(rYon&&(!mB||mB[1]===maru||mB[1]===shiro||mB[1]===(mA?mA[1]:null)))mB={1:rYon[1]};
+      var mC=text.match(/2着追加[:：]\s*(\d)号艇/);
       {
         var allBoats=['1','2','3','4','5','6'];
         var ranked2=calcData.parsed&&calcData.parsed.boats?calcData.parsed.boats.slice().sort(function(a,b){return (a.kiryokuRank||99)-(b.kiryokuRank||99);}):[];
@@ -758,23 +754,20 @@ async function generate(){
         }
         // ×印以外の◎○以外の艇
         var okOthers=allBoats.filter(function(b){return b!==maru&&b!==shiro&&ngBoats.indexOf(b)<0;});
-        // fallback: AIがパラメータを出さなかった場合（okOthers定義後）
-        if(!mA)mA={1:okOthers[0]||'3'};
-        if(!mB)mB={1:okOthers[1]||okOthers[0]||'4'};
+        // 3着A=▲(3位), 3着B=△(4位)を固定取得、無効ならokOthersで補完
+        var A=rSan?rSan[1]:null;
+        var B=rYon?rYon[1]:null;
+        if(!A||A===maru||A===shiro||ngBoats.indexOf(A)>=0)A=okOthers[0]||'3';
+        if(!B||B===maru||B===shiro||ngBoats.indexOf(B)>=0||B===A)B=okOthers.filter(function(x){return x!==A;})[0]||okOthers[0]||'4';
+        // C(2着追加)はAIから取得、◎○なら代替
         if(!mC)mC={1:okOthers[0]||'1'};
-        // C(2着追加)が◎○なら代替
         var C=mC[1];
         if(C===maru||C===shiro){for(var ri=0;ri<okOthers.length;ri++){C=okOthers[ri];break;}}
         // 全有効買い目を生成
         function vbet(a,b,c){return a!==b&&b!==c&&a!==c;}
         var seen={},allBets=[];
         function tryAdd(a,b,c){if(!vbet(a,b,c))return;var k=a+'-'+b+'-'+c;if(!seen[k]){seen[k]=true;allBets.push(k);}}
-        // 優先順位順に生成
-        var A=mA[1],B=mB[1];
-        // A・Bが無効（ng・◎○）なら okOthers で上書き
-        function invalidThird(v){return !v||v===maru||v===shiro||ngBoats.indexOf(v)>=0;}
-        if(invalidThird(A))A=okOthers.filter(function(x){return x!==B;})[0]||okOthers[0];
-        if(invalidThird(B)||B===A)B=okOthers.filter(function(x){return x!==A;})[0]||okOthers[1]||okOthers[0];
+        // 優先順位順に生成（A=▲, B=△固定）
         // 本線優先（◎-○, ○-◎, ◎-C の組み合わせ）
         var honsen=[];
         [A,B].forEach(function(t){tryAdd(maru,shiro,t);tryAdd(shiro,maru,t);tryAdd(maru,C,t);tryAdd(shiro,C,t);});
