@@ -640,42 +640,44 @@ async function generate(){
     if(!text)throw new Error('レスポンスが空です');
     // AREモード：パラメータをパースして12点自動生成
     if(currentMode==='are'&&calcData&&calcData.cands1st&&calcData.cands1st.length>=2){
-      var maru=String(calcData.cands1st[0].n); // ◎
-      var shiro=String(calcData.cands1st[1].n); // ○
+      var maru=String(calcData.cands1st[0].n);
+      var shiro=String(calcData.cands1st[1].n);
       var mA=text.match(/3着A[:：]\s*(\d)号艇/);
       var mB=text.match(/3着B[:：]\s*(\d)号艇/);
       var mC=text.match(/2着追加[:：]\s*(\d)号艇/);
       if(mA&&mB&&mC){
         var A=mA[1],B=mB[1],C=mC[1];
-        var honsen=[
-          maru+'-'+shiro+'-'+A,
-          maru+'-'+shiro+'-'+B,
-          shiro+'-'+maru+'-'+A,
-          shiro+'-'+maru+'-'+B,
-          maru+'-'+C+'-'+A,
-          maru+'-'+C+'-'+B
-        ];
-        var osaee=[
-          shiro+'-'+C+'-'+A,
-          shiro+'-'+C+'-'+B,
-          maru+'-'+A+'-'+B,
-          shiro+'-'+A+'-'+B,
-          maru+'-'+B+'-'+A,
-          shiro+'-'+B+'-'+A
-        ];
-        // 重複除去
-        var all=honsen.concat(osaee);
-        var seen={};
-        honsen=honsen.filter(function(b){if(seen[b])return false;seen[b]=true;return true;});
-        var osaeeFiltered=[];
-        osaee.forEach(function(b){if(!seen[b]){seen[b]=true;osaeeFiltered.push(b);}});
-        // 抑えを6点に調整
-        while(osaeeFiltered.length<6){osaeeFiltered.push(maru+'-'+shiro+'-'+A);}
-        osaeeFiltered=osaeeFiltered.slice(0,6);
-        // テキストに買い目セクションを挿入
-        var betSection='\n【買い目】\n本線(6点)\n'+honsen.join('\n')+'\n抑え(6点)\n'+osaeeFiltered.join('\n')+'\n';
-        // 買い目パラメータセクションの後に挿入
-        var insertIdx=text.indexOf('2着追加');if(insertIdx>=0){var nlIdx=text.indexOf('\n',insertIdx);if(nlIdx>=0)text=text.slice(0,nlIdx+1)+betSection+text.slice(nlIdx+1);}
+        var allBoats=['1','2','3','4','5','6'];
+        // Cが◎○と被ったら機力順で代替
+        if(C===maru||C===shiro){
+          var ranked=calcData.kisoryoku||[];
+          for(var ri=0;ri<ranked.length;ri++){var rn=String(ranked[ri].n);if(rn!==maru&&rn!==shiro){C=rn;break;}}
+        }
+        // Aが◎○Cと被ったら代替
+        if(A===maru||A===shiro||A===C){
+          for(var ai=0;ai<allBoats.length;ai++){var an=allBoats[ai];if(an!==maru&&an!==shiro&&an!==C&&an!==B){A=an;break;}}
+        }
+        // Bが◎○CAと被ったら代替
+        if(B===maru||B===shiro||B===C||B===A){
+          for(var bi=0;bi<allBoats.length;bi++){var bn=allBoats[bi];if(bn!==maru&&bn!==shiro&&bn!==C&&bn!==A){B=bn;break;}}
+        }
+        function vbet(a,b,c){return a!==b&&b!==c&&a!==c;}
+        var honsen=[],osaee=[],seen={};
+        function add(arr,a,b,c){if(!vbet(a,b,c))return;var k=a+'-'+b+'-'+c;if(!seen[k]){seen[k]=true;arr.push(k);}}
+        add(honsen,maru,shiro,A); add(honsen,maru,shiro,B);
+        add(honsen,shiro,maru,A); add(honsen,shiro,maru,B);
+        add(honsen,maru,C,A);     add(honsen,maru,C,B);
+        var ex1=[[shiro,C,A],[shiro,C,B],[maru,A,B],[shiro,A,B]];
+        for(var i=0;i<ex1.length&&honsen.length<6;i++)add(honsen,ex1[i][0],ex1[i][1],ex1[i][2]);
+        add(osaee,shiro,C,A); add(osaee,shiro,C,B);
+        add(osaee,maru,A,B);  add(osaee,shiro,A,B);
+        add(osaee,maru,B,A);  add(osaee,shiro,B,A);
+        var ex2=[[maru,shiro,A],[maru,shiro,B],[shiro,maru,A],[shiro,maru,B]];
+        for(var j=0;j<ex2.length&&osaee.length<6;j++)add(osaee,ex2[j][0],ex2[j][1],ex2[j][2]);
+        osaee=osaee.slice(0,6);
+        var bet='\n【買い目】\n本線('+honsen.length+'点)\n'+honsen.join('\n')+'\n抑え('+osaee.length+'点)\n'+osaee.join('\n')+'\n';
+        var ii=text.indexOf('2着追加');
+        if(ii>=0){var ni=text.indexOf('\n',ii);if(ni>=0)text=text.slice(0,ni+1)+bet+text.slice(ni+1);}
       }
     }
     document.getElementById('outText').textContent=text;
