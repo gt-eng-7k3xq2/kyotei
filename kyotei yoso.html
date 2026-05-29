@@ -848,37 +848,29 @@ async function generate(){
         // 非逃げ6点（abB軸）＋逃げ2点
         pushH(abB,abA,nA); pushH(abB,abA,nB);
         pushH(abB,nA,abA); pushH(abB,nB,abA);
-        pushO(abB,nA,nB);   pushO(abB,nB,nA);
-        pushO('1',abA,nA);  pushO('1',abA,nB);
+        pushO(abB,nA,nB);  pushO(abB,nB,nA);
+        pushO('1',abA,nA); pushO('1',abA,nB);
       } else {
         // A/B：1着固定
+        // 本線：abA軸2点 + abB軸2点
         pushH('1',abA,nA); pushH('1',abA,nB);
         if(abB){
           pushH('1',abB,nA); pushH('1',abB,nB);
-          // 抑え：abA・abB軸でnA・nBを交差させて本線と異なる組み合わせを確保
+          // 抑え：abA-abB逆軸2点 + nA/nB-abA逆順2点
           pushO('1',abA,abB); pushO('1',abB,abA);
-          pushO('1',abA,nB);  pushO('1',abB,nA);
-          // 4点未満の場合の追加候補
-          pushO('1',abA,nA);  pushO('1',abB,nB);
+          pushO('1',nA,abA);  pushO('1',nB,abB);
         } else {
-          pushO('1',nA,abA); pushO('1',nB,abA);
-          pushO('1',abA,nA); pushO('1',abA,nB);
+          // abBなし：本線abA-nA/nB軸、抑えnA/nB-abA逆順＋別3着
+          pushH('1',abA,nA); pushH('1',abA,nB);
+          pushH('1',nA,abA); pushH('1',nB,abA);
+          // 抑えはng以外のabA・nA・nB以外の艇を3着に使う
+          var extra=['2','3','4','5','6'].filter(function(x){return x!==abA&&x!==nA&&x!==nB&&ngNormal.indexOf(x)<0;});
+          pushO('1',abA,extra[0]||nA); pushO('1',abA,extra[1]||nB);
+          pushO('1',nA,extra[0]||abA); pushO('1',nB,extra[0]||abA);
         }
       }
       honsen=honsen.slice(0,4);
       osaee=osaee.slice(0,4);
-      // 抑えが4点未満の場合、1着固定で全2着・3着の組み合わせから補完
-      if(osaee.length<4){
-        var allN=['1','2','3','4','5','6'];
-        allN.forEach(function(b2){
-          if(osaee.length>=4)return;
-          allN.forEach(function(b3){
-            if(osaee.length>=4)return;
-            pushO('1',b2,b3);
-          });
-        });
-        osaee=osaee.slice(0,4);
-      }
       var honsenStr=honsen.join('/'),osaeeStr=osaee.join('/');
       var betBlock='\n【最終買い目】8点\n本線\n'+honsen.join('\n')+'\n抑え\n'+osaee.join('\n')+'\n';
       var pi=text.indexOf('【買い目パラメータ】');
