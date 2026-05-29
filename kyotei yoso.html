@@ -673,14 +673,18 @@ function buildPrompt(){
     p+='\n2着候補A: '+normalResult.ab[0].n+'号艇\n';
     if(normalResult.ab[1])p+='2着候補B: '+normalResult.ab[1].n+'号艇\n';
     if(normalResult.shinkido==='C'&&normalResult.ab[1]){
-      p+='【イン信頼度C注意】1号艇の逃げは薄い。2着候補B（'+normalResult.ab[1].n+'号艇）を◎評価、2着候補A（'+normalResult.ab[0].n+'号艇）を○評価とすること。\n';
+      p+='【イン信頼度C注意】1号艇の逃げは薄い。総合評価の◎○▲△をデータに基づき正確に評価すること。買い目はシステムが自動生成するため、パラメータ出力は不要。\n';
     }
     p+='\n【重要】買い目はシステムが自動生成する。以下のパラメータのみ出力せよ。\n';
     p+='【賞除艇の扱い】今節得点率が「-」の艇は賞除。レース出走可能。得点率項目のみ0点扱いで他は通常評価すること。足や実績が良ければ積極的に評価すること。\n';
-    p+='3着A・3着Bは必ず異なる艇番にすること。\n';
-    p+='3着A・3着Bに使用禁止の艇番：1号艇、2着候補A（'+normalResult.ab[0].n+'号艇）';
-    if(normalResult.ab[1])p+='、2着候補B（'+normalResult.ab[1].n+'号艇）';
-    p+='、×評価の艇。\n\n';
+    if(normalResult.shinkido!=='C'){
+      p+='3着A・3着Bは必ず異なる艇番にすること。\n';
+      p+='3着A・3着Bに使用禁止の艇番：1号艇、2着候補A（'+normalResult.ab[0].n+'号艇）';
+      if(normalResult.ab[1])p+='、2着候補B（'+normalResult.ab[1].n+'号艇）';
+      p+='、×評価の艇。\n\n';
+    } else {
+      p+='\n';
+    }
     p+='【出力フォーマット（必須・この順で）】\n';
     p+='【イン信頼度】'+normalResult.shinkido+'（逃げ率'+(nigeRate||'?')+'% ST'+(st1||'?')+'）\n';
     p+='【荒れ指数】'+areResult.score+'点（'+(areResult.score>=8?'転用可':'転用不可')+'）\n';
@@ -860,11 +864,27 @@ async function generate(){
         osaee.push(k);
       }
       if(shinkido==='C'&&abB){
-        // 非逃げ6点（abB軸）＋逃げ2点
-        pushH(abB,abA,nA); pushH(abB,abA,nB);
-        pushH(abB,nA,abA); pushH(abB,nB,abA);
-        pushO(abB,nA,nB);  pushO(abB,nB,nA);
-        pushO('1',abA,nA); pushO('1',nA,abA);
+        // 総合評価から◎○▲△をパース
+        var cMaru=text.match(/1位[\s　]*(\d)号艇[\s　]*◎/);
+        var cShiro=text.match(/2位[\s　]*(\d)号艇[\s　]*○/);
+        var cSan=text.match(/3位[\s　]*(\d)号艇[\s　]*▲/);
+        var cYon=text.match(/4位[\s　]*(\d)号艇[\s　]*△/);
+        var b1c=cMaru?cMaru[1]:abB;
+        var b2c=cShiro?cShiro[1]:abA;
+        var b3c=cSan?cSan[1]:null;
+        var b4c=cYon?cYon[1]:null;
+        // b3cがnullまたはng・◎○と重複する場合はokThirdから補完
+        if(!b3c||b3c===b1c||b3c===b2c||ngNormal.indexOf(b3c)>=0)
+          b3c=okThird.filter(function(x){return x!==b1c&&x!==b2c;})[0]||'3';
+        if(!b4c||b4c===b1c||b4c===b2c||b4c===b3c||ngNormal.indexOf(b4c)>=0)
+          b4c=okThird.filter(function(x){return x!==b1c&&x!==b2c&&x!==b3c;})[0]||null;
+        // 本線4点：◎○▲ボックス上位4通り（◎1着優先）
+        pushH(b1c,b2c,b3c); pushH(b1c,b3c,b2c);
+        pushH(b2c,b1c,b3c); pushH(b2c,b3c,b1c);
+        // 抑え4点：◎○▲ボックス残り2点 + ◎-△折り返し2点
+        pushO(b3c,b1c,b2c); pushO(b3c,b2c,b1c);
+        if(b4c){pushO(b1c,b3c,b4c); pushO(b1c,b4c,b3c);}
+        else{pushO(b1c,b2c,b3c); pushO(b2c,b1c,b3c);}// b4cなしの場合は逃げ2点
       } else {
         // A/B：1着固定
         // 本線：abA軸2点 + abB軸2点
