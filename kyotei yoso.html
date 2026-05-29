@@ -891,22 +891,9 @@ async function generate(){
         pushH('1',abA,nA); pushH('1',abA,nB);
         if(abB){
           pushH('1',abB,nA); pushH('1',abB,nB);
-          // 抑え：abA-abB逆軸2点 + abA軸nB・abB軸nA（本線と異なる組み合わせ）
+          // 抑え：abA-abB逆軸2点 ＋ nA/nB-abA/abB軸2点（本線と被らない）
           pushO('1',abA,abB); pushO('1',abB,abA);
-          // 3・4点目：本線と被らない組み合わせを試みる
-          // 本線は1-abA-nA, 1-abA-nB, 1-abB-nA, 1-abB-nBなので
-          // abA軸でnAかnB以外、abB軸でnAかnB以外を試す
-          var extraOk=['1','2','3','4','5','6'].filter(function(x){
-            return x!==abA&&x!==abB&&ngNormal.indexOf(x)<0&&x!==nA&&x!==nB;
-          });
-          if(extraOk.length>=2){
-            pushO('1',abA,extraOk[0]); pushO('1',abB,extraOk[1]||extraOk[0]);
-          } else if(extraOk.length===1){
-            pushO('1',abA,extraOk[0]); pushO('1',abB,extraOk[0]);
-          } else {
-            // extraがない場合はnA・nBを使う（本線と被るが仕方なし）
-            pushO('1',abA,nB); pushO('1',abB,nA);
-          }
+          pushO('1',nA,abA);  pushO('1',nB,abB);
         } else {
           // abBなし：本線abA-nA/nB軸、抑えnA/nB-abA逆順＋別3着
           pushH('1',abA,nA); pushH('1',abA,nB);
