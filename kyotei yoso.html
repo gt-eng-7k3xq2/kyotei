@@ -918,6 +918,9 @@ async function generate(){
       }
       text=text.replace('HONSEN',honsenStr);
       text=text.replace('OSAEE',osaeeStr);
+      // XサマリーのAI生成買い目行をJS生成買い目で強制上書き
+      text=text.replace(/本線(　| )[^\n]+/g,'本線　'+honsenStr);
+      text=text.replace(/抑え(　| )[^\n]+/g,'抑え　'+osaeeStr);
     }
     document.getElementById('outText').textContent=text;
     document.getElementById('outWrap').classList.add('show');
