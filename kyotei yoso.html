@@ -713,6 +713,14 @@ async function generate(){
         text=text.replace(/抑え[\u3000 ][X0-9\-\/]+/g,'抑え\u3000'+osaeeStr);
       }
     }
+    // 最終フィルタ：◎○以外が1着の買い目行を削除
+    if(currentMode==='are'&&calcData&&calcData.cands1st&&calcData.cands1st.length>=2){
+      var ok1st=[String(calcData.cands1st[0].n),String(calcData.cands1st[1].n)];
+      text=text.split('\n').filter(function(ln){
+        var m=ln.match(/^(\d)-(\d)-(\d)$/);
+        return !m||ok1st.indexOf(m[1])>=0;
+      }).join('\n');
+    }
     document.getElementById('outText').textContent=text;
     document.getElementById('outWrap').classList.add('show');
     showStatus('生成完了','ok');
