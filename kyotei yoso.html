@@ -647,6 +647,13 @@ async function generate(){
       var mC=text.match(/2着追加[:：]\s*(\d)号艇/);
       if(mA&&mB&&mC){
         var A=mA[1],B=mB[1],C=mC[1];
+        // ×印艇（機力5位・6位）を3着候補から除外
+        var ranked2=calcData.kisoryoku||[];
+        var ngBoats=ranked2.length>=6?[String(ranked2[4].n),String(ranked2[5].n)]:[];
+        var okFor3rd=allBoats.filter(function(b){return b!==maru&&b!==shiro&&ngBoats.indexOf(b)<0;});
+        if(ngBoats.indexOf(A)>=0&&okFor3rd.length>0)A=okFor3rd[0];
+        if(ngBoats.indexOf(B)>=0&&okFor3rd.length>1)B=okFor3rd[1];
+        if(A===B&&okFor3rd.length>1)B=okFor3rd.filter(function(b){return b!==A;})[0]||B;
         var allBoats=['1','2','3','4','5','6'];
         // Cが◎○と被ったら機力順で代替
         if(C===maru||C===shiro){
