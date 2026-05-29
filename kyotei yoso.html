@@ -843,8 +843,21 @@ async function generate(){
         if(shinkido!=='C'&&v==='1')return false;
         return true;
       }
-      if(!validThird(nA))nA=okThird[0]||'2';
-      if(!validThird(nB)||nB===nA)nB=okThird.filter(function(x){return x!==nA;})[0]||okThird[1]||'3';
+      if(!validThird(nA))nA=okThird[0]||null;
+      if(!validThird(nB)||nB===nA)nB=okThird.filter(function(x){return x!==nA;})[0]||null;
+      // nA・nBがnullの場合、ng以外・1以外・abA以外・abB以外から補完
+      var allCands=['2','3','4','5','6'].filter(function(x){
+        return x!==abA&&x!==abB&&ngNormal.indexOf(x)<0;
+      });
+      if(!nA)nA=allCands[0]||'2';
+      if(!nB||nB===nA){
+        nB=allCands.filter(function(x){return x!==nA;})[0]||null;
+        // allCandsに候補がない場合、ngを許可して別の艇を使う
+        if(!nB){
+          var ngAllowed=['2','3','4','5','6'].filter(function(x){return x!==abA&&x!==abB&&x!==nA;});
+          nB=ngAllowed[0]||nA;
+        }
+      }
       // 買い目生成（3艇すべて異なることを保証）
       function vb(a,b,c){return a&&b&&c&&a!==b&&b!==c&&a!==c;}
       var honsen=[],osaee=[];
