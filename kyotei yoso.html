@@ -776,9 +776,9 @@ async function generate(){
         var mid2=[maru,shiro];
         var mid3=okOthers.concat([]);
         mid2.forEach(function(h){mid3.forEach(function(m){okOthers.forEach(function(t){tryAdd(h,m,t);});});});
-        // 抑えが6点未満の場合、全艇で補完
+        // 抑えが6点未満の場合、ng以外の全艇で補完
         if(allBets.length<6){
-          var allBoatsArr=['1','2','3','4','5','6'];
+          var allBoatsArr=['1','2','3','4','5','6'].filter(function(x){return ngBoats.indexOf(x)<0;});
           mid2.forEach(function(h){
             allBoatsArr.forEach(function(m2){
               allBoatsArr.forEach(function(t){tryAdd(h,m2,t);});
