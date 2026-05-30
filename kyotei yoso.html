@@ -5,109 +5,74 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>G. 予想エンジン v2.0</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
-
-:root{
-  --bg:#f8f7f4;
-  --surface:#ffffff;
-  --border:#e0dcd6;
-  --border-strong:#c8c4be;
-  --text:#1a1814;
-  --text-sub:#6b6560;
-  --text-muted:#a09b96;
-  --accent:#c0392b;
-  --accent-light:#fdf0ef;
-  --accent-border:#f0c0bc;
-  --blue:#1a5fa8;
-  --blue-light:#eef4fc;
-  --green:#1a7a3a;
-  --green-light:#eef8f2;
-  --gold:#b8860b;
-  --gold-light:#fdf8ee;
-}
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-serif;min-height:100vh;padding:16px 14px 80px;}
-
-/* ヘッダー */
-.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:14px;border-bottom:2px solid var(--text);}
+body{background:#0d0f14;color:#e0e4f0;font-family:-apple-system,sans-serif;min-height:100vh;padding:20px 16px 80px;}
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
 .logo{display:flex;align-items:center;gap:10px;}
-.logo-icon{width:34px;height:34px;background:var(--text);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900;color:#fff;font-family:'Noto Serif JP',serif;letter-spacing:-1px;}
-.logo-text{font-size:16px;font-weight:700;color:var(--text);font-family:'Noto Serif JP',serif;}
-.logo-sub{font-size:10px;color:var(--text-muted);margin-top:1px;}
-.ver{font-size:10px;color:var(--text-sub);background:var(--surface);border:1px solid var(--border);padding:3px 9px;border-radius:2px;letter-spacing:0.5px;}
-
-/* セクション */
-.sec{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;margin-bottom:12px;}
-.sec-label{font-size:10px;color:var(--text-sub);letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px;}
-
-/* モードボタン */
-.mode-row{display:flex;gap:6px;margin-bottom:10px;}
-.mode-btn{flex:1;padding:11px;border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;cursor:pointer;font-family:'Noto Sans JP',sans-serif;transition:all 0.15s;}
-.mode-btn.active{background:var(--text);color:#fff;border:2px solid var(--text);}
-.mode-btn.inactive{background:var(--surface);color:var(--text-sub);border:1px solid var(--border);}
-
-/* フォーム */
+.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#c9a84c,#e8c56a);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#0d0f14;}
+.logo-text{font-size:18px;font-weight:700;color:#fff;}
+.logo-sub{font-size:11px;color:#556;margin-top:1px;}
+.ver{font-size:11px;color:#556;background:#161921;border:1px solid #252a38;padding:4px 10px;border-radius:20px;}
+.sec{background:#161921;border:1px solid #222840;border-radius:14px;padding:16px;margin-bottom:14px;}
+.sec-label{font-size:11px;color:#c9a84c;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:12px;}
+.mode-row{display:flex;gap:8px;margin-bottom:12px;}
+.mode-btn{flex:1;padding:12px;border-radius:10px;font-size:13px;font-weight:700;-webkit-appearance:none;cursor:pointer;font-family:-apple-system,sans-serif;}
+.mode-btn.active{background:#c9a84c;color:#0d0f14;border:none;}
+.mode-btn.inactive{background:#0d0f14;color:#888;border:1px solid #222840;}
 .race-row{display:flex;gap:8px;}
 .sel-w{flex:1;position:relative;}
-.sel-w::after{content:'▾';position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:11px;pointer-events:none;}
-.sel{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;padding:10px 28px 10px 10px;-webkit-appearance:none;outline:none;font-family:'Noto Sans JP',sans-serif;}
-textarea{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;padding:10px;resize:none;outline:none;font-family:monospace;line-height:1.8;min-height:110px;}
-textarea::placeholder{color:var(--text-muted);font-size:11px;}
-.calc-btn{width:100%;padding:12px;background:var(--blue-light);color:var(--blue);font-size:13px;font-weight:700;border:1px solid #c0d8f0;border-radius:4px;-webkit-appearance:none;margin-top:10px;font-family:'Noto Sans JP',sans-serif;}
-.gen-btn{width:100%;padding:15px;background:var(--accent);color:#fff;font-size:14px;font-weight:700;border:none;border-radius:4px;-webkit-appearance:none;margin-top:4px;font-family:'Noto Serif JP',serif;letter-spacing:1px;}
-.gen-btn:disabled{background:var(--border);color:var(--text-muted);}
+.sel-w::after{content:'▾';position:absolute;right:10px;top:50%;transform:translateY(-50%);color:#667;font-size:11px;pointer-events:none;}
+.sel{width:100%;background:#0d0f14;border:1px solid #252a38;border-radius:10px;color:#e0e4f0;font-size:13px;padding:11px 28px 11px 12px;-webkit-appearance:none;outline:none;}
+textarea{width:100%;background:#0d0f14;border:1px solid #252a38;border-radius:10px;color:#c8d0e8;font-size:11px;padding:12px;resize:none;outline:none;font-family:monospace;line-height:1.8;min-height:110px;}
+textarea::placeholder{color:#333a50;font-size:11px;}
+.calc-btn{width:100%;padding:13px;background:#1a2a4a;color:#7aabee;font-size:13px;font-weight:700;border:1px solid #2a3a6a;border-radius:10px;-webkit-appearance:none;margin-top:10px;}
+.gen-btn{width:100%;padding:16px;background:linear-gradient(135deg,#c9a84c,#e8c56a);color:#080a0f;font-size:15px;font-weight:800;border:none;border-radius:12px;-webkit-appearance:none;margin-top:4px;}
+.gen-btn:disabled{background:#1e2330;color:#333;}
 .api-row{display:flex;gap:8px;}
-.api-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;padding:10px 10px;outline:none;font-family:monospace;}
-.api-input.saved{border-color:#a0d0b0;color:var(--green);}
-.api-save{background:var(--text);color:#fff;border:none;padding:10px 14px;border-radius:4px;font-size:12px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;}
-
-/* 解析結果 */
-.calc-result{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;margin-top:12px;display:none;}
+.api-input{flex:1;background:#0d0f14;border:1px solid #252a38;border-radius:10px;color:#e0e4f0;font-size:13px;padding:11px 12px;outline:none;font-family:monospace;}
+.api-input.saved{border-color:#2a6a3a;color:#5dc87a;}
+.api-save{background:#c9a84c;color:#0d0f14;border:none;padding:11px 16px;border-radius:10px;font-size:12px;font-weight:700;-webkit-appearance:none;}
+.calc-result{background:#0d0f14;border:1px solid #1a2030;border-radius:12px;padding:14px;margin-top:12px;display:none;}
 .calc-result.show{display:block;}
-.cr-sec{font-size:10px;color:var(--text-sub);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin:12px 0 6px;padding-left:6px;border-left:2px solid var(--accent);}
-.cr-table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:8px;}
-.cr-table th{background:var(--bg);color:var(--text-sub);padding:5px 5px;text-align:center;border-bottom:1px solid var(--border);font-size:10px;font-weight:700;}
-.cr-table td{padding:5px 5px;border-bottom:1px solid var(--border);text-align:center;color:var(--text-sub);}
-.cr-table tr.best td{color:var(--accent);font-weight:700;background:var(--accent-light);}
-.tot{color:var(--text) !important;font-weight:700;}
-.info-row{font-size:11px;color:var(--text-sub);margin:5px 0;}
-.info-row b{color:var(--text);font-weight:700;}
-.are-box{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px;margin:8px 0;}
-.are-score{font-size:28px;font-weight:700;font-family:'Noto Serif JP',serif;}
-.score-pass{color:var(--green);}
-.score-fail{color:var(--accent);}
-.are-label{font-size:10px;color:var(--text-muted);}
-.bd-list{font-size:11px;color:var(--text-sub);margin-top:6px;line-height:2.0;}
-.bd-list span{color:var(--text);}
-.furikiri{padding:10px 12px;border-radius:4px;font-size:13px;font-weight:700;margin:8px 0;}
-.furikiri.pass{background:var(--green-light);color:var(--green);border:1px solid #a0d8b0;}
-.furikiri.fail{background:var(--accent-light);color:var(--accent);border:1px solid var(--accent-border);}
+.cr-sec{font-size:11px;color:#c9a84c;font-weight:700;letter-spacing:1px;margin:10px 0 8px;}
+.cr-table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:6px;}
+.cr-table th{background:#161921;color:#c9a84c;padding:5px 6px;text-align:center;border-bottom:1px solid #1a2030;font-size:10px;}
+.cr-table td{padding:5px 6px;border-bottom:1px solid #111820;text-align:center;color:#8090b0;}
+.cr-table tr.best td{color:#f0d878;font-weight:700;}
+.tot{color:#aaa !important;}
+.info-row{font-size:11px;color:#667;margin:6px 0;}
+.info-row b{color:#aab;}
+.are-box{background:#0d0f14;border:1px solid #1a2030;border-radius:8px;padding:10px;margin:8px 0;}
+.are-score{font-size:26px;font-weight:800;}
+.score-pass{color:#5dc87a;}
+.score-fail{color:#e55;}
+.are-label{font-size:10px;color:#556;}
+.bd-list{font-size:11px;color:#778;margin-top:6px;line-height:1.9;}
+.bd-list span{color:#aab;}
+.furikiri{padding:10px 12px;border-radius:8px;font-size:13px;font-weight:700;margin:8px 0;}
+.furikiri.pass{background:#0a1a10;color:#5dc87a;border:1px solid #1a4a28;}
+.furikiri.fail{background:#1a0808;color:#e55;border:1px solid #4a1515;}
 .cand-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;}
-.chip{padding:4px 10px;border-radius:2px;font-size:11px;font-weight:700;}
-.c1{background:var(--accent-light);color:var(--accent);border:1px solid var(--accent-border);}
-.c2{background:var(--blue-light);color:var(--blue);border:1px solid #c0d8f0;}
-
-/* ステータス */
-.status{font-size:12px;font-weight:500;padding:10px 12px;border-radius:4px;margin-bottom:12px;display:none;}
-.status.err{display:block;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent-border);}
-.status.ok{display:block;background:var(--green-light);color:var(--green);border:1px solid #a0d8b0;}
-
-/* ローディング */
+.chip{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.c1{background:rgba(201,168,76,0.15);color:#c9a84c;border:1px solid rgba(201,168,76,0.3);}
+.c2{background:rgba(85,136,224,0.12);color:#88aaee;border:1px solid rgba(85,136,224,0.25);}
+.status{font-size:12px;font-weight:500;padding:10px 12px;border-radius:10px;margin-bottom:12px;display:none;}
+.status.err{display:block;background:#1a0808;color:#ff6b6b;border:1px solid #4a1515;}
+.status.ok{display:block;background:#081a10;color:#5dc87a;border:1px solid #1a4a28;}
 .loading{text-align:center;padding:24px 0;display:none;}
 .loading.show{display:block;}
-.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 8px;}
+.spinner{width:26px;height:26px;border:2px solid #252a38;border-top-color:#c9a84c;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 8px;}
 @keyframes spin{to{transform:rotate(360deg);}}
-.loading-txt{font-size:11px;color:var(--text-muted);}
-
-/* 出力 */
+.loading-txt{font-size:11px;color:#556;}
 .out-wrap{display:none;margin-top:14px;}
 .out-wrap.show{display:block;}
-.out-hdr{font-size:10px;color:var(--text-sub);letter-spacing:1.5px;font-weight:700;margin-bottom:8px;text-transform:uppercase;}
-.out-text{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:14px;font-size:12px;color:var(--text);line-height:2.0;white-space:pre-wrap;word-break:break-word;font-family:'Noto Sans JP',sans-serif;}
-.copy-btn{width:100%;margin-top:8px;padding:11px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;}
-.copy-btn.ok{background:var(--green-light);color:var(--green);border-color:#a0d8b0;}
-.div{height:1px;background:var(--border);margin:4px 0 14px;}
+.out-hdr{font-size:11px;color:#c9a84c;letter-spacing:1px;font-weight:700;margin-bottom:8px;}
+.out-text{background:#0d0f14;border:1px solid #222840;border-radius:10px;padding:14px;font-size:12px;color:#c8d0e8;line-height:1.9;white-space:pre-wrap;word-break:break-word;}
+.copy-btn{width:100%;margin-top:10px;padding:12px;background:#161921;color:#c9a84c;border:1px solid #2a3050;border-radius:10px;font-size:13px;font-weight:700;-webkit-appearance:none;}
+.copy-btn.ok{background:#081a10;color:#5dc87a;border-color:#1a4a28;}
+.div{height:1px;background:linear-gradient(90deg,transparent,#252a38,transparent);margin:4px 0 14px;}
+
 </style>
 </head>
 <body>
@@ -179,6 +144,12 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
   <div class="out-text" id="outText"></div>
   <button class="copy-btn" id="copyBtn" onclick="copyOut()">📋 X投稿用にコピー</button>
 <button class="copy-btn" id="bridgeBtn" onclick="saveToBridge()" style="margin-top:8px;background:#0a1a2a;color:#7aabee;border-color:#2a3a6a;">📤 G. Toolsに連携</button>
+<div style="margin-top:14px;">
+  <div style="font-size:10px;color:var(--text-sub);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;padding-left:6px;border-left:2px solid var(--border);">オッズ確認（任意）</div>
+  <textarea id="oddsInput" style="height:80px;font-size:11px;" placeholder="ブックマークレットで取得したオッズデータを貼り付け..."></textarea>
+  <button onclick="showOddsResult()" style="width:100%;margin-top:6px;padding:11px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;">📊 オッズ・合成オッズを表示</button>
+  <div id="oddsResult"></div>
+</div>
 </div>
 
 <script>
@@ -256,14 +227,7 @@ function parseData(raw){
       tokuten:null,avgST:null,exhibRank:null,winsRate:null,
       avgEx:null,avgLap:null,avgStr:null,
       nyuse:i+1,exT:null,lapT:null,strT:null,st:null,stF:false,tilt:0,
-      kiryoku:null,kiryokuRank:null,
-      buhin:false,           // 部品交換あり
-      zenkokuRate:null,      // 全国勝率
-      totiRate:null,         // 当地勝率
-      renRate:null,          // 今節2連対率
-      sogoScore:null,        // JS総合スコア
-      sogoRank:null          // JS総合評価順位
-    });
+      kiryoku:null,kiryokuRank:null});
   }
   var section='',nigeContext='';
   var nigeRate6M=null,nigeRateLocal=null,nigeRateKoki=null,localCount=0;
@@ -317,8 +281,6 @@ function parseData(raw){
       }
       if(label==='前期'){var fv2=v6(line);for(var j=0;j<6;j++)boats[j].fZen=fv2[j]||0;}
       if(label==='事故率'){var sv=v6(line);for(var j=0;j<6;j++)boats[j].soyoRate=sv[j]||0;}
-      if(label==='全国'){var grv=v6(line);for(var j=0;j<6;j++)if(grv[j]!==null)boats[j].zenkokuRate=grv[j];}
-      if(label==='当地'){var trv=v6(line);for(var j=0;j<6;j++)if(trv[j]!==null)boats[j].totiRate=trv[j];}
       // 今期平均ST (基本情報内の平均ST→今期行)
       if(label==='今期'&&!afterFrank){
         var sv2=v6(line);
@@ -332,7 +294,6 @@ function parseData(raw){
       if(label==='平均ST'){var sv3=v6(line);for(var j=0;j<6;j++)if(sv3[j]!==null)boats[j].avgST=sv3[j];}
       if(label==='展示順位'||label==='平均展示順位'){var ev=v6(line);for(var j=0;j<6;j++)boats[j].exhibRank=ev[j];}
       if(label==='1着率'){var wv=v6(line);for(var j=0;j<6;j++)boats[j].winsRate=wv[j];}
-      if(label==='2連対率'){var rv=v6(line);for(var j=0;j<6;j++)boats[j].renRate=rv[j];}
       if(label==='平均展示'){var av=v6(line);for(var j=0;j<6;j++)if(av[j])boats[j].avgEx=av[j];}
       if(label==='平均周足'||label==='平均周り足'){var lv=v6(line);for(var j=0;j<6;j++)if(lv[j])boats[j].avgLap=lv[j];}
       if(label==='平均直線'){var dv=v6(line);for(var j=0;j<6;j++)if(dv[j])boats[j].avgStr=dv[j];}
@@ -345,13 +306,7 @@ function parseData(raw){
       if(label==='直線'){var stv=v6(line);for(var j=0;j<6;j++)if(stv[j])boats[j].strT=stv[j];}
       if(label==='ST'){var sf=stv6(line);for(var j=0;j<6;j++)if(sf.vals[j]!==null){boats[j].st=sf.vals[j];boats[j].stF=sf.flags[j];}}
       if(label==='チルト'){var cv=v6(line);for(var j=0;j<6;j++)if(cv[j]!==null)boats[j].tilt=cv[j];}
-      if(label==='部品交換'){
-        var bv=line.split('\t').slice(1);
-        for(var j=0;j<6&&j<bv.length;j++){
-          var bval=(bv[j]||'').trim();
-          if(bval&&bval!=='-')boats[j].buhin=true;
-        }
-      }    }
+    }
 
     if(section==='枠別勝率'){
       // 当地カウント
@@ -399,87 +354,6 @@ function calcKiryoku(boats){
   });
   var valid=boats.filter(b=>b.kiryoku!==null).sort((a,b)=>a.kiryoku-b.kiryoku);
   valid.forEach((b,i)=>b.kiryokuRank=i+1);
-}
-
-/* ===== 総合評価スコア（JS固定） ===== */
-function calcSogoScore(boats){
-  // 各項目の全艇値を収集してスコア化（0〜各満点）
-  var allTok=boats.map(b=>b.tokuten).filter(v=>v!==null);
-  var maxTok=allTok.length?Math.max(...allTok):1;
-  var minTok=allTok.length?Math.min(...allTok):0;
-
-  var allRate=boats.map(b=>b.zenkokuRate||b.totiRate||0);
-  var maxRate=Math.max(...allRate)||1;
-
-  var allST=boats.map(b=>b.avgST||b.stKoki).filter(v=>v!==null);
-  var minST=allST.length?Math.min(...allST):0.10;
-  var maxST=allST.length?Math.max(...allST):0.30;
-
-  var maxKr=boats.filter(b=>b.kiryokuRank!==null).length||6;
-
-  var allDirST=boats.map(b=>b.st).filter(v=>v!==null);
-  var minDirST=allDirST.length?Math.min(...allDirST):0.10;
-  var maxDirST=allDirST.length?Math.max(...allDirST):0.30;
-
-  boats.forEach(function(b){
-    var score=0;
-
-    // ① 今節得点率（30点満点）- 最重要
-    if(b.tokuten!==null&&maxTok>minTok){
-      score+=(b.tokuten-minTok)/(maxTok-minTok)*30;
-    } else if(b.tokuten!==null){
-      score+=15; // 全艇同値の場合
-    }
-
-    // ② 全国勝率 or 当地勝率（20点満点）
-    var rate=b.totiRate||b.zenkokuRate||0;
-    if(maxRate>0)score+=rate/maxRate*20;
-
-    // ③ 今節平均ST（20点満点）- 速いほど高得点
-    var st=b.avgST||b.stKoki;
-    if(st!==null&&maxST>minST){
-      score+=(maxST-st)/(maxST-minST)*20;
-    } else if(st!==null){
-      score+=10;
-    }
-
-    // ④ 機力スコア（15点満点）- 順位が良いほど高得点
-    if(b.kiryokuRank!==null&&maxKr>1){
-      score+=(maxKr-b.kiryokuRank)/(maxKr-1)*15;
-    }
-
-    // ⑤ 直前ST（10点満点）- 速いほど高得点、F艇は0点
-    if(b.st!==null&&!b.stF&&maxDirST>minDirST){
-      score+=(maxDirST-b.st)/(maxDirST-minDirST)*10;
-    }
-
-    // ⑥ 補正
-    // チルト補正
-    if(b.tilt<=-0.5)score+=2;
-    else if(b.tilt>=0.5)score+=1;
-
-    // 部品交換補正（直前が平均より改善していれば加点）
-    if(b.buhin){
-      var improved=false;
-      if(b.exT!==null&&b.avgEx!==null&&b.exT<b.avgEx-0.05)improved=true;
-      if(b.lapT!==null&&b.avgLap!==null&&b.lapT<b.avgLap-0.05)improved=true;
-      if(b.strT!==null&&b.avgStr!==null&&b.strT<b.avgStr-0.05)improved=true;
-      if(improved)score+=3;
-      else score+=0.5; // 部品交換あるが改善なし
-    }
-
-    // F今期ペナルティ
-    if(b.fKi>=1)score-=3;
-
-    // 今節1着率0%ペナルティ（2戦以上出場していることが前提）
-    if(b.winsRate===0&&b.tokuten!==null&&b.tokuten>0)score-=2;
-
-    b.sogoScore=Math.max(0,score);
-  });
-
-  // 順位付け（スコア高い順）
-  var sorted=boats.slice().sort(function(a,b){return (b.sogoScore||0)-(a.sogoScore||0);});
-  sorted.forEach(function(b,i){b.sogoRank=i+1;});
 }
 
 /* ===== 荒れ指数 ===== */
@@ -642,7 +516,6 @@ function runCalc(){
   if(!raw){showStatus('データを貼り付けてください','err');return;}
   var parsed=parseData(raw);
   calcKiryoku(parsed.boats);
-  calcSogoScore(parsed.boats);
   var areResult=calcAreIndex(parsed.boats,parsed.nigeRate);
   var furikiriResult=checkFurikiri(areResult.score,parsed.boats,parsed.nigeRate);
   var cands1st=select1st(parsed.boats);
@@ -670,16 +543,7 @@ function displayCalcResults(data){
   });
   html+='</tbody></table>';
 
-  // JS総合評価順位
-  html+='<div class="cr-sec">JS総合評価順位</div>';
-  html+='<table class="cr-table"><thead><tr><th>順</th><th>艇</th><th>選手</th><th>得点率</th><th>ST</th><th>機力</th><th>スコア</th></tr></thead><tbody>';
-  var ss=boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
-  ss.forEach(function(b){
-    var cl=b.sogoRank===1?'best':'';
-    var st=b.avgST!==null?b.avgST:(b.stKoki!==null?b.stKoki:'-');
-    html+='<tr class="'+cl+'"><td>'+(b.sogoRank||'-')+'</td><td>'+b.n+'</td><td>'+b.name+'</td><td>'+(b.tokuten!==null?b.tokuten:'-')+'</td><td>'+(st!=='-'?st:'-')+'</td><td>'+(b.kiryokuRank||'-')+'</td><td class="tot">'+(b.sogoScore!==null?b.sogoScore.toFixed(1):'-')+'</td></tr>';
-  });
-  html+='</tbody></table>';
+  // 逃げ率
   html+='<div class="info-row">1コース逃げ率: <b>'+(nigeRate!==null?nigeRate+'% ('+nigeRateSrc+')':'取得できず')+'</b></div>';
 
   if(currentMode==='are'){
@@ -745,13 +609,8 @@ function buildPrompt(){
     p+='\n【各艇データ】\n';
     boats.forEach(function(b){
       var st=b.avgST!==null?b.avgST:(b.stKoki!==null?b.stKoki:null);
-      p+=b.n+'号 '+b.name+' コース'+b.nyuse+' 今節得点率'+(b.tokuten!==null?b.tokuten:'-')+' 平均ST'+(st!==null?st:'-')+' 直前ST'+(b.st!==null?(b.stF?'F':'')+b.st:'-')+' F今期'+b.fKi+' 機力'+b.kiryokuRank+'位'+(b.buhin?' 【部品交換あり】':'')+(b.tilt!==0?' チルト'+b.tilt:'')+'\n';
+      p+=b.n+'号 '+b.name+' コース'+b.nyuse+' 今節得点率'+(b.tokuten!==null?b.tokuten:'-')+' 平均ST'+(st!==null?st:'-')+' 直前ST'+(b.st!==null?(b.stF?'F':'')+b.st:'-')+' F今期'+b.fKi+' 機力'+b.kiryokuRank+'位\n';
     });
-    p+='\n【JS総合評価順位（変更禁止・必ずこの順位で総合評価を出力せよ）】\n';
-    boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);}).forEach(function(b){
-      p+=b.sogoRank+'位 '+b.n+'号艇 '+b.name+'\n';
-    });
-    p+='\n【賞除艇の扱い】今節得点率が「-」の艇は賞除。レース出走可能。得点率項目のみ0点扱いで他は通常評価すること。\n';
     p+='\n【出力フォーマット（必須・この順で）】\n';
     p+='【荒れ指数】'+areResult.score+'点（上記内訳）\n';
     p+='【機力順位】上記の通り\n';
@@ -774,13 +633,8 @@ function buildPrompt(){
     p+='\n【各艇データ】\n';
     boats.forEach(function(b){
       var st=b.avgST!==null?b.avgST:(b.stKoki!==null?b.stKoki:null);
-      p+=b.n+'号 '+b.name+' 今節得点率'+(b.tokuten!==null?b.tokuten:'-')+' 平均ST'+(st!==null?st:'-')+' 直前ST'+(b.st!==null?(b.stF?'F':'')+b.st:'-')+' F今期'+b.fKi+(b.buhin?' 【部品交換あり】':'')+(b.tilt!==0?' チルト'+b.tilt:'')+'\n';
+      p+=b.n+'号 '+b.name+' 今節得点率'+(b.tokuten!==null?b.tokuten:'-')+' 平均ST'+(st!==null?st:'-')+' 直前ST'+(b.st!==null?(b.stF?'F':'')+b.st:'-')+' F今期'+b.fKi+'\n';
     });
-    p+='\n【JS総合評価順位（変更禁止・必ずこの順位で総合評価を出力せよ）】\n';
-    boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);}).forEach(function(b){
-      p+=b.sogoRank+'位 '+b.n+'号艇 '+b.name+'\n';
-    });
-    p+='\n【賞除艇の扱い】今節得点率が「-」の艇は賞除。レース出走可能。得点率項目のみ0点扱いで他は通常評価すること。足や実績が良ければ積極的に評価すること。\n';
     p+='\n2着候補A: '+normalResult.ab[0].n+'号艇\n';
     if(normalResult.ab[1])p+='2着候補B: '+normalResult.ab[1].n+'号艇\n';
     p+='\n【出力フォーマット（必須・この順で）】\n';
@@ -811,7 +665,7 @@ async function generate(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         contents:[{role:'user',parts:[{text:prompt}]}],
-        generationConfig:{temperature:0.15,maxOutputTokens:16000}
+        generationConfig:{temperature:0.15,maxOutputTokens:16000,thinkingConfig:{thinkingBudget:0}}
       })
     });
     var json=await res.json();
@@ -900,6 +754,103 @@ function copyOut(){
   var text=document.getElementById('outText').textContent;
   var btn=document.getElementById('copyBtn');
   if(navigator.clipboard){navigator.clipboard.writeText(text).then(function(){btn.textContent='✅ コピー完了';btn.classList.add('ok');setTimeout(function(){btn.textContent='📋 X投稿用にコピー';btn.classList.remove('ok');},2000);});}
+}
+
+/* ===== オッズパーサー ===== */
+function parseOdds(raw){
+  var lines=raw.split('\n').map(function(l){return l.replace(/\t/g,' ').trim();}).filter(function(l){return l.length>0;});
+  var boats={};
+  var playerRe=/^([1-6])\s+([\u3000-\u9fff\u30a0-\u30ff]+)/;
+  var blocks=[];
+  var cur=null;
+  for(var i=0;i<lines.length;i++){
+    var line=lines[i];
+    var pm=line.match(playerRe);
+    if(pm){cur={boatNo:parseInt(pm[1]),name:pm[2],dataLines:[]};blocks.push(cur);continue;}
+    if(cur&&!line.startsWith('合成')&&!line.startsWith('2単'))cur.dataLines.push(line);
+  }
+  for(var bi=0;bi<blocks.length;bi++){
+    var block=blocks[bi];
+    var boatNo=block.boatNo,name=block.name,dataLines=block.dataLines;
+    boats[boatNo]={name:name,odds:{}};
+    if(dataLines.length<1)continue;
+    var tokenLines=dataLines.map(function(l){return l.split(/\s+/).filter(function(t){return /^\d+(\.\d+)?$/.test(t);}).map(Number);});
+    var row0=tokenLines[0];
+    if(!row0||row0.length<3)continue;
+    var secondBoats=[];
+    for(var j=0;j+2<row0.length;j+=3){
+      var s=Math.round(row0[j]),t=Math.round(row0[j+1]),v=row0[j+2];
+      if(s>=1&&s<=6&&t>=1&&t<=6&&v>0){
+        secondBoats.push(s);
+        boats[boatNo].odds[boatNo+'-'+s+'-'+t]=v;
+      }
+    }
+    for(var row=1;row<tokenLines.length;row++){
+      var toks=tokenLines[row];
+      for(var col=0;col<secondBoats.length;col++){
+        var jj=col*2;
+        if(jj+1>=toks.length)continue;
+        var tt=Math.round(toks[jj]),vv=toks[jj+1];
+        if(tt>=1&&tt<=6&&vv>0)boats[boatNo].odds[boatNo+'-'+secondBoats[col]+'-'+tt]=vv;
+      }
+    }
+  }
+  return boats;
+}
+
+function calcGoseiOdds(betsArr,oddsData){
+  var sum=0,count=0;
+  betsArr.forEach(function(bet){
+    var parts=bet.match(/^(\d)-(\d)-(\d)$/);
+    if(!parts)return;
+    var first=parseInt(parts[1]);
+    var boatData=oddsData[first];
+    if(!boatData)return;
+    var o=boatData.odds[bet];
+    if(o&&o>0){sum+=1/o;count++;}
+  });
+  if(sum===0)return null;
+  return (1/sum).toFixed(1);
+}
+
+function showOddsResult(){
+  var raw=document.getElementById('oddsInput').value.trim();
+  if(!raw){alert('オッズデータを貼り付けてください');return;}
+  var oddsData=parseOdds(raw);
+  var outText=document.getElementById('outText').textContent;
+  // 買い目を抽出
+  var bets=[];
+  outText.split('\n').forEach(function(ln){if(/^\d-\d-\d$/.test(ln.trim()))bets.push(ln.trim());});
+  if(bets.length===0){alert('先に予想を生成してください');return;}
+  // 表示
+  var html='<div style="margin-top:14px;">';
+  html+='<div style="font-size:10px;color:var(--text-sub);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;padding-left:6px;border-left:2px solid var(--accent);">買い目オッズ</div>';
+  html+='<table style="width:100%;border-collapse:collapse;font-size:13px;">';
+  html+='<thead><tr><th style="text-align:left;padding:5px 6px;background:var(--bg);color:var(--text-sub);font-size:10px;border-bottom:1px solid var(--border);">買い目</th><th style="text-align:right;padding:5px 6px;background:var(--bg);color:var(--text-sub);font-size:10px;border-bottom:1px solid var(--border);">オッズ</th></tr></thead><tbody>';
+  var validBets=[];
+  bets.forEach(function(bet){
+    var parts=bet.match(/^(\d)-(\d)-(\d)$/);
+    if(!parts)return;
+    var first=parseInt(parts[1]);
+    var boatData=oddsData[first];
+    var o=boatData?boatData.odds[bet]:null;
+    var oStr=o?o.toFixed(1)+'倍':'—';
+    var color=o?(o>=100?'color:var(--accent)':o>=30?'color:var(--text)':'color:var(--green)'):'color:var(--text-muted)';
+    html+='<tr><td style="padding:5px 6px;border-bottom:1px solid var(--border);font-weight:700;">'+bet+'</td><td style="text-align:right;padding:5px 6px;border-bottom:1px solid var(--border);'+color+'">'+oStr+'</td></tr>';
+    if(o)validBets.push(bet);
+  });
+  html+='</tbody></table>';
+  // 合成オッズ
+  var gosei=calcGoseiOdds(validBets,oddsData);
+  if(gosei){
+    html+='<div style="margin-top:10px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:4px;">';
+    html+='<span style="font-size:10px;color:var(--text-sub);">合成オッズ</span>';
+    html+='<span style="font-size:22px;font-weight:700;color:var(--accent);margin-left:10px;">'+gosei+'倍</span>';
+    html+='<span style="font-size:10px;color:var(--text-muted);margin-left:8px;">('+validBets.length+'点)</span>';
+    html+='</div>';
+  }
+  html+='</div>';
+  document.getElementById('oddsResult').innerHTML=html;
 }
 loadKey();
 
