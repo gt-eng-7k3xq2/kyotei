@@ -766,6 +766,8 @@ async function generate(){
         if(ngFromAI.length>0)ngBoats=ngFromAI;
         else if(ranked2.length>=6)ngBoats=[String(ranked2[5].n)];
         var okOthers=allBoats.filter(function(b){return b!==maru&&b!==shiro&&ngBoats.indexOf(b)<0;});
+        // 抑え用：ng以外の全艇（◎○含む）
+        var okAll=allBoats.filter(function(b){return ngBoats.indexOf(b)<0;});
         // fallback: mA/mB/mCが取れなかった場合
         if(!mA)mA={1:okOthers[0]||'3'};
         if(!mB)mB={1:okOthers.filter(function(x){return x!==(mA?mA[1]:null);})[0]||okOthers[0]||'4'};
@@ -785,10 +787,14 @@ async function generate(){
         var honsen=[];
         [A,B].forEach(function(t){tryAdd(maru,shiro,t);tryAdd(shiro,maru,t);tryAdd(maru,C,t);tryAdd(shiro,C,t);});
         honsen=allBets.splice(0,Math.min(6,allBets.length));
-        // 抑え: 残り全組み合わせ
+        // 抑え: ◎○頭で3着にokAll全体を使う
         var mid2=[maru,shiro];
-        var mid3=okOthers.concat([]);
-        mid2.forEach(function(h){mid3.forEach(function(m){okOthers.forEach(function(t){tryAdd(h,m,t);});});});
+        mid2.forEach(function(h){
+          okAll.forEach(function(m){
+            if(m===h)return;
+            okAll.forEach(function(t){tryAdd(h,m,t);});
+          });
+        });
         // 全組み合わせからhonsenを除いた残りを抑えに
         var osaee=allBets.slice(0,6);
         var honsenStr=honsen.join('/'),osaeeStr=osaee.join('/');
