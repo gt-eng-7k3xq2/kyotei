@@ -813,34 +813,35 @@ async function generate(){
         var honsenStr=honsen.join('/'),osaeeStr=osaee.join('/');
         // 行単位で【買い目】ブロックを差し替え
         var tLines=text.split('\n');
-        var newLines=[],skip=false,inserted=false;
+        var newLines=[],inBet=false,inserted=false;
         for(var ti=0;ti<tLines.length;ti++){
           var tl=tLines[ti];
-          if(!inserted&&tl.indexOf('【総合評価】')>=0){
-            // 【買い目】がまだ挿入されていない場合ここに挿入
-            if(!skip){
-              newLines.push('【買い目】');
-              newLines.push('本線('+honsen.length+'点)');
-              honsen.forEach(function(b){newLines.push(b);});
-              newLines.push('抑え('+osaee.length+'点)');
-              osaee.forEach(function(b){newLines.push(b);});
-              newLines.push('');
-            }
-            inserted=true;skip=false;
-          }
-          if(tl.indexOf('【買い目】')>=0){skip=true;inserted=true;
+          if(tl.indexOf('【買い目】')>=0){
+            // 【買い目】開始：新しい買い目を挿入してinBet=true
             newLines.push('【買い目】');
             newLines.push('本線('+honsen.length+'点)');
             honsen.forEach(function(b){newLines.push(b);});
             newLines.push('抑え('+osaee.length+'点)');
             osaee.forEach(function(b){newLines.push(b);});
             newLines.push('');
+            inBet=true;inserted=true;
             continue;
           }
-          if(skip){
-            // 本線・抑え・X-X-X行をスキップ
-            if(/^(本線|抑え|\d-\d-\d)/.test(tl.trim()))continue;
-            skip=false;
+          if(inBet){
+            // 次の【で終了
+            if(tl.indexOf('【')>=0){inBet=false;newLines.push(tl);}
+            // それ以外はスキップ（古い買い目行）
+            continue;
+          }
+          // 【総合評価】の前に【買い目】がまだなければここに挿入
+          if(!inserted&&tl.indexOf('【総合評価】')>=0){
+            newLines.push('【買い目】');
+            newLines.push('本線('+honsen.length+'点)');
+            honsen.forEach(function(b){newLines.push(b);});
+            newLines.push('抑え('+osaee.length+'点)');
+            osaee.forEach(function(b){newLines.push(b);});
+            newLines.push('');
+            inserted=true;
           }
           newLines.push(tl);
         }
