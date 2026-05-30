@@ -736,8 +736,8 @@ async function generate(){
     // AREモード：パラメータをパースして12点自動生成
     if(currentMode==='are'&&calcData){
       // まず総合評価から◎○を取得
-      var mMaru=text.match(/1位[\s　]*(\d)号艇[\s　]*◎/);
-      var mShiro=text.match(/2位[\s　]*(\d)号艇[\s　]*○/);
+      var mMaru=text.match(/1位[\s　]*(\d)号艇[^\n]*◎/);
+      var mShiro=text.match(/2位[\s　]*(\d)号艇[^\n]*○/);
       var maru=mMaru?mMaru[1]:(calcData.cands1st&&calcData.cands1st[0]?String(calcData.cands1st[0].n):'1');
       var shiro=mShiro?mShiro[1]:(calcData.cands1st&&calcData.cands1st[1]?String(calcData.cands1st[1].n):'2');
       // maru===shiroになった場合の安全弁
