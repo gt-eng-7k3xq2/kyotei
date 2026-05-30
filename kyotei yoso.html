@@ -807,18 +807,29 @@ async function generate(){
       var r3=text.match(/3位\s*(\d)号艇/);
       var r4=text.match(/4位\s*(\d)号艇/);
       var r5=text.match(/5位\s*(\d)号艇/);
+      var r6=text.match(/6位\s*(\d)号艇/);
       var p1=r1?r1[1]:'1';
-      var p2=r2?r2[1]:null;
-      var p3=r3?r3[1]:null;
-      var p4=r4?r4[1]:null;
-      var p5=r5?r5[1]:null;
-      var ab=calcData.normalResult.ab;
-      var usedP=[p1];
-      function nextUnused(arr){return ['2','3','4','5','6'].filter(function(x){return arr.indexOf(x)<0;})[0]||'2';}
-      if(!p2){p2=ab[0]?String(ab[0].n):nextUnused(usedP);}usedP.push(p2);
-      if(!p3){p3=ab[1]?String(ab[1].n):nextUnused(usedP);}usedP.push(p3);
-      if(!p4){p4=nextUnused(usedP);}usedP.push(p4);
-      if(!p5){p5=nextUnused(usedP);}
+      var p2,p3,p4,p5;
+      if(shinkido==='C'){
+        // Cモード：総合評価順そのまま
+        var ab=calcData.normalResult.ab;
+        var usedP=[p1];
+        function nextUnused(arr){return ['2','3','4','5','6'].filter(function(x){return arr.indexOf(x)<0;})[0]||'2';}
+        p2=r2?r2[1]:null;p3=r3?r3[1]:null;p4=r4?r4[1]:null;p5=r5?r5[1]:null;
+        if(!p2){p2=ab[0]?String(ab[0].n):nextUnused(usedP);}usedP.push(p2);
+        if(!p3){p3=ab[1]?String(ab[1].n):nextUnused(usedP);}usedP.push(p3);
+        if(!p4){p4=nextUnused(usedP);}usedP.push(p4);
+        if(!p5){p5=nextUnused(usedP);}
+      } else {
+        // A/B：頭は1号艇固定。2着・3着は総合評価順から1を除いて取得
+        var sogoOrder=[r1,r2,r3,r4,r5,r6].filter(function(m){return m&&m[1]!=='1';}).map(function(m){return m[1];});
+        // 不足分は2〜6から補完
+        ['2','3','4','5','6'].forEach(function(x){if(sogoOrder.indexOf(x)<0)sogoOrder.push(x);});
+        p2=sogoOrder[0]||'2';
+        p3=sogoOrder[1]||'3';
+        p4=sogoOrder[2]||'4';
+        p5=sogoOrder[3]||'5';
+      }
       function vb(a,b,c){return a&&b&&c&&a!==b&&b!==c&&a!==c;}
       var honsen=[],osaee=[],bets={};
       function addBet(arr,a,b,c){if(!vb(a,b,c))return;var k=a+'-'+b+'-'+c;if(bets[k])return;bets[k]=true;arr.push(k);}
@@ -828,16 +839,10 @@ async function generate(){
         addBet(osaee,p3,p1,p2);addBet(osaee,p3,p2,p1);
         addBet(osaee,p1,p3,p4);addBet(osaee,p1,p4,p3);
       } else {
-        // A/B：1号艇頭固定。p2〜p5は'1'以外から選ぶ
-        var others=['2','3','4','5','6'].filter(function(x){return x!==p2&&x!==p3&&x!==p4&&x!==p5;});
-        var np2=p2==='1'?(others[0]||'2'):p2;
-        var np3=p3==='1'?(others.filter(function(x){return x!==np2;})[0]||'3'):p3;
-        var np4=p4==='1'?(others.filter(function(x){return x!==np2&&x!==np3;})[0]||'4'):p4;
-        var np5=p5==='1'?(others.filter(function(x){return x!==np2&&x!==np3&&x!==np4;})[0]||'5'):p5;
-        addBet(honsen,'1',np2,np3);addBet(honsen,'1',np3,np2);
-        addBet(honsen,'1',np2,np4);addBet(honsen,'1',np3,np4);
-        addBet(osaee,'1',np2,np5);addBet(osaee,'1',np3,np5);
-        addBet(osaee,'1',np4,np2);addBet(osaee,'1',np4,np3);
+        addBet(honsen,'1',p2,p3);addBet(honsen,'1',p3,p2);
+        addBet(honsen,'1',p2,p4);addBet(honsen,'1',p3,p4);
+        addBet(osaee,'1',p2,p5);addBet(osaee,'1',p3,p5);
+        addBet(osaee,'1',p4,p2);addBet(osaee,'1',p4,p3);
       }
       honsen=honsen.slice(0,4);osaee=osaee.slice(0,4);
       var honsenStr=honsen.join('/'),osaeeStr=osaee.join('/');
