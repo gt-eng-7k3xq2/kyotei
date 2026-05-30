@@ -772,34 +772,32 @@ async function generate(){
         if(!mA)mA={1:okOthers[0]||'3'};
         if(!mB)mB={1:okOthers.filter(function(x){return x!==(mA?mA[1]:null);})[0]||okOthers[0]||'4'};
         if(!mC)mC={1:okOthers[0]||'1'};
-        // C(2着追加)が◎○なら代替
-        var C=mC[1];
-        // CがA/B/◎/○と被る場合はokOthersから別の艇を選ぶ
-        if(C===maru||C===shiro||C===A||C===B){
-          C=okOthers.filter(function(x){return x!==A&&x!==B;})[0]||
-            okOthers.filter(function(x){return x!==A;})[0]||
-            okOthers[0]||B;
-        }
         // 全有効買い目を生成
         function vbet(a,b,c){return a!==b&&b!==c&&a!==c;}
-        var seen={},allBets=[];
-        function tryAdd(a,b,c){if(!vbet(a,b,c))return;var k=a+'-'+b+'-'+c;if(!seen[k]){seen[k]=true;allBets.push(k);}}
-        // 優先順位順に生成
+        // A・Bを先に確定
         var A=mA[1],B=mB[1];
         if(ngBoats.indexOf(A)>=0)A=okOthers.filter(function(x){return x!==B;})[0]||okOthers[0];
         if(ngBoats.indexOf(B)>=0||B===A)B=okOthers.filter(function(x){return x!==A;})[0]||okOthers[1]||okOthers[0];
+        // C(2着追加)：A・B・◎・○と被らない艇を優先、なければ◎○も候補に
+        var C=mC[1];
+        if(C===maru||C===shiro||C===A||C===B){
+          C=okOthers.filter(function(x){return x!==A&&x!==B;})[0]||
+            okAll.filter(function(x){return x!==maru&&x!==shiro&&x!==A&&x!==B;})[0]||
+            (shiro!==A&&shiro!==B?shiro:null)||
+            (maru!==A&&maru!==B?maru:null)||B;
+        }
         // 本線：◎頭3点 + ○頭3点 = 6点
         var honsen=[];
         var seen3={};
         function addHon(a,b,c){if(a===b||b===c||a===c)return;var k=a+'-'+b+'-'+c;if(seen3[k])return;seen3[k]=true;honsen.push(k);}
-        // ◎頭：3着A・3着B・C
+        // ◎頭3点
         addHon(maru,shiro,A);
         addHon(maru,shiro,B);
-        addHon(maru,C,A);
-        // ○頭：3着A・3着B・C
+        addHon(maru,A,B);
+        // ○頭3点
         addHon(shiro,maru,A);
         addHon(shiro,maru,B);
-        addHon(shiro,C,A);
+        addHon(shiro,A,B);
         honsen=honsen.slice(0,6);
         // 抑え：◎頭3点 + ○頭3点 = 6点（本線と重複しない）
         var osaee=[];
