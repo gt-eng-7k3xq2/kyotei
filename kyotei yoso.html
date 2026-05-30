@@ -788,26 +788,29 @@ async function generate(){
         var A=mA[1],B=mB[1];
         if(ngBoats.indexOf(A)>=0)A=okOthers.filter(function(x){return x!==B;})[0]||okOthers[0];
         if(ngBoats.indexOf(B)>=0||B===A)B=okOthers.filter(function(x){return x!==A;})[0]||okOthers[1]||okOthers[0];
-        // 本線：◎○交互に3着A・3着Bを組み合わせて6点
+        // 本線：◎頭3点 + ○頭3点 = 6点
         var honsen=[];
-        [A,B].forEach(function(t){
-          tryAdd(maru,shiro,t);
-          tryAdd(shiro,maru,t);
-        });
-        tryAdd(maru,C,A);tryAdd(shiro,C,A);
-        tryAdd(maru,C,B);tryAdd(shiro,C,B);
-        honsen=allBets.splice(0,Math.min(6,allBets.length));
-        // 抑え: seen/allBetsをリセットして独立生成
-        var seen2={},osaeBets=[];
-        function tryAdd2(a,b,c){if(!vbet(a,b,c))return;var k=a+'-'+b+'-'+c;if(seen2[k])return;var inHonsen=false;for(var hi=0;hi<honsen.length;hi++){if(honsen[hi]===k){inHonsen=true;break;}}if(inHonsen)return;seen2[k]=true;osaeBets.push(k);}
-        var mid2=[maru,shiro];
-        mid2.forEach(function(h){
-          okAll.forEach(function(m){
-            if(m===h)return;
-            okAll.forEach(function(t){tryAdd2(h,m,t);});
-          });
-        });
-        var osaee=osaeBets.slice(0,6);
+        var seen3={};
+        function addHon(a,b,c){if(a===b||b===c||a===c)return;var k=a+'-'+b+'-'+c;if(seen3[k])return;seen3[k]=true;honsen.push(k);}
+        // ◎頭：3着A・3着B・C
+        addHon(maru,shiro,A);
+        addHon(maru,shiro,B);
+        addHon(maru,C,A);
+        // ○頭：3着A・3着B・C
+        addHon(shiro,maru,A);
+        addHon(shiro,maru,B);
+        addHon(shiro,C,A);
+        honsen=honsen.slice(0,6);
+        // 抑え：◎頭3点 + ○頭3点 = 6点（本線と重複しない）
+        var osaee=[];
+        var seen4={};
+        honsen.forEach(function(k){seen4[k]=true;});
+        function addOsa(a,b,c){if(a===b||b===c||a===c)return;var k=a+'-'+b+'-'+c;if(seen4[k])return;seen4[k]=true;osaee.push(k);}
+        // ◎頭残り
+        okAll.forEach(function(m){if(m===maru)return;okAll.forEach(function(t){addOsa(maru,m,t);});});
+        // ○頭残り
+        okAll.forEach(function(m){if(m===shiro)return;okAll.forEach(function(t){addOsa(shiro,m,t);});});
+        osaee=osaee.slice(0,6);
         var honsenStr=honsen.join('/'),osaeeStr=osaee.join('/');
         var bet='\n【買い目】\n本線('+honsen.length+'点)\n'+honsen.join('\n')+'\n抑え('+osaee.length+'点)\n'+osaee.join('\n')+'\n';
         var ii=text.indexOf('2着追加');
