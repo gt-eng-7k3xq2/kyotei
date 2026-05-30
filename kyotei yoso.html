@@ -811,15 +811,13 @@ async function generate(){
         okAll.forEach(function(m){if(m===shiro)return;okAll.forEach(function(t){addOsa(shiro,m,t);});});
         osaee=osaee.slice(0,6);
         var honsenStr=honsen.join('/'),osaeeStr=osaee.join('/');
-        var bet='【買い目】\n本線('+honsen.length+'点)\n'+honsen.join('\n')+'\n抑え('+osaee.length+'点)\n'+osaee.join('\n')+'\n\n';
-        // 既存【買い目】があれば置換、なければ【総合評価】直前に挿入
-        if(text.indexOf('【買い目】')>=0){
-          text=text.replace(/【買い目】[\s\S]*?\n\n/,bet);
-        } else {
-          var sogoIdx=text.indexOf('【総合評価】');
-          if(sogoIdx>=0){text=text.slice(0,sogoIdx)+bet+text.slice(sogoIdx);}
-          else{text=bet+text;}
-        }
+        var bet='【買い目】\n本線('+honsen.length+'点)\n'+honsen.join('\n')+'\n抑え('+osaee.length+'点)\n'+osaee.join('\n')+'\n';
+        // 【買い目】〜【総合評価】の間を削除して再挿入
+        var s=text.indexOf('【買い目】');
+        var e=text.indexOf('【総合評価】');
+        if(s>=0&&e>=0&&s<e){text=text.slice(0,s)+bet+'\n'+text.slice(e);}
+        else if(e>=0){text=text.slice(0,e)+bet+'\n'+text.slice(e);}
+        else{text=bet+'\n'+text;}
         // Xサマリーの本線・抑え行も上書き
         text=text.replace(/本線[\u3000 \t][^\n]*/g,'本線　'+honsenStr);
         text=text.replace(/抑え[\u3000 \t][^\n]*/g,'抑え　'+osaeeStr);
