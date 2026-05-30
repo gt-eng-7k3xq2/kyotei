@@ -810,11 +810,12 @@ async function generate(){
         okAll.forEach(function(m){if(m===shiro)return;okAll.forEach(function(t){addOsa(shiro,m,t);});});
         osaee=osaee.slice(0,6);
         var honsenStr=honsen.join('/'),osaeeStr=osaee.join('/');
-        var bet='\n【買い目】\n本線('+honsen.length+'点)\n'+honsen.join('\n')+'\n抑え('+osaee.length+'点)\n'+osaee.join('\n')+'\n';
-        var ii=text.indexOf('2着追加');
-        if(ii>=0){var ni=text.indexOf('\n',ii);if(ni>=0)text=text.slice(0,ni+1)+bet+text.slice(ni+1);}
-        text=text.replace(/本線[\u3000 ][X0-9\-\/]+/g,'本線\u3000'+honsenStr);
-        text=text.replace(/抑え[\u3000 ][X0-9\-\/]+/g,'抑え\u3000'+osaeeStr);
+        var bet='【買い目】\n本線('+honsen.length+'点)\n'+honsen.join('\n')+'\n抑え('+osaee.length+'点)\n'+osaee.join('\n');
+        // 既存の【買い目】ブロックを丸ごと置換
+        text=text.replace(/【買い目】[\s\S]*?(?=\n【|\n$|$)/,bet);
+        // Xサマリーの本線・抑え行も上書き
+        text=text.replace(/本線[\u3000 \t][^\n]*/g,'本線　'+honsenStr);
+        text=text.replace(/抑え[\u3000 \t][^\n]*/g,'抑え　'+osaeeStr);
       }
     }
     // 通常モードJS自動生成
