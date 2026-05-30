@@ -846,10 +846,6 @@ async function generate(){
           newLines.push(tl);
         }
         text=newLines.join('\n');
-        // デバッグ：買い目部分を確認
-        var dbIdx=text.indexOf('【買い目】');
-        var dbEnd=text.indexOf('【総合評価】');
-        alert(dbIdx>=0?text.slice(dbIdx,Math.min(dbIdx+200,dbEnd>=0?dbEnd:dbIdx+200)):'買い目なし');
         // Xサマリーの本線・抑え行も上書き
         text=text.replace(/本線[\u3000 \t][^\n]*/g,'本線　'+honsenStr);
         text=text.replace(/抑え[\u3000 \t][^\n]*/g,'抑え　'+osaeeStr);
