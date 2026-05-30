@@ -773,7 +773,7 @@ async function generate(){
         if(!mB)mB={1:okOthers.filter(function(x){return x!==(mA?mA[1]:null);})[0]||okOthers[0]||'4'};
         if(!mC)mC={1:okOthers[0]||'1'};
         // 全有効買い目を生成
-        function vbet(a,b,c){return a!==b&&b!==c&&a!==c;}
+        var vbet=function(a,b,c){return a!==b&&b!==c&&a!==c;};
         // A・Bを先に確定
         var A=mA[1],B=mB[1];
         if(ngBoats.indexOf(A)>=0)A=okOthers.filter(function(x){return x!==B;})[0]||okOthers[0];
@@ -789,7 +789,7 @@ async function generate(){
         // 本線：◎頭3点 + ○頭3点 = 6点
         var honsen=[];
         var seen3={};
-        function addHon(a,b,c){if(a===b||b===c||a===c)return;var k=a+'-'+b+'-'+c;if(seen3[k])return;seen3[k]=true;honsen.push(k);}
+        var addHon=function(a,b,c){if(a===b||b===c||a===c)return;var k=a+'-'+b+'-'+c;if(seen3[k])return;seen3[k]=true;honsen.push(k);};
         // ◎頭3点
         addHon(maru,shiro,A);
         addHon(maru,shiro,B);
@@ -799,11 +799,11 @@ async function generate(){
         addHon(shiro,maru,B);
         addHon(shiro,A,B);
         honsen=honsen.slice(0,6);
-        // 抑え：◎頭3点 + ○頭3点 = 6点（本線と重複しない）
+        // 抑え：本線と重複しない組み合わせ6点
         var osaee=[];
         var seen4={};
         honsen.forEach(function(k){seen4[k]=true;});
-        function addOsa(a,b,c){if(a===b||b===c||a===c)return;var k=a+'-'+b+'-'+c;if(seen4[k])return;seen4[k]=true;osaee.push(k);}
+        var addOsa=function(a,b,c){if(a===b||b===c||a===c)return;var k=a+'-'+b+'-'+c;if(seen4[k])return;seen4[k]=true;osaee.push(k);};
         // ◎頭残り
         okAll.forEach(function(m){if(m===maru)return;okAll.forEach(function(t){addOsa(maru,m,t);});});
         // ○頭残り
@@ -848,9 +848,9 @@ async function generate(){
         p4=sogoOrder[2]||'4';
         p5=sogoOrder[3]||'5';
       }
-      function vb(a,b,c){return a&&b&&c&&a!==b&&b!==c&&a!==c;}
+      var vb=function(a,b,c){return a&&b&&c&&a!==b&&b!==c&&a!==c;};
       var honsen=[],osaee=[],bets={};
-      function addBet(arr,a,b,c){if(!vb(a,b,c))return;var k=a+'-'+b+'-'+c;if(bets[k])return;bets[k]=true;arr.push(k);}
+      var addBet=function(arr,a,b,c){if(!vb(a,b,c))return;var k=a+'-'+b+'-'+c;if(bets[k])return;bets[k]=true;arr.push(k);};
       if(shinkido==='C'){
         addBet(honsen,p1,p2,p3);addBet(honsen,p1,p3,p2);
         addBet(honsen,p2,p1,p3);addBet(honsen,p2,p3,p1);
