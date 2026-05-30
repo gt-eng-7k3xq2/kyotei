@@ -767,15 +767,14 @@ async function generate(){
       var mA=text.match(/3着A[:：]\s*(\d)号艇/);
       var mB=text.match(/3着B[:：]\s*(\d)号艇/);
       var mC=text.match(/2着追加[:：]\s*(\d)号艇/);
-        // fallback: AIがパラメータを出さなかった場合
-        if(!mA||!mB||!mC){
-          var fb=[okOthers[0]||'1', okOthers[1]||okOthers[0]||'5', okOthers[0]||'1'];
-          if(!mA)mA={1:fb[0]};if(!mB)mB={1:fb[1]};if(!mC)mC={1:fb[2]};
-        }
-        if(mA&&mB&&mC){
+      // 総合評価▲△から3着候補を固定取得（AIパラメータより優先）
+      var rSan=text.match(/3位\s*(\d)号艇/);
+      var rYon=text.match(/4位\s*(\d)号艇/);
+      if(rSan&&rSan[1]!==maru&&rSan[1]!==shiro)mA={1:rSan[1]};
+      if(rYon&&rYon[1]!==maru&&rYon[1]!==shiro&&rYon[1]!==(mA?mA[1]:null))mB={1:rYon[1]};
+        if(mA&&mB){
         var allBoats=['1','2','3','4','5','6'];
         var ranked2=calcData.parsed&&calcData.parsed.boats?calcData.parsed.boats.slice().sort(function(a,b){return (a.kiryokuRank||99)-(b.kiryokuRank||99);}):[];
-        // AI総合評価の×印艇をngBoatsとして使用
         var ngBoats=[];
         if(calcData.parsed&&calcData.parsed.boats){
           calcData.parsed.boats.forEach(function(b){if(b.forceNG)ngBoats.push(String(b.n));});
@@ -788,8 +787,11 @@ async function generate(){
         });
         if(ngFromAI.length>0)ngBoats=ngFromAI;
         else if(ranked2.length>=6)ngBoats=[String(ranked2[5].n)];
-        // ×印以外の◎○以外の艇
         var okOthers=allBoats.filter(function(b){return b!==maru&&b!==shiro&&ngBoats.indexOf(b)<0;});
+        // fallback: mA/mB/mCが取れなかった場合
+        if(!mA)mA={1:okOthers[0]||'3'};
+        if(!mB)mB={1:okOthers.filter(function(x){return x!==(mA?mA[1]:null);})[0]||okOthers[0]||'4'};
+        if(!mC)mC={1:okOthers[0]||'1'};
         // C(2着追加)が◎○なら代替
         var C=mC[1];
         if(C===maru||C===shiro){for(var ri=0;ri<okOthers.length;ri++){C=okOthers[ri];break;}}
@@ -818,13 +820,6 @@ async function generate(){
         text=text.replace(/本線[\u3000 ][X0-9\-\/]+/g,'本線\u3000'+honsenStr);
         text=text.replace(/抑え[\u3000 ][X0-9\-\/]+/g,'抑え\u3000'+osaeeStr);
       }
-    }
-    // 荒れモード：▲△から3着固定取得
-    if(currentMode==='are'&&calcData&&calcData.cands1st&&calcData.cands1st.length>=2){
-      var rSan=text.match(/3位\s*(\d)号艇/);
-      var rYon=text.match(/4位\s*(\d)号艇/);
-      if(rSan&&rSan[1]!==maru&&rSan[1]!==shiro)mA={1:rSan[1]};
-      if(rYon&&rYon[1]!==maru&&rYon[1]!==shiro&&rYon[1]!==(mA?mA[1]:null))mB={1:rYon[1]};
     }
     // 通常モードJS自動生成
     if(currentMode==='normal'&&calcData){
@@ -918,8 +913,15 @@ function showOddsResult(){
   if(!raw){alert('オッズデータを貼り付けてください');return;}
   var oddsData=parseOdds(raw);
   var outText=document.getElementById('outText').textContent;
-  var bets=[];
-  outText.split('\n').forEach(function(ln){if(/^\d-\d-\d$/.test(ln.trim()))bets.push(ln.trim());});
+  var bets=[],seen={};
+  var lines=outText.split('\n');
+  // 【Xサマリー】より前の行のみ対象
+  var xIdx=lines.findIndex(function(l){return l.indexOf('【Xサマリー】')>=0;});
+  var targetLines=xIdx>=0?lines.slice(0,xIdx):lines;
+  targetLines.forEach(function(ln){
+    var t=ln.trim();
+    if(/^\d-\d-\d$/.test(t)&&!seen[t]){seen[t]=true;bets.push(t);}
+  });
   if(bets.length===0){alert('先に予想を生成してください');return;}
   var html='<div style="margin-top:14px;"><div style="font-size:10px;color:var(--text-sub);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;padding-left:6px;border-left:2px solid var(--accent);">買い目オッズ</div>';
   html+='<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr><th style="text-align:left;padding:5px 6px;background:var(--bg);color:var(--text-sub);font-size:10px;border-bottom:1px solid var(--border);">買い目</th><th style="text-align:right;padding:5px 6px;background:var(--bg);color:var(--text-sub);font-size:10px;border-bottom:1px solid var(--border);">オッズ</th></tr></thead><tbody>';
