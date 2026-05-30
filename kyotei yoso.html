@@ -143,9 +143,12 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
   <div class="out-hdr">予想結果</div>
   <div class="out-text" id="outText"></div>
   <button class="copy-btn" id="copyBtn" onclick="copyOut()">📋 X投稿用にコピー</button>
-
+  <button onclick="saveLogEntry()" style="width:100%;margin-top:8px;padding:11px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;">📝 結果を記録</button>
+  <div id="resultInput" style="display:none;"></div>
 <div id="oddsResult"></div>
 </div>
+<div id="logSummary" style="display:none;margin-top:12px;padding:0 0 20px;"></div>
+<div id="logAnalysis" style="display:none;margin-top:4px;"></div>
 
 <script>
 
@@ -989,6 +992,151 @@ function showOddsResult(){
   document.getElementById('oddsResult').innerHTML=html;
 }
 loadKey();
+updateLogSummary();
+var currentLog=null;
+
+function saveLogEntry(){
+  if(!calcData)return;
+  var venue=document.getElementById('venue').value||'?';
+  var raceNum=document.getElementById('raceNum').value||'?';
+  var outText=document.getElementById('outText').textContent;
+  // AI総合評価順位を抽出
+  var aiRanking=[];
+  for(var r=1;r<=6;r++){
+    var m=outText.match(new RegExp(r+'位[\\s　]*(\\d)号艇'));
+    if(m)aiRanking.push({rank:r,n:parseInt(m[1])});
+  }
+  // 買い目を抽出
+  var honsen=[],osaee=[],inSec='';
+  outText.split('\n').forEach(function(ln){
+    var t=ln.trim();
+    if(t.indexOf('本線')===0)inSec='honsen';
+    else if(t.indexOf('抑え')===0)inSec='osaee';
+    else if(/^\d-\d-\d$/.test(t)){
+      if(inSec==='honsen')honsen.push(t);
+      else if(inSec==='osaee')osaee.push(t);
+    }
+  });
+  // 各艇の評価データ
+  var boats=calcData.parsed.boats.map(function(b){
+    return{n:b.n,name:b.name,tokuten:b.tokuten,avgST:b.avgST||b.stKoki,kiryokuRank:b.kiryokuRank,sogoRank:b.sogoRank,sogoScore:b.sogoScore?Math.round(b.sogoScore*10)/10:null};
+  });
+  currentLog={
+    id:Date.now(),
+    datetime:new Date().toISOString(),
+    venue:venue,raceNum:raceNum,mode:currentMode,
+    boats:boats,aiRanking:aiRanking,
+    bets:{honsen:honsen,osaee:osaee},
+    result:null,hit:null
+  };
+  showResultInput();
+}
+
+function showResultInput(){
+  var el=document.getElementById('resultInput');
+  el.style.display='block';
+  el.innerHTML='<div style="margin-top:14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;">'
+    +'<div style="font-size:10px;color:var(--text-sub);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px;">結果を記録</div>'
+    +'<div style="font-size:11px;color:var(--text-sub);margin-bottom:6px;">1着</div>'
+    +'<div style="display:flex;gap:6px;margin-bottom:10px;">'+[1,2,3,4,5,6].map(function(n){return'<button onclick="selectResult(1,'+n+')" id="r1_'+n+'" style="flex:1;padding:10px 0;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;background:var(--surface);color:var(--text);-webkit-appearance:none;">'+n+'</button>';}).join('')+'</div>'
+    +'<div style="font-size:11px;color:var(--text-sub);margin-bottom:6px;">2着</div>'
+    +'<div style="display:flex;gap:6px;margin-bottom:10px;">'+[1,2,3,4,5,6].map(function(n){return'<button onclick="selectResult(2,'+n+')" id="r2_'+n+'" style="flex:1;padding:10px 0;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;background:var(--surface);color:var(--text);-webkit-appearance:none;">'+n+'</button>';}).join('')+'</div>'
+    +'<div style="font-size:11px;color:var(--text-sub);margin-bottom:6px;">3着</div>'
+    +'<div style="display:flex;gap:6px;margin-bottom:10px;">'+[1,2,3,4,5,6].map(function(n){return'<button onclick="selectResult(3,'+n+')" id="r3_'+n+'" style="flex:1;padding:10px 0;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;background:var(--surface);color:var(--text);-webkit-appearance:none;">'+n+'</button>';}).join('')+'</div>'
+    +'<div style="font-size:11px;color:var(--text-sub);margin-bottom:6px;">払戻（円・任意）</div>'
+    +'<input type="number" id="payoutInput" placeholder="例: 12500" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;padding:10px;outline:none;margin-bottom:10px;">'
+    +'<button onclick="commitResult()" style="width:100%;padding:12px;background:var(--text);color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:\'Noto Sans JP\',sans-serif;">保存</button>'
+    +'<button onclick="document.getElementById(\'resultInput\').style.display=\'none\'" style="width:100%;margin-top:6px;padding:10px;background:var(--surface);color:var(--text-sub);border:1px solid var(--border);border-radius:4px;font-size:12px;-webkit-appearance:none;">キャンセル</button>'
+    +'</div>';
+  currentLog.result={first:null,second:null,third:null,payout:null};
+}
+
+function selectResult(place,n){
+  if(!currentLog||!currentLog.result)return;
+  var key=place===1?'first':place===2?'second':'third';
+  currentLog.result[key]=n;
+  // ボタンの色を更新
+  [1,2,3,4,5,6].forEach(function(i){
+    var btn=document.getElementById('r'+place+'_'+i);
+    if(btn){btn.style.background=i===n?'var(--text)':'var(--surface)';btn.style.color=i===n?'#fff':'var(--text)';}
+  });
+}
+
+function commitResult(){
+  if(!currentLog||!currentLog.result)return;
+  var r=currentLog.result;
+  if(!r.first||!r.second||!r.third){alert('1着・2着・3着を選んでください');return;}
+  var payout=parseInt(document.getElementById('payoutInput').value)||0;
+  currentLog.result.payout=payout;
+  var combo=r.first+'-'+r.second+'-'+r.third;
+  var allBets=currentLog.bets.honsen.concat(currentLog.bets.osaee);
+  currentLog.hit=allBets.indexOf(combo)>=0;
+  var hitStr=currentLog.hit?'✅ 的中':'❌ 外れ';
+  // ◎○▲の実際の着順を記録
+  currentLog.maruResult=null;currentLog.shiroResult=null;currentLog.sankakuResult=null;
+  currentLog.aiRanking.forEach(function(ar){
+    var pos=ar.n===r.first?1:ar.n===r.second?2:ar.n===r.third?3:null;
+    if(ar.rank===1)currentLog.maruResult=pos;
+    if(ar.rank===2)currentLog.shiroResult=pos;
+    if(ar.rank===3)currentLog.sankakuResult=pos;
+  });
+  // localStorageに保存
+  var logs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
+  logs.push(currentLog);
+  // 最大200件
+  if(logs.length>200)logs=logs.slice(-200);
+  localStorage.setItem('kyotei_logs',JSON.stringify(logs));
+  document.getElementById('resultInput').style.display='none';
+  var savedHit=hitStr;
+  currentLog=null;
+  showStatus('記録しました（'+combo+' '+savedHit+'）','ok');
+  updateLogSummary();
+}
+
+function updateLogSummary(){
+  var logs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
+  if(!logs.length){document.getElementById('logSummary').style.display='none';return;}
+  var total=logs.length,hits=logs.filter(function(l){return l.hit;}).length;
+  var maruHits=logs.filter(function(l){return l.maruResult===1;}).length;
+  var totalPayout=logs.reduce(function(s,l){return s+(l.result&&l.result.payout?l.result.payout:0);},0);
+  var html='<div style="margin-top:14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;">'
+    +'<div style="font-size:10px;color:var(--text-sub);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px;">ログ集計 ('+total+'件)</div>'
+    +'<div style="display:flex;gap:8px;margin-bottom:10px;">'
+    +'<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:20px;font-weight:700;color:var(--accent);">'+Math.round(hits/total*100)+'%</div><div style="font-size:10px;color:var(--text-sub);">的中率</div></div>'
+    +'<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:20px;font-weight:700;color:var(--blue);">'+Math.round(maruHits/total*100)+'%</div><div style="font-size:10px;color:var(--text-sub);">◎1着率</div></div>'
+    +'<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:20px;font-weight:700;color:var(--green);">'+Math.round(totalPayout/100)*100+'</div><div style="font-size:10px;color:var(--text-sub);">累計払戻</div></div>'
+    +'</div>'
+    +'<button onclick="analyzeLog()" style="width:100%;padding:11px;background:var(--blue-light);color:var(--blue);border:1px solid #c0d8f0;border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:\'Noto Sans JP\',sans-serif;'+(total<10?'opacity:0.5;':'')+'">🔍 AIに改善提案させる'+(total<10?' ('+total+'/10件)':'')+'</button>'
+    +'</div>';
+  var el=document.getElementById('logSummary');
+  el.style.display='block';
+  el.innerHTML=html;
+}
+
+function analyzeLog(){
+  var logs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
+  if(logs.length<10){alert('10件以上記録してから分析できます');return;}
+  var key=getKey();
+  if(!key){alert('APIキーを設定してください');return;}
+  var summary=logs.map(function(l,i){
+    var r=l.result;
+    var combo=r?r.first+'-'+r.second+'-'+r.third:'不明';
+    var hit=l.hit?'的中':'外れ';
+    var boats=l.boats.map(function(b){return b.n+'号:得点率'+b.tokuten+'/ST'+(b.avgST||'-')+'/機力'+b.kiryokuRank+'位/総合'+b.sogoRank+'位';}).join(', ');
+    var ai=l.aiRanking.map(function(a){return a.rank+'位:'+a.n+'号';}).join('/');
+    return (i+1)+'. '+l.venue+l.raceNum+'R ['+l.mode+'] AI評価:'+ai+' 結果:'+combo+' '+hit+(l.maruResult?'(◎'+l.maruResult+'着)':'')+(r&&r.payout?' 払戻'+r.payout:'');
+  }).join('\n');
+  var prompt='以下は競艇予想システムのログです。JS総合評価スコアの重み付け改善のために分析してください。\n\n'+summary+'\n\n分析してください：\n1. ◎（1位評価）が1着になった率と傾向\n2. 外れたレースの共通パターン\n3. calcSogoScoreの具体的な改善提案（どの指標の重みを上げ下げすべきか）\n4. プロンプトで変えるべき点';
+  document.getElementById('logAnalysis').style.display='block';
+  document.getElementById('logAnalysis').innerHTML='<div style="margin-top:10px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;"><div class="spinner" style="margin:20px auto;"></div><div style="text-align:center;font-size:11px;color:var(--text-muted);">分析中...</div></div>';
+  fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:2000,thinkingConfig:{thinkingBudget:0}}})
+  }).then(function(res){return res.json();}).then(function(json){
+    var t=json.candidates&&json.candidates[0]&&json.candidates[0].content&&json.candidates[0].content.parts[0].text||'分析失敗';
+    document.getElementById('logAnalysis').innerHTML='<div style="margin-top:10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;"><div style="font-size:10px;color:var(--text-sub);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:6px;">AI改善提案</div><div style="font-size:12px;color:var(--text);line-height:2.0;white-space:pre-wrap;">'+t+'</div></div>';
+  }).catch(function(e){document.getElementById('logAnalysis').innerHTML='<div style="color:var(--accent);padding:10px;">エラー: '+e.message+'</div>';});
+}
 
 </script>
 </body>
