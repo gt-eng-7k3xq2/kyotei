@@ -143,7 +143,7 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
   <div class="out-hdr">予想結果</div>
   <div class="out-text" id="outText"></div>
   <button class="copy-btn" id="copyBtn" onclick="copyOut()">📋 X投稿用にコピー</button>
-<button class="copy-btn" id="bridgeBtn" onclick="saveToBridge()" style="margin-top:8px;background:#0a1a2a;color:#7aabee;border-color:#2a3a6a;">📤 G. Toolsに連携</button>
+
 <div id="oddsResult"></div>
 </div>
 
@@ -164,23 +164,6 @@ function clearAll(){
   try{document.getElementById('venue').value='';}catch(e){}
   try{document.getElementById('raceNum').value='';}catch(e){}
   calcData=null;
-}
-function saveToBridge(){
-  var text=document.getElementById('outText').textContent;
-  if(!text){showStatus('先に予想を生成してください','err');return;}
-  var venue=document.getElementById('venue').value||'';
-  var raceNum=document.getElementById('raceNum').value||'';
-  var bridge={ts:Date.now(),venue:venue,raceNum:raceNum,outputText:text,mode:currentMode};
-  localStorage.setItem('yoso_bridge',JSON.stringify(bridge));
-  var btn=document.getElementById('bridgeBtn');
-  btn.textContent='✅ 連携済み';
-  btn.style.color='#5dc87a';
-  btn.style.borderColor='#1a4a28';
-  setTimeout(function(){
-    btn.textContent='📤 G. Toolsに連携';
-    btn.style.color='#7aabee';
-    btn.style.borderColor='#2a3a6a';
-  },3000);
 }
 function saveKey(){
   var k=document.getElementById('apiKey').value.trim();
@@ -852,9 +835,12 @@ async function generate(){
       }
       honsen=honsen.slice(0,4);osaee=osaee.slice(0,4);
       var honsenStr=honsen.join('/'),osaeeStr=osaee.join('/');
-      var betBlock='\n【最終買い目】8点\n本線\n'+honsen.join('\n')+'\n抑え\n'+osaee.join('\n')+'\n';
-      var pi=text.indexOf('【買い目パラメータ】');
-      if(pi>=0){var ni2=text.indexOf('\n3着B',pi);if(ni2>=0){var ni3=text.indexOf('\n',ni2+1);if(ni3>=0)text=text.slice(0,ni3+1)+betBlock+text.slice(ni3+1);}else{text=text.slice(0,pi)+betBlock+text.slice(pi);}}
+      var betBlock='【最終買い目】8点\n本線\n'+honsen.join('\n')+'\n抑え\n'+osaee.join('\n')+'\n';
+      // AIが出した【最終買い目】ブロックを全て削除
+      text=text.replace(/【最終買い目】[\s\S]*?(?=【|$)/g,'');
+      // 【イン信頼度】の前に挿入
+      var inIdx=text.indexOf('【イン信頼度】');
+      if(inIdx>=0){text=text.slice(0,inIdx)+betBlock+'\n'+text.slice(inIdx);}
       else{text=betBlock+'\n'+text;}
       text=text.replace(/本線[\u3000 \t][^\n]*/g,'本線　'+honsenStr);
       text=text.replace(/抑え[\u3000 \t][^\n]*/g,'抑え　'+osaeeStr);
