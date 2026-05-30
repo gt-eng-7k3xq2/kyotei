@@ -144,12 +144,7 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
   <div class="out-text" id="outText"></div>
   <button class="copy-btn" id="copyBtn" onclick="copyOut()">📋 X投稿用にコピー</button>
 <button class="copy-btn" id="bridgeBtn" onclick="saveToBridge()" style="margin-top:8px;background:#0a1a2a;color:#7aabee;border-color:#2a3a6a;">📤 G. Toolsに連携</button>
-<div style="margin-top:14px;">
-  <div style="font-size:10px;color:var(--text-sub);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;padding-left:6px;border-left:2px solid var(--border);">オッズ確認（任意）</div>
-  <textarea id="oddsInput" style="height:80px;font-size:11px;" placeholder="ブックマークレットで取得したオッズデータを貼り付け..."></textarea>
-  <button onclick="showOddsResult()" style="width:100%;margin-top:6px;padding:11px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;">📊 オッズ・合成オッズを表示</button>
-  <div id="oddsResult"></div>
-</div>
+<div id="oddsResult"></div>
 </div>
 
 <script>
@@ -873,6 +868,7 @@ async function generate(){
     }
     document.getElementById('outText').textContent=text;
     document.getElementById('outWrap').classList.add('show');
+    showOddsResult();
     showStatus('生成完了','ok');
   }catch(e){showStatus('エラー: '+e.message,'err');}
   finally{
@@ -909,20 +905,23 @@ function calcGoseiOdds(betsArr,oddsData){
   return sum===0?null:(1/sum).toFixed(1);
 }
 function showOddsResult(){
-  var raw=document.getElementById('oddsInput').value.trim();
-  if(!raw){alert('オッズデータを貼り付けてください');return;}
-  var oddsData=parseOdds(raw);
+  // レースデータから=== オッズ ===セクションを自動抽出
+  var raw=document.getElementById('raceData').value;
+  var oddsIdx=raw.indexOf('=== オッズ ===');
+  if(oddsIdx<0){document.getElementById('oddsResult').innerHTML='';return;}
+  var oddsRaw=raw.slice(oddsIdx);
+  var oddsData=parseOdds(oddsRaw);
   var outText=document.getElementById('outText').textContent;
   var bets=[],seen={};
   var lines=outText.split('\n');
-  // 【Xサマリー】より前の行のみ対象
-  var xIdx=lines.findIndex(function(l){return l.indexOf('【Xサマリー】')>=0;});
-  var targetLines=xIdx>=0?lines.slice(0,xIdx):lines;
-  targetLines.forEach(function(ln){
+  var inBetSection=false;
+  lines.forEach(function(ln){
     var t=ln.trim();
-    if(/^\d-\d-\d$/.test(t)&&!seen[t]){seen[t]=true;bets.push(t);}
+    if(t.indexOf('【最終買い目】')>=0||t.indexOf('【買い目】')>=0){inBetSection=true;return;}
+    if(inBetSection&&t.startsWith('【')&&t.indexOf('買い目')<0){inBetSection=false;}
+    if(inBetSection&&/^\d-\d-\d$/.test(t)&&!seen[t]){seen[t]=true;bets.push(t);}
   });
-  if(bets.length===0){alert('先に予想を生成してください');return;}
+  if(bets.length===0){document.getElementById('oddsResult').innerHTML='';return;}
   var html='<div style="margin-top:14px;"><div style="font-size:10px;color:var(--text-sub);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;padding-left:6px;border-left:2px solid var(--accent);">買い目オッズ</div>';
   html+='<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr><th style="text-align:left;padding:5px 6px;background:var(--bg);color:var(--text-sub);font-size:10px;border-bottom:1px solid var(--border);">買い目</th><th style="text-align:right;padding:5px 6px;background:var(--bg);color:var(--text-sub);font-size:10px;border-bottom:1px solid var(--border);">オッズ</th></tr></thead><tbody>';
   var validBets=[];
