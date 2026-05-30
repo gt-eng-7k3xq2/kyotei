@@ -908,8 +908,8 @@ async function generate(){
       text=text.replace(/本線[\u3000 \t][^\n]*/g,'本線　'+honsenStr);
       text=text.replace(/抑え[\u3000 \t][^\n]*/g,'抑え　'+osaeeStr);
     }
-    if(currentMode==='are'&&calcData&&calcData.cands1st&&calcData.cands1st.length>=2){
-      var ok1st=[String(calcData.cands1st[0].n),String(calcData.cands1st[1].n)];
+    if(currentMode==='are'&&calcData){
+      var ok1st=[maru,shiro];
       text=text.split('\n').filter(function(ln){
         var m=ln.match(/^(\d)-(\d)-(\d)$/);
         return !m||ok1st.indexOf(m[1])>=0;
