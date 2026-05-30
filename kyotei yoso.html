@@ -800,7 +800,6 @@ async function generate(){
         addHon(shiro,maru,B);
         addHon(shiro,A,B);
         honsen=honsen.slice(0,6);
-        alert('maru='+maru+' shiro='+shiro+' A='+A+' B='+B+'\nhonsen='+honsen.join(','));
         // 抑え：本線と重複しない組み合わせ6点
         var osaee=[];
         var seen4={};
@@ -812,13 +811,40 @@ async function generate(){
         okAll.forEach(function(m){if(m===shiro)return;okAll.forEach(function(t){addOsa(shiro,m,t);});});
         osaee=osaee.slice(0,6);
         var honsenStr=honsen.join('/'),osaeeStr=osaee.join('/');
-        var bet='【買い目】\n本線('+honsen.length+'点)\n'+honsen.join('\n')+'\n抑え('+osaee.length+'点)\n'+osaee.join('\n')+'\n';
-        // 【買い目】〜【総合評価】の間を削除して再挿入
-        var s=text.indexOf('【買い目】');
-        var e=text.indexOf('【総合評価】');
-        if(s>=0&&e>=0&&s<e){text=text.slice(0,s)+bet+'\n'+text.slice(e);}
-        else if(e>=0){text=text.slice(0,e)+bet+'\n'+text.slice(e);}
-        else{text=bet+'\n'+text;}
+        // 行単位で【買い目】ブロックを差し替え
+        var tLines=text.split('\n');
+        var newLines=[],skip=false,inserted=false;
+        for(var ti=0;ti<tLines.length;ti++){
+          var tl=tLines[ti];
+          if(!inserted&&tl.indexOf('【総合評価】')>=0){
+            // 【買い目】がまだ挿入されていない場合ここに挿入
+            if(!skip){
+              newLines.push('【買い目】');
+              newLines.push('本線('+honsen.length+'点)');
+              honsen.forEach(function(b){newLines.push(b);});
+              newLines.push('抑え('+osaee.length+'点)');
+              osaee.forEach(function(b){newLines.push(b);});
+              newLines.push('');
+            }
+            inserted=true;skip=false;
+          }
+          if(tl.indexOf('【買い目】')>=0){skip=true;inserted=true;
+            newLines.push('【買い目】');
+            newLines.push('本線('+honsen.length+'点)');
+            honsen.forEach(function(b){newLines.push(b);});
+            newLines.push('抑え('+osaee.length+'点)');
+            osaee.forEach(function(b){newLines.push(b);});
+            newLines.push('');
+            continue;
+          }
+          if(skip){
+            // 本線・抑え・X-X-X行をスキップ
+            if(/^(本線|抑え|\d-\d-\d)/.test(tl.trim()))continue;
+            skip=false;
+          }
+          newLines.push(tl);
+        }
+        text=newLines.join('\n');
         // Xサマリーの本線・抑え行も上書き
         text=text.replace(/本線[\u3000 \t][^\n]*/g,'本線　'+honsenStr);
         text=text.replace(/抑え[\u3000 \t][^\n]*/g,'抑え　'+osaeeStr);
