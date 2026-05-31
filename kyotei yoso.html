@@ -646,7 +646,12 @@ function displayCalcResults(data){
     }
   } else {
     // 通常モード
-    html+='<div class="are-box"><div style="display:flex;align-items:baseline;gap:8px;"><span class="are-score" style="font-size:22px;color:#c9a84c;">【'+normalResult.shinkido+'】</span><span class="are-label">イン信頼度</span></div></div>';
+    var jsShinkido=normalResult.shinkido;
+    html+='<div class="are-box">';
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">';
+    html+='<div style="display:flex;align-items:baseline;gap:8px;"><span class="are-score" style="font-size:22px;color:var(--accent);" id="shinkidoLabel">【'+jsShinkido+'】</span><span class="are-label">イン信頼度</span><span id="shinkidoManual" style="font-size:10px;color:var(--accent);display:none;">手動</span></div>';
+    html+='<div style="display:flex;gap:4px;">'+['A','B','C'].map(function(x){return'<button onclick="overrideShinkido(\''+x+'\')" id="sh_'+x+'" style="padding:6px 12px;border-radius:4px;font-size:12px;font-weight:700;-webkit-appearance:none;border:1px solid '+(x===jsShinkido?'var(--text)':'var(--border)')+';background:'+(x===jsShinkido?'var(--text)':'var(--surface)')+';color:'+(x===jsShinkido?'#fff':'var(--text-sub)')+';">'+x+'</button>';}).join('')+'</div>';
+    html+='</div></div>';
     html+='<div class="info-row">荒れ指数: <b>'+areResult.score+'点</b> → '+(areResult.score>=8?'⚠️ 荒れ転用可':'転用不可')+'</div>';
     html+='<div class="cr-sec">2着候補</div><div class="cand-row">';
     normalResult.ab.forEach(c=>{html+='<span class="chip c2">'+c.n+'号艇（'+c.reason+'）</span>';});
@@ -950,6 +955,25 @@ async function generate(){
     document.getElementById('genBtn').disabled=false;
     document.getElementById('loading').classList.remove('show');
   }
+}
+
+function overrideShinkido(x){
+  if(!calcData)return;
+  var orig=calcData.normalResult.shinkido;
+  calcData.normalResult.shinkido=x;
+  // ボタンのスタイル更新
+  ['A','B','C'].forEach(function(v){
+    var btn=document.getElementById('sh_'+v);
+    if(!btn)return;
+    btn.style.background=v===x?'var(--text)':'var(--surface)';
+    btn.style.color=v===x?'#fff':'var(--text-sub)';
+    btn.style.borderColor=v===x?'var(--text)':'var(--border)';
+  });
+  // ラベル更新
+  var lbl=document.getElementById('shinkidoLabel');
+  if(lbl)lbl.textContent='【'+x+'】';
+  var manual=document.getElementById('shinkidoManual');
+  if(manual)manual.style.display=x!==orig?'inline':'none';
 }
 
 function saveVenueRace(){
