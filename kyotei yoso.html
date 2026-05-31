@@ -896,7 +896,7 @@ async function generate(){
         // Cモード：総合評価順そのまま
         var ab=calcData.normalResult.ab;
         var usedP=[p1];
-        function nextUnused(arr){return ['2','3','4','5','6'].filter(function(x){return arr.indexOf(x)<0;})[0]||'2';}
+        var nextUnused=function(arr){return ['2','3','4','5','6'].filter(function(x){return arr.indexOf(x)<0;})[0]||'2';};
         p2=r2?r2[1]:null;p3=r3?r3[1]:null;p4=r4?r4[1]:null;p5=r5?r5[1]:null;
         if(!p2){p2=ab[0]?String(ab[0].n):nextUnused(usedP);}usedP.push(p2);
         if(!p3){p3=ab[1]?String(ab[1].n):nextUnused(usedP);}usedP.push(p3);
@@ -1011,6 +1011,8 @@ function copySogoHyoka(){
     setTimeout(function(){btn.textContent='📊 総合評価';},2000);
   });
 }
+
+function copyOut(){
   var text=document.getElementById('outText').textContent;
   var btn=document.getElementById('copyBtn');
   if(navigator.clipboard){navigator.clipboard.writeText(text).then(function(){btn.textContent='✅ コピー完了';btn.classList.add('ok');setTimeout(function(){btn.textContent='📋 X投稿用にコピー';btn.classList.remove('ok');},2000);});}
