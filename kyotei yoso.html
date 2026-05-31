@@ -343,7 +343,7 @@ function calcKiryoku(boats){
 }
 
 /* ===== 総合評価スコア（JS固定） ===== */
-function calcSogoScore(boats){
+function calcSogoScore(boats,nigeRate){
   var allTok=boats.map(function(b){return b.tokuten;}).filter(function(v){return v!==null;});
   var maxTok=allTok.length?Math.max.apply(null,allTok):1;
   var minTok=allTok.length?Math.min.apply(null,allTok):0;
@@ -356,21 +356,40 @@ function calcSogoScore(boats){
   var allDirST=boats.map(function(b){return b.st;}).filter(function(v){return v!==null;});
   var minDirST=allDirST.length?Math.min.apply(null,allDirST):0.10;
   var maxDirST=allDirST.length?Math.max.apply(null,allDirST):0.30;
+  // 連対率の正規化
+  var allRen=boats.map(function(b){return b.renRate!==null?b.renRate:0;});
+  var maxRen=Math.max.apply(null,allRen)||1;
   boats.forEach(function(b){
     var score=0;
+    // 今節得点率 30点
     if(b.tokuten!==null&&maxTok>minTok)score+=(b.tokuten-minTok)/(maxTok-minTok)*30;
     else if(b.tokuten!==null)score+=15;
+    // 勝率 20点
     var rate=b.totiRate||b.zenkokuRate||0;
     if(maxRate>0)score+=rate/maxRate*20;
+    // 平均ST 20点
     var st=b.avgST||b.stKoki;
     if(st!==null&&maxST>minST)score+=(maxST-st)/(maxST-minST)*20;
     else if(st!==null)score+=10;
+    // 機力 15点
     if(b.kiryokuRank!==null&&maxKr>1)score+=(maxKr-b.kiryokuRank)/(maxKr-1)*15;
+    // 直前ST 10点
     if(b.st!==null&&!b.stF&&maxDirST>minDirST)score+=(maxDirST-b.st)/(maxDirST-minDirST)*10;
+    // 今節2連対率 10点（新規追加）
+    var ren=b.renRate!==null?b.renRate:0;
+    if(maxRen>0)score+=ren/maxRen*10;
+    // チルト補正
     if(b.tilt<=-0.5)score+=2;else if(b.tilt>=0.5)score+=1;
+    // 部品交換補正
     if(b.buhin){var imp=false;if(b.exT!==null&&b.avgEx!==null&&b.exT<b.avgEx-0.05)imp=true;if(b.lapT!==null&&b.avgLap!==null&&b.lapT<b.avgLap-0.05)imp=true;if(b.strT!==null&&b.avgStr!==null&&b.strT<b.avgStr-0.05)imp=true;score+=imp?3:0.5;}
+    // F今期ペナルティ
     if(b.fKi>=1)score-=3;
+    // 今節1着率0%ペナルティ
     if(b.winsRate===0&&b.tokuten!==null&&b.tokuten>0)score-=2;
+    // 【新規】6号艇補正：外コースは展開依存が強いため抑制
+    if(b.nyuse===6)score-=8;
+    // 【新規】1号艇補正：逃げ率65%以上の場合にインの有利性を加算
+    if(b.nyuse===1&&nigeRate!==null&&nigeRate>=65)score+=10;
     b.sogoScore=Math.max(0,score);
   });
   var sorted=boats.slice().sort(function(a,b){return (b.sogoScore||0)-(a.sogoScore||0);});
@@ -558,7 +577,7 @@ function runCalc(){
   if(!raw){showStatus('データを貼り付けてください','err');return;}
   var parsed=parseData(raw);
   calcKiryoku(parsed.boats);
-  calcSogoScore(parsed.boats);
+  calcSogoScore(parsed.boats,parsed.nigeRate);
   calcForceNG(parsed.boats);
   var areResult=calcAreIndex(parsed.boats,parsed.nigeRate);
   var furikiriResult=checkFurikiri(areResult.score,parsed.boats,parsed.nigeRate);
