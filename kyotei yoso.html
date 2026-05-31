@@ -874,8 +874,15 @@ async function generate(){
         }
         text=newLines.join('\n');
         // Xサマリーの本線・抑え行も上書き
-        text=text.replace(/本線[\u3000 \t][^\n]*/g,'本線　'+honsenStr);
-        text=text.replace(/抑え[\u3000 \t][^\n]*/g,'抑え　'+osaeeStr);
+        // Xサマリー内の本線・抑え行を上書き
+        var xIdx2=text.indexOf('【Xサマリー】');
+        if(xIdx2>=0){
+          var before2=text.slice(0,xIdx2);
+          var after2=text.slice(xIdx2);
+          after2=after2.replace(/本線[^\n]*/g,'本線　'+honsenStr);
+          after2=after2.replace(/抑え[^\n]*/g,'抑え　'+osaeeStr);
+          text=before2+after2;
+        }
       }
     }
     // 通常モードJS自動生成
@@ -932,8 +939,15 @@ async function generate(){
       var inIdx=text.indexOf('【イン信頼度】');
       if(inIdx>=0){text=text.slice(0,inIdx)+betBlock+'\n'+text.slice(inIdx);}
       else{text=betBlock+'\n'+text;}
-      text=text.replace(/本線[\u3000 \t][^\n]*/g,'本線　'+honsenStr);
-      text=text.replace(/抑え[\u3000 \t][^\n]*/g,'抑え　'+osaeeStr);
+      // Xサマリー内の本線・抑え行を上書き（表記形式問わず）
+      var xIdx=text.indexOf('【Xサマリー】');
+      if(xIdx>=0){
+        var before=text.slice(0,xIdx);
+        var after=text.slice(xIdx);
+        after=after.replace(/本線[^\n]*/g,'本線　'+honsenStr);
+        after=after.replace(/抑え[^\n]*/g,'抑え　'+osaeeStr);
+        text=before+after;
+      }
     }
     if(currentMode==='are'&&calcData){
       var ok1st=[maru,shiro];
