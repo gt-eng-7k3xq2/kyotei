@@ -143,10 +143,7 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
   <div class="out-hdr">予想結果</div>
   <div class="out-text" id="outText"></div>
   <button class="copy-btn" id="copyBtn" onclick="copyOut()">📋 全文コピー</button>
-  <div style="display:flex;gap:6px;margin-top:6px;">
-    <button onclick="copyXSummary()" style="flex:1;padding:11px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:12px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;" id="copyXBtn">𝕏 サマリー</button>
-    <button onclick="copySogoHyoka()" style="flex:1;padding:11px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:12px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;" id="copySogoBtn">📊 総合評価</button>
-  </div>
+  <button onclick="copyXAndSogo()" style="width:100%;margin-top:6px;padding:11px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;" id="copyXSogoBtn">𝕏 総合評価＋サマリーをコピー</button>
   <div id="resultInput" style="display:none;"></div>
 <div id="oddsResult"></div>
 </div>
@@ -990,25 +987,18 @@ function loadVenueRace(){
   if(r){var el2=document.getElementById('raceNum');for(var i=0;i<el2.options.length;i++){if(el2.options[i].value===r){el2.selectedIndex=i;break;}}}
 }
 
-function copyXSummary(){
+function copyXAndSogo(){
   var text=document.getElementById('outText').textContent;
-  var m=text.match(/【Xサマリー】([\s\S]*?)(?=\n【|$)/);
-  var out=m?('【Xサマリー】'+m[1]).trim():text;
-  var btn=document.getElementById('copyXBtn');
+  var sogoM=text.match(/【総合評価】([\s\S]*?)(?=\n【|$)/);
+  var xM=text.match(/【Xサマリー】([\s\S]*?)(?=\n【|$)/);
+  var out='';
+  if(sogoM)out+='【総合評価】'+sogoM[1].trim();
+  if(xM)out+=(out?'\n\n':'')+'【Xサマリー】'+xM[1].trim();
+  if(!out)out=text;
+  var btn=document.getElementById('copyXSogoBtn');
   navigator.clipboard.writeText(out).then(function(){
     btn.textContent='✅ コピー完了';
-    setTimeout(function(){btn.textContent='𝕏 サマリー';},2000);
-  });
-}
-
-function copySogoHyoka(){
-  var text=document.getElementById('outText').textContent;
-  var m=text.match(/【総合評価】([\s\S]*?)(?=\n【|$)/);
-  var out=m?('【総合評価】'+m[1]).trim():text;
-  var btn=document.getElementById('copySogoBtn');
-  navigator.clipboard.writeText(out).then(function(){
-    btn.textContent='✅ コピー完了';
-    setTimeout(function(){btn.textContent='📊 総合評価';},2000);
+    setTimeout(function(){btn.textContent='𝕏 総合評価＋サマリーをコピー';},2000);
   });
 }
 
