@@ -101,7 +101,7 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
   </div>
   <div class="race-row">
     <div class="sel-w">
-      <select class="sel" id="venue">
+      <select class="sel" id="venue" onchange="saveVenueRace()">
         <option value="">場所を選択</option>
         <option>桐生</option><option>戸田</option><option>江戸川</option><option>平和島</option><option>多摩川</option>
         <option>浜名湖</option><option>蒲郡</option><option>常滑</option><option>津</option><option>三国</option>
@@ -111,7 +111,7 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
       </select>
     </div>
     <div class="sel-w" style="flex:0 0 80px">
-      <select class="sel" id="raceNum">
+      <select class="sel" id="raceNum" onchange="saveVenueRace()">
         <option value="">R</option>
         <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option>
         <option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option>
@@ -142,7 +142,11 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
   <div class="div"></div>
   <div class="out-hdr">予想結果</div>
   <div class="out-text" id="outText"></div>
-  <button class="copy-btn" id="copyBtn" onclick="copyOut()">📋 X投稿用にコピー</button>
+  <button class="copy-btn" id="copyBtn" onclick="copyOut()">📋 全文コピー</button>
+  <div style="display:flex;gap:6px;margin-top:6px;">
+    <button onclick="copyXSummary()" style="flex:1;padding:11px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:12px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;" id="copyXBtn">𝕏 サマリー</button>
+    <button onclick="copySogoHyoka()" style="flex:1;padding:11px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:12px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;" id="copySogoBtn">📊 総合評価</button>
+  </div>
   <div id="resultInput" style="display:none;"></div>
 <div id="oddsResult"></div>
 </div>
@@ -948,7 +952,41 @@ async function generate(){
   }
 }
 
-function copyOut(){
+function saveVenueRace(){
+  var v=document.getElementById('venue').value;
+  var r=document.getElementById('raceNum').value;
+  if(v)localStorage.setItem('last_venue',v);
+  if(r)localStorage.setItem('last_race',r);
+}
+
+function loadVenueRace(){
+  var v=localStorage.getItem('last_venue');
+  var r=localStorage.getItem('last_race');
+  if(v){var el=document.getElementById('venue');for(var i=0;i<el.options.length;i++){if(el.options[i].value===v){el.selectedIndex=i;break;}}}
+  if(r){var el2=document.getElementById('raceNum');for(var i=0;i<el2.options.length;i++){if(el2.options[i].value===r){el2.selectedIndex=i;break;}}}
+}
+
+function copyXSummary(){
+  var text=document.getElementById('outText').textContent;
+  var m=text.match(/【Xサマリー】([\s\S]*?)(?=\n【|$)/);
+  var out=m?('【Xサマリー】'+m[1]).trim():text;
+  var btn=document.getElementById('copyXBtn');
+  navigator.clipboard.writeText(out).then(function(){
+    btn.textContent='✅ コピー完了';
+    setTimeout(function(){btn.textContent='𝕏 サマリー';},2000);
+  });
+}
+
+function copySogoHyoka(){
+  var text=document.getElementById('outText').textContent;
+  var m=text.match(/【総合評価】([\s\S]*?)(?=\n【|$)/);
+  var out=m?('【総合評価】'+m[1]).trim():text;
+  var btn=document.getElementById('copySogoBtn');
+  navigator.clipboard.writeText(out).then(function(){
+    btn.textContent='✅ コピー完了';
+    setTimeout(function(){btn.textContent='📊 総合評価';},2000);
+  });
+}
   var text=document.getElementById('outText').textContent;
   var btn=document.getElementById('copyBtn');
   if(navigator.clipboard){navigator.clipboard.writeText(text).then(function(){btn.textContent='✅ コピー完了';btn.classList.add('ok');setTimeout(function(){btn.textContent='📋 X投稿用にコピー';btn.classList.remove('ok');},2000);});}
@@ -1011,6 +1049,7 @@ function showOddsResult(){
   document.getElementById('oddsResult').innerHTML=html;
 }
 loadKey();
+loadVenueRace();
 updateLogSummary();
 /* ===== ログ機能 ===== */
 
