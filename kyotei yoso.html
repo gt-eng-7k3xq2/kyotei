@@ -1031,7 +1031,7 @@ function updateLogSummary(){
   if(!logs.length){el.style.display='none';return;}
   el.style.display='block';
   var pending=logs.filter(function(l){return l.result===null;});
-  var done=logs.filter(function(l){return l.result!==null;});
+  var done=logs.filter(function(l){return l.result!==null&&l.result!=='skip';});
   var hits=done.filter(function(l){return l.hit;}).length;
   var maruHits=done.filter(function(l){return l.maruResult===1;}).length;
   var totalPayout=done.reduce(function(s,l){return s+(l.result.payout||0);},0);
@@ -1077,6 +1077,7 @@ function openResultInput(id){
   html+='<div style="font-size:11px;color:var(--text-sub);margin-bottom:5px;">払戻（円・任意）</div>';
   html+='<input type="number" id="pay_'+id+'" placeholder="例: 12500" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;padding:10px;outline:none;margin-bottom:10px;">';
   html+='<button onclick="commitLog('+id+')" style="width:100%;padding:12px;background:var(--text);color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:\'Noto Sans JP\',sans-serif;">保存</button>';
+  html+='<button onclick="skipLog('+id+')" style="width:100%;margin-top:6px;padding:11px;background:var(--surface);color:var(--text-sub);border:1px solid var(--border);border-radius:4px;font-size:12px;font-weight:700;-webkit-appearance:none;">見送り</button>';
   html+='<button onclick="updateLogSummary()" style="width:100%;margin-top:6px;padding:10px;background:var(--surface);color:var(--text-sub);border:1px solid var(--border);border-radius:4px;font-size:12px;-webkit-appearance:none;">キャンセル</button>';
   html+='</div>';
   el.innerHTML=html;
@@ -1090,6 +1091,17 @@ function selectBtn(id,place,n){
     var btn=document.getElementById('rb_'+id+'_'+place+'_'+i);
     if(btn){btn.style.background=i===n?'var(--text)':'var(--surface)';btn.style.color=i===n?'#fff':'var(--text)';}
   });
+}
+
+function skipLog(id){
+  var logs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
+  for(var i=0;i<logs.length;i++){
+    if(logs[i].id===id){logs[i].result='skip';logs[i].hit=false;break;}
+  }
+  localStorage.setItem('kyotei_logs',JSON.stringify(logs));
+  delete window['_rb_'+id];
+  showStatus('見送りとして記録しました','ok');
+  updateLogSummary();
 }
 
 function commitLog(id){
