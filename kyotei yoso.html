@@ -395,6 +395,12 @@ function calcSogoScore(boats,nigeRate){
   });
   var sorted=boats.slice().sort(function(a,b){return (b.sogoScore||0)-(a.sogoScore||0);});
   sorted.forEach(function(b,i){b.sogoRank=i+1;});
+  // 6号艇が1位の場合、2位と入れ替え（◎になれない制限）
+  var rank1=sorted[0],rank2=sorted[1];
+  if(rank1&&rank2&&rank1.nyuse===6){
+    rank1.sogoRank=2;
+    rank2.sogoRank=1;
+  }
 }
 
 /* ===== JS強制× ===== */
