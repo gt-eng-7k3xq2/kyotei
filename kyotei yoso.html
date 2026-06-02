@@ -1187,7 +1187,22 @@ function autoSaveLog(text){
   var boats=calcData.parsed.boats.map(function(b){
     return{n:b.n,name:b.name,tokuten:b.tokuten,avgST:b.avgST||b.stKoki,kiryokuRank:b.kiryokuRank,sogoRank:b.sogoRank,sogoScore:b.sogoScore?Math.round(b.sogoScore*10)/10:null};
   });
-  var entry={id:Date.now(),datetime:new Date().toISOString(),venue:venue,raceNum:raceNum,mode:currentMode,boats:boats,aiRanking:aiRanking,bets:{honsen:honsen,osaee:osaee},result:null,hit:null,maruResult:null,shiroResult:null,sankakuResult:null};
+  var entry={
+    id:Date.now(),
+    datetime:new Date().toISOString(),
+    venue:venue,
+    raceNum:raceNum,
+    mode:currentMode,
+    shinkido:currentMode==='normal'?(calcData.normalResult?calcData.normalResult.shinkido:null):null,
+    nigeRate:calcData.parsed.nigeRate,
+    areScore:calcData.areResult?calcData.areResult.score:null,
+    furikiriPass:currentMode==='are'?(calcData.furikiriResult?calcData.furikiriResult.pass:null):null,
+    arePts:currentMode==='are'?currentPts:null,
+    boats:boats,
+    aiRanking:aiRanking,
+    bets:{honsen:honsen,osaee:osaee},
+    result:null,hit:null,maruResult:null,shiroResult:null,sankakuResult:null
+  };
   var logs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
   logs.push(entry);
   if(logs.length>200)logs=logs.slice(-200);
@@ -1324,7 +1339,12 @@ function analyzeLog(){
     var r=l.result;
     var combo=r.first+'-'+r.second+'-'+r.third;
     var ai=l.aiRanking.map(function(a){return a.rank+'位:'+a.n+'号';}).join('/');
-    return (i+1)+'. '+l.venue+l.raceNum+'R ['+l.mode+'] AI評価:'+ai+' 結果:'+combo+' '+(l.hit?'的中':'外れ')+(l.maruResult?' ◎'+l.maruResult+'着':'')+(r.payout?' 払戻'+r.payout:'');
+    var meta=[];
+    if(l.mode==='normal'&&l.shinkido)meta.push('信頼度'+l.shinkido);
+    if(l.nigeRate!==null&&l.nigeRate!==undefined)meta.push('逃げ率'+l.nigeRate+'%');
+    if(l.areScore!==null&&l.areScore!==undefined)meta.push('荒れ'+l.areScore+'点');
+    if(l.mode==='are'&&l.arePts)meta.push(l.arePts+'点買い');
+    return (i+1)+'. '+l.venue+l.raceNum+'R ['+l.mode+'] '+(meta.length?'('+meta.join('/')+') ':'')+' AI評価:'+ai+' 結果:'+combo+' '+(l.hit?'的中':'外れ')+(l.maruResult?' ◎'+l.maruResult+'着':'')+(r.payout?' 払戻'+r.payout:'');
   }).join('\n');
   var prompt='以下は競艇予想システムのログです。JS総合評価スコアの重み付け改善のために分析してください。\n\n'+summary+'\n\n以下を分析してください：\n1. ◎（1位評価）が1着になった率と傾向\n2. 外れたレースの共通パターン\n3. calcSogoScoreの具体的な改善提案（どの指標の重みを上げ下げすべきか）\n4. 荒れモード/通常モードで改善すべき点';
   document.getElementById('logAnalysis').style.display='block';
