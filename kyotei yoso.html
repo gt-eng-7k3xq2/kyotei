@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>G. 予想エンジン v2.1</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Noto+Serif+JP:wght@400;700;900&family=Noto+Sans+JP:wght@400;500;700&family=Anton&family=Tenor+Sans&display=swap');
 :root{--bg:#f8f7f4;--surface:#ffffff;--border:#e0dcd6;--border-strong:#c8c4be;--text:#1a1814;--text-sub:#6b6560;--text-muted:#a09b96;--accent:#c0392b;--accent-light:#fdf0ef;--accent-border:#f0c0bc;--blue:#1a5fa8;--blue-light:#eef4fc;--green:#1a7a3a;--green-light:#eef8f2;}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-serif;min-height:100vh;padding:16px 14px 80px;}
@@ -85,25 +85,28 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
 .eval-card-wrap.show{display:block;}
 .eval-card-hdr{font-size:10px;color:var(--text-sub);letter-spacing:1.5px;font-weight:700;margin-bottom:8px;text-transform:uppercase;}
 .eval-card{position:relative;border-radius:10px;overflow:hidden;padding:16px 14px 18px;background:radial-gradient(ellipse at 50% 35%,rgba(52,48,42,0.95) 0%,rgba(10,10,8,1) 70%);}
-.eval-card-title{text-align:center;font-family:'Noto Serif JP',serif;font-style:italic;font-weight:900;font-size:clamp(18px,5vw,32px);letter-spacing:.04em;background:linear-gradient(180deg,#fffbe0 0%,#ffe580 28%,#c9a84c 62%,#7a5810 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:5px;line-height:1.1;}
-.eval-brush{display:block;height:7px;margin:0 auto 12px;width:52%;background:linear-gradient(90deg,transparent 0%,rgba(180,140,30,.45) 20%,rgba(255,220,80,.65) 50%,rgba(180,140,30,.45) 80%,transparent 100%);border-radius:50%;filter:blur(2px);}
-.eval-boats{background:linear-gradient(180deg,#1f1f1f 0%,#131313 100%);border:1px solid #2e2e2e;border-radius:8px;padding:12px 8px 10px;position:relative;display:flex;align-items:center;justify-content:space-between;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 4px 24px rgba(0,0,0,.9);}
-.eval-boats::before{content:'';position:absolute;top:5px;left:5px;width:14px;height:14px;border-top:2px solid #c9a84c;border-left:2px solid #c9a84c;}
-.eval-boats::after{content:'';position:absolute;bottom:5px;right:5px;width:14px;height:14px;border-bottom:2px solid #c9a84c;border-right:2px solid #c9a84c;}
-.eval-corner-tr{position:absolute;top:5px;right:5px;width:14px;height:14px;border-top:2px solid #c9a84c;border-right:2px solid #c9a84c;}
-.eval-corner-bl{position:absolute;bottom:5px;left:5px;width:14px;height:14px;border-bottom:2px solid #c9a84c;border-left:2px solid #c9a84c;}
-.eval-slot{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-width:0;}
-.eval-arrow{color:#555;font-size:clamp(11px,2.5vw,18px);font-weight:bold;flex-shrink:0;line-height:1;padding:0 1px;margin-bottom:18px;}
-.eval-badge{width:clamp(30px,8vw,52px);height:clamp(30px,8vw,52px);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Anton',sans-serif;font-size:clamp(18px,5vw,34px);position:relative;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.2);}
-.eval-badge::after{content:'';position:absolute;top:0;left:0;right:0;height:48%;border-radius:6px 6px 0 0;background:linear-gradient(180deg,rgba(255,255,255,.24) 0%,transparent 100%);pointer-events:none;}
-.eval-stars{display:flex;gap:1px;font-size:clamp(7px,2vw,12px);line-height:1;}
-.eval-star-on{color:#f0c800;filter:drop-shadow(0 0 2px rgba(255,210,0,.6));}
+.eval-card-title{text-align:center;font-family:'Playfair Display','Noto Serif JP',serif;font-style:italic;font-weight:900;font-size:clamp(20px,5.5vw,36px);letter-spacing:.04em;background:linear-gradient(180deg,#fffbe0 0%,#ffe580 28%,#c9a84c 62%,#7a5810 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 2px 8px rgba(0,0,0,1));margin-bottom:5px;line-height:1.1;}
+.eval-brush{display:block;height:9px;margin:0 auto 12px;width:52%;background:linear-gradient(90deg,transparent 0%,rgba(180,140,30,.45) 20%,rgba(255,220,80,.65) 50%,rgba(180,140,30,.45) 80%,transparent 100%);border-radius:50%;filter:blur(2.5px);}
+.eval-boats{background:linear-gradient(180deg,#1f1f1f 0%,#131313 100%);border:1px solid #2e2e2e;border-radius:8px;padding:14px 10px 12px;position:relative;display:flex;align-items:center;justify-content:space-between;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 4px 24px rgba(0,0,0,.9);}
+.eval-boats::before{content:'';position:absolute;top:5px;left:5px;width:16px;height:16px;border-top:2px solid #c9a84c;border-left:2px solid #c9a84c;}
+.eval-boats::after{content:'';position:absolute;bottom:5px;right:5px;width:16px;height:16px;border-bottom:2px solid #c9a84c;border-right:2px solid #c9a84c;}
+.eval-corner-tr{position:absolute;top:5px;right:5px;width:16px;height:16px;border-top:2px solid #c9a84c;border-right:2px solid #c9a84c;}
+.eval-corner-bl{position:absolute;bottom:5px;left:5px;width:16px;height:16px;border-bottom:2px solid #c9a84c;border-left:2px solid #c9a84c;}
+.eval-slot{display:flex;flex-direction:column;align-items:center;gap:7px;flex:1;min-width:0;}
+.eval-arrow{color:#555;font-size:clamp(13px,3vw,22px);font-weight:bold;flex-shrink:0;line-height:1;padding:0 1px;margin-bottom:22px;}
+.eval-badge{width:clamp(34px,9vw,60px);height:clamp(34px,9vw,60px);border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:'Anton',sans-serif;font-size:clamp(20px,5.5vw,38px);position:relative;flex-shrink:0;box-shadow:0 5px 14px rgba(0,0,0,.75),inset 0 1px 0 rgba(255,255,255,.22),inset 0 -2px 0 rgba(0,0,0,.45);}
+.eval-badge::after{content:'';position:absolute;top:0;left:0;right:0;height:48%;border-radius:7px 7px 0 0;background:linear-gradient(180deg,rgba(255,255,255,.26) 0%,transparent 100%);pointer-events:none;}
+.eval-stars{display:flex;gap:1px;font-size:clamp(9px,2.4vw,15px);line-height:1;}
+.eval-star-on{color:#f0c800;filter:drop-shadow(0 0 3px rgba(255,210,0,.7));}
 .eval-star-off{color:#252525;}
-.eval-gold-lines{position:relative;margin-top:8px;display:flex;flex-direction:column;gap:3px;}
-.eval-gold-line{height:1.2px;background:linear-gradient(90deg,transparent 0%,#8a6010 12%,#c9a84c 32%,#ffe580 50%,#c9a84c 68%,#8a6010 88%,transparent 100%);}
-.eval-hint{margin-top:7px;color:#4a4a4a;font-size:.65rem;text-align:center;}
+.eval-gold-lines{position:relative;margin-top:10px;display:flex;flex-direction:column;gap:3px;padding:0 0 2px;}
+.eval-gold-dot{position:absolute;width:9px;height:9px;left:50%;transform:translateX(-50%);top:0;background:radial-gradient(circle,#ffe580 0%,#c9a84c 55%,transparent 100%);border-radius:50%;}
+.eval-gold-line{height:1.4px;background:linear-gradient(90deg,transparent 0%,#8a6010 12%,#c9a84c 32%,#ffe580 50%,#c9a84c 68%,#8a6010 88%,transparent 100%);}
+.eval-hint{margin-top:9px;color:#4a4a4a;font-size:.65rem;text-align:center;}
 .eval-hint span{color:#c9a84c;}
+.eval-save-btn{width:100%;margin-top:8px;padding:11px;background:linear-gradient(135deg,#7a5800,#c9a84c,#ffe580,#c9a84c,#7a5800);color:#000;border:none;border-radius:6px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;cursor:pointer;letter-spacing:.05em;}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -199,9 +202,11 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
       <div class="eval-gold-lines">
         <div class="eval-gold-line"></div>
         <div class="eval-gold-line"></div>
+        <div class="eval-gold-dot"></div>
       </div>
     </div>
-    <p class="eval-hint">📱 カードを<span>スクリーンショット</span>して保存</p>
+    <button class="eval-save-btn" onclick="saveEvalCard()">📥 評価カードを画像保存</button>
+    <p class="eval-hint">または📱<span>スクリーンショット</span>でも保存できます</p>
   </div>
 </div>
 <div id="logSummary" style="display:none;margin-top:12px;padding:0 0 20px;"></div>
@@ -1435,6 +1440,31 @@ function renderEvalCard(text,venue,raceNum){
   });
 
   document.getElementById('evalCardWrap').classList.add('show');
+}
+
+function saveEvalCard(){
+  var card=document.getElementById('evalCard');
+  if(!card)return;
+  var btn=document.querySelector('.eval-save-btn');
+  btn.textContent='生成中...';
+  btn.disabled=true;
+  html2canvas(card,{
+    scale:3,
+    useCORS:true,
+    backgroundColor:null,
+    logging:false
+  }).then(function(canvas){
+    var link=document.createElement('a');
+    link.download='GARON_評価カード.png';
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+    btn.textContent='✅ 保存しました';
+    setTimeout(function(){btn.textContent='📥 評価カードを画像保存';btn.disabled=false;},2000);
+  }).catch(function(){
+    btn.textContent='📥 評価カードを画像保存';
+    btn.disabled=false;
+    showStatus('保存に失敗しました。スクショをお試しください。','err');
+  });
 }
 
 /* ===== ログ機能 ===== */
