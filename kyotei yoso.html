@@ -827,20 +827,37 @@ function compressBets(betsArr){
   function isUsed(i){return used.indexOf(i)>=0;}
   function markUsed(arr){arr.forEach(function(i){if(!isUsed(i))used.push(i);});}
 
+  // STEP0: 1着固定で2着セット=3着セット対称（例: 3-4-5+3-5-4 → 3-45-45）
+  var byFirst0={};
+  valid.forEach(function(b,i){
+    var a=b[0];
+    if(!byFirst0[a])byFirst0[a]=[];
+    byFirst0[a].push(i);
+  });
+  Object.keys(byFirst0).forEach(function(a){
+    var indices=byFirst0[a].filter(function(i){return !isUsed(i);});
+    if(indices.length<2)return;
+    var seconds=indices.map(function(i){return valid[i][2];});
+    var thirds=indices.map(function(i){return valid[i][4];});
+    var secSet=seconds.slice().sort().join('');
+    var thiSet=thirds.slice().sort().join('');
+    if(secSet===thiSet){parts.push(a+'-'+secSet+'-'+thiSet);markUsed(indices);}
+  });
+
   // STEP1: 1着・2着固定で3着をまとめる（例: 4-6-2+4-6-3 → 4-6-23）
   var byFirstSecond={};
   valid.forEach(function(b,i){
+    if(isUsed(i))return;
     var key=b[0]+'-'+b[2];
     if(!byFirstSecond[key])byFirstSecond[key]=[];
     byFirstSecond[key].push(i);
   });
   Object.keys(byFirstSecond).forEach(function(key){
-    var indices=byFirstSecond[key];
-    var unused=indices.filter(function(i){return !isUsed(i);});
-    if(unused.length>=2){
-      var thirds=unused.map(function(i){return valid[i][4];}).sort();
+    var indices=byFirstSecond[key].filter(function(i){return !isUsed(i);});
+    if(indices.length>=2){
+      var thirds=indices.map(function(i){return valid[i][4];}).sort();
       parts.push(key+'-'+thirds.join(''));
-      markUsed(unused);
+      markUsed(indices);
     }
   });
 
@@ -968,6 +985,8 @@ function buildAreBetsFinal(maru,shiro,sankaku,go,ngBoats){
 /* ===== API呼び出し ===== */
 async function generate(){
   if(!calcData){showStatus('先にデータを解析してください','err');return;}
+  var venue=document.getElementById('venue').value||'?';
+  var raceNum=document.getElementById('raceNum').value||'?';
   var key=getKey();
   if(!key){showStatus('APIキーを保存してください','err');return;}
   var prompt=buildPrompt();
