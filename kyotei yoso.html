@@ -635,7 +635,7 @@ function displayCalcResults(data){
   var sk=boats.slice().sort(function(a,b){return (a.kiryokuRank||99)-(b.kiryokuRank||99);});
   sk.forEach(function(b){
     var cl=b.kiryokuRank===1?'best':'';
-    html+='<tr class="'+cl+'"><td>'+(b.kiryokuRank||'-')+'</td><td>'+b.n+'</td><td>'+b.name+'</td><td>'+(b.exT!==null?b.exT.toFixed(2):'-')+'</td><td>'+(b.lapT!==null?b.lapT.toFixed(2):'-')+'</td><td>'+(b.strT!==null?b.strT.toFixed(2):'-')+'</td><td class="tot">'+(b.kiryoku!==null?b.kiryoku.toFixed(2):'-')+'</td></tr>';
+    html+='<tr class="'+cl+'"><td>'+(b.kiryokuRank!==null?b.kiryokuRank:'-')+'</td><td>'+b.n+'</td><td>'+b.name+'</td><td>'+(b.exT!==null?b.exT.toFixed(2):'-')+'</td><td>'+(b.lapT!==null?b.lapT.toFixed(2):'-')+'</td><td>'+(b.strT!==null?b.strT.toFixed(2):'-')+'</td><td class="tot">'+(b.kiryoku!==null?b.kiryoku.toFixed(2):'-')+'</td></tr>';
   });
   html+='</tbody></table>';
 
@@ -716,7 +716,7 @@ function buildPrompt(){
     p+='逃げ率: '+(nigeRate!==null?nigeRate+'% ('+nigeRateSrc+')':'取得できず')+'\n\n';
     p+='【機力スコア順位（変更禁止）】\n';
     boats.slice().sort(function(a,b){return (a.kiryokuRank||99)-(b.kiryokuRank||99);}).forEach(function(b){
-      p+=b.kiryokuRank+'位 '+b.n+'号艇 '+b.name+' 合計'+(b.kiryoku!==null?b.kiryoku.toFixed(2):'-')+'\n';
+      p+=(b.kiryokuRank!==null?b.kiryokuRank:'-')+'位 '+b.n+'号艇 '+b.name+' 合計'+(b.kiryoku!==null?b.kiryoku.toFixed(2):'-')+'\n';
     });
     p+='\n【荒れ指数】'+areResult.score+'点\n内訳: '+areResult.breakdown.join(' / ')+'\n';
     p+='【足切り】クリア\n\n';
@@ -821,50 +821,68 @@ function buildPrompt(){
 function compressBets(betsArr){
   var valid=betsArr.filter(function(b){return /^[1-6]-[1-6]-[1-6]$/.test(b);});
   if(!valid.length)return '';
-  var used=new Set();
+  var used=[];
   var parts=[];
 
-  // 1着固定、2着セット=3着セット対称
-  var byFirst={};
-  valid.forEach(function(b,i){
-    var a=b[0],s=b[2],c=b[4];
-    if(!byFirst[a])byFirst[a]=[];
-    byFirst[a].push(i);
-  });
-  for(var first in byFirst){
-    var indices=byFirst[first];
-    if(indices.length<2)continue;
-    var seconds=[...new Set(indices.map(function(i){return valid[i][2];}))].sort();
-    var thirds=[...new Set(indices.map(function(i){return valid[i][4];}))].sort();
-    if(JSON.stringify(seconds)===JSON.stringify(thirds)){
-      parts.push(first+'-'+seconds.join('')+'-'+thirds.join(''));
-      indices.forEach(function(i){used.add(i);});
-    } else {
-      var byS={};
-      indices.forEach(function(i){
-        var s=valid[i][2],c=valid[i][4];
-        if(!byS[s])byS[s]=[];
-        if(byS[s].indexOf(c)<0)byS[s].push(c);
-      });
-      var byTkey={};
-      Object.entries(byS).forEach(function(e){
-        var s=e[0],tl=e[1];
-        var key=tl.slice().sort().join('');
-        if(!byTkey[key])byTkey[key]={seconds:[],thirds:tl.slice().sort()};
-        byTkey[key].seconds.push(s);
-      });
-      Object.values(byTkey).forEach(function(g){
-        var ig=indices.filter(function(i){return g.seconds.indexOf(valid[i][2])>=0;});
-        if(ig.length>1){
-          parts.push(first+'-'+g.seconds.slice().sort().join('')+'-'+g.thirds.join(''));
-          ig.forEach(function(i){used.add(i);});
-        }
-      });
-    }
-  }
+  function isUsed(i){return used.indexOf(i)>=0;}
+  function markUsed(arr){arr.forEach(function(i){if(!isUsed(i))used.push(i);});}
 
-  // 残り
-  valid.forEach(function(b,i){if(!used.has(i))parts.push(b);});
+  // STEP1: 1着・2着固定で3着をまとめる（例: 4-6-2+4-6-3 → 4-6-23）
+  var byFirstSecond={};
+  valid.forEach(function(b,i){
+    var key=b[0]+'-'+b[2];
+    if(!byFirstSecond[key])byFirstSecond[key]=[];
+    byFirstSecond[key].push(i);
+  });
+  Object.keys(byFirstSecond).forEach(function(key){
+    var indices=byFirstSecond[key];
+    var unused=indices.filter(function(i){return !isUsed(i);});
+    if(unused.length>=2){
+      var thirds=unused.map(function(i){return valid[i][4];}).sort();
+      parts.push(key+'-'+thirds.join(''));
+      markUsed(unused);
+    }
+  });
+
+  // STEP2: 2着・3着固定で1着をまとめる（例: 4-3-2+6-3-2 → 46-3-2）
+  var bySecondThird={};
+  valid.forEach(function(b,i){
+    if(isUsed(i))return;
+    var key=b[2]+'-'+b[4];
+    if(!bySecondThird[key])bySecondThird[key]=[];
+    bySecondThird[key].push(i);
+  });
+  Object.keys(bySecondThird).forEach(function(key){
+    var indices=bySecondThird[key];
+    var unused=indices.filter(function(i){return !isUsed(i);});
+    if(unused.length>=2){
+      var firsts=unused.map(function(i){return valid[i][0];}).sort();
+      parts.push(firsts.join('')+'-'+key);
+      markUsed(unused);
+    }
+  });
+
+  // STEP3: 1着・3着固定で2着をまとめる
+  var byFirstThird={};
+  valid.forEach(function(b,i){
+    if(isUsed(i))return;
+    var key=b[0]+'-'+b[4];
+    if(!byFirstThird[key])byFirstThird[key]=[];
+    byFirstThird[key].push(i);
+  });
+  Object.keys(byFirstThird).forEach(function(key){
+    var indices=byFirstThird[key];
+    var unused=indices.filter(function(i){return !isUsed(i);});
+    if(unused.length>=2){
+      var parts2=key.split('-');
+      var seconds=unused.map(function(i){return valid[i][2];}).sort();
+      parts.push(parts2[0]+'-'+seconds.join('')+'-'+parts2[1]);
+      markUsed(unused);
+    }
+  });
+
+  // 残り（単独）
+  valid.forEach(function(b,i){if(!isUsed(i))parts.push(b);});
   return parts.join('/');
 }
 
