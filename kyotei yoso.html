@@ -400,7 +400,8 @@ function calcSogoScore(boats,nigeRate){
     if(b.fKi>=1)score-=3;
     if(b.winsRate===0&&b.tokuten!==null&&b.tokuten>0)score-=2;
     if(b.nyuse===6)score-=8;
-    if(b.nyuse===1&&nigeRate!==null&&nigeRate>=65)score+=10;
+    if(b.nyuse===5)score-=4;
+    if(b.nyuse===1&&nigeRate!==null&&nigeRate>=70)score+=10;
     b.sogoScore=Math.max(0,score);
   });
 
@@ -1346,12 +1347,12 @@ function analyzeLog(){
     if(l.mode==='are'&&l.arePts)meta.push(l.arePts+'点買い');
     return (i+1)+'. '+l.venue+l.raceNum+'R ['+l.mode+'] '+(meta.length?'('+meta.join('/')+') ':'')+' AI評価:'+ai+' 結果:'+combo+' '+(l.hit?'的中':'外れ')+(l.maruResult?' ◎'+l.maruResult+'着':'')+(r.payout?' 払戻'+r.payout:'');
   }).join('\n');
-  var prompt='以下は競艇予想システムのログです。JS総合評価スコアの重み付け改善のために分析してください。\n\n'+summary+'\n\n以下を分析してください：\n1. ◎（1位評価）が1着になった率と傾向\n2. 外れたレースの共通パターン\n3. calcSogoScoreの具体的な改善提案（どの指標の重みを上げ下げすべきか）\n4. 荒れモード/通常モードで改善すべき点';
+  var prompt='競艇予想システムのログを分析し、結論のみを以下フォーマットで出力せよ。説明・前置き・繰り返し一切不要。\n\n'+summary+'\n\n【出力フォーマット（厳守）】\n【◎1着率】XX% (X/X件)\n【外れパターン】\n・パターン名: 件数と原因1行\n・パターン名: 件数と原因1行\n【スコア改善案】\n・指標名: +X/-X点、根拠1行\n・指標名: +X/-X点、根拠1行\n【通常モード改善】\n・改善点: 1行\n【荒れモード改善】\n・改善点: 1行\n【優先対応】\n・最重要: 1行\n・次点: 1行';
   document.getElementById('logAnalysis').style.display='block';
   document.getElementById('logAnalysis').innerHTML='<div style="margin-top:10px;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:6px;text-align:center;"><div class="spinner" style="margin:0 auto 8px;"></div><div style="font-size:11px;color:var(--text-muted);">分析中...</div></div>';
   fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key,{
     method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:4000,thinkingConfig:{thinkingBudget:0}}})
+    body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:2000,thinkingConfig:{thinkingBudget:0}}})
   }).then(function(res){return res.json();}).then(function(json){
     var t=json.candidates&&json.candidates[0]&&json.candidates[0].content&&json.candidates[0].content.parts[0].text||'分析失敗';
     document.getElementById('logAnalysis').innerHTML='<div style="margin-top:10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;"><div style="font-size:10px;color:var(--text-sub);font-weight:700;letter-spacing:1.5px;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:6px;">AI改善提案</div><div style="font-size:12px;color:var(--text);line-height:2.0;white-space:pre-wrap;">'+t+'</div></div>';
