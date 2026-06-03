@@ -159,6 +159,7 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
   <div class="out-text" id="outText"></div>
   <button class="copy-btn" id="copyBtn" onclick="copyOut()">📋 全文コピー</button>
   <button onclick="copyXAndSogo()" style="width:100%;margin-top:6px;padding:11px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;" id="copyXSogoBtn">𝕏 総合評価＋サマリーをコピー</button>
+  <button onclick="copyXOnly()" style="width:100%;margin-top:6px;padding:11px;background:#1a1a2a;color:#c9a84c;border:1px solid #3a3a5a;border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;" id="copyXOnlyBtn">𝕏 Xサマリーのみコピー</button>
   <div id="resultInput" style="display:none;"></div>
   <div id="oddsResult"></div>
 </div>
@@ -762,7 +763,7 @@ function buildPrompt(){
     p+='×'+go+' 苗字(短評)\n';
     p+='×'+sixth+' 苗字(短評)\n\n';
     p+='【Xサマリー】\n'+venue+raceNum+'R\n';
-    p+='(一言コメント・❶〜❻丸数字＋苗字＋断定口調・15文字以内・1行のみ・「通常モード」「信頼度」「荒れ」等のシステム情報禁止)\n';
+    p+='以下のテンプレから最も当てはまる1つを選び、丸数字と苗字を当てはめ1行で出力。他表現禁止。◯評価→❶苗字◯。機力軸→機力は❶苗字。攻め起点→攻めの起点は❹苗字。連対狙い→❶苗字の連対。舟足注目→気になる❻苗字の舟足。イン弱め→❶苗字のイン戦。荒れ軸→波乱想定も機力は❶苗字。残し狙い→❶苗字残し。差し狙い→狙いは❷苗字の差し抜け。\n';
     p+='HYOKA_ORDER\n';
     p+='本線　HONSEN_PLACEHOLDER\n';
     p+='抑え　OSAEE_PLACEHOLDER\n';
@@ -807,7 +808,7 @@ function buildPrompt(){
     p+='【評価】(印は◎○▲△××のみ)\n';
     p+='◎X 苗字(短評)\n○X 苗字(短評)\n▲X 苗字(短評)\n△X 苗字(短評)\n×X 苗字(短評)\n×X 苗字(短評)\n\n';
     p+='【Xサマリー】\n'+venue+raceNum+'R\n';
-    p+='(一言コメント・❶〜❻丸数字＋苗字＋断定口調・15文字以内・1行のみ・「通常モード」「信頼度」等のシステム情報禁止)\n';
+    p+='以下のテンプレから最も当てはまる1つを選び、丸数字と苗字を当てはめ1行で出力。他表現禁止。◯評価→❶苗字◯。機力軸→機力は❶苗字。攻め起点→攻めの起点は❹苗字。連対狙い→❶苗字の連対。舟足注目→気になる❻苗字の舟足。イン弱め→❶苗字のイン戦。荒れ軸→波乱想定も機力は❶苗字。残し狙い→❶苗字残し。差し狙い→狙いは❷苗字の差し抜け。\n';
     p+='HYOKA_ORDER\n';
     p+='本線　HONSEN_PLACEHOLDER\n';
     p+='抑え　OSAEE_PLACEHOLDER\n';
@@ -1191,13 +1192,37 @@ function loadVenueRace(){
   if(r){var el2=document.getElementById('raceNum');for(var i=0;i<el2.options.length;i++){if(el2.options[i].value===r){el2.selectedIndex=i;break;}}}
 }
 
+function formatXSummary(raw){
+  // Xサマリーの内容を1行ずつ空行区切りに整形
+  var lines=raw.trim().split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length>0;});
+  return lines.join('\n\n');
+}
+
+function copyXOnly(){
+  var text=document.getElementById('outText').textContent;
+  var xIdx=text.indexOf('【Xサマリー】');
+  if(xIdx<0){showStatus('Xサマリーが見つかりません','err');return;}
+  var xEnd=text.indexOf('\n【',xIdx+1);
+  var xRaw=xEnd>=0?text.slice(xIdx+8,xEnd):text.slice(xIdx+8);
+  var out=formatXSummary(xRaw);
+  var btn=document.getElementById('copyXOnlyBtn');
+  navigator.clipboard.writeText(out).then(function(){
+    btn.textContent='✅ コピー完了';
+    setTimeout(function(){btn.textContent='𝕏 Xサマリーのみコピー';},2000);
+  });
+}
+
 function copyXAndSogo(){
   var text=document.getElementById('outText').textContent;
-  var sogoM=text.match(/【総合評価】([\s\S]*?)(?=\n【|$)/);
-  var xM=text.match(/【Xサマリー】([\s\S]*?)(?=\n【|$)/);
+  var sogoIdx=text.indexOf('【総合評価】');
+  var sogoEnd=text.indexOf('\n【',sogoIdx+1);
+  var sogoRaw=sogoIdx>=0?(sogoEnd>=0?text.slice(sogoIdx,sogoEnd):text.slice(sogoIdx)):'';
+  var xIdx=text.indexOf('【Xサマリー】');
+  var xEnd=text.indexOf('\n【',xIdx+1);
+  var xRaw=xIdx>=0?(xEnd>=0?text.slice(xIdx+8,xEnd):text.slice(xIdx+8)):'';
   var out='';
-  if(sogoM)out+='【総合評価】'+sogoM[1].trim();
-  if(xM)out+=(out?'\n\n':'')+'【Xサマリー】'+xM[1].trim();
+  if(sogoRaw)out+=sogoRaw.trim();
+  if(xRaw)out+=(out?'\n\n':'')+'【Xサマリー】\n'+formatXSummary(xRaw);
   if(!out)out=text;
   var btn=document.getElementById('copyXSogoBtn');
   navigator.clipboard.writeText(out).then(function(){
