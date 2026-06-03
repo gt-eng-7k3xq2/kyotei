@@ -79,6 +79,30 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
 .copy-btn{width:100%;margin-top:8px;padding:11px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;}
 .copy-btn.ok{background:var(--green-light);color:var(--green);border-color:#a0d8b0;}
 .div{height:1px;background:var(--border);margin:4px 0 14px;}
+
+/* ===== 評価カード ===== */
+.eval-card-wrap{margin-top:14px;display:none;}
+.eval-card-wrap.show{display:block;}
+.eval-card-hdr{font-size:10px;color:var(--text-sub);letter-spacing:1.5px;font-weight:700;margin-bottom:8px;text-transform:uppercase;}
+.eval-card{position:relative;border-radius:10px;overflow:hidden;padding:16px 14px 18px;background:radial-gradient(ellipse at 50% 35%,rgba(52,48,42,0.95) 0%,rgba(10,10,8,1) 70%);}
+.eval-card-title{text-align:center;font-family:'Noto Serif JP',serif;font-style:italic;font-weight:900;font-size:clamp(18px,5vw,32px);letter-spacing:.04em;background:linear-gradient(180deg,#fffbe0 0%,#ffe580 28%,#c9a84c 62%,#7a5810 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:5px;line-height:1.1;}
+.eval-brush{display:block;height:7px;margin:0 auto 12px;width:52%;background:linear-gradient(90deg,transparent 0%,rgba(180,140,30,.45) 20%,rgba(255,220,80,.65) 50%,rgba(180,140,30,.45) 80%,transparent 100%);border-radius:50%;filter:blur(2px);}
+.eval-boats{background:linear-gradient(180deg,#1f1f1f 0%,#131313 100%);border:1px solid #2e2e2e;border-radius:8px;padding:12px 8px 10px;position:relative;display:flex;align-items:center;justify-content:space-between;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 4px 24px rgba(0,0,0,.9);}
+.eval-boats::before{content:'';position:absolute;top:5px;left:5px;width:14px;height:14px;border-top:2px solid #c9a84c;border-left:2px solid #c9a84c;}
+.eval-boats::after{content:'';position:absolute;bottom:5px;right:5px;width:14px;height:14px;border-bottom:2px solid #c9a84c;border-right:2px solid #c9a84c;}
+.eval-corner-tr{position:absolute;top:5px;right:5px;width:14px;height:14px;border-top:2px solid #c9a84c;border-right:2px solid #c9a84c;}
+.eval-corner-bl{position:absolute;bottom:5px;left:5px;width:14px;height:14px;border-bottom:2px solid #c9a84c;border-left:2px solid #c9a84c;}
+.eval-slot{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-width:0;}
+.eval-arrow{color:#555;font-size:clamp(11px,2.5vw,18px);font-weight:bold;flex-shrink:0;line-height:1;padding:0 1px;margin-bottom:18px;}
+.eval-badge{width:clamp(30px,8vw,52px);height:clamp(30px,8vw,52px);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Anton',sans-serif;font-size:clamp(18px,5vw,34px);position:relative;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.2);}
+.eval-badge::after{content:'';position:absolute;top:0;left:0;right:0;height:48%;border-radius:6px 6px 0 0;background:linear-gradient(180deg,rgba(255,255,255,.24) 0%,transparent 100%);pointer-events:none;}
+.eval-stars{display:flex;gap:1px;font-size:clamp(7px,2vw,12px);line-height:1;}
+.eval-star-on{color:#f0c800;filter:drop-shadow(0 0 2px rgba(255,210,0,.6));}
+.eval-star-off{color:#252525;}
+.eval-gold-lines{position:relative;margin-top:8px;display:flex;flex-direction:column;gap:3px;}
+.eval-gold-line{height:1.2px;background:linear-gradient(90deg,transparent 0%,#8a6010 12%,#c9a84c 32%,#ffe580 50%,#c9a84c 68%,#8a6010 88%,transparent 100%);}
+.eval-hint{margin-top:7px;color:#4a4a4a;font-size:.65rem;text-align:center;}
+.eval-hint span{color:#c9a84c;}
 </style>
 </head>
 <body>
@@ -162,6 +186,23 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
   <button onclick="copyXOnly()" style="width:100%;margin-top:6px;padding:11px;background:#1a1a2a;color:#c9a84c;border:1px solid #3a3a5a;border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;" id="copyXOnlyBtn">𝕏 Xサマリーのみコピー</button>
   <div id="resultInput" style="display:none;"></div>
   <div id="oddsResult"></div>
+  <div class="eval-card-wrap" id="evalCardWrap">
+    <div class="div"></div>
+    <div class="eval-card-hdr">評価カード</div>
+    <div class="eval-card" id="evalCard">
+      <div class="eval-card-title" id="evalCardTitle">G.の総合評価🚤</div>
+      <span class="eval-brush"></span>
+      <div class="eval-boats" id="evalBoats">
+        <div class="eval-corner-tr"></div>
+        <div class="eval-corner-bl"></div>
+      </div>
+      <div class="eval-gold-lines">
+        <div class="eval-gold-line"></div>
+        <div class="eval-gold-line"></div>
+      </div>
+    </div>
+    <p class="eval-hint">📱 カードを<span>スクリーンショット</span>して保存</p>
+  </div>
 </div>
 <div id="logSummary" style="display:none;margin-top:12px;padding:0 0 20px;"></div>
 <div id="logAnalysis" style="display:none;margin-top:4px;"></div>
@@ -1194,6 +1235,7 @@ async function generate(){
     document.getElementById('outText').textContent=text;
     document.getElementById('outWrap').classList.add('show');
     showOddsResult();
+    renderEvalCard(text,venue,raceNum);
     autoSaveLog(text);
     showStatus('生成完了','ok');
 
@@ -1336,6 +1378,63 @@ function showOddsResult(){
   if(gosei){html+='<div style="margin-top:10px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:4px;"><span style="font-size:10px;color:var(--text-sub);">合成オッズ</span><span style="font-size:22px;font-weight:700;color:var(--accent);margin-left:10px;">'+gosei+'倍</span><span style="font-size:10px;color:var(--text-muted);margin-left:8px;">('+validBets.length+'点)</span></div>';}
   html+='</div>';
   document.getElementById('oddsResult').innerHTML=html;
+}
+
+
+/* ===== 評価カード描画 ===== */
+var BOAT_COLORS={1:{bg:'linear-gradient(145deg,#d4d4d4,#989898)',text:'#000'},2:{bg:'linear-gradient(145deg,#3c3c3c,#0c0c0c)',text:'#fff'},3:{bg:'linear-gradient(145deg,#e03232,#8c0e0e)',text:'#fff'},4:{bg:'linear-gradient(145deg,#2c6ce0,#0c3498)',text:'#fff'},5:{bg:'linear-gradient(145deg,#f0c400,#9c7400)',text:'#000'},6:{bg:'linear-gradient(145deg,#22a044,#086428)',text:'#fff'}};
+var MARK_TO_STARS={'◎':5,'○':4,'▲':3,'△':2,'×':1};
+
+function renderEvalCard(text,venue,raceNum){
+  // 総合評価から順位・印を取得
+  var rankData=[];
+  text.split('\n').forEach(function(line){
+    var m=line.match(/(\d)位[\s\u3000]+(\d)号艇[\s\u3000]*(◎|○|▲|△|×)/);
+    if(m)rankData.push({rank:parseInt(m[1]),boat:parseInt(m[2]),mark:m[3]});
+  });
+  if(!rankData.length)return;
+  rankData.sort(function(a,b){return a.rank-b.rank;});
+
+  // タイトル
+  var title='G.の総合評価🚤';
+  if(venue&&venue!=='?'&&raceNum&&raceNum!=='?')title='G.の総合評価🚤　'+venue+raceNum+'R';
+  document.getElementById('evalCardTitle').textContent=title;
+
+  // 艇バッジ生成
+  var container=document.getElementById('evalBoats');
+  var ctr=container.querySelector('.eval-corner-tr');
+  var cbl=container.querySelector('.eval-corner-bl');
+  container.innerHTML='';
+  container.appendChild(ctr);
+  container.appendChild(cbl);
+
+  rankData.forEach(function(d,idx){
+    if(idx>0){
+      var arrow=document.createElement('div');
+      arrow.className='eval-arrow';
+      arrow.textContent='›';
+      container.appendChild(arrow);
+    }
+    var slot=document.createElement('div');
+    slot.className='eval-slot';
+    var badge=document.createElement('div');
+    badge.className='eval-badge';
+    var c=BOAT_COLORS[d.boat]||BOAT_COLORS[1];
+    badge.style.background=c.bg;
+    badge.style.color=c.text;
+    badge.textContent=d.boat;
+    var stars=document.createElement('div');
+    stars.className='eval-stars';
+    var starCount=MARK_TO_STARS[d.mark]||1;
+    var starsHtml='';
+    for(var i=0;i<5;i++)starsHtml+='<span class="'+(starCount>i?'eval-star-on':'eval-star-off')+'">★</span>';
+    stars.innerHTML=starsHtml;
+    slot.appendChild(badge);
+    slot.appendChild(stars);
+    container.appendChild(slot);
+  });
+
+  document.getElementById('evalCardWrap').classList.add('show');
 }
 
 /* ===== ログ機能 ===== */
