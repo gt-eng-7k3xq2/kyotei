@@ -415,6 +415,31 @@ function calcSogoScore(boats,nigeRate){
   }
 }
 
+/* ===== 信頼度・荒れ指数後補正 ===== */
+function applyShinkidoAreBonus(boats,shinkido,areScore){
+  var b1=boats.find(function(b){return b.nyuse===1;})||boats[0];
+  boats.forEach(function(b){
+    var bonus=0;
+    // 信頼度補正（1号艇のみ）
+    if(b.nyuse===1){
+      if(shinkido==='A')bonus+=10;
+      else if(shinkido==='C')bonus-=5;
+    }
+    // 荒れ指数補正（1号艇のみ）
+    if(b.nyuse===1){
+      if(areScore===0)bonus+=5;
+      else if(areScore>=9)bonus-=5;
+    }
+    b.sogoScore=Math.max(0,(b.sogoScore||0)+bonus);
+  });
+  // 補正後に再ランク付け
+  var sorted=boats.slice().sort(function(a,b){return (b.sogoScore||0)-(a.sogoScore||0);});
+  sorted.forEach(function(b,i){b.sogoRank=i+1;});
+  // 6号艇が1位の場合は2位と入れ替え
+  var rank1=sorted[0],rank2=sorted[1];
+  if(rank1&&rank2&&rank1.nyuse===6){rank1.sogoRank=2;rank2.sogoRank=1;}
+}
+
 /* ===== JS強制× ===== */
 function calcForceNG(boats){
   var scores=[];
@@ -589,6 +614,8 @@ function runCalc(){
   var furikiriResult=checkFurikiri(areResult.score,parsed.boats,parsed.nigeRate);
   var cands1st=select1st(parsed.boats);
   var normalResult=calcNormal(parsed.boats,parsed.nigeRate);
+  // 信頼度・荒れ指数による後補正
+  applyShinkidoAreBonus(parsed.boats,normalResult.shinkido,areResult.score);
   calcData={parsed:parsed,areResult:areResult,furikiriResult:furikiriResult,cands1st:cands1st,normalResult:normalResult};
   displayCalcResults(calcData);
   document.getElementById('calcResult').classList.add('show');
@@ -735,9 +762,10 @@ function buildPrompt(){
     p+='×'+go+' 苗字(短評)\n';
     p+='×'+sixth+' 苗字(短評)\n\n';
     p+='【Xサマリー】\n'+venue+raceNum+'R\n';
-    p+='(展開コメント1〜2行・❶〜❻丸数字と苗字・断定口調)\n';
-    p+='本線　X-X-X/X-X-X/X-X-X/X-X-X/X-X-X/X-X-X\n';
-    p+='抑え　X-X-X/X-X-X/X-X-X/X-X-X/X-X-X/X-X-X\n';
+    p+='(一言コメント・❶〜❻丸数字＋苗字＋断定口調・15文字以内・1行のみ・「通常モード」「信頼度」「荒れ」等のシステム情報禁止)\n';
+    p+='HYOKA_ORDER\n';
+    p+='本線　HONSEN_PLACEHOLDER\n';
+    p+='抑え　OSAEE_PLACEHOLDER\n';
     p+='G.';
 
   } else {
@@ -778,9 +806,20 @@ function buildPrompt(){
     p+='1位 X号艇 ◎\n2位 X号艇 ○\n3位 X号艇 ▲\n4位 X号艇 △\n5位 X号艇 ×\n6位 X号艇 ×\n\n';
     p+='【評価】(印は◎○▲△××のみ)\n';
     p+='◎X 苗字(短評)\n○X 苗字(短評)\n▲X 苗字(短評)\n△X 苗字(短評)\n×X 苗字(短評)\n×X 苗字(短評)\n\n';
-    p+='【Xサマリー】\n'+venue+raceNum+'R\n通常モード。イン信頼度【'+normalResult.shinkido+'】\n（展開核心1行）\n（狙い目1行）\n本線　1-X-X/1-X-X/1-X-X/1-X-X\n抑え　1-X-X/1-X-X/1-X-X/1-X-X\nG.';
+    p+='【Xサマリー】\n'+venue+raceNum+'R\n';
+    p+='(一言コメント・❶〜❻丸数字＋苗字＋断定口調・15文字以内・1行のみ・「通常モード」「信頼度」等のシステム情報禁止)\n';
+    p+='HYOKA_ORDER\n';
+    p+='本線　HONSEN_PLACEHOLDER\n';
+    p+='抑え　OSAEE_PLACEHOLDER\n';
+    p+='G.';
   }
   return p;
+}
+
+/* ===== 評価順文字列生成 ===== */
+function buildHyokaOrder(boats){
+  var sorted=boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
+  return sorted.map(function(b){return String(b.n);}).join('>');
 }
 
 /* ===== 荒れモード買い目生成（JS固定） ===== */
@@ -905,8 +944,8 @@ async function generate(){
       var betsResult=buildAreBetsFinal(maru,shiro,sankaku,go,ngBoats);
       var honsen=betsResult.honsen;
       var osaee=betsResult.osaee;
-      var honsenStr=honsen.join('/');
-      var osaeeStr=osaee.join('/');
+      var honsenStr=compressBets(honsen)||honsen.join('/');
+      var osaeeStr=compressBets(osaee)||osaee.join('/');
 
       // テキストに【買い目】ブロックを挿入・差し替え
       var tLines=text.split('\n');
@@ -940,13 +979,16 @@ async function generate(){
       }
       text=newLines.join('\n');
 
-      // Xサマリーの本線・抑え行を上書き
+      // Xサマリーの本線・抑え・評価順を上書き
       var xIdx=text.indexOf('【Xサマリー】');
       if(xIdx>=0){
         var before=text.slice(0,xIdx);
         var after=text.slice(xIdx);
-        after=after.replace(/本線[^\n]*/g,'本線　'+honsenStr);
-        after=after.replace(/抑え[^\n]*/g,'抑え　'+osaeeStr);
+        // 評価順をJS固定で挿入
+        var hyokaOrder=buildHyokaOrder(calcData.parsed.boats);
+        after=after.replace(/HYOKA_ORDER/g,hyokaOrder);
+        // 買い目上書き（圧縮済み）
+        after=after.split('\n').map(function(ln){if(ln.indexOf('本線')===0)return '本線　'+honsenStr;if(ln.indexOf('抑え')===0)return '抑え　'+osaeeStr;return ln;}).join('\n');
         text=before+after;
       }
 
@@ -1021,23 +1063,35 @@ async function generate(){
       }
 
       honsen=honsen.slice(0,4);osaee=osaee.slice(0,4);
-      var honsenStr=honsen.join('/'),osaeeStr=osaee.join('/');
+      var honsenStr=compressBets(honsen)||honsen.join('/');
+      var osaeeStr=compressBets(osaee)||osaee.join('/');
       var betBlock='【最終買い目】8点\n本線\n'+honsen.join('\n')+'\n抑え\n'+osaee.join('\n')+'\n';
 
       // AIが出した【最終買い目】ブロックを全て削除
       text=text.replace(/【最終買い目】[\s\S]*?(?=【|$)/g,'');
+      // 【Xサマリー】より前にある「本線」「抑え」行も削除（重複防止）
+      var xPos=text.indexOf('【Xサマリー】');
+      if(xPos>=0){
+        var preX=text.slice(0,xPos);
+        var postX=text.slice(xPos);
+                preX=preX.split('\n').filter(function(ln){return ln.indexOf('本線')!==0&&ln.indexOf('抑え')!==0;}).join('\n');
+        text=preX+postX;
+      }
       // 【イン信頼度】の前に挿入
       var inIdx=text.indexOf('【イン信頼度】');
       if(inIdx>=0){text=text.slice(0,inIdx)+betBlock+'\n'+text.slice(inIdx);}
       else{text=betBlock+'\n'+text;}
 
-      // Xサマリー内の本線・抑え行を上書き
+      // Xサマリー内の本線・抑え・評価順を上書き
       var xIdx2=text.indexOf('【Xサマリー】');
       if(xIdx2>=0){
         var before2=text.slice(0,xIdx2);
         var after2=text.slice(xIdx2);
-        after2=after2.replace(/本線[^\n]*/g,'本線　'+honsenStr);
-        after2=after2.replace(/抑え[^\n]*/g,'抑え　'+osaeeStr);
+        // 評価順をJS固定で挿入
+        var hyokaOrder2=buildHyokaOrder(calcData.parsed.boats);
+        after2=after2.replace(/HYOKA_ORDER/g,hyokaOrder2);
+        // 買い目上書き（圧縮済み）
+        after2=after2.split('\n').map(function(ln){if(ln.indexOf('本線')===0)return '本線　'+honsenStr;if(ln.indexOf('抑え')===0)return '抑え　'+osaeeStr;return ln;}).join('\n');
         text=before2+after2;
       }
     }
@@ -1293,7 +1347,19 @@ function skipLog(id){
 
 function commitLog(id){
   var sel=window['_rb_'+id];
-  if(!sel||!sel[1]||!sel[2]||!sel[3]){alert('1着・2着・3着を選んでください');return;}
+  if(!sel||!sel[1]||!sel[2]||!sel[3]){
+    // 未入力の着順をハイライト
+    [1,2,3].forEach(function(place){
+      if(!sel||!sel[place]){
+        [1,2,3,4,5,6].forEach(function(n){
+          var btn=document.getElementById('rb_'+id+'_'+place+'_'+n);
+          if(btn)btn.style.border='2px solid var(--accent)';
+        });
+      }
+    });
+    showToast('1着・2着・3着をすべて入力してください');
+    return;
+  }
   var payout=parseInt(document.getElementById('pay_'+id).value)||0;
   var logs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
   var hitResult=false;
