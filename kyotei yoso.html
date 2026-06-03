@@ -1041,6 +1041,9 @@ async function generate(){
         after=after.replace(/HYOKA_ORDER/g,hyokaOrder);
         // 買い目上書き（圧縮済み）
         after=after.split('\n').map(function(ln){if(ln.indexOf('本線')===0)return '本線　'+honsenStr;if(ln.indexOf('抑え')===0)return '抑え　'+osaeeStr;return ln;}).join('\n');
+        // 場所・レース番号を強制で先頭に挿入
+        after=after.replace('【Xサマリー】','【Xサマリー】\n'+venue+raceNum+'R');
+        var vrStr=venue+raceNum+'R';var vrSeen=false;after=after.split('\n').filter(function(ln){if(ln.trim()===vrStr){if(vrSeen)return false;vrSeen=true;}return true;}).join('\n');
         text=before+after;
       }
 
@@ -1144,6 +1147,9 @@ async function generate(){
         after2=after2.replace(/HYOKA_ORDER/g,hyokaOrder2);
         // 買い目上書き（圧縮済み）
         after2=after2.split('\n').map(function(ln){if(ln.indexOf('本線')===0)return '本線　'+honsenStr;if(ln.indexOf('抑え')===0)return '抑え　'+osaeeStr;return ln;}).join('\n');
+        // 場所・レース番号を強制で先頭に挿入
+        after2=after2.replace('【Xサマリー】','【Xサマリー】\n'+venue+raceNum+'R');
+        var vrStr2=venue+raceNum+'R';var vrSeen2=false;after2=after2.split('\n').filter(function(ln){if(ln.trim()===vrStr2){if(vrSeen2)return false;vrSeen2=true;}return true;}).join('\n');
         text=before2+after2;
       }
     }
