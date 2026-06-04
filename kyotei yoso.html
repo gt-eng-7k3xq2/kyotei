@@ -1595,6 +1595,11 @@ function updateLogSummary(){
     html+='<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:18px;font-weight:700;color:var(--blue);">'+Math.round(maruHits/done.length*100)+'%</div><div style="font-size:10px;color:var(--text-sub);">◎1着率</div></div>';
     html+='<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:14px;font-weight:700;color:var(--green);">'+totalPayout.toLocaleString()+'</div><div style="font-size:10px;color:var(--text-sub);">累計払戻</div></div>';
     html+='</div>';
+    // 通常モード外れ詳細ボタン
+    var normalMissLogs=done.filter(function(l){return l.mode==='normal'&&!l.hit;});
+    if(normalMissLogs.length>0){
+      html+='<button onclick="showNormalDetail()" style="width:100%;padding:11px;background:rgba(85,136,224,0.1);color:var(--blue);border:1px solid rgba(85,136,224,0.3);border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:\'Noto Sans JP\',sans-serif;margin-bottom:6px;">📊 通常モード外れ詳細（'+normalMissLogs.length+'件）</button>';
+    }
     // 荒れモード外れ詳細ボタン
     var areLogs=done.filter(function(l){return l.mode==='are'&&!l.hit;});
     if(areLogs.length>0){
@@ -1702,6 +1707,59 @@ function resetLog(){
   document.getElementById('logAnalysis').style.display='none';
   updateLogSummary();
   showStatus('ログをリセットしました','ok');
+}
+
+function showNormalDetail(){
+  var logs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
+  var missLogs=logs.filter(function(l){return l.mode==='normal'&&l.result&&l.result!=='skip'&&!l.hit;});
+  if(!missLogs.length){alert('通常モード外れデータなし');return;}
+  var el=document.getElementById('logSummary');
+  var html='<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;">';
+  html+='<div style="font-size:10px;color:var(--blue);font-weight:700;letter-spacing:1.5px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:6px;">通常モード外れ詳細（'+missLogs.length+'件）</div>';
+  missLogs.forEach(function(l){
+    var r=l.result;
+    var combo=r.first+'-'+r.second+'-'+r.third;
+    var allBets=(l.bets?((l.bets.honsen||[]).concat(l.bets.osaee||[])):[]); 
+    // AI評価順位マップ
+    var rankMap={};
+    (l.aiRanking||[]).forEach(function(a){rankMap[a.n]=a.rank;});
+    // 結果の各艇が何位評価だったか
+    var r1rank=rankMap[r.first]?rankMap[r.first]+'位':'評価外';
+    var r2rank=rankMap[r.second]?rankMap[r.second]+'位':'評価外';
+    var r3rank=rankMap[r.third]?rankMap[r.third]+'位':'評価外';
+    // ◎が来てるか
+    var maru=l.aiRanking?l.aiRanking.find(function(a){return a.rank===1;}):null;
+    var maruN=maru?maru.n:'?';
+    var maruCame=(r.first==maruN||r.second==maruN||r.third==maruN);
+    // 買い目に入ってたか
+    var inBet=allBets.indexOf(combo)>=0;
+    var missType=!maruCame?'◎着外':(l.maruResult===1?'紐ズレ':'◎着順違い');
+    var typeColor=missType==='◎着外'?'var(--red)':missType==='紐ズレ'?'var(--accent)':'var(--text-sub)';
+    html+='<div style="background:var(--bg);border-radius:4px;padding:10px;margin-bottom:8px;">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
+    html+='<span style="font-size:13px;font-weight:700;">'+l.venue+l.raceNum+'R</span>';
+    html+='<span style="font-size:11px;font-weight:700;color:'+typeColor+';">'+missType+'</span>';
+    html+='</div>';
+    html+='<div style="font-size:11px;color:var(--text-sub);margin-bottom:4px;">信頼度'+l.shinkido+' 逃げ'+(l.nigeRate||'?')+'% 荒れ'+(l.areScore||0)+'点</div>';
+    html+='<div style="font-size:12px;margin-bottom:4px;">結果: <b>'+r.first+'</b>('+r1rank+')-<b>'+r.second+'</b>('+r2rank+')-<b>'+r.third+'</b>('+r3rank+')</div>';
+    html+='<div style="font-size:11px;color:var(--text-sub);margin-bottom:4px;">◎'+maruN+'→'+(l.maruResult?l.maruResult+'着':'着外')+(l.shiroResult?' ○→'+l.shiroResult+'着':'')+'</div>';
+    html+='<div style="font-size:10px;color:'+(inBet?'var(--green)':'var(--red)')+';">買い目に'+(inBet?'✅ 入ってた':'❌ 入ってない')+'</div>';
+    html+='</div>';
+  });
+  // 紐ズレ集計
+  var zuré=missLogs.filter(function(l){
+    var r=l.result,maru=l.aiRanking?l.aiRanking.find(function(a){return a.rank===1;}):null;
+    return maru&&(r.first==maru.n||r.second==maru.n||r.third==maru.n)&&l.maruResult===1;
+  }).length;
+  var maruOut=missLogs.filter(function(l){
+    var r=l.result,maru=l.aiRanking?l.aiRanking.find(function(a){return a.rank===1;}):null;
+    return maru&&r.first!=maru.n&&r.second!=maru.n&&r.third!=maru.n;
+  }).length;
+  html+='<div style="background:var(--blue-light);border:1px solid #c0d8f0;border-radius:4px;padding:10px;margin-bottom:10px;font-size:12px;">';
+  html+='紐ズレ: <b>'+zuré+'件</b>　◎着外: <b>'+maruOut+'件</b></div>';
+  html+='<button onclick="updateLogSummary()" style="width:100%;padding:10px;background:var(--surface);color:var(--text-sub);border:1px solid var(--border);border-radius:4px;font-size:12px;-webkit-appearance:none;">← 戻る</button>';
+  html+='</div>';
+  el.innerHTML=html;
 }
 
 function showAreDetail(){
