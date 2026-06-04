@@ -279,7 +279,7 @@ function parseData(raw){
   var boats=[];
   for(var i=0;i<6;i++){
     boats.push({n:i+1,name:'',fKi:0,fZen:0,soyoRate:0,stKoki:null,
-      tokuten:null,avgST:null,exhibRank:null,winsRate:null,
+      tokuten:null,avgST:null,exhibRank:null,winsRate:null,raceCount:null,renRate3:null,
       avgEx:null,avgLap:null,avgStr:null,
       nyuse:i+1,exT:null,lapT:null,strT:null,st:null,stF:false,tilt:0,
       kiryoku:null,kiryokuRank:null,
@@ -347,11 +347,23 @@ function parseData(raw){
     }
 
     if(section==='今節成績'){
-      if(label==='得点率'){var tv=v6(line);for(var j=0;j<6;j++)boats[j].tokuten=tv[j];}
+      if(label==='得点率'){
+        var tv=v6(line);
+        for(var j=0;j<6;j++){
+          boats[j].tokuten=tv[j];
+          // 走数を括弧内から取得試行
+          var cols2=line.split('\t');
+          if(cols2[j+1]){
+            var rc=cols2[j+1].match(/\((\d+)\)/);
+            if(rc)boats[j].raceCount=parseInt(rc[1]);
+          }
+        }
+      }
       if(label==='平均ST'){var sv3=v6(line);for(var j=0;j<6;j++)if(sv3[j]!==null)boats[j].avgST=sv3[j];}
       if(label==='展示順位'||label==='平均展示順位'){var ev=v6(line);for(var j=0;j<6;j++)boats[j].exhibRank=ev[j];}
       if(label==='1着率'){var wv=v6(line);for(var j=0;j<6;j++)boats[j].winsRate=wv[j];}
       if(label==='2連対率'){var rv=v6(line);for(var j=0;j<6;j++)boats[j].renRate=rv[j];}
+      if(label==='3連対率'){var r3v=v6(line);for(var j=0;j<6;j++)boats[j].renRate3=r3v[j];}
       if(label==='平均展示'){var av=v6(line);for(var j=0;j<6;j++)if(av[j])boats[j].avgEx=av[j];}
       if(label==='平均周足'||label==='平均周り足'){var lv=v6(line);for(var j=0;j<6;j++)if(lv[j])boats[j].avgLap=lv[j];}
       if(label==='平均直線'){var dv=v6(line);for(var j=0;j<6;j++)if(dv[j])boats[j].avgStr=dv[j];}
@@ -394,6 +406,31 @@ function parseData(raw){
   return{boats:boats,nigeRate:nigeRate,nigeRateSrc:nigeRateSrc,localCount:localCount};
 }
 
+/* ===== 今節走数推定 ===== */
+function estimateRaceCountFromRates(wins,ren2,ren3){
+  for(var n=1;n<=12;n++){
+    var ok=true;
+    [wins,ren2,ren3].forEach(function(rate){
+      if(rate===null||rate===0)return;
+      var found=false;
+      for(var k=0;k<=n;k++){if(Math.abs(Math.round(k/n*1000)/10-rate)<0.5){found=true;break;}}
+      if(!found)ok=false;
+    });
+    if(ok)return n;
+  }
+  return null;
+}
+function calcRaceCount(boats){
+  var counts={};
+  boats.forEach(function(b){
+    var c=estimateRaceCountFromRates(b.winsRate,b.renRate,b.renRate3);
+    if(c)counts[c]=(counts[c]||0)+1;
+  });
+  var maxN=null,maxCnt=0;
+  Object.keys(counts).forEach(function(k){if(counts[k]>maxCnt){maxCnt=counts[k];maxN=parseInt(k);}});
+  return maxN||0;
+}
+
 /* ===== 機力スコア ===== */
 function calcKiryoku(boats){
   boats.forEach(function(b){
@@ -412,7 +449,7 @@ function calcKiryoku(boats){
 }
 
 /* ===== 総合評価スコア ===== */
-function calcSogoScore(boats,nigeRate){
+function calcSogoScore(boats,nigeRate,raceCount){
   var allTok=boats.map(function(b){return b.tokuten;}).filter(function(v){return v!==null;});
   var maxTok=allTok.length?Math.max.apply(null,allTok):1;
   var minTok=allTok.length?Math.min.apply(null,allTok):0;
@@ -428,13 +465,16 @@ function calcSogoScore(boats,nigeRate){
   var allRen=boats.map(function(b){return b.renRate!==null?b.renRate:0;});
   var maxRen=Math.max.apply(null,allRen)||1;
 
-  // 今節レース数を推定（得点率から逆算：1走=6点換算）
-  // 平均得点率から今節走数を推定。3走未満は序盤フラグ
-  var avgTok=allTok.length?allTok.reduce(function(s,v){return s+v;},0)/allTok.length:0;
-  var estRaces=avgTok>0?Math.round(avgTok/6*allTok.length/allTok.length):0;
-  // 今節得点率の有効数を確認（0点が多い＝序盤）
-  var validTok=allTok.filter(function(v){return v>0;}).length;
-  var isEarlyRace=(validTok<=2||maxTok<=6); // 有効得点率が2艇以下 or 最大得点率6点以下 = 序盤
+  // 今節走数判定（raceCountが取れてる艇の平均、なければ得点率から推定）
+   // 走数ベースで序盤/終盤を判定（3走以下=序盤）
+  var isEarlyRace;
+  if(raceCount&&raceCount>0){
+    isEarlyRace=(raceCount<=3);
+  } else {
+    // フォールバック：得点率から推定
+    var validTok=allTok.filter(function(v){return v>0;}).length;
+    isEarlyRace=(validTok<=2||maxTok<=6);
+  }
 
   boats.forEach(function(b){
     var score=0;
@@ -682,8 +722,10 @@ function runCalc(){
   if(!raw){showStatus('データを貼り付けてください','err');return;}
   var parsed=parseData(raw);
   calcKiryoku(parsed.boats);
-  calcSogoScore(parsed.boats,parsed.nigeRate);
+  calcSogoScore(parsed.boats,parsed.nigeRate,parsed.raceCount||0);
   calcForceNG(parsed.boats);
+  var raceCount=calcRaceCount(parsed.boats);
+  parsed.raceCount=raceCount;
   var areResult=calcAreIndex(parsed.boats,parsed.nigeRate);
   var furikiriResult=checkFurikiri(areResult.score,parsed.boats,parsed.nigeRate);
   var cands1st=select1st(parsed.boats);
@@ -722,6 +764,18 @@ function displayCalcResults(data){
   });
   html+='</tbody></table>';
   html+='<div class="info-row">1コース逃げ率: <b>'+(nigeRate!==null?nigeRate+'% ('+nigeRateSrc+')':'取得できず')+'</b></div>';
+  var rc=parsed.raceCount||0;
+  var allTokDisp=boats.map(function(b){return b.tokuten;}).filter(function(v){return v!==null;});
+  var maxTokDisp=allTokDisp.length?Math.max.apply(null,allTokDisp):0;
+  var earlyFlag=rc>0?rc<=3:(allTokDisp.filter(function(v){return v>0;}).length<=2||maxTokDisp<=6);
+  html+='<div class="info-row">今節走数: <b>'+(rc>0?rc+'走':'推定中')+'</b>　→　<b style="color:'+(earlyFlag?'var(--accent)':'var(--blue)')+';">'+(earlyFlag?'序盤モード（勝率重視）':'終盤モード（今節成績重視）')+'</b></div>';
+  // 序盤/終盤モード表示
+  var rcVals2=boats.map(function(b){return b.raceCount;}).filter(function(v){return v!==null&&v>0;});
+  var avgRC2=rcVals2.length?rcVals2.reduce(function(s,v){return s+v;},0)/rcVals2.length:0;
+  var validTok2=boats.map(function(b){return b.tokuten;}).filter(function(v){return v!==null&&v>0;}).length;
+  var maxTok2=boats.map(function(b){return b.tokuten||0;});maxTok2=Math.max.apply(null,maxTok2);
+  var earlyMode=avgRC2>0?(avgRC2<=3):(validTok2<=2||maxTok2<=6);
+  html+='<div class="info-row">スコアモード: <b style="color:'+(earlyMode?'var(--accent)':'var(--blue)')+';">'+(earlyMode?'序盤モード（勝率重視）':'終盤モード（今節重視）')+'</b>'+(avgRC2>0?' 平均'+avgRC2.toFixed(1)+'走':'（推定）')+'</div>';
 
   if(currentMode==='are'){
     var cls=areResult.score>=8?'score-pass':'score-fail';
