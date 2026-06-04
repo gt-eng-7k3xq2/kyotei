@@ -1701,27 +1701,79 @@ function resetLog(){
 
 function analyzeLog(){
   var logs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
-  var done=logs.filter(function(l){return l.result!==null;});
+  var done=logs.filter(function(l){return l.result!==null&&l.result!=='skip';});
   if(done.length<10){alert('10件以上記録してから分析できます');return;}
   var key=getKey();
   if(!key){alert('APIキーを設定してください');return;}
-  var summary=done.map(function(l,i){
+
+  // 集計サマリー
+  var total=done.length;
+  var hits=done.filter(function(l){return l.hit;}).length;
+  var maruHits=done.filter(function(l){return l.maruResult===1;}).length;
+  var shiroHits=done.filter(function(l){return l.shiroResult===1;}).length;
+  var missTypes={ichaku:0,nichaku:0,sankaku:0,tensu:0};
+  var maruDist={1:0,2:0,3:0,out:0};
+  var shiroDist={1:0,2:0,3:0,out:0};
+  var normalHits=0,normalTotal=0,areHits=0,areTotal=0;
+  var shinkidoStats={A:{hit:0,total:0},B:{hit:0,total:0},C:{hit:0,total:0}};
+
+  done.forEach(function(l){
+    (l.miss||[]).forEach(function(m){if(missTypes[m]!==undefined)missTypes[m]++;});
+    if(l.maruResult===1)maruDist[1]++;
+    else if(l.maruResult===2)maruDist[2]++;
+    else if(l.maruResult===3)maruDist[3]++;
+    else maruDist.out++;
+    if(l.shiroResult===1)shiroDist[1]++;
+    else if(l.shiroResult===2)shiroDist[2]++;
+    else if(l.shiroResult===3)shiroDist[3]++;
+    else shiroDist.out++;
+    if(l.mode==='normal'){normalTotal++;if(l.hit)normalHits++;}
+    if(l.mode==='are'){areTotal++;if(l.hit)areHits++;}
+    if(l.shinkido&&shinkidoStats[l.shinkido]){shinkidoStats[l.shinkido].total++;if(l.hit)shinkidoStats[l.shinkido].hit++;}
+  });
+
+  // 個別ログ（全情報）
+  var logLines=done.map(function(l,i){
     var r=l.result;
     var combo=r.first+'-'+r.second+'-'+r.third;
-    var ai=l.aiRanking.map(function(a){return a.rank+'位:'+a.n+'号';}).join('/');
+    // AI評価順位
+    var ai=l.aiRanking.map(function(a){return a.rank+':'+a.n;}).join('/');
+    // 買い目
+    var bets=l.bets?(l.bets.honsen||[]).concat(l.bets.osaee||[]):[];
+    var betStr=bets.join('/');
+    // 外れ分類
+    var missStr=(l.miss||[]).join(',');
+    // メタ情報
     var meta=[];
-    if(l.mode==='normal'&&l.shinkido)meta.push('信頼度'+l.shinkido);
-    if(l.nigeRate!==null&&l.nigeRate!==undefined)meta.push('逃げ率'+l.nigeRate+'%');
-    if(l.areScore!==null&&l.areScore!==undefined)meta.push('荒れ'+l.areScore+'点');
-    if(l.mode==='are'&&l.arePts)meta.push(l.arePts+'点買い');
-    return (i+1)+'. '+l.venue+l.raceNum+'R ['+l.mode+'] '+(meta.length?'('+meta.join('/')+') ':'')+' AI評価:'+ai+' 結果:'+combo+' '+(l.hit?'的中':'外れ')+(l.maruResult?' ◎'+l.maruResult+'着':'')+(r.payout?' 払戻'+r.payout:'');
+    if(l.shinkido)meta.push('信頼度'+l.shinkido);
+    if(l.nigeRate!=null)meta.push('逃げ'+l.nigeRate+'%');
+    if(l.areScore!=null)meta.push('荒れ'+l.areScore+'pt');
+    if(l.mode==='are'&&l.arePts)meta.push(l.arePts+'点買');
+    var outcome=(l.hit?'的中':'外れ');
+    var maruStr=l.maruResult?'◎'+l.maruResult+'着':'◎着外';
+    var shiroStr=l.shiroResult?'○'+l.shiroResult+'着':'○着外';
+    return (i+1)+'.'+l.venue+l.raceNum+'R['+l.mode+']['+(meta.join('/'))+'] AI:'+ai+' 買:'+betStr+' 結果:'+combo+' '+outcome+' '+maruStr+' '+shiroStr+(missStr?' 分類:'+missStr:'')+(r.payout?' 払'+r.payout:'');
   }).join('\n');
-  var prompt='競艇予想システムのログを分析し、結論のみを以下フォーマットで出力せよ。説明・前置き・繰り返し一切不要。\n\n'+summary+'\n\n【出力フォーマット（厳守）】\n【◎1着率】XX% (X/X件)\n【外れパターン】\n・パターン名: 件数と原因1行\n・パターン名: 件数と原因1行\n【スコア改善案】\n・指標名: +X/-X点、根拠1行\n・指標名: +X/-X点、根拠1行\n【通常モード改善】\n・改善点: 1行\n【荒れモード改善】\n・改善点: 1行\n【優先対応】\n・最重要: 1行\n・次点: 1行';
+
+  // 集計行
+  var statLines=[
+    '=集計=',
+    '総数:'+total+' 的中:'+hits+'('+Math.round(hits/total*100)+'%)',
+    '◎1着:'+maruHits+'('+Math.round(maruHits/total*100)+'%) ◎分布:1着'+maruDist[1]+'/2着'+maruDist[2]+'/3着'+maruDist[3]+'/着外'+maruDist.out,
+    '○1着:'+shiroHits+'('+Math.round(shiroHits/total*100)+'%) ○分布:1着'+shiroDist[1]+'/2着'+shiroDist[2]+'/3着'+shiroDist[3]+'/着外'+shiroDist.out,
+    '通常:'+normalHits+'/'+normalTotal+' 荒れ:'+areHits+'/'+areTotal,
+    '信頼度A:'+shinkidoStats.A.hit+'/'+shinkidoStats.A.total+' B:'+shinkidoStats.B.hit+'/'+shinkidoStats.B.total+' C:'+shinkidoStats.C.hit+'/'+shinkidoStats.C.total,
+    '外れ分類 1着:'+missTypes.ichaku+'/2着:'+missTypes.nichaku+'/3着:'+missTypes.sankaku+'/点数:'+missTypes.tensu
+  ].join('\n');
+
+  var summary=statLines+'\n\n=個別ログ=\n'+logLines;
+
+  var prompt='競艇予想システムのログ分析。以下フォーマットのみ出力。説明・前置き不要。\n\n'+summary+'\n\n【出力フォーマット】\n【◎1着率】XX%(X/X) ○1着率XX%\n【外れパターン】\n・(パターン):(件数)件/(原因1行)\n【信頼度別】A:X/X B:X/X C:X/X→改善点1行\n【◎○分布分析】1行\n【買い目改善】1行\n【スコア改善案】\n・(指標):(±X点)/(根拠1行)\n【通常モード】改善点1行\n【荒れモード】改善点1行\n【最優先対応】1行';
   document.getElementById('logAnalysis').style.display='block';
   document.getElementById('logAnalysis').innerHTML='<div style="margin-top:10px;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:6px;text-align:center;"><div class="spinner" style="margin:0 auto 8px;"></div><div style="font-size:11px;color:var(--text-muted);">分析中...</div></div>';
   fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key,{
     method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:2000,thinkingConfig:{thinkingBudget:0}}})
+    body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:3000,thinkingConfig:{thinkingBudget:0}}})
   }).then(function(res){return res.json();}).then(function(json){
     var t=json.candidates&&json.candidates[0]&&json.candidates[0].content&&json.candidates[0].content.parts[0].text||'分析失敗';
     document.getElementById('logAnalysis').innerHTML='<div style="margin-top:10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;"><div style="font-size:10px;color:var(--text-sub);font-weight:700;letter-spacing:1.5px;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:6px;">AI改善提案</div><div style="font-size:12px;color:var(--text);line-height:2.0;white-space:pre-wrap;">'+t+'</div></div>';
