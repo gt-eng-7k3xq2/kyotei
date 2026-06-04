@@ -952,25 +952,12 @@ function compressBets(betsArr){
 function buildHyokaOrder(boats){
   var sorted=boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
   if(!sorted.length)return '';
-  // スコア差で不等号を決定（差20以上→>> / 差5未満→同グループ / それ以外→>）
-  var groups=[[sorted[0].n]];
-  var groupSeps=[];
+  // 全艇をsogoRank順に>か>>で連結（グループまとめなし・上の総合評価と順序一致）
+  var result=String(sorted[0].n);
   for(var i=1;i<sorted.length;i++){
     var prev=sorted[i-1],curr=sorted[i];
     var diff=(prev.sogoScore||0)-(curr.sogoScore||0);
-    if(diff<5){
-      // ほぼ同じ→同グループにまとめる
-      groups[groups.length-1].push(curr.n);
-    } else {
-      groups.push([curr.n]);
-      groupSeps.push(diff>=20?'>>':'>');
-    }
-  }
-  // グループを不等号で連結
-  var parts=groups.map(function(g){return g.join('');});
-  var result=parts[0];
-  for(var k=0;k<groupSeps.length;k++){
-    result+=groupSeps[k]+parts[k+1];
+    result+=(diff>=20?'>>':'>')+String(curr.n);
   }
   return result;
 }
