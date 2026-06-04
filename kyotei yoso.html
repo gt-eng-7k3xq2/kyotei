@@ -1595,6 +1595,11 @@ function updateLogSummary(){
     html+='<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:18px;font-weight:700;color:var(--blue);">'+Math.round(maruHits/done.length*100)+'%</div><div style="font-size:10px;color:var(--text-sub);">◎1着率</div></div>';
     html+='<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:14px;font-weight:700;color:var(--green);">'+totalPayout.toLocaleString()+'</div><div style="font-size:10px;color:var(--text-sub);">累計払戻</div></div>';
     html+='</div>';
+    // 荒れモード外れ詳細ボタン
+    var areLogs=done.filter(function(l){return l.mode==='are'&&!l.hit;});
+    if(areLogs.length>0){
+      html+='<button onclick="showAreDetail()" style="width:100%;padding:11px;background:rgba(224,85,102,0.1);color:var(--red);border:1px solid rgba(224,85,102,0.3);border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:\'Noto Sans JP\',sans-serif;margin-bottom:6px;">📊 荒れモード外れ詳細（'+areLogs.length+'件）</button>';
+    }
     html+='<button onclick="analyzeLog()" style="width:100%;padding:11px;background:var(--blue-light);color:var(--blue);border:1px solid #c0d8f0;border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:\'Noto Sans JP\',sans-serif;'+(done.length<10?'opacity:0.5;':'')+'">🔍 AIに改善提案させる'+(done.length<10?' ('+done.length+'/10件)':'')+'</button>';
     html+='<button onclick="resetLog()" style="width:100%;margin-top:6px;padding:10px;background:var(--surface);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;font-size:11px;font-weight:700;-webkit-appearance:none;font-family:\'Noto Sans JP\',sans-serif;">🗑 ログをリセット</button>';
   }
@@ -1697,6 +1702,37 @@ function resetLog(){
   document.getElementById('logAnalysis').style.display='none';
   updateLogSummary();
   showStatus('ログをリセットしました','ok');
+}
+
+function showAreDetail(){
+  var logs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
+  var areLogs=logs.filter(function(l){return l.mode==='are'&&l.result&&l.result!=='skip'&&!l.hit;});
+  if(!areLogs.length){alert('荒れモード外れデータなし');return;}
+  var el=document.getElementById('logSummary');
+  var html='<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;">';
+  html+='<div style="font-size:10px;color:var(--red);font-weight:700;letter-spacing:1.5px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:6px;">荒れモード外れ詳細（'+areLogs.length+'件）</div>';
+  areLogs.forEach(function(l){
+    var r=l.result;
+    var combo=r.first+'-'+r.second+'-'+r.third;
+    var allBets=(l.bets?((l.bets.honsen||[]).concat(l.bets.osaee||[])):[]); 
+    var maru=l.aiRanking.find(function(a){return a.rank===1;});
+    var shiro=l.aiRanking.find(function(a){return a.rank===2;});
+    var maruN=maru?maru.n:'?';
+    var shiroN=shiro?shiro.n:'?';
+    html+='<div style="background:var(--bg);border-radius:4px;padding:10px;margin-bottom:8px;">';
+    html+='<div style="display:flex;justify-content:space-between;margin-bottom:6px;">';
+    html+='<span style="font-size:13px;font-weight:700;">'+l.venue+l.raceNum+'R</span>';
+    html+='<span style="font-size:11px;color:var(--text-sub);">荒れ'+l.areScore+'点 逃げ'+(l.nigeRate||'?')+'%</span>';
+    html+='</div>';
+    html+='<div style="font-size:11px;color:var(--text-sub);margin-bottom:4px;">◎'+maruN+'号 ○'+shiroN+'号</div>';
+    html+='<div style="font-size:12px;margin-bottom:4px;">結果: <span style="font-weight:700;color:var(--accent);">'+combo+'</span></div>';
+    html+='<div style="font-size:11px;color:var(--text-sub);margin-bottom:4px;">◎'+maruN+'号→'+(l.maruResult?l.maruResult+'着':'着外')+'　○'+shiroN+'号→'+(l.shiroResult?l.shiroResult+'着':'着外')+'</div>';
+    html+='<div style="font-size:10px;color:var(--text-muted);font-family:monospace;">買い目: '+allBets.join('/')+'</div>';
+    html+='</div>';
+  });
+  html+='<button onclick="updateLogSummary()" style="width:100%;padding:10px;background:var(--surface);color:var(--text-sub);border:1px solid var(--border);border-radius:4px;font-size:12px;-webkit-appearance:none;">← 戻る</button>';
+  html+='</div>';
+  el.innerHTML=html;
 }
 
 function analyzeLog(){
