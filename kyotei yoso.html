@@ -1878,9 +1878,36 @@ function analyzeLog(){
     '外れ分類 1着:'+missTypes.ichaku+'/2着:'+missTypes.nichaku+'/3着:'+missTypes.sankaku+'/点数:'+missTypes.tensu
   ].join('\n');
 
-  var summary=statLines+'\n\n=個別ログ=\n'+logLines;
+  // 外れパターン集計（買い目依存なし・maruResult/shiroResultベース）
+  var missLogs=done.filter(function(l){return !l.hit;});
+  var maruOut=missLogs.filter(function(l){return !l.maruResult;}).length;
+  var maruHit1=missLogs.filter(function(l){return l.maruResult===1;}).length; // 紐ズレ
+  var maruHit2=missLogs.filter(function(l){return l.maruResult===2;}).length;
+  var maruHit3=missLogs.filter(function(l){return l.maruResult===3;}).length;
 
-  var prompt='競艇予想システムのログ分析。以下フォーマットのみ出力。説明・前置き不要。\n\n'+summary+'\n\n【出力フォーマット】\n【◎1着率】XX%(X/X) ○1着率XX%\n【外れパターン】\n・(パターン):(件数)件/(原因1行)\n【信頼度別】A:X/X B:X/X C:X/X→改善点1行\n【◎○分布分析】1行\n【買い目改善】1行\n【スコア改善案】\n・(指標):(±X点)/(根拠1行)\n【通常モード】改善点1行\n【荒れモード】改善点1行\n【最優先対応】1行';
+  // 通常外れ詳細テキスト
+  var normalMissDetail=done.filter(function(l){return l.mode==='normal'&&!l.hit;}).map(function(l){
+    var r=l.result;
+    var rankMap={};(l.aiRanking||[]).forEach(function(a){rankMap[a.n]=a.rank;});
+    var maru=l.aiRanking?l.aiRanking.find(function(a){return a.rank===1;}):null;
+    var maruN=maru?maru.n:'?';
+    var maruCame=r.first==maruN||r.second==maruN||r.third==maruN;
+    var missType=!maruCame?'◎着外':l.maruResult===1?'紐ズレ':'◎着順違い';
+    return l.venue+l.raceNum+'R['+missType+']['+l.shinkido+'/逃'+l.nigeRate+'%/荒'+l.areScore+'pt] 結果:'+r.first+'('+( rankMap[r.first]||'?')+'位)-'+r.second+'('+( rankMap[r.second]||'?')+'位)-'+r.third+'('+( rankMap[r.third]||'?')+'位) ◎'+maruN+'→'+(l.maruResult?l.maruResult+'着':'着外')+(l.shiroResult?' ○→'+l.shiroResult+'着':'');
+  }).join('\n');
+
+  // 荒れ外れ詳細テキスト
+  var areMissDetail=done.filter(function(l){return l.mode==='are'&&!l.hit;}).map(function(l){
+    var r=l.result;
+    var maru=l.aiRanking?l.aiRanking.find(function(a){return a.rank===1;}):null;
+    var shiro=l.aiRanking?l.aiRanking.find(function(a){return a.rank===2;}):null;
+    var maruN=maru?maru.n:'?',shiroN=shiro?shiro.n:'?';
+    return l.venue+l.raceNum+'R[荒'+l.areScore+'pt/逃'+l.nigeRate+'%] ◎'+maruN+'○'+shiroN+' 結果:'+r.first+'-'+r.second+'-'+r.third+' ◎→'+(l.maruResult?l.maruResult+'着':'着外')+' ○→'+(l.shiroResult?l.shiroResult+'着':'着外');
+  }).join('\n');
+
+  var summary=statLines+'\n外れ内訳:紐ズレ'+maruHit1+'件/◎2着'+maruHit2+'件/◎3着'+maruHit3+'件/◎着外'+maruOut+'件'+'\n\n=通常外れ詳細=\n'+normalMissDetail+'\n\n=荒れ外れ詳細=\n'+areMissDetail+'\n\n=個別ログ=\n'+logLines;
+
+  var prompt='競艇予想システムのログ分析。以下フォーマットのみ出力。説明・前置き不要。切れないよう簡潔に。\n\n'+summary+'\n\n【出力フォーマット】\n【◎1着率】XX%(X/X) ○1着率XX%\n【外れ内訳】紐ズレX件/◎2着X件/◎3着X件/◎着外X件\n【通常外れ傾向】1〜2行\n【荒れ外れ傾向】1〜2行\n【信頼度別】A:X/X B:X/X C:X/X→1行\n【買い目改善】1〜2行\n【スコア改善案】\n・指標:±X点/根拠1行\n【最優先対応】1行';
   document.getElementById('logAnalysis').style.display='block';
   document.getElementById('logAnalysis').innerHTML='<div style="margin-top:10px;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:6px;text-align:center;"><div class="spinner" style="margin:0 auto 8px;"></div><div style="font-size:11px;color:var(--text-muted);">分析中...</div></div>';
   fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key,{
