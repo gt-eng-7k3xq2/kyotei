@@ -1883,7 +1883,13 @@ function analyzeLog(){
     var outcome=(l.hit?'的中':'外れ');
     var maruStr=l.maruResult?'◎'+l.maruResult+'着':'◎着外';
     var shiroStr=l.shiroResult?'○'+l.shiroResult+'着':'○着外';
-    return (i+1)+'.'+l.venue+l.raceNum+'R['+l.mode+']['+(meta.join('/'))+'] AI:'+ai+' 買:'+betStr+' 結果:'+combo+' '+outcome+' '+maruStr+' '+shiroStr+(missStr?' 分類:'+missStr:'')+(r.payout?' 払'+r.payout:'');
+    // 実際の2着・3着艇のsogoRank・sogoScoreを取得
+    var boatMap={};
+    (l.boats||[]).forEach(function(b){boatMap[b.n]={rank:b.sogoRank,score:b.sogoScore,kt:b.tokuten,st:b.avgST,kr:b.kiryokuRank};});
+    var r2info=boatMap[r.second]?r.second+'号('+boatMap[r.second].rank+'位/'+boatMap[r.second].score+'pt/得'+boatMap[r.second].kt+'/ST'+boatMap[r.second].st+'/機'+boatMap[r.second].kr+')':r.second+'号(?位)';
+    var r3info=boatMap[r.third]?r.third+'号('+boatMap[r.third].rank+'位/'+boatMap[r.third].score+'pt/得'+boatMap[r.third].kt+'/ST'+boatMap[r.third].st+'/機'+boatMap[r.third].kr+')':r.third+'号(?位)';
+    var r1info=boatMap[r.first]?r.first+'号('+boatMap[r.first].rank+'位/'+boatMap[r.first].score+'pt)':r.first+'号(?位)';
+    return (i+1)+'.'+l.venue+l.raceNum+'R['+l.mode+']['+(meta.join('/'))+'] AI:'+ai+' 結果:1着'+r1info+' 2着'+r2info+' 3着'+r3info+' '+outcome+' '+maruStr+' '+shiroStr+(missStr?' 分類:'+missStr:'')+(r.payout?' 払'+r.payout:'');
   }).join('\n');
 
   // 集計行
@@ -1912,7 +1918,10 @@ function analyzeLog(){
     var maruN=maru?maru.n:'?';
     var maruCame=r.first==maruN||r.second==maruN||r.third==maruN;
     var missType=!maruCame?'◎着外':l.maruResult===1?'紐ズレ':'◎着順違い';
-    return l.venue+l.raceNum+'R['+missType+']['+l.shinkido+'/逃'+l.nigeRate+'%/荒'+l.areScore+'pt] 結果:'+r.first+'('+( rankMap[r.first]||'?')+'位)-'+r.second+'('+( rankMap[r.second]||'?')+'位)-'+r.third+'('+( rankMap[r.third]||'?')+'位) ◎'+maruN+'→'+(l.maruResult?l.maruResult+'着':'着外')+(l.shiroResult?' ○→'+l.shiroResult+'着':'');
+    // 各艇のsogoScore情報
+    var bm={};(l.boats||[]).forEach(function(b){bm[b.n]=b;});
+    function binfo(n){var b=bm[n];return b?n+'号('+b.sogoRank+'位/'+b.sogoScore+'pt/機'+b.kiryokuRank+')':n+'号(?)';}
+    return l.venue+l.raceNum+'R['+missType+']['+l.shinkido+'/逃'+l.nigeRate+'%/荒'+l.areScore+'pt] 結果:'+binfo(r.first)+'-'+binfo(r.second)+'-'+binfo(r.third)+' ◎'+maruN+'→'+(l.maruResult?l.maruResult+'着':'着外')+(l.shiroResult?' ○→'+l.shiroResult+'着':'');
   }).join('\n');
 
   // 荒れ外れ詳細テキスト
@@ -1921,12 +1930,14 @@ function analyzeLog(){
     var maru=l.aiRanking?l.aiRanking.find(function(a){return a.rank===1;}):null;
     var shiro=l.aiRanking?l.aiRanking.find(function(a){return a.rank===2;}):null;
     var maruN=maru?maru.n:'?',shiroN=shiro?shiro.n:'?';
-    return l.venue+l.raceNum+'R[荒'+l.areScore+'pt/逃'+l.nigeRate+'%] ◎'+maruN+'○'+shiroN+' 結果:'+r.first+'-'+r.second+'-'+r.third+' ◎→'+(l.maruResult?l.maruResult+'着':'着外')+' ○→'+(l.shiroResult?l.shiroResult+'着':'着外');
+    var bm2={};(l.boats||[]).forEach(function(b){bm2[b.n]=b;});
+    function binfo2(n){var b=bm2[n];return b?n+'号('+b.sogoRank+'位/'+b.sogoScore+'pt/機'+b.kiryokuRank+')':n+'号(?)';}
+    return l.venue+l.raceNum+'R[荒'+l.areScore+'pt/逃'+l.nigeRate+'%] ◎'+maruN+'('+binfo2(maruN)+')○'+shiroN+'('+binfo2(shiroN)+') 結果:'+binfo2(r.first)+'-'+binfo2(r.second)+'-'+binfo2(r.third)+' ◎→'+(l.maruResult?l.maruResult+'着':'着外')+' ○→'+(l.shiroResult?l.shiroResult+'着':'着外');
   }).join('\n');
 
   var summary=statLines+'\n外れ内訳:紐ズレ'+maruHit1+'件/◎2着'+maruHit2+'件/◎3着'+maruHit3+'件/◎着外'+maruOut+'件'+'\n\n=通常外れ詳細=\n'+normalMissDetail+'\n\n=荒れ外れ詳細=\n'+areMissDetail+'\n\n=個別ログ=\n'+logLines;
 
-  var prompt='競艇予想システムのログ分析。以下フォーマットのみ出力。説明・前置き不要。切れないよう簡潔に。\n\n'+summary+'\n\n【出力フォーマット】\n【◎1着率】XX%(X/X) ○1着率XX%\n【外れ内訳】紐ズレX件/◎2着X件/◎3着X件/◎着外X件\n【通常外れ傾向】1〜2行\n【荒れ外れ傾向】1〜2行\n【信頼度別】A:X/X B:X/X C:X/X→1行\n【買い目改善】1〜2行\n【スコア改善案】\n・指標:±X点/根拠1行\n【最優先対応】1行';
+  var prompt='競艇予想システムのログ分析。以下フォーマットのみ出力。説明・前置き不要。切れないよう簡潔に。各レースの各艇データ（sogoRank/sogoScore/機力）も含まれるので、実際に2着3着に来た艇のスコア傾向も分析せよ。\n\n'+summary+'\n\n【出力フォーマット】\n【◎1着率】XX%(X/X) ○1着率XX%\n【外れ内訳】紐ズレX件/◎2着X件/◎3着X件/◎着外X件\n【通常外れ傾向】1〜2行\n【荒れ外れ傾向】1〜2行\n【信頼度別】A:X/X B:X/X C:X/X→1行\n【買い目改善】1〜2行\n【スコア改善案】\n・指標:±X点/根拠1行\n【最優先対応】1行';
   document.getElementById('logAnalysis').style.display='block';
   document.getElementById('logAnalysis').innerHTML='<div style="margin-top:10px;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:6px;text-align:center;"><div class="spinner" style="margin:0 auto 8px;"></div><div style="font-size:11px;color:var(--text-muted);">分析中...</div></div>';
   fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key,{
