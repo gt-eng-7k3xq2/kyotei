@@ -952,38 +952,25 @@ function compressBets(betsArr){
 function buildHyokaOrder(boats){
   var sorted=boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
   if(!sorted.length)return '';
-  // スコア差で不等号・イコールを決定（差10以上→>> / 差3未満→= / それ以外→>）
-  // =が連続する場合は「25」のようにまとめる
+  // スコア差で不等号を決定（差20以上→>> / 差5未満→同グループ / それ以外→>）
   var groups=[[sorted[0].n]];
-  var separators=[];
+  var groupSeps=[];
   for(var i=1;i<sorted.length;i++){
     var prev=sorted[i-1],curr=sorted[i];
     var diff=(prev.sogoScore||0)-(curr.sogoScore||0);
     if(diff<5){
-      // ほぼ同じ→同グループ
+      // ほぼ同じ→同グループにまとめる
       groups[groups.length-1].push(curr.n);
-      separators.push('=');
-    } else if(diff>=20){
-      groups.push([curr.n]);
-      separators.push('>>');
     } else {
       groups.push([curr.n]);
-      separators.push('>');
+      groupSeps.push(diff>=20?'>>':'>');
     }
   }
-  // グループをまとめて文字列化
+  // グループを不等号で連結
   var parts=groups.map(function(g){return g.join('');});
   var result=parts[0];
-  for(var j=0;j<separators.length;j++){
-    if(separators[j]==='=')continue; // =はグループ内なので区切り不要
-    result+=separators[j]+parts[j+1];
-  }
-  // =区切りのグループを正しく連結
-  result='';
-  for(var k=0;k<parts.length;k++){
-    if(k===0){result=parts[0];continue;}
-    var sep=separators[k-1];
-    if(sep!=='=')result+=sep+parts[k];
+  for(var k=0;k<groupSeps.length;k++){
+    result+=groupSeps[k]+parts[k+1];
   }
   return result;
 }
