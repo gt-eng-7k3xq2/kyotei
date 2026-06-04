@@ -727,7 +727,7 @@ function runCalc(){
   parsed.raceCount=raceCount;
   calcSogoScore(parsed.boats,parsed.nigeRate,raceCount);
   calcForceNG(parsed.boats);
-  // raceCount設定済み
+  var areResult=calcAreIndex(parsed.boats,parsed.nigeRate);
   var furikiriResult=checkFurikiri(areResult.score,parsed.boats,parsed.nigeRate);
   var cands1st=select1st(parsed.boats);
   var normalResult=calcNormal(parsed.boats,parsed.nigeRate);
