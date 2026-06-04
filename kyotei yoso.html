@@ -722,11 +722,11 @@ function runCalc(){
   if(!raw){showStatus('データを貼り付けてください','err');return;}
   var parsed=parseData(raw);
   calcKiryoku(parsed.boats);
-  calcSogoScore(parsed.boats,parsed.nigeRate,parsed.raceCount||0);
-  calcForceNG(parsed.boats);
   var raceCount=calcRaceCount(parsed.boats);
   parsed.raceCount=raceCount;
-  var areResult=calcAreIndex(parsed.boats,parsed.nigeRate);
+  calcSogoScore(parsed.boats,parsed.nigeRate,raceCount);
+  calcForceNG(parsed.boats);
+  // raceCount設定済み
   var furikiriResult=checkFurikiri(areResult.score,parsed.boats,parsed.nigeRate);
   var cands1st=select1st(parsed.boats);
   var normalResult=calcNormal(parsed.boats,parsed.nigeRate);
