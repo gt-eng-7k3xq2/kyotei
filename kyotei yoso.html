@@ -1282,9 +1282,10 @@ function loadVenueRace(){
 }
 
 function formatXSummary(raw){
-  // Xサマリーの内容を1行ずつ空行区切りに整形
+  // 1行目（場所・R）の下だけ空行、残りは詰める
   var lines=raw.trim().split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length>0;});
-  return lines.join('\n\n');
+  if(lines.length===0)return '';
+  return lines[0]+'\n\n'+lines.slice(1).join('\n');
 }
 
 function copyXOnly(){
