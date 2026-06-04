@@ -929,11 +929,46 @@ function buildPrompt(){
     p+='【荒れ指数】'+areResult.score+'点（'+(areResult.score>=8?'転用可':'転用不可')+'）\n';
     p+='【特記】\n\n';
     p+='【最終買い目】8点\n本線\n1-X-X\n1-X-X\n1-X-X\n1-X-X\n抑え\n1-X-X\n1-X-X\n1-X-X\n1-X-X\n\n';
-    // 総合評価：gtoolsパーサーに合わせて「X位 X号艇 印」形式を厳命
+
+    // 総合評価：モードに応じて印を固定割り当て
+    var shinkido=normalResult.shinkido;
+    var sogoTop=sogoSortedN[0]?String(sogoSortedN[0].n):null;
+    var sogoTop2=sogoSortedN[1]?String(sogoSortedN[1].n):null;
+    var maruN_disp,shiroN_disp;
+    if(shinkido==='A'){
+      // Aモード：1号頭固定→◎は1号、○はsogoRank1位（1号以外）
+      maruN_disp='1';
+      shiroN_disp=sogoTop!=='1'?sogoTop:(sogoTop2||'2');
+    } else if(shinkido==='B'){
+      // Bモード：◎はsogoRank1位、○は1号
+      maruN_disp=sogoTop||'1';
+      shiroN_disp='1';
+    } else {
+      // Cモード：sogoRankそのまま
+      maruN_disp=sogoTop||'1';
+      shiroN_disp=sogoTop2||'2';
+    }
+    var usedDisp=[maruN_disp,shiroN_disp];
+    var remainDisp=sogoSortedN.filter(function(b){return usedDisp.indexOf(String(b.n))<0;}).map(function(b){return String(b.n);});
+    var sankakuN_disp=remainDisp[0]||'3';
+    var yonkakuN_disp=remainDisp[1]||'4';
+    var goN_disp=remainDisp[2]||'5';
+    var sixthN_disp=remainDisp[3]||'6';
+
     p+='【総合評価】(G.Tools連携用・必ず以下フォーマットで6艇出力・スペース厳守)\n';
-    p+='1位 X号艇 ◎\n2位 X号艇 ○\n3位 X号艇 ▲\n4位 X号艇 △\n5位 X号艇 ×\n6位 X号艇 ×\n\n';
+    p+='1位 '+maruN_disp+'号艇 ◎\n';
+    p+='2位 '+shiroN_disp+'号艇 ○\n';
+    p+='3位 '+sankakuN_disp+'号艇 ▲\n';
+    p+='4位 '+yonkakuN_disp+'号艇 △\n';
+    p+='5位 '+goN_disp+'号艇 ×\n';
+    p+='6位 '+sixthN_disp+'号艇 ×\n\n';
     p+='【評価】(印は◎○▲△××のみ)\n';
-    p+='◎X 苗字(短評)\n○X 苗字(短評)\n▲X 苗字(短評)\n△X 苗字(短評)\n×X 苗字(短評)\n×X 苗字(短評)\n\n';
+    p+='◎'+maruN_disp+' 苗字(短評)\n';
+    p+='○'+shiroN_disp+' 苗字(短評)\n';
+    p+='▲'+sankakuN_disp+' 苗字(短評)\n';
+    p+='△'+yonkakuN_disp+' 苗字(短評)\n';
+    p+='×'+goN_disp+' 苗字(短評)\n';
+    p+='×'+sixthN_disp+' 苗字(短評)\n\n';
     p+='【Xサマリー】\n'+venue+raceNum+'R\n';
     p+='一言コメントを以下の出力例から最も当てはまるものを選び、丸数字と苗字を実際のデータに当てはめて1行のみ出力せよ。説明・テンプレ名・矢印は一切出力禁止。【出力例】❶苗字◯。／機力は❶苗字。／攻めの起点は❹苗字。／❶苗字の連対。／気になる❻苗字の舟足。／❶苗字のイン戦。／波乱想定も機力は❶苗字。／❶苗字残し。／狙いは❷苗字の差し抜け。\n';
     p+='HYOKA_ORDER\n';
