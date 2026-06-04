@@ -767,14 +767,13 @@ function displayCalcResults(data){
   var rc=parsed.raceCount||0;
   var allTokDisp=boats.map(function(b){return b.tokuten;}).filter(function(v){return v!==null;});
   var maxTokDisp=allTokDisp.length?Math.max.apply(null,allTokDisp):0;
-  var earlyFlag=rc>0?rc<=3:(allTokDisp.filter(function(v){return v>0;}).length<=2||maxTokDisp<=6);
+  var earlyFlag=rc>0?(rc<=3):(allTokDisp.filter(function(v){return v>0;}).length<=2||maxTokDisp<=6);
   html+='<div class="info-row">今節走数: <b>'+(rc>0?rc+'走':'推定中')+'</b>　→　<b style="color:'+(earlyFlag?'var(--accent)':'var(--blue)')+';">'+(earlyFlag?'序盤モード（勝率重視）':'終盤モード（今節成績重視）')+'</b></div>';
-  // 序盤/終盤モード表示
-  var rcVals2=boats.map(function(b){return b.raceCount;}).filter(function(v){return v!==null&&v>0;});
-  var avgRC2=rcVals2.length?rcVals2.reduce(function(s,v){return s+v;},0)/rcVals2.length:0;
+  // 序盤/終盤モード表示（parsed.raceCountを使用）
+  var rc2=parsed.raceCount||0;
   var validTok2=boats.map(function(b){return b.tokuten;}).filter(function(v){return v!==null&&v>0;}).length;
   var maxTok2=boats.map(function(b){return b.tokuten||0;});maxTok2=Math.max.apply(null,maxTok2);
-  var earlyMode=avgRC2>0?(avgRC2<=3):(validTok2<=2||maxTok2<=6);
+  var earlyMode=rc2>0?(rc2<=3):(validTok2<=2||maxTok2<=6);
   html+='<div class="info-row">スコアモード: <b style="color:'+(earlyMode?'var(--accent)':'var(--blue)')+';">'+(earlyMode?'序盤モード（勝率重視）':'終盤モード（今節重視）')+'</b>'+(avgRC2>0?' 平均'+avgRC2.toFixed(1)+'走':'（推定）')+'</div>';
 
   if(currentMode==='are'){
