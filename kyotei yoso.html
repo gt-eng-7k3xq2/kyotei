@@ -428,36 +428,54 @@ function calcSogoScore(boats,nigeRate){
   var allRen=boats.map(function(b){return b.renRate!==null?b.renRate:0;});
   var maxRen=Math.max.apply(null,allRen)||1;
 
+  // 今節レース数を推定（得点率から逆算：1走=6点換算）
+  // 平均得点率から今節走数を推定。3走未満は序盤フラグ
+  var avgTok=allTok.length?allTok.reduce(function(s,v){return s+v;},0)/allTok.length:0;
+  var estRaces=avgTok>0?Math.round(avgTok/6*allTok.length/allTok.length):0;
+  // 今節得点率の有効数を確認（0点が多い＝序盤）
+  var validTok=allTok.filter(function(v){return v>0;}).length;
+  var isEarlyRace=(validTok<=2||maxTok<=6); // 有効得点率が2艇以下 or 最大得点率6点以下 = 序盤
+
   boats.forEach(function(b){
     var score=0;
-    // 今節得点率 25点（実績重視）
-    if(b.tokuten!==null&&maxTok>minTok)score+=(b.tokuten-minTok)/(maxTok-minTok)*25;
-    else if(b.tokuten!==null)score+=12.5;
-    // 勝率 15点（過去データは控えめ）
+
+    // 今節得点率：序盤は10点、終盤は30点（動的切替）
+    var tokWeight=isEarlyRace?10:30;
+    if(b.tokuten!==null&&maxTok>minTok)score+=(b.tokuten-minTok)/(maxTok-minTok)*tokWeight;
+    else if(b.tokuten!==null)score+=tokWeight/2;
+
+    // 勝率：序盤は20点、終盤は5点（動的切替）
+    var rateWeight=isEarlyRace?20:5;
     var rate=b.totiRate||b.zenkokuRate||0;
-    if(maxRate>0)score+=rate/maxRate*15;
-    // 平均ST 15点（直前STで代替できるため縮小）
+    if(maxRate>0)score+=rate/maxRate*rateWeight;
+
+    // 平均ST 15点（今節の傾向として固定）
     var st=b.avgST||b.stKoki;
     if(st!==null&&maxST>minST)score+=(maxST-st)/(maxST-minST)*15;
     else if(st!==null)score+=7.5;
-    // 機力 28点（当日の舟の状態を最重視）
+
+    // 機力 28点（当日の舟の状態を最重視・序盤終盤問わず）
     if(b.kiryokuRank!==null&&maxKr>1)score+=(maxKr-b.kiryokuRank)/(maxKr-1)*28;
+
     // 直前ST 10点
     if(b.st!==null&&!b.stF&&maxDirST>minDirST)score+=(maxDirST-b.st)/(maxDirST-minDirST)*10;
-    // 2連対率 5点
+
+    // 2連対率：序盤は12点、終盤は10点（序盤は過去連対傾向を重視）
+    var renWeight=isEarlyRace?12:10;
     var ren=b.renRate!==null?b.renRate:0;
-    if(maxRen>0)score+=ren/maxRen*5;
+    if(maxRen>0)score+=ren/maxRen*renWeight;
+
     // チルト補正
     if(b.tilt<=-0.5)score+=2;else if(b.tilt>=0.5)score+=1;
     // 部品交換補正
     if(b.buhin){var imp=false;if(b.exT!==null&&b.avgEx!==null&&b.exT<b.avgEx-0.05)imp=true;if(b.lapT!==null&&b.avgLap!==null&&b.lapT<b.avgLap-0.05)imp=true;if(b.strT!==null&&b.avgStr!==null&&b.strT<b.avgStr-0.05)imp=true;score+=imp?3:0.5;}
     // Fペナルティ
     if(b.fKi>=1)score-=3;
-    // 今節1着率0%ペナルティ
-    if(b.winsRate===0&&b.tokuten!==null&&b.tokuten>0)score-=2;
-    // 6号艇・5号艇ペナルティ廃止（実力を正しく評価）
-    // 1号艇ボーナス：逃げ率65%以上で+5点（過去の+10点から緩和）
+    // 今節1着率0%ペナルティ（終盤のみ有効）
+    if(!isEarlyRace&&b.winsRate===0&&b.tokuten!==null&&b.tokuten>0)score-=2;
+    // 1号艇ボーナス：逃げ率65%以上で+5点
     if(b.nyuse===1&&nigeRate!==null&&nigeRate>=65)score+=5;
+
     b.sogoScore=Math.max(0,score);
   });
 
@@ -580,7 +598,7 @@ function calcAreIndex(boats,nigeRate){
 
 /* ===== 足切り ===== */
 function checkFurikiri(areScore,boats,nigeRate){
-  if(areScore<8)return{pass:false,stage:1,reason:'荒れ指数'+areScore+'点（8点未満）'};
+  if(areScore<10)return{pass:false,stage:1,reason:'荒れ指数'+areScore+'点（10点未満）'};
   var b1=boats.find(function(b){return b.nyuse===1;})||boats[0];
   function ex(){
     if(boats.some(function(b){return b.nyuse!==b.n;}))return true;
@@ -595,7 +613,7 @@ function checkFurikiri(areScore,boats,nigeRate){
     if(b1.winsRate!==null&&b1.winsRate===0)return true;
     return false;
   }
-  if(nigeRate!==null&&nigeRate>=60&&!ex())return{pass:false,stage:2,reason:'逃げ率'+nigeRate+'%（≥60%）'};
+  if(nigeRate!==null&&nigeRate>=55&&!ex())return{pass:false,stage:2,reason:'逃げ率'+nigeRate+'%（≥55%）'};
   var allT2=boats.map(function(b){return b.tokuten;}).filter(function(v){return v!==null;});
   if(allT2.length&&b1.tokuten!==null&&b1.tokuten===Math.max.apply(null,allT2)&&!ex())
     return{pass:false,stage:2,reason:'1コース今節得点率1位'};
@@ -1075,10 +1093,9 @@ async function generate(){
     // ===== 荒れモード：JS固定買い目生成 =====
     if(currentMode==='are'&&calcData){
       var sogoSorted=calcData.parsed.boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
-      // 荒れモード：1号艇は◎○になれない（外枠候補優先）
-      var sogoExclude1=sogoSorted.filter(function(b){return b.nyuse!==1;});
-      var maru  = String(sogoExclude1[0]?sogoExclude1[0].n:(sogoSorted[0]?sogoSorted[0].n:'2'));
-      var shiro = String(sogoExclude1[1]?sogoExclude1[1].n:(sogoSorted[1]?sogoSorted[1].n:'3'));
+      // 荒れモード：sogoRankそのまま使用（1号制限撤廃）
+      var maru  = String(sogoSorted[0]?sogoSorted[0].n:'1');
+      var shiro = String(sogoSorted[1]?sogoSorted[1].n:'2');
       var sankaku = String(sogoSorted[2]?sogoSorted[2].n:'3');
       var go      = String(sogoSorted[4]?sogoSorted[4].n:'5');
       if(maru===shiro){shiro=['1','2','3','4','5','6'].filter(function(x){return x!==maru;})[0]||'3';}
