@@ -1147,20 +1147,34 @@ async function generate(){
       }
       text=newLines.join('\n');
 
-      // Xサマリーの本線・抑え・評価順を上書き
+      // Xサマリーを完全にJS固定で再構築
       var xIdx=text.indexOf('【Xサマリー】');
       if(xIdx>=0){
         var before=text.slice(0,xIdx);
         var after=text.slice(xIdx);
-        // 評価順をJS固定で挿入
+        // コメント行を抽出（場所R行・本線・抑え・G.・HYOKA_ORDER・空行以外の最初の行）
+        var xLines=after.split('\n');
+        var commentLine='';
+        for(var xi=1;xi<xLines.length;xi++){
+          var xl=xLines[xi].trim();
+          if(!xl)continue;
+          if(xl===venue+raceNum+'R')continue;
+          if(xl.indexOf('本線')===0||xl.indexOf('抑え')===0)continue;
+          if(xl==='G.')continue;
+          if(xl.indexOf('HYOKA_ORDER')>=0)continue;
+          if(/^[\d><=]+$/.test(xl))continue;
+          commentLine=xl;
+          break;
+        }
         var hyokaOrder=buildHyokaOrder(calcData.parsed.boats);
-        after=after.replace(/HYOKA_ORDER/g,hyokaOrder);
-        // 買い目上書き（圧縮済み）
-        after=after.split('\n').map(function(ln){if(ln.indexOf('本線')===0)return '本線　'+honsenStr;if(ln.indexOf('抑え')===0)return '抑え　'+osaeeStr;return ln;}).join('\n');
-        // 場所・レース番号を強制で先頭に挿入
-        after=after.replace('【Xサマリー】','【Xサマリー】\n'+venue+raceNum+'R');
-        var vrStr=venue+raceNum+'R';var vrSeen=false;after=after.split('\n').filter(function(ln){if(ln.trim()===vrStr){if(vrSeen)return false;vrSeen=true;}return true;}).join('\n');
-        text=before+after;
+        // Xサマリーを完全再構築
+        var newX='【Xサマリー】\n'+venue+raceNum+'R\n';
+        if(commentLine)newX+=commentLine+'\n';
+        newX+=hyokaOrder+'\n';
+        newX+='本線\u3000'+honsenStr+'\n';
+        newX+='抑え\u3000'+osaeeStr+'\n';
+        newX+='G.';
+        text=before+newX;
       }
 
       // ◎○以外の1着買い目フィルター
@@ -1254,19 +1268,34 @@ async function generate(){
       else{text=betBlock+'\n'+text;}
 
       // Xサマリー内の本線・抑え・評価順を上書き
+      // Xサマリーを完全にJS固定で再構築
       var xIdx2=text.indexOf('【Xサマリー】');
       if(xIdx2>=0){
         var before2=text.slice(0,xIdx2);
         var after2=text.slice(xIdx2);
-        // 評価順をJS固定で挿入
+        // コメント行を抽出
+        var xLines2=after2.split('\n');
+        var commentLine2='';
+        for(var xi2=1;xi2<xLines2.length;xi2++){
+          var xl2=xLines2[xi2].trim();
+          if(!xl2)continue;
+          if(xl2===venue+raceNum+'R')continue;
+          if(xl2.indexOf('本線')===0||xl2.indexOf('抑え')===0)continue;
+          if(xl2==='G.')continue;
+          if(xl2.indexOf('HYOKA_ORDER')>=0)continue;
+          if(xl2.indexOf('通常モード')>=0||xl2.indexOf('信頼度')>=0)continue;
+          if(/^[\d><=]+$/.test(xl2))continue;
+          commentLine2=xl2;
+          break;
+        }
         var hyokaOrder2=buildHyokaOrder(calcData.parsed.boats);
-        after2=after2.replace(/HYOKA_ORDER/g,hyokaOrder2);
-        // 買い目上書き（圧縮済み）
-        after2=after2.split('\n').map(function(ln){if(ln.indexOf('本線')===0)return '本線　'+honsenStr;if(ln.indexOf('抑え')===0)return '抑え　'+osaeeStr;return ln;}).join('\n');
-        // 場所・レース番号を強制で先頭に挿入
-        after2=after2.replace('【Xサマリー】','【Xサマリー】\n'+venue+raceNum+'R');
-        var vrStr2=venue+raceNum+'R';var vrSeen2=false;after2=after2.split('\n').filter(function(ln){if(ln.trim()===vrStr2){if(vrSeen2)return false;vrSeen2=true;}return true;}).join('\n');
-        text=before2+after2;
+        var newX2='【Xサマリー】\n'+venue+raceNum+'R\n';
+        if(commentLine2)newX2+=commentLine2+'\n';
+        newX2+=hyokaOrder2+'\n';
+        newX2+='本線\u3000'+honsenStr+'\n';
+        newX2+='抑え\u3000'+osaeeStr+'\n';
+        newX2+='G.';
+        text=before2+newX2;
       }
     }
 
