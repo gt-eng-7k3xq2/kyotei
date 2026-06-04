@@ -1065,11 +1065,13 @@ async function generate(){
     // ===== 荒れモード：JS固定買い目生成 =====
     if(currentMode==='are'&&calcData){
       var sogoSorted=calcData.parsed.boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
-      var maru  = String(sogoSorted[0]?sogoSorted[0].n:'1');
-      var shiro = String(sogoSorted[1]?sogoSorted[1].n:'2');
+      // 荒れモード：1号艇は◎○になれない（外枠候補優先）
+      var sogoExclude1=sogoSorted.filter(function(b){return b.nyuse!==1;});
+      var maru  = String(sogoExclude1[0]?sogoExclude1[0].n:(sogoSorted[0]?sogoSorted[0].n:'2'));
+      var shiro = String(sogoExclude1[1]?sogoExclude1[1].n:(sogoSorted[1]?sogoSorted[1].n:'3'));
       var sankaku = String(sogoSorted[2]?sogoSorted[2].n:'3');
       var go      = String(sogoSorted[4]?sogoSorted[4].n:'5');
-      if(maru===shiro){shiro=['1','2','3','4','5','6'].filter(function(x){return x!==maru;})[0]||'2';}
+      if(maru===shiro){shiro=['1','2','3','4','5','6'].filter(function(x){return x!==maru;})[0]||'3';}
 
       // ng艇取得
       var ngBoats=[];
@@ -1532,16 +1534,32 @@ function autoSaveLog(text){
     var m=text.match(new RegExp(r+'位[\\s　]*(\\d)号艇'));
     if(m)aiRanking.push({rank:r,n:parseInt(m[1])});
   }
-  var honsen=[],osaee=[],inSec='';
-  text.split('\n').forEach(function(ln){
-    var t=ln.trim();
-    if(t.indexOf('本線')===0)inSec='honsen';
-    else if(t.indexOf('抑え')===0)inSec='osaee';
-    else if(/^\d-\d-\d$/.test(t)){
-      if(inSec==='honsen')honsen.push(t);
-      else if(inSec==='osaee')osaee.push(t);
-    }
-  });
+  // 買い目取得：Xサマリーから展開済みで取得（圧縮表記対応）
+  var honsen=[],osaee=[];
+  var xIdx=text.indexOf('【Xサマリー】');
+  var searchText=xIdx>=0?text.slice(xIdx):text;
+  var honsenM=searchText.match(/本線[\s　]+([\S]+)/);
+  var osaeM=searchText.match(/抑え[\s　]+([\S]+)/);
+  function expandBetsLog(str){
+    if(!str)return[];
+    var result=[];
+    str.split('/').forEach(function(seg){
+      seg=seg.trim();if(!seg)return;
+      if(/^[1-6]-[1-6]-[1-6]$/.test(seg)){result.push(seg);return;}
+      var parts=seg.split('-');
+      if(parts.length===3){
+        var s1=parts[0].split('').filter(function(c){return/[1-6]/.test(c);});
+        var s2=parts[1].split('').filter(function(c){return/[1-6]/.test(c);});
+        var s3=parts[2].split('').filter(function(c){return/[1-6]/.test(c);});
+        s1.forEach(function(a){s2.forEach(function(b){s3.forEach(function(c){
+          if(a!==b&&b!==c&&a!==c)result.push(a+'-'+b+'-'+c);
+        });});});
+      }
+    });
+    return result;
+  }
+  honsen=honsenM?expandBetsLog(honsenM[1]):[];
+  osaee=osaeM?expandBetsLog(osaeM[1]):[];
   var boats=calcData.parsed.boats.map(function(b){
     return{n:b.n,name:b.name,tokuten:b.tokuten,avgST:b.avgST||b.stKoki,kiryokuRank:b.kiryokuRank,sogoRank:b.sogoRank,sogoScore:b.sogoScore?Math.round(b.sogoScore*10)/10:null};
   });
@@ -1867,11 +1885,22 @@ function analyzeLog(){
   document.getElementById('logAnalysis').innerHTML='<div style="margin-top:10px;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:6px;text-align:center;"><div class="spinner" style="margin:0 auto 8px;"></div><div style="font-size:11px;color:var(--text-muted);">分析中...</div></div>';
   fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key,{
     method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:3000,thinkingConfig:{thinkingBudget:0}}})
+    body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:4000,thinkingConfig:{thinkingBudget:0}}})
   }).then(function(res){return res.json();}).then(function(json){
     var t=json.candidates&&json.candidates[0]&&json.candidates[0].content&&json.candidates[0].content.parts[0].text||'分析失敗';
-    document.getElementById('logAnalysis').innerHTML='<div style="margin-top:10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;"><div style="font-size:10px;color:var(--text-sub);font-weight:700;letter-spacing:1.5px;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:6px;">AI改善提案</div><div style="font-size:12px;color:var(--text);line-height:2.0;white-space:pre-wrap;">'+t+'</div></div>';
+    window._lastAnalysis=t;
+    document.getElementById('logAnalysis').innerHTML='<div style="margin-top:10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:6px;"><div style="font-size:10px;color:var(--text-sub);font-weight:700;letter-spacing:1.5px;">AI改善提案</div><button onclick="copyAnalysis()" id="copyAnalysisBtn" style="padding:5px 12px;background:var(--text);color:#fff;border:none;border-radius:4px;font-size:11px;font-weight:700;-webkit-appearance:none;cursor:pointer;">📋 コピー</button></div><div style="font-size:12px;color:var(--text);line-height:2.0;white-space:pre-wrap;">'+t+'</div></div>';
   }).catch(function(e){document.getElementById('logAnalysis').innerHTML='<div style="color:var(--accent);padding:10px;">エラー: '+e.message+'</div>';});
+}
+
+function copyAnalysis(){
+  var t=window._lastAnalysis||'';
+  if(!t)return;
+  var btn=document.getElementById('copyAnalysisBtn');
+  navigator.clipboard.writeText(t).then(function(){
+    btn.textContent='✅ コピー完了';
+    setTimeout(function(){btn.textContent='📋 コピー';},2000);
+  });
 }
 
 loadKey();
