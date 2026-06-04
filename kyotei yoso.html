@@ -430,24 +430,34 @@ function calcSogoScore(boats,nigeRate){
 
   boats.forEach(function(b){
     var score=0;
-    if(b.tokuten!==null&&maxTok>minTok)score+=(b.tokuten-minTok)/(maxTok-minTok)*30;
-    else if(b.tokuten!==null)score+=15;
+    // 今節得点率 25点（実績重視）
+    if(b.tokuten!==null&&maxTok>minTok)score+=(b.tokuten-minTok)/(maxTok-minTok)*25;
+    else if(b.tokuten!==null)score+=12.5;
+    // 勝率 15点（過去データは控えめ）
     var rate=b.totiRate||b.zenkokuRate||0;
-    if(maxRate>0)score+=rate/maxRate*20;
+    if(maxRate>0)score+=rate/maxRate*15;
+    // 平均ST 15点（直前STで代替できるため縮小）
     var st=b.avgST||b.stKoki;
-    if(st!==null&&maxST>minST)score+=(maxST-st)/(maxST-minST)*20;
-    else if(st!==null)score+=10;
-    if(b.kiryokuRank!==null&&maxKr>1)score+=(maxKr-b.kiryokuRank)/(maxKr-1)*15;
+    if(st!==null&&maxST>minST)score+=(maxST-st)/(maxST-minST)*15;
+    else if(st!==null)score+=7.5;
+    // 機力 28点（当日の舟の状態を最重視）
+    if(b.kiryokuRank!==null&&maxKr>1)score+=(maxKr-b.kiryokuRank)/(maxKr-1)*28;
+    // 直前ST 10点
     if(b.st!==null&&!b.stF&&maxDirST>minDirST)score+=(maxDirST-b.st)/(maxDirST-minDirST)*10;
+    // 2連対率 5点
     var ren=b.renRate!==null?b.renRate:0;
-    if(maxRen>0)score+=ren/maxRen*10;
+    if(maxRen>0)score+=ren/maxRen*5;
+    // チルト補正
     if(b.tilt<=-0.5)score+=2;else if(b.tilt>=0.5)score+=1;
+    // 部品交換補正
     if(b.buhin){var imp=false;if(b.exT!==null&&b.avgEx!==null&&b.exT<b.avgEx-0.05)imp=true;if(b.lapT!==null&&b.avgLap!==null&&b.lapT<b.avgLap-0.05)imp=true;if(b.strT!==null&&b.avgStr!==null&&b.strT<b.avgStr-0.05)imp=true;score+=imp?3:0.5;}
+    // Fペナルティ
     if(b.fKi>=1)score-=3;
+    // 今節1着率0%ペナルティ
     if(b.winsRate===0&&b.tokuten!==null&&b.tokuten>0)score-=2;
-    if(b.nyuse===6)score-=8;
-    if(b.nyuse===5)score-=4;
-    if(b.nyuse===1&&nigeRate!==null&&nigeRate>=70)score+=10;
+    // 6号艇・5号艇ペナルティ廃止（実力を正しく評価）
+    // 1号艇ボーナス：逃げ率65%以上で+5点（過去の+10点から緩和）
+    if(b.nyuse===1&&nigeRate!==null&&nigeRate>=65)score+=5;
     b.sogoScore=Math.max(0,score);
   });
 
