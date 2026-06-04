@@ -776,7 +776,7 @@ function displayCalcResults(data){
   var validTok2=boats.map(function(b){return b.tokuten;}).filter(function(v){return v!==null&&v>0;}).length;
   var maxTok2=boats.map(function(b){return b.tokuten||0;});maxTok2=Math.max.apply(null,maxTok2);
   var earlyMode=rc2>0?(rc2<=3):(validTok2<=2||maxTok2<=6);
-  html+='<div class="info-row">スコアモード: <b style="color:'+(earlyMode?'var(--accent)':'var(--blue)')+';">'+(earlyMode?'序盤モード（勝率重視）':'終盤モード（今節重視）')+'</b>'+(avgRC2>0?' 平均'+avgRC2.toFixed(1)+'走':'（推定）')+'</div>';
+  html+='<div class="info-row">スコアモード: <b style="color:'+(earlyMode?'var(--accent)':'var(--blue)')+';">'+(earlyMode?'序盤モード（勝率重視）':'終盤モード（今節重視）')+'</b>'+(rc2>0?' 平均'+rc2+'走':'（推定）')+'</div>';
 
   if(currentMode==='are'){
     var cls=areResult.score>=8?'score-pass':'score-fail';
