@@ -951,7 +951,41 @@ function compressBets(betsArr){
 /* ===== 評価順文字列生成 ===== */
 function buildHyokaOrder(boats){
   var sorted=boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
-  return sorted.map(function(b){return String(b.n);}).join('>');
+  if(!sorted.length)return '';
+  // スコア差で不等号・イコールを決定（差10以上→>> / 差3未満→= / それ以外→>）
+  // =が連続する場合は「25」のようにまとめる
+  var groups=[[sorted[0].n]];
+  var separators=[];
+  for(var i=1;i<sorted.length;i++){
+    var prev=sorted[i-1],curr=sorted[i];
+    var diff=(prev.sogoScore||0)-(curr.sogoScore||0);
+    if(diff<5){
+      // ほぼ同じ→同グループ
+      groups[groups.length-1].push(curr.n);
+      separators.push('=');
+    } else if(diff>=20){
+      groups.push([curr.n]);
+      separators.push('>>');
+    } else {
+      groups.push([curr.n]);
+      separators.push('>');
+    }
+  }
+  // グループをまとめて文字列化
+  var parts=groups.map(function(g){return g.join('');});
+  var result=parts[0];
+  for(var j=0;j<separators.length;j++){
+    if(separators[j]==='=')continue; // =はグループ内なので区切り不要
+    result+=separators[j]+parts[j+1];
+  }
+  // =区切りのグループを正しく連結
+  result='';
+  for(var k=0;k<parts.length;k++){
+    if(k===0){result=parts[0];continue;}
+    var sep=separators[k-1];
+    if(sep!=='=')result+=sep+parts[k];
+  }
+  return result;
 }
 
 /* ===== 荒れモード買い目生成（JS固定） ===== */
