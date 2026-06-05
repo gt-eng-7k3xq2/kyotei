@@ -225,6 +225,12 @@ var currentPts = 12; // 荒れモード買い目点数
 var calcData = null;
 
 function clearAll(){
+  var ptsSection=document.getElementById('arePtsSection');
+  if(ptsSection)ptsSection.style.display='none';
+  var editWrap=document.getElementById('editMarkWrap');
+  if(editWrap)editWrap.style.display='none';
+  currentPts=8;
+  setPts(8);
   document.getElementById('raceData').value='';
   document.getElementById('calcResult').classList.remove('show');
   document.getElementById('calcContent').innerHTML='';
@@ -776,6 +782,13 @@ function displayCalcResults(data){
     html+='<tr class="'+cl+'"><td>'+(b.sogoRank||'-')+'</td><td>'+b.n+'</td><td>'+b.name+'</td><td>'+(b.tokuten!==null?b.tokuten:'-')+'</td><td>'+st+'</td><td>'+(b.kiryokuRank||'-')+'</td><td class="tot">'+(b.sogoScore!==null?b.sogoScore.toFixed(1):'-')+'</td></tr>';
   });
   html+='</tbody></table>';
+  // 信頼度を大きく表示
+  var shinkidoColor=jsShinkido==='A'?'var(--blue)':jsShinkido==='B'?'var(--green)':'var(--accent)';
+  var shinkidoLabel=jsShinkido==='A'?'信頼度A（イン戦強）':jsShinkido==='B'?'信頼度B（標準）':'信頼度C（荒れ注意）';
+  html+='<div style="text-align:center;padding:10px;background:var(--bg);border-radius:6px;margin-bottom:10px;">';
+  html+='<div style="font-size:28px;font-weight:900;color:'+shinkidoColor+';">'+jsShinkido+'</div>';
+  html+='<div style="font-size:11px;color:'+shinkidoColor+';margin-top:2px;">'+shinkidoLabel+'</div>';
+  html+='</div>';
   html+='<div class="info-row">1コース逃げ率: <b>'+(nigeRate!==null?nigeRate+'% ('+nigeRateSrc+')':'取得できず')+'</b></div>';
   var rc=parsed.raceCount||0;
   var allTokDisp=boats.map(function(b){return b.tokuten;}).filter(function(v){return v!==null;});
@@ -1305,10 +1318,10 @@ async function generate(){
         var hyokaOrder=buildHyokaOrder(calcData.parsed.boats);
         // Xサマリーを完全再構築
         var newX='【Xサマリー】\n'+venue+raceNum+'R\n';
-        if(commentLine)newX+=commentLine+'\n';
+        if(commentLine)newX+=commentLine+'\n\n';
         newX+=hyokaOrder+'\n';
         newX+='本線　'+honsenStr+'\n';
-        newX+='抑え　'+osaeeStr+'\n';
+        newX+='抑え　'+osaeeStr+'\n\n';
         newX+='G.';
         text=before+newX;
       }
@@ -1370,7 +1383,7 @@ async function generate(){
             commentC=xlc;break;
           }
           var hyokaC=buildHyokaOrder(calcData.parsed.boats);
-          var newXC='【Xサマリー】\n'+venue+raceNum+'R\n'+(commentC?commentC+'\n':'')+hyokaC+'\n本線　'+honsenStrC+'\n抑え　'+osaeeStrC+'\nG.';
+          var newXC='【Xサマリー】\n'+venue+raceNum+'R\n'+(commentC?commentC+'\n\n':'')+hyokaC+'\n本線　'+honsenStrC+'\n抑え　'+osaeeStrC+'\n\nG.';
           text=beforeC+newXC;
         }
         // autoSaveLog等の処理へ
@@ -1486,10 +1499,10 @@ async function generate(){
         }
         var hyokaOrder2=buildHyokaOrder(calcData.parsed.boats);
         var newX2='【Xサマリー】\n'+venue+raceNum+'R\n';
-        if(commentLine2)newX2+=commentLine2+'\n';
+        if(commentLine2)newX2+=commentLine2+'\n\n';
         newX2+=hyokaOrder2+'\n';
         newX2+='本線　'+honsenStr+'\n';
-        newX2+='抑え　'+osaeeStr+'\n';
+        newX2+='抑え　'+osaeeStr+'\n\n';
         newX2+='G.';
         text=before2+newX2;
       }
@@ -1808,7 +1821,7 @@ function regenerateBets(){
       commentC=xlc;break;
     }
     var hyokaC=buildHyokaOrder(calcData.parsed.boats);
-    var newXC='【Xサマリー】\n'+venue+raceNum+'R\n'+(commentC?commentC+'\n':'')+hyokaC+'\n本線　'+honsenStrC+'\n抑え　'+osaeeStrC+'\nG.';
+    var newXC='【Xサマリー】\n'+venue+raceNum+'R\n'+(commentC?commentC+'\n\n':'')+hyokaC+'\n本線　'+honsenStrC+'\n抑え　'+osaeeStrC+'\n\nG.';
     text=beforeC+newXC;
   }
   document.getElementById('outText').textContent=text;
