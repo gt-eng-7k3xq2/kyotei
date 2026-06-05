@@ -784,9 +784,17 @@ function displayCalcResults(data){
   var _shinkido=normalResult.shinkido;
   var shinkidoColor=_shinkido==='A'?'var(--blue)':_shinkido==='B'?'var(--green)':'var(--accent)';
   var shinkidoLabel=_shinkido==='A'?'信頼度A（イン戦強）':_shinkido==='B'?'信頼度B（標準）':'信頼度C（荒れ注意）';
-  html+='<div id="shinkidoBigDisp" style="text-align:center;padding:10px;background:var(--bg);border-radius:6px;margin-bottom:10px;">';
+  html+='<div id="shinkidoBigDisp" style="text-align:center;padding:10px;background:var(--bg);border-radius:6px;margin-bottom:8px;">';
   html+='<div class="shinkido-big-letter" style="font-size:36px;font-weight:900;color:'+shinkidoColor+';">'+_shinkido+'</div>';
   html+='<div class="shinkido-big-label" style="font-size:11px;color:'+shinkidoColor+';margin-top:2px;">'+shinkidoLabel+'</div>';
+  html+='</div>';
+  // A/B/C切り替えボタン（常時表示）
+  html+='<div style="display:flex;gap:6px;justify-content:center;margin-bottom:10px;">';
+  ['A','B','C'].forEach(function(x){
+    var isActive=x===_shinkido;
+    var btnColor=x==='A'?'var(--blue)':x==='B'?'var(--green)':'var(--accent)';
+    html+='<button onclick="overrideShinkido(\''+x+'\')" id="sh_'+x+'" style="flex:1;padding:8px;border-radius:6px;font-size:14px;font-weight:700;-webkit-appearance:none;border:2px solid '+(isActive?btnColor:'var(--border)')+';background:'+(isActive?btnColor:'var(--surface)')+';color:'+(isActive?'#fff':'var(--text-sub)')+';">'+x+'</button>';
+  });
   html+='</div>';
   html+='<div class="info-row">1コース逃げ率: <b>'+(nigeRate!==null?nigeRate+'% ('+nigeRateSrc+')':'取得できず')+'</b></div>';
   var rc=parsed.raceCount||0;
