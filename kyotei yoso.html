@@ -706,11 +706,9 @@ function calcNormal(boats,nigeRate){
     if(nigeRate>=65&&st<=0.15)shinkido='A';
     else if(nigeRate<55||(st!==null&&st>=0.18))shinkido='C';
   }
+  // 2着候補はsogoRankベースで選定（1号除く上位2艇）
   var sorted=boats.filter(function(b){return b.nyuse!==1;}).sort(function(a,b){
-    var ta=a.tokuten||0,tb=b.tokuten||0;
-    if(Math.abs(ta-tb)>0.5)return tb-ta;
-    var sa=a.avgST||a.stKoki||0.2,sb=b.avgST||b.stKoki||0.2;
-    return sa-sb;
+    return (a.sogoRank||99)-(b.sogoRank||99);
   });
   var ab=sorted.slice(0,2).map(function(b,i){return{n:b.n,reason:'2着候補'+(i===0?'A':'B')};});
   return{shinkido:shinkido,ab:ab};
@@ -1853,11 +1851,55 @@ function showMissDetail(){
     var came=r.first==maru.n||r.second==maru.n||r.third==maru.n;
     if(!came)maruOut++;else if(l.maruResult===1)zuré++;else maruOrd++;
   });
-  html+='<div style="display:flex;gap:8px;margin-bottom:12px;">';
+  // 信頼度別・モード別集計
+  var shinkidoStat={A:{total:0,hit:0,miss:0},B:{total:0,hit:0,miss:0},C:{total:0,hit:0,miss:0}};
+  var modeStat={normal:{total:0,hit:0},are:{total:0,hit:0}};
+  var allLogs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
+  var doneLogs=allLogs.filter(function(l){return l.result&&l.result!=='skip';});
+  doneLogs.forEach(function(l){
+    if(l.mode==='normal'&&l.shinkido&&shinkidoStat[l.shinkido]){
+      shinkidoStat[l.shinkido].total++;
+      if(l.hit)shinkidoStat[l.shinkido].hit++;
+      else shinkidoStat[l.shinkido].miss++;
+    }
+    if(modeStat[l.mode]){modeStat[l.mode].total++;if(l.hit)modeStat[l.mode].hit++;}
+  });
+
+  html+='<div style="display:flex;gap:8px;margin-bottom:8px;">';
   html+='<div style="flex:1;text-align:center;padding:8px;background:var(--bg);border-radius:4px;"><div style="font-size:16px;font-weight:700;color:var(--accent);">'+maruOut+'</div><div style="font-size:10px;color:var(--text-sub);">◎着外</div></div>';
   html+='<div style="flex:1;text-align:center;padding:8px;background:var(--bg);border-radius:4px;"><div style="font-size:16px;font-weight:700;color:var(--blue);">'+zuré+'</div><div style="font-size:10px;color:var(--text-sub);">紐ズレ</div></div>';
   html+='<div style="flex:1;text-align:center;padding:8px;background:var(--bg);border-radius:4px;"><div style="font-size:16px;font-weight:700;color:var(--text-sub);">'+maruOrd+'</div><div style="font-size:10px;color:var(--text-sub);">◎着順違い</div></div>';
   html+='</div>';
+
+  // 信頼度別集計
+  html+='<div style="background:var(--bg);border-radius:4px;padding:10px;margin-bottom:8px;">';
+  html+='<div style="font-size:10px;color:var(--text-sub);font-weight:700;margin-bottom:6px;">信頼度別（通常モード）</div>';
+  html+='<div style="display:flex;gap:8px;">';
+  ['A','B','C'].forEach(function(s){
+    var st=shinkidoStat[s];
+    var rate=st.total>0?Math.round(st.hit/st.total*100):0;
+    var color=rate>=30?'var(--green)':rate>=20?'var(--blue)':'var(--accent)';
+    html+='<div style="flex:1;text-align:center;padding:6px;background:var(--surface);border-radius:4px;">';
+    html+='<div style="font-size:13px;font-weight:700;color:'+color+';">'+st.hit+'/'+st.total+'</div>';
+    html+='<div style="font-size:9px;color:var(--text-muted);">信頼度'+s+'（'+rate+'%）</div>';
+    html+='</div>';
+  });
+  html+='</div></div>';
+
+  // モード別集計
+  html+='<div style="background:var(--bg);border-radius:4px;padding:10px;margin-bottom:12px;">';
+  html+='<div style="font-size:10px;color:var(--text-sub);font-weight:700;margin-bottom:6px;">モード別</div>';
+  html+='<div style="display:flex;gap:8px;">';
+  [{key:'normal',label:'通常'},{key:'are',label:'荒れ'}].forEach(function(m){
+    var st=modeStat[m.key];
+    var rate=st.total>0?Math.round(st.hit/st.total*100):0;
+    var color=rate>=25?'var(--green)':'var(--accent)';
+    html+='<div style="flex:1;text-align:center;padding:6px;background:var(--surface);border-radius:4px;">';
+    html+='<div style="font-size:13px;font-weight:700;color:'+color+';">'+st.hit+'/'+st.total+'</div>';
+    html+='<div style="font-size:9px;color:var(--text-muted);">'+m.label+'（'+rate+'%）</div>';
+    html+='</div>';
+  });
+  html+='</div></div>';
   missLogs.forEach(function(l){
     var r=l.result;
     var rankMap={};(l.aiRanking||[]).forEach(function(a){rankMap[a.n]=a.rank;});
