@@ -2365,7 +2365,8 @@ function analyzeLog(){
     method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:4000,thinkingConfig:{thinkingBudget:0}}})
   }).then(function(res){return res.json();}).then(function(json){
-    var t=json.candidates&&json.candidates[0]&&json.candidates[0].content&&json.candidates[0].content.parts[0].text||'分析失敗';
+    var t=json.candidates&&json.candidates[0]&&json.candidates[0].content&&json.candidates[0].content.parts[0].text;
+    if(!t){t='分析失敗: '+(json.error&&json.error.message||JSON.stringify(json).slice(0,100));}
     window._lastAnalysis=t;
     document.getElementById('logAnalysis').innerHTML='<div style="margin-top:10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:6px;"><div style="font-size:10px;color:var(--text-sub);font-weight:700;letter-spacing:1.5px;">AI改善提案</div><button onclick="copyAnalysis()" id="copyAnalysisBtn" style="padding:5px 12px;background:var(--text);color:#fff;border:none;border-radius:4px;font-size:11px;font-weight:700;-webkit-appearance:none;cursor:pointer;">📋 コピー</button></div><div style="font-size:12px;color:var(--text);line-height:2.0;white-space:pre-wrap;">'+t+'</div></div>';
   }).catch(function(e){document.getElementById('logAnalysis').innerHTML='<div style="color:var(--accent);padding:10px;">エラー: '+e.message+'</div>';});
