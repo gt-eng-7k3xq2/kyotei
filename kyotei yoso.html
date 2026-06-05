@@ -1351,6 +1351,52 @@ async function generate(){
     // ===== 通常モード：JS固定買い目生成 =====
     if(currentMode==='normal'&&calcData){
       var shinkido=calcData.normalResult.shinkido;
+
+      // 4点・6点は全モード共通でbuildAreBetsFinalを使う
+      if(currentPts===4||currentPts===6){
+        var sogoSortedX=calcData.parsed.boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
+        var maruX=null,shiroX=null,sankakuX=null;
+        text.split('\n').forEach(function(ln){
+          var m1=ln.match(/(\d)位\s*(\d)号艇\s*◎/);if(m1)maruX=m1[2];
+          var m2=ln.match(/(\d)位\s*(\d)号艇\s*○/);if(m2)shiroX=m2[2];
+          var m3=ln.match(/(\d)位\s*(\d)号艇\s*▲/);if(m3)sankakuX=m3[2];
+        });
+        maruX=maruX||String(sogoSortedX[0]?sogoSortedX[0].n:'1');
+        shiroX=shiroX||String(sogoSortedX[1]?sogoSortedX[1].n:'2');
+        sankakuX=sankakuX||String(sogoSortedX[2]?sogoSortedX[2].n:'3');
+        var goX=String(sogoSortedX[4]?sogoSortedX[4].n:'5');
+        var usedX=[maruX,shiroX,sankakuX];
+        if(usedX.indexOf(goX)>=0){var gAlt=sogoSortedX.filter(function(b){return usedX.indexOf(String(b.n))<0;});goX=String(gAlt[1]?gAlt[1].n:gAlt[0]?gAlt[0].n:goX);}
+        var betsX=buildAreBetsFinal(maruX,shiroX,sankakuX,goX,[]);
+        var honsenX=betsX.honsen;var osaeeX=betsX.osaee;
+        var honsenStrX=compressBets(honsenX)||honsenX.join('/');
+        var osaeeStrX=compressBets(osaeeX)||osaeeX.join('/');
+        var betBlockX='【最終買い目】'+(honsenX.length+osaeeX.length)+'点\n本線\n'+honsenX.join('\n')+(osaeeX.length?'\n抑え\n'+osaeeX.join('\n'):'')+'\n';
+        text=text.replace(/【最終買い目】[\s\S]*?(?=【|$)/g,'');
+        var inIdxX=text.indexOf('【イン信頼度】');
+        if(inIdxX>=0){text=text.slice(0,inIdxX)+betBlockX+'\n'+text.slice(inIdxX);}else{text=betBlockX+'\n'+text;}
+        var xIdxX=text.indexOf('【Xサマリー】');
+        var hyokaX=buildHyokaOrder(calcData.parsed.boats);
+        if(xIdxX>=0){
+          var bX=text.slice(0,xIdxX),aX=text.slice(xIdxX);
+          var cX='';var xlX=aX.split('\n');
+          for(var xi=1;xi<xlX.length;xi++){var xl=xlX[xi].trim();if(!xl||xl===venue+raceNum+'R'||xl.indexOf('本線')===0||xl.indexOf('抑え')===0||xl==='G.'||/^[\d><=]+$/.test(xl))continue;cX=xl;break;}
+          text=bX+'【Xサマリー】\n'+venue+raceNum+'R\n'+(cX?cX+'\n\n':'')+hyokaX+'\n本線　'+honsenStrX+(osaeeX.length?'\n抑え　'+osaeeStrX:'')+'\n\nG.';
+        } else {
+          text+='\n【Xサマリー】\n'+venue+raceNum+'R\n\n'+hyokaX+'\n本線　'+honsenStrX+(osaeeX.length?'\n抑え　'+osaeeStrX:'')+'\n\nG.';
+        }
+        document.getElementById('outText').textContent=text;
+        document.getElementById('outWrap').classList.add('show');
+        showOddsResult();renderEvalCard(text,venue,raceNum);autoSaveLog(text);showStatus('生成完了','ok');
+        if(calcData&&calcData.normalResult&&calcData.normalResult.shinkido==='C'){
+          var mFT=text.match(/1位\s*(\d)号艇\s*◎/);var sFT=text.match(/2位\s*(\d)号艇\s*○/);var kFT=text.match(/3位\s*(\d)号艇\s*▲/);
+          if(mFT&&sFT&&kFT)showEditMarkUI(mFT[1],sFT[1],kFT[1]);
+        }else{document.getElementById('editMarkWrap').style.display='none';}
+        document.getElementById('genBtn').disabled=false;
+        document.getElementById('loading').classList.remove('show');
+        return;
+      }
+
       // 信頼度CでcurrentPts>=12の場合は荒れモードロジックを使う
       if(shinkido==='C'&&currentPts>=12){
         // 荒れ系買い目生成（buildAreBetsFinalを流用）
