@@ -274,8 +274,9 @@ function setPts(pts){
   });
   var activeEl=document.getElementById('pts'+pts);
   if(activeEl)activeEl.className='pts-btn active';
-  [12,14,15].forEach(function(p){
-    document.getElementById('pts'+p).className='pts-btn '+(p===pts?'active':'inactive');
+  [8,12,14,15].forEach(function(p){
+    var btn=document.getElementById('pts'+p);
+    if(btn)btn.className='pts-btn '+(p===pts?'active':'inactive');
   });
 }
 
