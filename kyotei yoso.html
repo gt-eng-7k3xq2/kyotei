@@ -1388,10 +1388,9 @@ async function generate(){
         document.getElementById('outText').textContent=text;
         document.getElementById('outWrap').classList.add('show');
         showOddsResult();renderEvalCard(text,venue,raceNum);autoSaveLog(text);showStatus('生成完了','ok');
-        if(calcData&&calcData.normalResult&&calcData.normalResult.shinkido==='C'){
-          var mFT=text.match(/1位\s*(\d)号艇\s*◎/);var sFT=text.match(/2位\s*(\d)号艇\s*○/);var kFT=text.match(/3位\s*(\d)号艇\s*▲/);
-          if(mFT&&sFT&&kFT)showEditMarkUI(mFT[1],sFT[1],kFT[1]);
-        }else{document.getElementById('editMarkWrap').style.display='none';}
+        // 全モード・全点数で差し替えUI表示
+        var mFT=text.match(/1位\s*(\d)号艇\s*◎/);var sFT=text.match(/2位\s*(\d)号艇\s*○/);var kFT=text.match(/3位\s*(\d)号艇\s*▲/);
+        if(mFT&&sFT&&kFT)showEditMarkUI(mFT[1],sFT[1],kFT[1]);
         document.getElementById('genBtn').disabled=false;
         document.getElementById('loading').classList.remove('show');
         return;
@@ -1578,16 +1577,12 @@ async function generate(){
     renderEvalCard(text,venue,raceNum);
     autoSaveLog(text);
     showStatus('生成完了','ok');
-    // 信頼度C時は差し替えUIを表示
-    if(calcData&&calcData.normalResult&&calcData.normalResult.shinkido==='C'){
-      var mFromText=text.match(/1位\s*(\d)号艇\s*◎/);
-      var sFromText=text.match(/2位\s*(\d)号艇\s*○/);
-      var kFromText=text.match(/3位\s*(\d)号艇\s*▲/);
-      if(mFromText&&sFromText&&kFromText){
-        showEditMarkUI(mFromText[1],sFromText[1],kFromText[1]);
-      }
-    } else {
-      document.getElementById('editMarkWrap').style.display='none';
+    // 全モードで差し替えUI表示
+    var mFromText=text.match(/1位\s*(\d)号艇\s*◎/);
+    var sFromText=text.match(/2位\s*(\d)号艇\s*○/);
+    var kFromText=text.match(/3位\s*(\d)号艇\s*▲/);
+    if(mFromText&&sFromText&&kFromText){
+      showEditMarkUI(mFromText[1],sFromText[1],kFromText[1]);
     }
 
   }catch(e){showStatus('エラー: '+e.message,'err');}
