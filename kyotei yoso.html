@@ -1397,6 +1397,12 @@ async function generate(){
       }
 
       // 信頼度CでcurrentPts>=12の場合は荒れモードロジックを使う
+      // ただし逃げ率60%以上は通常8点に戻す（逃げが強いレースは荒れ系買い目不適）
+      var nigeRateForC=calcData.parsed.nigeRate;
+      if(shinkido==='C'&&currentPts>=12&&nigeRateForC!==null&&nigeRateForC>=60){
+        currentPts=8;setPts(8);
+        showStatus('逃げ率'+nigeRateForC+'%のため8点に変更','ok');
+      }
       if(shinkido==='C'&&currentPts>=12){
         // 荒れ系買い目生成（buildAreBetsFinalを流用）
         var sogoSortedC=calcData.parsed.boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
@@ -1906,6 +1912,12 @@ function autoSaveLog(text){
   if(!calcData)return;
   var venue=document.getElementById('venue').value||'?';
   var raceNum=document.getElementById('raceNum').value||'?';
+  // 直前ログと同じvenue+raceNumなら重複防止（60秒以内）
+  var existingLogs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
+  if(existingLogs.length>0){
+    var last=existingLogs[existingLogs.length-1];
+    if(last.venue===venue&&last.raceNum===raceNum&&Date.now()-last.savedAt<60000){return;}
+  }
   var aiRanking=[];
   for(var r=1;r<=6;r++){
     var m=text.match(new RegExp(r+'位[\\s　]*(\\d)号艇'));
@@ -1956,6 +1968,7 @@ function autoSaveLog(text){
     bets:{honsen:honsen,osaee:osaee},
     result:null,hit:null,maruResult:null,shiroResult:null,sankakuResult:null
   };
+  entry.savedAt=Date.now();
   var logs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
   logs.push(entry);
   if(logs.length>200)logs=logs.slice(-200);
