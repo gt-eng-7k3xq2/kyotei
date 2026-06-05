@@ -941,9 +941,9 @@ function buildPrompt(){
       maruN_disp='1';
       shiroN_disp=sogoTop!=='1'?sogoTop:(sogoTop2||'2');
     } else if(shinkido==='B'){
-      // Bモード：◎はsogoRank1位、○は1号
+      // Bモード：◎はsogoRank1位、○は1号（ただしsogoRank1位が1号の場合はsogoRank2位）
       maruN_disp=sogoTop||'1';
-      shiroN_disp='1';
+      shiroN_disp=(sogoTop!=='1')?'1':(sogoTop2||'2');
     } else {
       // Cモード：sogoRankそのまま
       maruN_disp=sogoTop||'1';
