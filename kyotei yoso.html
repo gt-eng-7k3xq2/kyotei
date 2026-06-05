@@ -1181,11 +1181,19 @@ async function generate(){
     // ===== 荒れモード：JS固定買い目生成 =====
     if(currentMode==='are'&&calcData){
       var sogoSorted=calcData.parsed.boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
-      // 荒れモード：sogoRankそのまま使用（1号制限撤廃）
-      var maru  = String(sogoSorted[0]?sogoSorted[0].n:'1');
-      var shiro = String(sogoSorted[1]?sogoSorted[1].n:'2');
-      var sankaku = String(sogoSorted[2]?sogoSorted[2].n:'3');
-      var go      = String(sogoSorted[4]?sogoSorted[4].n:'5');
+      // AIが出力した◎○▲△をテキストから取得（総合評価ブロック）
+      var maruFromAI=null,shiroFromAI=null,sankakuFromAI=null,goFromAI=null;
+      text.split('\n').forEach(function(ln){
+        var m1=ln.match(/(\d)位\s*(\d)号艇\s*◎/);if(m1)maruFromAI=m1[2];
+        var m2=ln.match(/(\d)位\s*(\d)号艇\s*○/);if(m2)shiroFromAI=m2[2];
+        var m3=ln.match(/(\d)位\s*(\d)号艇\s*▲/);if(m3)sankakuFromAI=m3[2];
+        var m4=ln.match(/(\d)位\s*(\d)号艇\s*△/);if(m4)goFromAI=m4[2];
+      });
+      // AIの出力を優先、なければsogoRankを使用
+      var maru  = maruFromAI||String(sogoSorted[0]?sogoSorted[0].n:'1');
+      var shiro = shiroFromAI||String(sogoSorted[1]?sogoSorted[1].n:'2');
+      var sankaku = sankakuFromAI||String(sogoSorted[2]?sogoSorted[2].n:'3');
+      var go      = goFromAI||String(sogoSorted[4]?sogoSorted[4].n:'5');
       if(maru===shiro){shiro=['1','2','3','4','5','6'].filter(function(x){return x!==maru;})[0]||'3';}
 
       // ng艇取得
