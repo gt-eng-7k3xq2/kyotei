@@ -1093,6 +1093,16 @@ function getYonkaku(maru,shiro,sankaku,go,ngBoats,allBoats){
 function buildAreBetsFinal(maru,shiro,sankaku,go,ngBoats){
   var allBoats=['1','2','3','4','5','6'];
   var yonkaku=getYonkaku(maru,shiro,sankaku,go,ngBoats,allBoats);
+  // goがngBoatsに含まれる場合は別の艇に置き換え
+  if(ngBoats.indexOf(go)>=0){
+    var cands=allBoats.filter(function(x){return x!==maru&&x!==shiro&&x!==sankaku&&x!==yonkaku&&ngBoats.indexOf(x)<0;});
+    if(cands.length)go=cands[0];
+  }
+  // yonkakuがngBoatsに含まれる場合も置き換え
+  if(ngBoats.indexOf(yonkaku)>=0){
+    var cands2=allBoats.filter(function(x){return x!==maru&&x!==shiro&&x!==sankaku&&x!==go&&ngBoats.indexOf(x)<0;});
+    if(cands2.length)yonkaku=cands2[0];
+  }
   var seen={};
   var addBet=function(arr,a,b,c){
     if(!a||!b||!c)return;
