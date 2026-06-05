@@ -128,7 +128,7 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
 <div class="sec">
   <div class="sec-label">モード・レース情報</div>
   <!-- 点数セレクター（信頼度C/荒れ展開時に表示） -->
-  <div id="arePtsSection" style="display:none;margin-bottom:10px;">
+  <div id="arePtsSection" style="display:block;margin-bottom:10px;">
     <div class="pts-label">買い目点数（信頼度C）</div>
     <div class="pts-row">
       <button class="pts-btn inactive" id="pts4" onclick="setPts(4)">4点<br><span style="font-size:10px;font-weight:400;">本線4</span></button>
@@ -227,12 +227,8 @@ var currentPts = 12; // 荒れモード買い目点数
 var calcData = null;
 
 function clearAll(){
-  var ptsSection=document.getElementById('arePtsSection');
-  if(ptsSection)ptsSection.style.display='none';
   var editWrap=document.getElementById('editMarkWrap');
   if(editWrap)editWrap.style.display='none';
-  currentPts=8;
-  setPts(8);
   document.getElementById('raceData').value='';
   document.getElementById('calcResult').classList.remove('show');
   document.getElementById('calcContent').innerHTML='';
@@ -788,9 +784,9 @@ function displayCalcResults(data){
   var _shinkido=normalResult.shinkido;
   var shinkidoColor=_shinkido==='A'?'var(--blue)':_shinkido==='B'?'var(--green)':'var(--accent)';
   var shinkidoLabel=_shinkido==='A'?'信頼度A（イン戦強）':_shinkido==='B'?'信頼度B（標準）':'信頼度C（荒れ注意）';
-  html+='<div style="text-align:center;padding:10px;background:var(--bg);border-radius:6px;margin-bottom:10px;">';
-  html+='<div style="font-size:36px;font-weight:900;color:'+shinkidoColor+';">'+_shinkido+'</div>';
-  html+='<div style="font-size:11px;color:'+shinkidoColor+';margin-top:2px;">'+shinkidoLabel+'</div>';
+  html+='<div id="shinkidoBigDisp" style="text-align:center;padding:10px;background:var(--bg);border-radius:6px;margin-bottom:10px;">';
+  html+='<div class="shinkido-big-letter" style="font-size:36px;font-weight:900;color:'+shinkidoColor+';">'+_shinkido+'</div>';
+  html+='<div class="shinkido-big-label" style="font-size:11px;color:'+shinkidoColor+';margin-top:2px;">'+shinkidoLabel+'</div>';
   html+='</div>';
   html+='<div class="info-row">1コース逃げ率: <b>'+(nigeRate!==null?nigeRate+'% ('+nigeRateSrc+')':'取得できず')+'</b></div>';
   var rc=parsed.raceCount||0;
@@ -799,18 +795,7 @@ function displayCalcResults(data){
   var earlyFlag=rc>0?(rc<=3):(allTokDisp.filter(function(v){return v>0;}).length<=2||maxTokDisp<=6);
   html+='<div class="info-row">今節走数: <b>'+(rc>0?rc+'走':'推定中')+'</b>　→　<b style="color:'+(earlyFlag?'var(--accent)':'var(--blue)')+';">'+(earlyFlag?'序盤モード（勝率重視）':'終盤モード（今節成績重視）')+'</b></div>';
   // 序盤/終盤モード表示（parsed.raceCountを使用）
-  // 信頼度Cの時は点数セレクターを表示
-  var shinkidoForPts=normalResult.shinkido;
-  var ptsSection=document.getElementById('arePtsSection');
-  if(ptsSection){
-    if(shinkidoForPts==='C'){
-      ptsSection.style.display='block';
-      // currentPtsが8点以外なら荒れモード系の買い目を使う
-    } else {
-      ptsSection.style.display='none';
-      currentPts=8; // A/Bモードは8点固定
-    }
-  }
+  // 点数セレクターは常時表示
   var rc2=parsed.raceCount||0;
   var validTok2=boats.map(function(b){return b.tokuten;}).filter(function(v){return v!==null&&v>0;}).length;
   var maxTok2=boats.map(function(b){return b.tokuten||0;});maxTok2=Math.max.apply(null,maxTok2);
@@ -1394,18 +1379,22 @@ async function generate(){
         else{text=betBlockC+'\n'+text;}
         // Xサマリー再構築
         var xIdxC=text.indexOf('【Xサマリー】');
+        var hyokaC=buildHyokaOrder(calcData.parsed.boats);
+        var commentC='';
         if(xIdxC>=0){
           var beforeC=text.slice(0,xIdxC),afterC=text.slice(xIdxC);
           var xLinesC=afterC.split('\n');
-          var commentC='';
           for(var xci=1;xci<xLinesC.length;xci++){
             var xlc=xLinesC[xci].trim();
             if(!xlc||xlc===venue+raceNum+'R'||xlc.indexOf('本線')===0||xlc.indexOf('抑え')===0||xlc==='G.'||/^[\d><=]+$/.test(xlc))continue;
             commentC=xlc;break;
           }
-          var hyokaC=buildHyokaOrder(calcData.parsed.boats);
           var newXC='【Xサマリー】\n'+venue+raceNum+'R\n'+(commentC?commentC+'\n\n':'')+hyokaC+'\n本線　'+honsenStrC+'\n抑え　'+osaeeStrC+'\n\nG.';
           text=beforeC+newXC;
+        } else {
+          // AIがXサマリーを出力しなかった場合は末尾に追加
+          var newXC='\n【Xサマリー】\n'+venue+raceNum+'R\n\n'+hyokaC+'\n本線　'+honsenStrC+'\n抑え　'+osaeeStrC+'\n\nG.';
+          text+=newXC;
         }
         // autoSaveLog等の処理へ
         document.getElementById('outText').textContent=text;
@@ -1569,6 +1558,19 @@ function overrideShinkido(x){
   if(lbl)lbl.textContent='【'+x+'】';
   var manual=document.getElementById('shinkidoManual');
   if(manual)manual.style.display=x!==orig?'inline':'none';
+  // 信頼度大表示も更新
+  var shinkidoColor=x==='A'?'var(--blue)':x==='B'?'var(--green)':'var(--accent)';
+  var shinkidoLabel=x==='A'?'信頼度A（イン戦強）':x==='B'?'信頼度B（標準）':'信頼度C（荒れ注意）';
+  var bigDisp=document.getElementById('shinkidoBigDisp');
+  if(bigDisp){
+    bigDisp.querySelector('.shinkido-big-letter').textContent=x;
+    bigDisp.querySelector('.shinkido-big-letter').style.color=shinkidoColor;
+    bigDisp.querySelector('.shinkido-big-label').textContent=shinkidoLabel;
+    bigDisp.querySelector('.shinkido-big-label').style.color=shinkidoColor;
+  }
+  // 差し替えUIの表示制御
+  var editWrap=document.getElementById('editMarkWrap');
+  if(editWrap)editWrap.style.display=(x==='C')?'block':'none';
 }
 
 function saveVenueRace(){
@@ -1832,10 +1834,10 @@ function regenerateBets(){
   else{text=betBlockC+'\n'+text;}
   // Xサマリー再構築
   var xIdxC=text.indexOf('【Xサマリー】');
+  var commentC='';
   if(xIdxC>=0){
     var beforeC=text.slice(0,xIdxC),afterC=text.slice(xIdxC);
     var xLinesC=afterC.split('\n');
-    var commentC='';
     for(var xci=1;xci<xLinesC.length;xci++){
       var xlc=xLinesC[xci].trim();
       if(!xlc||xlc===venue+raceNum+'R'||xlc.indexOf('本線')===0||xlc.indexOf('抑え')===0||xlc==='G.'||/^[\d><=]+$/.test(xlc))continue;
