@@ -1212,8 +1212,12 @@ async function generate(){
       // AIの×印も取得
       var ngFromAI=[];
       text.split('\n').forEach(function(ln){
+        // 総合評価の×（末尾）: "5位 6号艇 ×"
         var m=ln.match(/(\d)位\s*(\d)号艇\s*×/);
         if(m)ngFromAI.push(m[2]);
+        // 評価の×（先頭）: "×6 フカガワ"
+        var m2=ln.match(/^×(\d)/);
+        if(m2&&ngFromAI.indexOf(m2[1])<0)ngFromAI.push(m2[1]);
       });
       if(ngFromAI.length>0)ngBoats=ngFromAI;
 
