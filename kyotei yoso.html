@@ -131,6 +131,8 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
   <div id="arePtsSection" style="display:none;margin-bottom:10px;">
     <div class="pts-label">買い目点数（信頼度C）</div>
     <div class="pts-row">
+      <button class="pts-btn inactive" id="pts4" onclick="setPts(4)">4点<br><span style="font-size:10px;font-weight:400;">本線4</span></button>
+      <button class="pts-btn inactive" id="pts6" onclick="setPts(6)">6点<br><span style="font-size:10px;font-weight:400;">本線6</span></button>
       <button class="pts-btn active" id="pts8" onclick="setPts(8)">8点<br><span style="font-size:10px;font-weight:400;">通常</span></button>
       <button class="pts-btn inactive" id="pts12" onclick="setPts(12)">12点<br><span style="font-size:10px;font-weight:400;">本線6+抑え6</span></button>
       <button class="pts-btn inactive" id="pts14" onclick="setPts(14)">14点<br><span style="font-size:10px;font-weight:400;">本線6+抑え8</span></button>
@@ -280,7 +282,7 @@ function setPts(pts){
   });
   var activeEl=document.getElementById('pts'+pts);
   if(activeEl)activeEl.className='pts-btn active';
-  [8,12,14,15].forEach(function(p){
+  [4,6,8,12,14,15].forEach(function(p){
     var btn=document.getElementById('pts'+p);
     if(btn)btn.className='pts-btn '+(p===pts?'active':'inactive');
   });
@@ -783,10 +785,11 @@ function displayCalcResults(data){
   });
   html+='</tbody></table>';
   // 信頼度を大きく表示
-  var shinkidoColor=jsShinkido==='A'?'var(--blue)':jsShinkido==='B'?'var(--green)':'var(--accent)';
-  var shinkidoLabel=jsShinkido==='A'?'信頼度A（イン戦強）':jsShinkido==='B'?'信頼度B（標準）':'信頼度C（荒れ注意）';
+  var _shinkido=normalResult.shinkido;
+  var shinkidoColor=_shinkido==='A'?'var(--blue)':_shinkido==='B'?'var(--green)':'var(--accent)';
+  var shinkidoLabel=_shinkido==='A'?'信頼度A（イン戦強）':_shinkido==='B'?'信頼度B（標準）':'信頼度C（荒れ注意）';
   html+='<div style="text-align:center;padding:10px;background:var(--bg);border-radius:6px;margin-bottom:10px;">';
-  html+='<div style="font-size:28px;font-weight:900;color:'+shinkidoColor+';">'+jsShinkido+'</div>';
+  html+='<div style="font-size:36px;font-weight:900;color:'+shinkidoColor+';">'+_shinkido+'</div>';
   html+='<div style="font-size:11px;color:'+shinkidoColor+';margin-top:2px;">'+shinkidoLabel+'</div>';
   html+='</div>';
   html+='<div class="info-row">1コース逃げ率: <b>'+(nigeRate!==null?nigeRate+'% ('+nigeRateSrc+')':'取得できず')+'</b></div>';
@@ -1156,7 +1159,25 @@ function buildAreBetsFinal(maru,shiro,sankaku,go,ngBoats){
   // 抑え（点数別）
   var osaee=[];
 
-  if(currentPts===12){
+  if(currentPts===4){
+    // 4点：本線◎○頭の4点のみ
+    addBet(honsen,maru,shiro,sankaku);
+    addBet(honsen,maru,shiro,yonkaku);
+    addBet(honsen,shiro,maru,sankaku);
+    addBet(honsen,shiro,maru,yonkaku);
+    honsen=honsen.slice(0,4);
+    return{honsen:honsen,osaee:[]};
+  } else if(currentPts===6){
+    // 6点：本線のみ6点
+    addBet(honsen,maru,shiro,sankaku);
+    addBet(honsen,maru,shiro,yonkaku);
+    addBet(honsen,maru,sankaku,yonkaku);
+    addBet(honsen,shiro,maru,sankaku);
+    addBet(honsen,shiro,maru,yonkaku);
+    addBet(honsen,shiro,sankaku,yonkaku);
+    honsen=honsen.slice(0,6);
+    return{honsen:honsen,osaee:[]};
+  } else if(currentPts===12){
     addBet(osaee,maru,sankaku,go);
     addBet(osaee,maru,yonkaku,go);
     addBet(osaee,shiro,sankaku,go);
