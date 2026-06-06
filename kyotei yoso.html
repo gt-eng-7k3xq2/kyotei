@@ -1030,7 +1030,16 @@ function displayCalcResults(data){
   var earlyMode=rc2>0?(rc2<=3):(validTok2<=2||maxTok2<=6);
   html+='<div class="info-row">スコアモード: <b style="color:'+(earlyMode?'var(--accent)':'var(--blue)')+';">'+(earlyMode?'序盤モード（勝率重視）':'終盤モード（今節重視）')+'</b>'+(rc2>0?' 平均'+rc2+'走':'（推定）')+'</div>';
 
-  // 通常モード
+  document.getElementById('calcContent').innerHTML=html;
+}
+
+/* ===== AIプロンプト構築 ===== */
+function buildPrompt(){
+  var venue=document.getElementById('venue').value||'?';
+  var raceNum=document.getElementById('raceNum').value||'?';
+  var parsed=calcData.parsed,areResult=calcData.areResult,furikiriResult=calcData.furikiriResult,cands1st=calcData.cands1st,normalResult=calcData.normalResult;
+  var boats=parsed.boats,nigeRate=parsed.nigeRate,nigeRateSrc=parsed.nigeRateSrc;
+  var p='';
   {
     var b1=boats.find(function(b){return b.nyuse===1;})||boats[0];
     var st1=b1.avgST!==null?b1.avgST:b1.stKoki;
