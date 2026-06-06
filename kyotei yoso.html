@@ -1240,9 +1240,9 @@ function compressBets(betsArr){
   var parts=[];
 
   function isUsed(i){return used.indexOf(i)>=0;}
-  function markUsed(arr){arr.forEach(function(i){if(!isUsed(i))used.push(i);});}
+  function markUsed(arr){arr.forEach(function(i){if(used.indexOf(i)<0)used.push(i);});}
 
-  // STEP0: 1着固定で2着セット=3着セット対称（例: 3-4-5+3-5-4 → 3-45-45）
+  // STEP0: 1着固定で2着と3着が対称のペア（2点単位で判定）例: 1-56-56
   var byFirst0={};
   valid.forEach(function(b,i){
     var a=b[0];
@@ -1251,12 +1251,19 @@ function compressBets(betsArr){
   });
   Object.keys(byFirst0).forEach(function(a){
     var indices=byFirst0[a].filter(function(i){return !isUsed(i);});
-    if(indices.length<2)return;
-    var seconds=indices.map(function(i){return valid[i][2];});
-    var thirds=indices.map(function(i){return valid[i][4];});
-    var secSet=seconds.slice().sort().join('');
-    var thiSet=thirds.slice().sort().join('');
-    if(secSet===thiSet){parts.push(a+'-'+secSet+'-'+thiSet);markUsed(indices);}
+    for(var pi=0;pi<indices.length;pi++){
+      for(var pj=pi+1;pj<indices.length;pj++){
+        var ii=indices[pi],ij=indices[pj];
+        if(isUsed(ii)||isUsed(ij))continue;
+        var s2=valid[ii][2],s3=valid[ii][4];
+        var t2=valid[ij][2],t3=valid[ij][4];
+        if(s2===t3&&s3===t2){
+          var combo=[s2,s3].sort().join('');
+          parts.push(a+'-'+combo+'-'+combo);
+          markUsed([ii,ij]);
+        }
+      }
+    }
   });
 
   // STEP1: 1着・2着固定で3着をまとめる（例: 4-6-2+4-6-3 → 4-6-23）
@@ -1873,8 +1880,8 @@ async function generate(){
       var newX='【Xサマリー】\n'+venue+raceNum+'R\n';
       if(commentLine)newX+=commentLine+'\n\n';
       newX+=hyokaOrder+'\n';
-      newX+='本線\u3000'+honsen.join('/')+'\n';
-      if(osaee.length)newX+='抑え\u3000'+osaee.join('/')+'\n';
+      newX+='本線\u3000'+(compressBets(honsen)||honsen.join('/'))+'\n';
+      if(osaee.length)newX+='抑え\u3000'+(compressBets(osaee)||osaee.join('/'))+'\n';
       newX+='\nG.';
       if(xIdx2>=0){
         text=text.slice(0,xIdx2)+newX;
