@@ -1396,14 +1396,14 @@ async function generate(){
         return;
       }
 
-      // 信頼度CでcurrentPts>=12の場合は荒れモードロジックを使う
-      // ただし逃げ率60%以上は通常8点に戻す（逃げが強いレースは荒れ系買い目不適）
+      // currentPts>=12の場合は荒れモードロジックを使う（全信頼度共通）
+      // ただし逃げ率60%以上は通常8点に戻す
       var nigeRateForC=calcData.parsed.nigeRate;
-      if(shinkido==='C'&&currentPts>=12&&nigeRateForC!==null&&nigeRateForC>=60){
+      if(currentPts>=12&&nigeRateForC!==null&&nigeRateForC>=60){
         currentPts=8;setPts(8);
         showStatus('逃げ率'+nigeRateForC+'%のため8点に変更','ok');
       }
-      if(shinkido==='C'&&currentPts>=12){
+      if(currentPts>=12){
         // 荒れ系買い目生成（buildAreBetsFinalを流用）
         var sogoSortedC=calcData.parsed.boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
         var maruC=null,shiroC=null,sankakuC=null;
@@ -1528,7 +1528,7 @@ async function generate(){
       honsen=honsen.slice(0,4);osaee=osaee.slice(0,4);
       var honsenStr=compressBets(honsen)||honsen.join('/');
       var osaeeStr=compressBets(osaee)||osaee.join('/');
-      var betBlock='【最終買い目】8点\n本線\n'+honsen.join('\n')+'\n抑え\n'+osaee.join('\n')+'\n';
+      var betBlock='【最終買い目】'+(honsen.length+osaee.length)+'点\n本線\n'+honsen.join('\n')+'\n抑え\n'+osaee.join('\n')+'\n';
 
       // AIが出した【最終買い目】ブロックを全て削除
       text=text.replace(/【最終買い目】[\s\S]*?(?=【|$)/g,'');
