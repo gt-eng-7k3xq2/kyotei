@@ -239,18 +239,8 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
   <div class="loading" id="loading">
     <div class="spinner"></div>
     <div class="loading-txt">Gemini が予想を生成中...</div>
-  </div>
 </div>
-
-<div class="status" id="status"></div>
-<button class="gen-btn" id="genBtn" onclick="generate()" disabled style="display:none;">🎯 予想を生成する</button>
-
-<div class="loading" id="loading">
-  <div class="spinner"></div>
-  <div class="loading-txt">Gemini が予想を生成中...</div>
-</div>
-
-<div class="out-wrap" id="outWrap">
+  <div class="out-wrap" id="outWrap">
   <div class="div"></div>
   <div class="out-hdr">予想結果</div>
   <div class="out-text" id="outText"></div>
@@ -1819,12 +1809,12 @@ async function generate(){
         var newX='【Xサマリー】\n'+venue+raceNum+'R\n';
         if(commentLine)newX+=commentLine+'\n\n';
         newX+=hyokaOrder+'\n';
-        newX+='本線\u3000'+honsenStr+'\n';
-        if(osaeeStr)newX+='抑え\u3000'+osaeeStr+'\n';
+        newX+='本線\u3000'+honsen.join('/')+'\n';
+        if(osaee.length)newX+='抑え\u3000'+osaee.join('/')+'\n';
         newX+='\nG.';
         text=before2+newX;
       } else {
-        text+='\n【Xサマリー】\n'+venue+raceNum+'R\n\n'+hyokaOrder+'\n本線\u3000'+honsenStr+(osaeeStr?'\n抑え\u3000'+osaeeStr:'')+'\n\nG.';
+        text+='\n【Xサマリー】\n'+venue+raceNum+'R\n\n'+hyokaOrder+'\n本線\u3000'+honsen.join('/')+(osaee.length?'\n抑え\u3000'+osaee.join('/'):'')+'\n\nG.';
       }
     }
 
