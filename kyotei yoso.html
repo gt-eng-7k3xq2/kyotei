@@ -962,7 +962,7 @@ function runCalc(){
   document.getElementById('calcResult').classList.add('show');
   document.getElementById('genBtn').disabled=false;
   var step1Next=document.getElementById('step1Next');if(step1Next)step1Next.disabled=false;
-  }catch(e){showStatus('エラー: '+e.message,'err');document.getElementById('genBtn').disabled=false;console.error(e);}
+  }catch(e){showStatus('エラー: '+e.message,'err');alert('runCalcエラー: '+e.message+'\n'+e.stack);document.getElementById('genBtn').disabled=false;console.error(e);}
 }
 
 /* ===== 表示 ===== */
