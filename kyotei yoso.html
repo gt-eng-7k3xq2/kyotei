@@ -91,8 +91,17 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
 .step-next-btn{width:100%;padding:13px;background:var(--text);color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:700;-webkit-appearance:none;margin-top:12px;font-family:'Noto Serif JP',serif;letter-spacing:1px;cursor:pointer;}
 .step-next-btn:disabled{background:var(--border);color:var(--text-muted);}
 /* 印選択ボタン */
-.mark-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:10px;position:relative;z-index:100;isolation:isolate;}
+.mark-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;position:relative;z-index:100;isolation:isolate;}
 .mark-boat-btn{aspect-ratio:1;border-radius:6px;border:1px solid var(--border);background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;-webkit-appearance:none;gap:2px;position:relative;z-index:101;-webkit-tap-highlight-color:rgba(0,0,0,0.1);touch-action:manipulation;user-select:none;-webkit-user-select:none;}
+/* プルダウン式印カード */
+.mark-card{border-radius:8px;border:2px solid var(--border);background:var(--bg);padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:5px;position:relative;}
+.mark-card.mark-maru{border-color:var(--accent);background:var(--accent-light);}
+.mark-card.mark-shiro{border-color:var(--blue);background:var(--blue-light);}
+.mark-card.mark-sankaku{border-color:#a0856a;background:#f5f0e8;}
+.mark-card.mark-yonkaku{border-color:#6a8050;background:#f0f5e8;}
+.mark-card.mark-batsu{border-color:var(--border);background:var(--bg);}
+.mark-card-num{font-size:22px;font-weight:900;line-height:1;}
+.mark-card-sel{width:100%;border-radius:4px;border:1px solid var(--border);font-size:14px;font-weight:700;padding:5px 2px;text-align:center;-webkit-appearance:none;appearance:none;background:rgba(255,255,255,0.7);font-family:'Noto Sans JP',sans-serif;cursor:pointer;touch-action:manipulation;}
 .mark-boat-btn .boat-num{font-size:18px;font-weight:700;}
 .mark-boat-btn .boat-mark{font-size:11px;font-weight:700;}
 .mark-boat-btn.mark-maru{background:var(--accent-light);border-color:var(--accent);color:var(--accent);}
@@ -179,11 +188,13 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
     <button class="calc-btn" style="flex:1;margin-top:0;" onclick="runCalc()">⚡ データを解析する</button>
     <button onclick="clearAll()" style="padding:13px 16px;background:#f8f7f4;color:#888;border:1px solid #e0dcd6;border-radius:4px;font-size:13px;cursor:pointer;-webkit-appearance:none;">✕</button>
   </div>
-  <div class="calc-result" id="calcResult">
-    <div style="font-size:11px;color:#c9a84c;font-weight:700;margin-bottom:8px;">📊 解析結果</div>
-    <div id="calcContent"></div>
-  </div>
   <button class="step-next-btn" id="step1Next" onclick="goStep2()" style="opacity:0.4;pointer-events:none;">次へ：印・点数を確認 →</button>
+</div>
+
+<!-- 解析結果：STEP間で常時表示 -->
+<div class="calc-result" id="calcResult" style="margin-bottom:12px;">
+  <div style="font-size:11px;color:#c9a84c;font-weight:700;margin-bottom:8px;">📊 解析結果</div>
+  <div id="calcContent"></div>
 </div>
 
 <!-- STEP2：印確認・点数選択 -->
@@ -196,17 +207,10 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
   <!-- 信頼度表示 -->
   <div id="step2ShinkidoDisp" style="margin-bottom:12px;"></div>
 
-  <!-- 6艇印選択 -->
-  <div style="font-size:10px;color:var(--text-sub);margin-bottom:6px;font-weight:700;">◎○▲△ をタップして変更</div>
-  <div class="mark-legend">
-    <span><b style="color:var(--accent);">◎</b>1着本命</span>
-    <span><b style="color:var(--blue);">○</b>2着本命</span>
-    <span><b style="color:#7a6040;">▲</b>3着候補</span>
-    <span><b style="color:#4a6030;">△</b>4着候補</span>
-    <span><b style="color:var(--text-muted);">×</b>切り</span>
-  </div>
+  <!-- 6艇印選択（プルダウン式） -->
+  <div style="font-size:10px;color:var(--text-sub);margin-bottom:8px;font-weight:700;">各艇の印をプルダウンで選択</div>
   <div class="mark-grid" id="markGrid"></div>
-  <div style="font-size:10px;color:var(--text-muted);margin-bottom:12px;">※ ◎○は1艇ずつ、▲△は変更可、残りは×</div>
+  <div style="font-size:10px;color:var(--text-muted);margin-bottom:12px;">※ ◎○は1艇ずつ自動調整</div>
 
   <!-- A/B/C切り替え -->
   <div style="font-size:10px;color:var(--text-sub);margin-bottom:6px;font-weight:700;">モード</div>
@@ -354,23 +358,34 @@ function renderMarkGrid(boats){
   var grid = document.getElementById('markGrid');
   if(!grid)return;
   var markLabels = {maru:'◎',shiro:'○',sankaku:'▲',yonkaku:'△',batsu:'×'};
-  var markColors = {maru:'mark-maru',shiro:'mark-shiro',sankaku:'mark-sankaku',yonkaku:'mark-yonkaku',batsu:'mark-batsu'};
-  grid.innerHTML = (boats||calcData.parsed.boats.slice().sort(function(a,b){return a.nyuse-b.nyuse;})).map(function(b){
+  var markOrder = ['maru','shiro','sankaku','yonkaku','batsu'];
+  var boatList = boats||calcData.parsed.boats.slice().sort(function(a,b){return a.nyuse-b.nyuse;});
+  grid.innerHTML = boatList.map(function(b){
     var ns=String(b.n);
     var mark=manualMarks[ns]||'batsu';
-    return '<button class="mark-boat-btn '+markColors[mark]+'" onclick="cycleMarkBoat(\''+ns+'\')" id="markBtn'+ns+'">'+
-      '<span class="boat-num" style="pointer-events:none;">'+b.n+'</span>'+
-      '<span class="boat-mark" style="pointer-events:none;">'+markLabels[mark]+'</span>'+
-      '</button>';
+    var opts = markOrder.map(function(m){
+      return '<option value="'+m+'"'+(m===mark?' selected':'')+'>'+markLabels[m]+'</option>';
+    }).join('');
+    // 艇色
+    var numColors={'1':'#888','2':'#111','3':'#c42222','4':'#1e52cc','5':'#cc9a00','6':'#168432'};
+    var numColor = numColors[ns]||'#111';
+    return '<div class="mark-card mark-'+mark+'" id="markCard'+ns+'">'+
+      '<div class="mark-card-num" style="color:'+numColor+';">'+b.n+'</div>'+
+      '<select class="mark-card-sel" onchange="setMarkBoat(\''+ns+'\',this.value)" id="markSel'+ns+'">'+opts+'</select>'+
+      '</div>';
   }).join('');
 }
 
 function cycleMarkBoat(ns){
-  // ◎→○→▲→△→×→◎ のサイクル
+  // ◎→○→▲→△→×→◎ のサイクル（後方互換で残す）
   var order=['maru','shiro','sankaku','yonkaku','batsu'];
   var cur=manualMarks[ns]||'batsu';
   var next=order[(order.indexOf(cur)+1)%order.length];
-  // ◎○は1艇のみ
+  setMarkBoat(ns,next);
+}
+
+function setMarkBoat(ns, next){
+  // ◎○は1艇のみ制約
   if(next==='maru'){
     Object.keys(manualMarks).forEach(function(k){if(manualMarks[k]==='maru')manualMarks[k]='batsu';});
   }
@@ -379,6 +394,7 @@ function cycleMarkBoat(ns){
   }
   manualMarks[ns]=next;
   renderMarkGrid();
+  // プルダウンの選択値も更新（renderMarkGridで再描画されるが念のため）
 }
 
 function applyManualMarks(){
@@ -1721,7 +1737,7 @@ async function generate(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         contents:[{role:'user',parts:[{text:prompt}]}],
-        generationConfig:{temperature:0.15,maxOutputTokens:16000,thinkingConfig:{thinkingBudget:0}}
+        generationConfig:{temperature:0.15,maxOutputTokens:3000,thinkingConfig:{thinkingBudget:0}}
       })
     });
     var json=await res.json();
