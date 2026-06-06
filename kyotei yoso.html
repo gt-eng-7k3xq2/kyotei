@@ -1345,497 +1345,53 @@ function getYonkaku(maru,shiro,sankaku,go,ngBoats,allBoats){
 }
 
 function buildAreBetsFinal(maru,shiro,sankaku,go,ngBoats){
+  // 全モード共通：15点の母集団から点数に応じて削る
   var allBoats=['1','2','3','4','5','6'];
   var yonkaku=getYonkaku(maru,shiro,sankaku,go,ngBoats,allBoats);
-  // ng艇（×印）は1着・2着には使わないが、3着候補としては使用可
-  // go/yonkakuはそのまま使用（3着候補なのでng制限不要）
+
   var seen={};
   var addBet=function(arr,a,b,c){
-    if(!a||!b||!c)return;
-    if(a===b||b===c||a===c)return;
-    var k=a+'-'+b+'-'+c;
-    if(seen[k])return;
-    seen[k]=true;
-    arr.push(k);
+    if(!a||!b||!c||a===b||b===c||a===c)return;
+    var k=a+'-'+b+'-'+c;if(seen[k])return;seen[k]=true;arr.push(k);
   };
 
-  // 本線6点
-  var honsen=[];
-  addBet(honsen,maru,shiro,sankaku);
-  addBet(honsen,maru,shiro,yonkaku);
-  addBet(honsen,maru,sankaku,yonkaku);
-  addBet(honsen,shiro,maru,sankaku);
-  addBet(honsen,shiro,maru,yonkaku);
-  addBet(honsen,shiro,sankaku,yonkaku);
-  honsen=honsen.slice(0,6);
+  // ===== 15点の母集団（優先順位固定） =====
+  var allHonsen=[];
+  addBet(allHonsen,maru,shiro,sankaku);   // 1-2-3
+  addBet(allHonsen,maru,sankaku,shiro);   // 1-3-2
+  addBet(allHonsen,shiro,maru,sankaku);   // 2-1-3
+  addBet(allHonsen,shiro,sankaku,maru);   // 2-3-1
+  addBet(allHonsen,maru,yonkaku,shiro);   // 1-4-2
+  addBet(allHonsen,maru,shiro,yonkaku);   // 1-2-4
 
-  // 抑え（点数別）
-  var osaee=[];
+  var allOsaee=[];
+  addBet(allOsaee,shiro,yonkaku,maru);    // 2-4-1
+  addBet(allOsaee,shiro,maru,yonkaku);    // 2-1-4
+  addBet(allOsaee,maru,shiro,go);         // 1-2-5
+  addBet(allOsaee,maru,go,shiro);         // 1-5-2
+  addBet(allOsaee,shiro,maru,go);         // 2-1-5
+  addBet(allOsaee,shiro,go,maru);         // 2-5-1
+  addBet(allOsaee,maru,sankaku,yonkaku);  // 1-3-4
+  addBet(allOsaee,maru,yonkaku,sankaku);  // 1-4-3
+  addBet(allOsaee,maru,sankaku,go);       // 1-3-5
 
+  // ===== 点数に応じて切り出し =====
+  var honsen,osaee;
   if(currentPts===4){
-    // 4点：本線◎○頭の4点のみ
-    addBet(honsen,maru,shiro,sankaku);
-    addBet(honsen,maru,shiro,yonkaku);
-    addBet(honsen,shiro,maru,sankaku);
-    addBet(honsen,shiro,maru,yonkaku);
-    honsen=honsen.slice(0,4);
-    return{honsen:honsen,osaee:[]};
+    honsen=allHonsen.slice(0,4);osaee=[];
   } else if(currentPts===6){
-    // 6点：本線のみ6点
-    addBet(honsen,maru,shiro,sankaku);
-    addBet(honsen,maru,shiro,yonkaku);
-    addBet(honsen,maru,sankaku,yonkaku);
-    addBet(honsen,shiro,maru,sankaku);
-    addBet(honsen,shiro,maru,yonkaku);
-    addBet(honsen,shiro,sankaku,yonkaku);
-    honsen=honsen.slice(0,6);
-    return{honsen:honsen,osaee:[]};
+    honsen=allHonsen.slice(0,6);osaee=[];
+  } else if(currentPts===8){
+    honsen=allHonsen.slice(0,4);osaee=allOsaee.slice(0,4);
   } else if(currentPts===12){
-    // 12点：◎○▲を軸に△とgo(5位)を3着に組む
-    // 本線6点
-    addBet(honsen,maru,shiro,sankaku);   // 1-2-3
-    addBet(honsen,maru,sankaku,shiro);   // 1-3-2
-    addBet(honsen,shiro,maru,sankaku);   // 2-1-3
-    addBet(honsen,shiro,sankaku,maru);   // 2-3-1
-    addBet(honsen,maru,yonkaku,shiro);   // 1-4-2
-    addBet(honsen,maru,shiro,yonkaku);   // 1-2-4
-    // 抑え6点
-    addBet(osaee,shiro,yonkaku,maru);    // 2-4-1
-    addBet(osaee,shiro,maru,yonkaku);    // 2-1-4
-    addBet(osaee,maru,shiro,go);         // 1-2-5
-    addBet(osaee,maru,go,shiro);         // 1-5-2
-    addBet(osaee,shiro,maru,go);         // 2-1-5
-    addBet(osaee,shiro,go,maru);         // 2-5-1
-    osaee=osaee.slice(0,6);
+    honsen=allHonsen.slice(0,6);osaee=allOsaee.slice(0,6);
   } else if(currentPts===14){
-    // 14点：12点＋go（5位評価）3着2点追加
-    addBet(osaee,shiro,maru,sankaku);
-    addBet(osaee,shiro,maru,yonkaku);
-    addBet(osaee,shiro,sankaku,maru);
-    addBet(osaee,shiro,sankaku,yonkaku);
-    addBet(osaee,shiro,yonkaku,maru);
-    addBet(osaee,shiro,yonkaku,sankaku);
-    addBet(osaee,maru,shiro,go);
-    addBet(osaee,shiro,maru,go);
-    osaee=osaee.slice(0,8);
+    honsen=allHonsen.slice(0,6);osaee=allOsaee.slice(0,8);
   } else {
-    // 15点：12点＋go（5位評価）3着3点追加
-    addBet(osaee,shiro,maru,sankaku);
-    addBet(osaee,shiro,maru,yonkaku);
-    addBet(osaee,shiro,sankaku,maru);
-    addBet(osaee,shiro,sankaku,yonkaku);
-    addBet(osaee,shiro,yonkaku,maru);
-    addBet(osaee,shiro,yonkaku,sankaku);
-    addBet(osaee,maru,shiro,go);
-    addBet(osaee,shiro,maru,go);
-    addBet(osaee,maru,sankaku,go);
-    osaee=osaee.slice(0,9);
+    honsen=allHonsen.slice(0,6);osaee=allOsaee.slice(0,9);
   }
 
   return{honsen:honsen,osaee:osaee};
-}
-
-/* ===== API呼び出し ===== */
-async function generate(){
-  if(!calcData){showStatus('先にデータを解析してください','err');return;}
-  var venue=document.getElementById('venue').value||'?';
-  var raceNum=document.getElementById('raceNum').value||'?';
-  var key=getKey();
-  if(!key){showStatus('APIキーを保存してください','err');return;}
-  var prompt=buildPrompt();
-  document.getElementById('genBtn').disabled=true;
-  document.getElementById('loading').classList.add('show');
-  document.getElementById('outWrap').classList.remove('show');
-  document.getElementById('status').style.display='none';
-
-  try{
-    var res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        contents:[{role:'user',parts:[{text:prompt}]}],
-        generationConfig:{temperature:0.15,maxOutputTokens:16000,thinkingConfig:{thinkingBudget:0}}
-      })
-    });
-    var json=await res.json();
-    if(!res.ok)throw new Error(json.error&&json.error.message||'APIエラー');
-    var text=json.candidates&&json.candidates[0]&&json.candidates[0].content&&json.candidates[0].content.parts[0].text;
-    if(!text)throw new Error('レスポンスが空です');
-
-    // ===== 荒れモード：JS固定買い目生成 =====
-    if(currentMode==='are'&&calcData){
-      var sogoSorted=calcData.parsed.boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
-      // AIが出力した◎○▲△をテキストから取得（総合評価ブロック）
-      var maruFromAI=null,shiroFromAI=null,sankakuFromAI=null;
-      text.split('\n').forEach(function(ln){
-        var m1=ln.match(/(\d)位\s*(\d)号艇\s*◎/);if(m1)maruFromAI=m1[2];
-        var m2=ln.match(/(\d)位\s*(\d)号艇\s*○/);if(m2)shiroFromAI=m2[2];
-        var m3=ln.match(/(\d)位\s*(\d)号艇\s*▲/);if(m3)sankakuFromAI=m3[2];
-      });
-      // ◎○▲はAI出力を優先、なければsogoRankを使用
-      var maru    = maruFromAI||String(sogoSorted[0]?sogoSorted[0].n:'1');
-      var shiro   = shiroFromAI||String(sogoSorted[1]?sogoSorted[1].n:'2');
-      var sankaku = sankakuFromAI||String(sogoSorted[2]?sogoSorted[2].n:'3');
-      // goは常にsogoRank5位（◎○▲△と重複しない5番手）
-      var go = String(sogoSorted[4]?sogoSorted[4].n:'5');
-      // goが◎○▲と重複する場合はsogoRank順で次の艇を使用
-      var usedMaruShiroSankaku=[maru,shiro,sankaku];
-      if(usedMaruShiroSankaku.indexOf(go)>=0){
-        var goAlt=sogoSorted.filter(function(b){return usedMaruShiroSankaku.indexOf(String(b.n))<0;});
-        go=String(goAlt[goAlt.length>1?1:0]?goAlt[goAlt.length>1?1:0].n:go);
-      }
-      if(maru===shiro){shiro=['1','2','3','4','5','6'].filter(function(x){return x!==maru;})[0]||'3';}
-
-      // ng艇取得
-      var ngBoats=[];
-      calcData.parsed.boats.forEach(function(b){if(b.forceNG)ngBoats.push(String(b.n));});
-      // AIの×印も取得
-      var ngFromAI=[];
-      text.split('\n').forEach(function(ln){
-        // 総合評価の×（末尾）: "5位 6号艇 ×"
-        var m=ln.match(/(\d)位\s*(\d)号艇\s*×/);
-        if(m)ngFromAI.push(m[2]);
-        // 評価の×（先頭）: "×6 フカガワ"
-        var m2=ln.match(/^×(\d)/);
-        if(m2&&ngFromAI.indexOf(m2[1])<0)ngFromAI.push(m2[1]);
-      });
-      if(ngFromAI.length>0)ngBoats=ngFromAI;
-
-      // JS固定で買い目生成
-      var betsResult=buildAreBetsFinal(maru,shiro,sankaku,go,ngBoats);
-      var honsen=betsResult.honsen;
-      var osaee=betsResult.osaee;
-      var honsenStr=compressBets(honsen)||honsen.join('/');
-      var osaeeStr=compressBets(osaee)||osaee.join('/');
-
-      // テキストに【買い目】ブロックを挿入・差し替え
-      var tLines=text.split('\n');
-      var newLines=[],inBet=false,inserted=false;
-      for(var ti=0;ti<tLines.length;ti++){
-        var tl=tLines[ti];
-        if(tl.indexOf('【買い目】')>=0){
-          newLines.push('【買い目】');
-          newLines.push('本線('+honsen.length+'点)');
-          honsen.forEach(function(b){newLines.push(b);});
-          newLines.push('抑え('+osaee.length+'点)');
-          osaee.forEach(function(b){newLines.push(b);});
-          newLines.push('');
-          inBet=true;inserted=true;
-          continue;
-        }
-        if(inBet){
-          if(tl.indexOf('【')>=0){inBet=false;newLines.push(tl);}
-          continue;
-        }
-        if(!inserted&&tl.indexOf('【総合評価】')>=0){
-          newLines.push('【買い目】');
-          newLines.push('本線('+honsen.length+'点)');
-          honsen.forEach(function(b){newLines.push(b);});
-          newLines.push('抑え('+osaee.length+'点)');
-          osaee.forEach(function(b){newLines.push(b);});
-          newLines.push('');
-          inserted=true;
-        }
-        newLines.push(tl);
-      }
-      text=newLines.join('\n');
-
-      // Xサマリーを完全にJS固定で再構築
-      var xIdx=text.indexOf('【Xサマリー】');
-      if(xIdx>=0){
-        var before=text.slice(0,xIdx);
-        var after=text.slice(xIdx);
-        // コメント行を抽出（場所R行・本線・抑え・G.・HYOKA_ORDER・空行以外の最初の行）
-        var xLines=after.split('\n');
-        var commentLine='';
-        for(var xi=1;xi<xLines.length;xi++){
-          var xl=xLines[xi].trim();
-          if(!xl)continue;
-          if(xl===venue+raceNum+'R')continue;
-          if(xl.indexOf('本線')===0||xl.indexOf('抑え')===0)continue;
-          if(xl==='G.')continue;
-          if(xl.indexOf('HYOKA_ORDER')>=0)continue;
-          if(/^[\d><=]+$/.test(xl))continue;
-          commentLine=xl;
-          break;
-        }
-        var hyokaOrder=buildHyokaOrder(calcData.parsed.boats);
-        // Xサマリーを完全再構築
-        var newX='【Xサマリー】\n'+venue+raceNum+'R\n';
-        if(commentLine)newX+=commentLine+'\n\n';
-        newX+=hyokaOrder+'\n';
-        newX+='本線　'+honsenStr+'\n';
-        newX+='抑え　'+osaeeStr+'\n\n';
-        newX+='G.';
-        text=before+newX;
-      }
-
-      // ◎○以外の1着買い目フィルター
-      var ok1st=[maru,shiro];
-      text=text.split('\n').filter(function(ln){
-        var m=ln.match(/^(\d)-(\d)-(\d)$/);
-        return !m||ok1st.indexOf(m[1])>=0;
-      }).join('\n');
-    }
-
-    // ===== 通常モード：JS固定買い目生成 =====
-    if(currentMode==='normal'&&calcData){
-      var shinkido=calcData.normalResult.shinkido;
-
-      // 4点・6点は全モード共通でbuildAreBetsFinalを使う
-      if(currentPts===4||currentPts===6){
-        var sogoSortedX=calcData.parsed.boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
-        var maruX=null,shiroX=null,sankakuX=null;
-        text.split('\n').forEach(function(ln){
-          var m1=ln.match(/(\d)位\s*(\d)号艇\s*◎/);if(m1)maruX=m1[2];
-          var m2=ln.match(/(\d)位\s*(\d)号艇\s*○/);if(m2)shiroX=m2[2];
-          var m3=ln.match(/(\d)位\s*(\d)号艇\s*▲/);if(m3)sankakuX=m3[2];
-        });
-        maruX=maruX||String(sogoSortedX[0]?sogoSortedX[0].n:'1');
-        shiroX=shiroX||String(sogoSortedX[1]?sogoSortedX[1].n:'2');
-        sankakuX=sankakuX||String(sogoSortedX[2]?sogoSortedX[2].n:'3');
-        var goX=String(sogoSortedX[4]?sogoSortedX[4].n:'5');
-        var usedX=[maruX,shiroX,sankakuX];
-        if(usedX.indexOf(goX)>=0){var gAlt=sogoSortedX.filter(function(b){return usedX.indexOf(String(b.n))<0;});goX=String(gAlt[1]?gAlt[1].n:gAlt[0]?gAlt[0].n:goX);}
-        var betsX=buildAreBetsFinal(maruX,shiroX,sankakuX,goX,[]);
-        var honsenX=betsX.honsen;var osaeeX=betsX.osaee;
-        var honsenStrX=compressBets(honsenX)||honsenX.join('/');
-        var osaeeStrX=compressBets(osaeeX)||osaeeX.join('/');
-        var betBlockX='【最終買い目】'+(honsenX.length+osaeeX.length)+'点\n本線\n'+honsenX.join('\n')+(osaeeX.length?'\n抑え\n'+osaeeX.join('\n'):'')+'\n';
-        text=text.replace(/【最終買い目】[\s\S]*?(?=【|$)/g,'');
-        var inIdxX=text.indexOf('【イン信頼度】');
-        if(inIdxX>=0){text=text.slice(0,inIdxX)+betBlockX+'\n'+text.slice(inIdxX);}else{text=betBlockX+'\n'+text;}
-        var xIdxX=text.indexOf('【Xサマリー】');
-        var hyokaX=buildHyokaOrder(calcData.parsed.boats);
-        if(xIdxX>=0){
-          var bX=text.slice(0,xIdxX),aX=text.slice(xIdxX);
-          var cX='';var xlX=aX.split('\n');
-          for(var xi=1;xi<xlX.length;xi++){var xl=xlX[xi].trim();if(!xl||xl===venue+raceNum+'R'||xl.indexOf('本線')===0||xl.indexOf('抑え')===0||xl==='G.'||/^[\d><=]+$/.test(xl))continue;cX=xl;break;}
-          text=bX+'【Xサマリー】\n'+venue+raceNum+'R\n'+(cX?cX+'\n\n':'')+hyokaX+'\n本線　'+honsenStrX+(osaeeX.length?'\n抑え　'+osaeeStrX:'')+'\n\nG.';
-        } else {
-          text+='\n【Xサマリー】\n'+venue+raceNum+'R\n\n'+hyokaX+'\n本線　'+honsenStrX+(osaeeX.length?'\n抑え　'+osaeeStrX:'')+'\n\nG.';
-        }
-        document.getElementById('outText').textContent=text;
-        document.getElementById('outWrap').classList.add('show');
-        showOddsResult();renderEvalCard(text,venue,raceNum);autoSaveLog(text);showStatus('生成完了','ok');
-        // 全モード・全点数で差し替えUI表示
-        var mFT=text.match(/1位\s*(\d)号艇\s*◎/);var sFT=text.match(/2位\s*(\d)号艇\s*○/);var kFT=text.match(/3位\s*(\d)号艇\s*▲/);
-        if(mFT&&sFT&&kFT)showEditMarkUI(mFT[1],sFT[1],kFT[1]);
-        document.getElementById('genBtn').disabled=false;
-        document.getElementById('loading').classList.remove('show');
-        return;
-      }
-
-      // currentPts>=12の場合は荒れモードロジックを使う（全信頼度共通）
-      // ただし逃げ率60%以上は通常8点に戻す
-      var nigeRateForC=calcData.parsed.nigeRate;
-      if(currentPts>=12&&nigeRateForC!==null&&nigeRateForC>=60){
-        currentPts=8;setPts(8);
-        showStatus('逃げ率'+nigeRateForC+'%のため8点に変更','ok');
-      }
-      if(currentPts>=12){
-        // 荒れ系買い目生成（buildAreBetsFinalを流用）
-        var sogoSortedC=calcData.parsed.boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
-        var maruC=null,shiroC=null,sankakuC=null;
-        text.split('\n').forEach(function(ln){
-          var m1=ln.match(/(\d)位\s*(\d)号艇\s*◎/);if(m1)maruC=m1[2];
-          var m2=ln.match(/(\d)位\s*(\d)号艇\s*○/);if(m2)shiroC=m2[2];
-          var m3=ln.match(/(\d)位\s*(\d)号艇\s*▲/);if(m3)sankakuC=m3[2];
-        });
-        var maruCA=maruC||String(sogoSortedC[0]?sogoSortedC[0].n:'1');
-        var shiroCA=shiroC||String(sogoSortedC[1]?sogoSortedC[1].n:'2');
-        var sankakuCA=sankakuC||String(sogoSortedC[2]?sogoSortedC[2].n:'3');
-        var goCA=String(sogoSortedC[4]?sogoSortedC[4].n:'5');
-        var usedCA=[maruCA,shiroCA,sankakuCA];
-        if(usedCA.indexOf(goCA)>=0){
-          var goAltCA=sogoSortedC.filter(function(b){return usedCA.indexOf(String(b.n))<0;});
-          goCA=String(goAltCA[goAltCA.length>1?1:0]?goAltCA[goAltCA.length>1?1:0].n:goCA);
-        }
-        var ngBoatsC=[];
-        text.split('\n').forEach(function(ln){
-          var mx=ln.match(/(\d)位\s*(\d)号艇\s*×/);if(mx)ngBoatsC.push(mx[2]);
-          var mx2=ln.match(/^×(\d)/);if(mx2&&ngBoatsC.indexOf(mx2[1])<0)ngBoatsC.push(mx2[1]);
-        });
-        var betsC=buildAreBetsFinal(maruCA,shiroCA,sankakuCA,goCA,ngBoatsC);
-        var honsenC=betsC.honsen;
-        var osaeeC=betsC.osaee;
-        var honsenStrC=compressBets(honsenC)||honsenC.join('/');
-        var osaeeStrC=compressBets(osaeeC)||osaeeC.join('/');
-        var betBlockC='【最終買い目】'+(honsenC.length+osaeeC.length)+'点\n本線\n'+honsenC.join('\n')+'\n抑え\n'+osaeeC.join('\n')+'\n';
-        text=text.replace(/【最終買い目】[\s\S]*?(?=【|$)/g,'');
-        var inIdxC=text.indexOf('【イン信頼度】');
-        if(inIdxC>=0){text=text.slice(0,inIdxC)+betBlockC+'\n'+text.slice(inIdxC);}
-        else{text=betBlockC+'\n'+text;}
-        // Xサマリー再構築
-        var xIdxC=text.indexOf('【Xサマリー】');
-        var hyokaC=buildHyokaOrder(calcData.parsed.boats);
-        var commentC='';
-        if(xIdxC>=0){
-          var beforeC=text.slice(0,xIdxC),afterC=text.slice(xIdxC);
-          var xLinesC=afterC.split('\n');
-          for(var xci=1;xci<xLinesC.length;xci++){
-            var xlc=xLinesC[xci].trim();
-            if(!xlc||xlc===venue+raceNum+'R'||xlc.indexOf('本線')===0||xlc.indexOf('抑え')===0||xlc==='G.'||/^[\d><=]+$/.test(xlc))continue;
-            commentC=xlc;break;
-          }
-          var newXC='【Xサマリー】\n'+venue+raceNum+'R\n'+(commentC?commentC+'\n\n':'')+hyokaC+'\n本線　'+honsenStrC+'\n抑え　'+osaeeStrC+'\n\nG.';
-          text=beforeC+newXC;
-        } else {
-          // AIがXサマリーを出力しなかった場合は末尾に追加
-          var newXC='\n【Xサマリー】\n'+venue+raceNum+'R\n\n'+hyokaC+'\n本線　'+honsenStrC+'\n抑え　'+osaeeStrC+'\n\nG.';
-          text+=newXC;
-        }
-        // autoSaveLog等の処理へ
-        document.getElementById('outText').textContent=text;
-        document.getElementById('outWrap').classList.add('show');
-        showOddsResult();
-        renderEvalCard(text,venue,raceNum);
-        autoSaveLog(text);
-        showStatus('生成完了','ok');
-        document.getElementById('genBtn').disabled=false;
-        document.getElementById('loading').classList.remove('show');
-        return;
-      }
-      var r1=text.match(/1位\s*(\d)号艇/);
-      var r2=text.match(/2位\s*(\d)号艇/);
-      var r3=text.match(/3位\s*(\d)号艇/);
-      var r4=text.match(/4位\s*(\d)号艇/);
-      var r5=text.match(/5位\s*(\d)号艇/);
-      var r6=text.match(/6位\s*(\d)号艇/);
-      var p1=r1?r1[1]:'1';
-      var p2,p3,p4,p5;
-
-      // manualOverrideがあれば印を優先適用（全モード共通）
-      if(window._manualOverride){
-        var mo=window._manualOverride;
-        if(mo.maru)p1=mo.maru;
-        if(mo.shiro)p2=mo.shiro;
-        if(mo.sankaku)p3=mo.sankaku;
-        if(mo.yonkaku)p4=mo.yonkaku;
-        window._manualOverride=null;
-      }
-
-      if(shinkido==='C'){
-        // Cモード：総合評価順そのまま
-        var usedP=[p1];
-        var nextUnused=function(arr){return ['2','3','4','5','6'].filter(function(x){return arr.indexOf(x)<0;})[0]||'2';};
-        p2=r2?r2[1]:null;p3=r3?r3[1]:null;p4=r4?r4[1]:null;p5=r5?r5[1]:null;
-        if(!p2){p2=calcData.normalResult.ab[0]?String(calcData.normalResult.ab[0].n):nextUnused(usedP);}usedP.push(p2);
-        if(!p3){p3=calcData.normalResult.ab[1]?String(calcData.normalResult.ab[1].n):nextUnused(usedP);}usedP.push(p3);
-        if(!p4){p4=nextUnused(usedP);}usedP.push(p4);
-        if(!p5){p5=nextUnused(usedP);}
-      } else if(shinkido==='A'){
-        // Aモード：1号頭固定。2着・3着はJS総合評価から1を除いた順
-        var sogoOrder=[r1,r2,r3,r4,r5,r6].filter(function(m){return m&&m[1]!=='1';}).map(function(m){return m[1];});
-        ['2','3','4','5','6'].forEach(function(x){if(sogoOrder.indexOf(x)<0)sogoOrder.push(x);});
-        p2=sogoOrder[0]||'2';
-        p3=sogoOrder[1]||'3';
-        p4=sogoOrder[2]||'4';
-        p5=sogoOrder[3]||'5';
-      } else {
-        // Bモード：1号頭4点 + JS2位評価頭4点
-        var sogoOrderB=[r1,r2,r3,r4,r5,r6].filter(function(m){return m&&m[1]!=='1';}).map(function(m){return m[1];});
-        ['2','3','4','5','6'].forEach(function(x){if(sogoOrderB.indexOf(x)<0)sogoOrderB.push(x);});
-        p2=sogoOrderB[0]||'2'; // JS2位評価（1を除く1番手）
-        p3=sogoOrderB[1]||'3';
-        p4=sogoOrderB[2]||'4';
-        p5=sogoOrderB[3]||'5';
-      }
-
-      var vb=function(a,b,c){return a&&b&&c&&a!==b&&b!==c&&a!==c;};
-      var honsen=[],osaee=[],bets={};
-      var addBetN=function(arr,a,b,c){if(!vb(a,b,c))return;var k=a+'-'+b+'-'+c;if(bets[k])return;bets[k]=true;arr.push(k);};
-
-      if(shinkido==='C'){
-        addBetN(honsen,p1,p2,p3);addBetN(honsen,p1,p3,p2);
-        addBetN(honsen,p2,p1,p3);addBetN(honsen,p2,p3,p1);
-        addBetN(osaee,p3,p1,p2);addBetN(osaee,p3,p2,p1);
-        addBetN(osaee,p1,p3,p4);addBetN(osaee,p1,p4,p3);
-      } else if(shinkido==='A'){
-        // Aモード：1号頭固定8点
-        addBetN(honsen,'1',p2,p3);addBetN(honsen,'1',p3,p2);
-        addBetN(honsen,'1',p2,p4);addBetN(honsen,'1',p3,p4);
-        addBetN(osaee,'1',p2,p5);addBetN(osaee,'1',p3,p5);
-        addBetN(osaee,'1',p4,p2);addBetN(osaee,'1',p4,p3);
-      } else {
-        // Bモード：1号頭4点 + p2頭4点
-        addBetN(honsen,'1',p2,p3);addBetN(honsen,'1',p3,p2);
-        addBetN(honsen,p2,'1',p3);addBetN(honsen,p2,p3,'1');
-        addBetN(osaee,'1',p2,p4);addBetN(osaee,'1',p4,p2);
-        addBetN(osaee,p2,'1',p4);addBetN(osaee,p2,p4,'1');
-      }
-
-      honsen=honsen.slice(0,4);osaee=osaee.slice(0,4);
-      var honsenStr=compressBets(honsen)||honsen.join('/');
-      var osaeeStr=compressBets(osaee)||osaee.join('/');
-      var betBlock='【最終買い目】'+(honsen.length+osaee.length)+'点\n本線\n'+honsen.join('\n')+'\n抑え\n'+osaee.join('\n')+'\n';
-
-      // AIが出した【最終買い目】ブロックを全て削除
-      text=text.replace(/【最終買い目】[\s\S]*?(?=【|$)/g,'');
-      // 【Xサマリー】より前にある「本線」「抑え」行も削除（重複防止）
-      var xPos=text.indexOf('【Xサマリー】');
-      if(xPos>=0){
-        var preX=text.slice(0,xPos);
-        var postX=text.slice(xPos);
-                preX=preX.split('\n').filter(function(ln){return ln.indexOf('本線')!==0&&ln.indexOf('抑え')!==0;}).join('\n');
-        text=preX+postX;
-      }
-      // 【イン信頼度】の前に挿入
-      var inIdx=text.indexOf('【イン信頼度】');
-      if(inIdx>=0){text=text.slice(0,inIdx)+betBlock+'\n'+text.slice(inIdx);}
-      else{text=betBlock+'\n'+text;}
-
-      // Xサマリー内の本線・抑え・評価順を上書き
-      // Xサマリーを完全にJS固定で再構築
-      var xIdx2=text.indexOf('【Xサマリー】');
-      if(xIdx2>=0){
-        var before2=text.slice(0,xIdx2);
-        var after2=text.slice(xIdx2);
-        // コメント行を抽出
-        var xLines2=after2.split('\n');
-        var commentLine2='';
-        for(var xi2=1;xi2<xLines2.length;xi2++){
-          var xl2=xLines2[xi2].trim();
-          if(!xl2)continue;
-          if(xl2===venue+raceNum+'R')continue;
-          if(xl2.indexOf('本線')===0||xl2.indexOf('抑え')===0)continue;
-          if(xl2==='G.')continue;
-          if(xl2.indexOf('HYOKA_ORDER')>=0)continue;
-          if(xl2.indexOf('通常モード')>=0||xl2.indexOf('信頼度')>=0)continue;
-          if(/^[\d><=]+$/.test(xl2))continue;
-          commentLine2=xl2;
-          break;
-        }
-        var hyokaOrder2=buildHyokaOrder(calcData.parsed.boats);
-        var newX2='【Xサマリー】\n'+venue+raceNum+'R\n';
-        if(commentLine2)newX2+=commentLine2+'\n\n';
-        newX2+=hyokaOrder2+'\n';
-        newX2+='本線　'+honsenStr+'\n';
-        newX2+='抑え　'+osaeeStr+'\n\n';
-        newX2+='G.';
-        text=before2+newX2;
-      }
-    }
-
-    document.getElementById('outText').textContent=text;
-    document.getElementById('outWrap').classList.add('show');
-    showOddsResult();
-    renderEvalCard(text,venue,raceNum);
-    autoSaveLog(text);
-    showStatus('生成完了','ok');
-    // 全モードで差し替えUI表示
-    var mFromText=text.match(/1位\s*(\d)号艇\s*◎/);
-    var sFromText=text.match(/2位\s*(\d)号艇\s*○/);
-    var kFromText=text.match(/3位\s*(\d)号艇\s*▲/);
-    if(mFromText&&sFromText&&kFromText){
-      showEditMarkUI(mFromText[1],sFromText[1],kFromText[1]);
-    }
-
-  } catch(e){showStatus('エラー: '+e.message,'err');}
-  finally{
-    document.getElementById('genBtn').disabled=false;
-    document.getElementById('loading').classList.remove('show');
-  }
 }
 
 function overrideShinkido(x){
@@ -2147,6 +1703,151 @@ function regenerateBets(){
   renderEvalCard(text,venue,raceNum);
   showStatus('買い目を再生成しました','ok');
 }
+
+
+async function generate(){
+  if(!calcData){showStatus('先にデータを解析してください','err');return;}
+  var venue=document.getElementById('venue').value||'?';
+  var raceNum=document.getElementById('raceNum').value||'?';
+  var key=getKey();
+  if(!key){showStatus('APIキーを保存してください','err');return;}
+  var prompt=buildPrompt();
+  document.getElementById('genBtn').disabled=true;
+  document.getElementById('loading').classList.add('show');
+  document.getElementById('outWrap').classList.remove('show');
+  document.getElementById('status').style.display='none';
+
+  try{
+    var res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        contents:[{role:'user',parts:[{text:prompt}]}],
+        generationConfig:{temperature:0.15,maxOutputTokens:16000,thinkingConfig:{thinkingBudget:0}}
+      })
+    });
+    var json=await res.json();
+    if(!res.ok)throw new Error(json.error&&json.error.message||'APIエラー');
+    var text=json.candidates&&json.candidates[0]&&json.candidates[0].content&&json.candidates[0].content.parts[0].text;
+    if(!text)throw new Error('レスポンスが空です');
+
+    // ===== 全モード共通：JS固定買い目生成 =====
+    if(calcData){
+      var shinkido=calcData.normalResult.shinkido;
+      var sogoSorted=calcData.parsed.boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
+
+      // AIの総合評価から◎○▲を取得
+      var maruFromAI=null,shiroFromAI=null,sankakuFromAI=null;
+      text.split('\n').forEach(function(ln){
+        var m1=ln.match(/(\d)位[\s\u3000]*(\d)号艇[\s\u3000]*◎/);if(m1)maruFromAI=m1[2];
+        var m2=ln.match(/(\d)位[\s\u3000]*(\d)号艇[\s\u3000]*○/);if(m2)shiroFromAI=m2[2];
+        var m3=ln.match(/(\d)位[\s\u3000]*(\d)号艇[\s\u3000]*▲/);if(m3)sankakuFromAI=m3[2];
+      });
+
+      // manualOverrideがあれば優先
+      var maru,shiro,sankaku;
+      if(window._manualOverride){
+        var mo=window._manualOverride;
+        maru=mo.maru||maruFromAI||String(sogoSorted[0]?sogoSorted[0].n:'1');
+        shiro=mo.shiro||shiroFromAI||String(sogoSorted[1]?sogoSorted[1].n:'2');
+        sankaku=mo.sankaku||sankakuFromAI||String(sogoSorted[2]?sogoSorted[2].n:'3');
+        window._manualOverride=null;
+      } else if(shinkido==='A'){
+        // Aモード：◎は1号固定、○はsogoRank1位(1号以外)
+        maru='1';
+        var shiroList=sogoSorted.filter(function(b){return String(b.n)!=='1';});
+        shiro=shiroFromAI||(shiroList[0]?String(shiroList[0].n):'2');
+        sankaku=sankakuFromAI||(shiroList[1]?String(shiroList[1].n):'3');
+      } else if(shinkido==='B'){
+        // Bモード：◎はsogoRank1位、○は1号(sogoRank1位が1号なら2位)
+        maru=maruFromAI||String(sogoSorted[0]?sogoSorted[0].n:'1');
+        shiro=shiroFromAI||(maru!=='1'?'1':String(sogoSorted[1]?sogoSorted[1].n:'2'));
+        sankaku=sankakuFromAI||String(sogoSorted.filter(function(b){return String(b.n)!==maru&&String(b.n)!==shiro;})[0]?sogoSorted.filter(function(b){return String(b.n)!==maru&&String(b.n)!==shiro;})[0].n:'3');
+      } else {
+        // Cモード：sogoRankそのまま
+        maru=maruFromAI||String(sogoSorted[0]?sogoSorted[0].n:'1');
+        shiro=shiroFromAI||String(sogoSorted[1]?sogoSorted[1].n:'2');
+        sankaku=sankakuFromAI||String(sogoSorted[2]?sogoSorted[2].n:'3');
+      }
+
+      // go=sogoRank5位（◎○▲と重複しない）
+      var usedMSS=[maru,shiro,sankaku];
+      var goList=sogoSorted.filter(function(b){return usedMSS.indexOf(String(b.n))<0;});
+      var go=String(goList[1]?goList[1].n:goList[0]?goList[0].n:'5');
+
+      // ng艇取得（AIの×印）
+      var ngBoats=[];
+      text.split('\n').forEach(function(ln){
+        var mx=ln.match(/(\d)位[\s\u3000]*(\d)号艇[\s\u3000]*×/);if(mx)ngBoats.push(mx[2]);
+        var mx2=ln.match(/^×(\d)/);if(mx2&&ngBoats.indexOf(mx2[1])<0)ngBoats.push(mx2[1]);
+      });
+
+      // 逃げ率60%以上で12点以上なら8点に戻す
+      var nigeRateVal=calcData.parsed.nigeRate;
+      if(currentPts>=12&&nigeRateVal!==null&&nigeRateVal>=60){
+        currentPts=8;setPts(8);
+        showStatus('逃げ率'+nigeRateVal+'%のため8点に変更','ok');
+      }
+
+      // JS固定で買い目生成
+      var betsResult=buildAreBetsFinal(maru,shiro,sankaku,go,ngBoats);
+      var honsen=betsResult.honsen;
+      var osaee=betsResult.osaee;
+      var honsenStr=compressBets(honsen)||honsen.join('/');
+      var osaeeStr=osaee.length?(compressBets(osaee)||osaee.join('/')):'';
+      var totalPts=honsen.length+osaee.length;
+
+      // 【最終買い目】ブロックを置換
+      var betBlock='【最終買い目】'+totalPts+'点\n本線\n'+honsen.join('\n')+(osaee.length?'\n抑え\n'+osaee.join('\n'):'')+'\n';
+      text=text.replace(/【最終買い目】[\s\S]*?(?=【|$)/g,'');
+      var inIdx=text.indexOf('【イン信頼度】');
+      if(inIdx>=0){text=text.slice(0,inIdx)+betBlock+'\n'+text.slice(inIdx);}
+      else{text=betBlock+'\n'+text;}
+
+      // Xサマリー再構築
+      var hyokaOrder=buildHyokaOrder(calcData.parsed.boats);
+      var xIdx2=text.indexOf('【Xサマリー】');
+      var commentLine='';
+      if(xIdx2>=0){
+        var before2=text.slice(0,xIdx2),after2=text.slice(xIdx2);
+        var xLines2=after2.split('\n');
+        for(var xi2=1;xi2<xLines2.length;xi2++){
+          var xl2=xLines2[xi2].trim();
+          if(!xl2||xl2===venue+raceNum+'R'||xl2.indexOf('本線')===0||xl2.indexOf('抑え')===0||xl2==='G.'||/^[\d><=＞＜＝]+$/.test(xl2))continue;
+          commentLine=xl2;break;
+        }
+        var newX='【Xサマリー】\n'+venue+raceNum+'R\n';
+        if(commentLine)newX+=commentLine+'\n\n';
+        newX+=hyokaOrder+'\n';
+        newX+='本線\u3000'+honsenStr+'\n';
+        if(osaeeStr)newX+='抑え\u3000'+osaeeStr+'\n';
+        newX+='\nG.';
+        text=before2+newX;
+      } else {
+        text+='\n【Xサマリー】\n'+venue+raceNum+'R\n\n'+hyokaOrder+'\n本線\u3000'+honsenStr+(osaeeStr?'\n抑え\u3000'+osaeeStr:'')+'\n\nG.';
+      }
+    }
+
+    document.getElementById('outText').textContent=text;
+    document.getElementById('outWrap').classList.add('show');
+    showOddsResult();
+    renderEvalCard(text,venue,raceNum);
+    autoSaveLog(text);
+    showStatus('生成完了','ok');
+
+    // 差し替えUIを表示
+    var mFT=text.match(/1位[\s\u3000]*(\d)号艇[\s\u3000]*◎/);
+    var sFT=text.match(/2位[\s\u3000]*(\d)号艇[\s\u3000]*○/);
+    var kFT=text.match(/3位[\s\u3000]*(\d)号艇[\s\u3000]*▲/);
+    if(mFT&&sFT&&kFT)showEditMarkUI(mFT[1],sFT[1],kFT[1]);
+
+  } catch(e){showStatus('エラー: '+e.message,'err');}
+  finally{
+    document.getElementById('genBtn').disabled=false;
+    document.getElementById('loading').classList.remove('show');
+  }
+}
+
 /* ===== ログ機能 ===== */
 function autoSaveLog(text){
   if(!calcData)return;
