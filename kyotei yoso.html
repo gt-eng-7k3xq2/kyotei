@@ -233,6 +233,15 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
   <button onclick="copyXAndSogo()" style="width:100%;margin-top:6px;padding:11px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;" id="copyXSogoBtn">𝕏 総合評価＋サマリーをコピー</button>
   <button onclick="copyXOnly()" style="width:100%;margin-top:6px;padding:11px;background:#1a1a2a;color:#c9a84c;border:1px solid #3a3a5a;border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;" id="copyXOnlyBtn">𝕏 Xサマリーのみコピー</button>
   <div id="resultInput" style="display:none;"></div>
+  <div id="editMarkWrap" style="display:none;margin-top:12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;">
+    <div style="font-size:10px;color:var(--text-sub);font-weight:700;margin-bottom:8px;">◎○▲を差し替えて再生成</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <div style="flex:1;"><div style="font-size:10px;color:var(--accent);margin-bottom:4px;">◎</div><select id="editMaru" class="sel" style="font-size:13px;"></select></div>
+      <div style="flex:1;"><div style="font-size:10px;color:var(--blue);margin-bottom:4px;">○</div><select id="editShiro" class="sel" style="font-size:13px;"></select></div>
+      <div style="flex:1;"><div style="font-size:10px;color:#7a6040;margin-bottom:4px;">▲</div><select id="editSankaku" class="sel" style="font-size:13px;"></select></div>
+    </div>
+    <button onclick="regenerateBets()" style="width:100%;padding:11px;background:var(--blue-light);color:var(--blue);border:1px solid #c0d8f0;border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;touch-action:manipulation;">🔄 買い目を再生成</button>
+  </div>
   <div id="oddsResult"></div>
   <div class="eval-card-wrap" id="evalCardWrap">
     <div class="div"></div>
@@ -312,24 +321,16 @@ function showStep(n){currentStep=n;}
 function initMarkGrid(){
   if(!calcData)return;
   var boats = calcData.parsed.boats.slice().sort(function(a,b){return a.nyuse-b.nyuse;});
-  var shinkido = calcData.normalResult.shinkido;
   var sogoSorted = calcData.parsed.boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
 
-  // デフォルト印をモード別に設定
+  // モードA/B/Cに関わらず印はsogoRankで固定
   manualMarks = {};
-  var maruN, shiroN, sankakuN, yonkakuN;
-  if(shinkido==='A'){
-    maruN='1';
-    shiroN=String(sogoSorted[0]&&sogoSorted[0].n!==1?sogoSorted[0].n:sogoSorted[1]?sogoSorted[1].n:2);
-  } else if(shinkido==='B'){
-    maruN=String(sogoSorted[0]?sogoSorted[0].n:1);
-    shiroN=maruN!=='1'?'1':String(sogoSorted[1]?sogoSorted[1].n:2);
-  } else {
-    maruN=String(sogoSorted[0]?sogoSorted[0].n:1);
-    shiroN=String(sogoSorted[1]?sogoSorted[1].n:2);
-  }
-  sankakuN=String(sogoSorted.filter(function(b){return String(b.n)!==maruN&&String(b.n)!==shiroN;})[0]?sogoSorted.filter(function(b){return String(b.n)!==maruN&&String(b.n)!==shiroN;})[0].n:3);
-  yonkakuN=String(sogoSorted.filter(function(b){return String(b.n)!==maruN&&String(b.n)!==shiroN&&String(b.n)!==sankakuN;})[0]?sogoSorted.filter(function(b){return String(b.n)!==maruN&&String(b.n)!==shiroN&&String(b.n)!==sankakuN;})[0].n:4);
+  var maruN   = String(sogoSorted[0]?sogoSorted[0].n:1);
+  var shiroN  = String(sogoSorted[1]?sogoSorted[1].n:2);
+  var rem1    = sogoSorted.filter(function(b){return String(b.n)!==maruN&&String(b.n)!==shiroN;});
+  var sankakuN= String(rem1[0]?rem1[0].n:3);
+  var rem2    = rem1.filter(function(b){return String(b.n)!==sankakuN;});
+  var yonkakuN= String(rem2[0]?rem2[0].n:4);
 
   [1,2,3,4,5,6].forEach(function(n){
     var ns=String(n);
@@ -409,7 +410,7 @@ function initStep2ModeRow(){
   row.innerHTML=['A','B','C'].map(function(x){
     var isActive=x===shinkido;
     var color=x==='A'?'var(--blue)':x==='B'?'var(--green)':'var(--accent)';
-    return '<button onclick="step2OverrideShinkido('+JSON.stringify(x)+')" id="step2sh_'+x+'" style="flex:1;padding:10px;border-radius:4px;font-size:15px;font-weight:700;-webkit-appearance:none;border:2px solid '+(isActive?color:'var(--border)')+';background:'+(isActive?color:'var(--surface)')+';color:'+(isActive?'#fff':'var(--text-sub)')+';">'+x+'</button>';
+    return '<button onclick="step2OverrideShinkido(\''+x+'\')" id="step2sh_'+x+'" style="flex:1;padding:10px;border-radius:4px;font-size:15px;font-weight:700;-webkit-appearance:none;cursor:pointer;touch-action:manipulation;border:2px solid '+(isActive?color:'var(--border)')+';background:'+(isActive?color:'var(--surface)')+';color:'+(isActive?'#fff':'var(--text-sub)')+';">'+x+'</button>';
   }).join('');
 }
 
@@ -487,12 +488,6 @@ function setMode(m){
 
 function setPts(pts){
   currentPts=pts;
-  ['pts8','pts12','pts14','pts15'].forEach(function(id){
-    var el=document.getElementById(id);
-    if(el)el.className='pts-btn inactive';
-  });
-  var activeEl=document.getElementById('pts'+pts);
-  if(activeEl)activeEl.className='pts-btn active';
   [4,6,8,12,14,15].forEach(function(p){
     var btn=document.getElementById('pts'+p);
     if(btn)btn.className='pts-btn '+(p===pts?'active':'inactive');
@@ -977,7 +972,6 @@ function runCalc(){
   calcData={parsed:parsed,areResult:areResult,furikiriResult:furikiriResult,cands1st:cands1st,normalResult:normalResult};
   displayCalcResults(calcData);
   document.getElementById('calcResult').classList.add('show');
-  var step1Next=document.getElementById('step1Next');if(step1Next){step1Next.style.opacity='1';step1Next.style.pointerEvents='auto';step1Next.style.cursor='pointer';}
   goStep2();
   }catch(e){showStatus('エラー: '+e.message,'err');console.error(e);}
 }
@@ -1351,9 +1345,9 @@ function getYonkaku(maru,shiro,sankaku,go,ngBoats,allBoats){
 }
 
 function buildAreBetsFinal(maru,shiro,sankaku,go,ngBoats){
-  // 全モード共通：15点の母集団から点数に応じて削る
   var allBoats=['1','2','3','4','5','6'];
   var yonkaku=getYonkaku(maru,shiro,sankaku,go,ngBoats,allBoats);
+  var shinkido=calcData?calcData.normalResult.shinkido:'B';
 
   var seen={};
   var addBet=function(arr,a,b,c){
@@ -1361,27 +1355,53 @@ function buildAreBetsFinal(maru,shiro,sankaku,go,ngBoats){
     var k=a+'-'+b+'-'+c;if(seen[k])return;seen[k]=true;arr.push(k);
   };
 
-  // ===== 15点の母集団（優先順位固定） =====
-  var allHonsen=[];
-  addBet(allHonsen,maru,shiro,sankaku);   // 1-2-3
-  addBet(allHonsen,maru,sankaku,shiro);   // 1-3-2
-  addBet(allHonsen,shiro,maru,sankaku);   // 2-1-3
-  addBet(allHonsen,shiro,sankaku,maru);   // 2-3-1
-  addBet(allHonsen,maru,yonkaku,shiro);   // 1-4-2
-  addBet(allHonsen,maru,shiro,yonkaku);   // 1-2-4
+  var allHonsen=[],allOsaee=[];
 
-  var allOsaee=[];
-  addBet(allOsaee,shiro,yonkaku,maru);    // 2-4-1
-  addBet(allOsaee,shiro,maru,yonkaku);    // 2-1-4
-  addBet(allOsaee,maru,shiro,go);         // 1-2-5
-  addBet(allOsaee,maru,go,shiro);         // 1-5-2
-  addBet(allOsaee,shiro,maru,go);         // 2-1-5
-  addBet(allOsaee,shiro,go,maru);         // 2-5-1
-  addBet(allOsaee,maru,sankaku,yonkaku);  // 1-3-4
-  addBet(allOsaee,maru,yonkaku,sankaku);  // 1-4-3
-  addBet(allOsaee,maru,sankaku,go);       // 1-3-5
+  if(shinkido==='A'){
+    // Aモード：◎頭のみ（逃げ一辺倒）
+    // 本線6点：maru頭に固定
+    addBet(allHonsen,maru,shiro,sankaku);    // ◎-○-▲
+    addBet(allHonsen,maru,sankaku,shiro);    // ◎-▲-○
+    addBet(allHonsen,maru,shiro,yonkaku);    // ◎-○-△
+    addBet(allHonsen,maru,yonkaku,shiro);    // ◎-△-○
+    addBet(allHonsen,maru,sankaku,yonkaku);  // ◎-▲-△
+    addBet(allHonsen,maru,yonkaku,sankaku);  // ◎-△-▲
+    // 抑え9点：maru頭のみ
+    addBet(allOsaee,maru,shiro,go);          // ◎-○-⑤
+    addBet(allOsaee,maru,go,shiro);          // ◎-⑤-○
+    addBet(allOsaee,maru,sankaku,go);        // ◎-▲-⑤
+    addBet(allOsaee,maru,go,sankaku);        // ◎-⑤-▲
+    addBet(allOsaee,maru,yonkaku,go);        // ◎-△-⑤
+    addBet(allOsaee,maru,go,yonkaku);        // ◎-⑤-△
+    // 残り3点
+    var restA=allBoats.filter(function(x){return x!==maru&&x!==shiro&&x!==sankaku&&x!==yonkaku&&x!==go;});
+    if(restA[0]){
+      addBet(allOsaee,maru,shiro,restA[0]);
+      addBet(allOsaee,maru,sankaku,restA[0]);
+      addBet(allOsaee,maru,restA[0],shiro);
+    }
+  } else {
+    // Bモード・Cモード：◎頭＋○頭の両方
+    // 本線6点
+    addBet(allHonsen,maru,shiro,sankaku);    // ◎-○-▲
+    addBet(allHonsen,maru,sankaku,shiro);    // ◎-▲-○
+    addBet(allHonsen,shiro,maru,sankaku);    // ○-◎-▲
+    addBet(allHonsen,shiro,sankaku,maru);    // ○-▲-◎
+    addBet(allHonsen,maru,yonkaku,shiro);    // ◎-△-○
+    addBet(allHonsen,maru,shiro,yonkaku);    // ◎-○-△
+    // 抑え9点
+    addBet(allOsaee,shiro,yonkaku,maru);     // ○-△-◎
+    addBet(allOsaee,shiro,maru,yonkaku);     // ○-◎-△
+    addBet(allOsaee,maru,shiro,go);          // ◎-○-⑤
+    addBet(allOsaee,maru,go,shiro);          // ◎-⑤-○
+    addBet(allOsaee,shiro,maru,go);          // ○-◎-⑤
+    addBet(allOsaee,shiro,go,maru);          // ○-⑤-◎
+    addBet(allOsaee,maru,sankaku,yonkaku);   // ◎-▲-△
+    addBet(allOsaee,maru,yonkaku,sankaku);   // ◎-△-▲
+    addBet(allOsaee,maru,sankaku,go);        // ◎-▲-⑤
+  }
 
-  // ===== 点数に応じて切り出し =====
+  // 点数に応じて切り出し
   var honsen,osaee;
   if(currentPts===4){
     honsen=allHonsen.slice(0,4);osaee=[];
@@ -1456,7 +1476,7 @@ function copyXOnly(){
   var xIdx=text.indexOf('【Xサマリー】');
   if(xIdx<0){showStatus('Xサマリーが見つかりません','err');return;}
   var xEnd=text.indexOf('\n【',xIdx+1);
-  var xRaw=xEnd>=0?text.slice(xIdx+8,xEnd):text.slice(xIdx+8);
+  var xRaw=xEnd>=0?text.slice(xIdx+7,xEnd):text.slice(xIdx+7);
   var out=formatXSummary(xRaw);
   var btn=document.getElementById('copyXOnlyBtn');
   navigator.clipboard.writeText(out).then(function(){
@@ -1472,7 +1492,7 @@ function copyXAndSogo(){
   var sogoRaw=sogoIdx>=0?(sogoEnd>=0?text.slice(sogoIdx,sogoEnd):text.slice(sogoIdx)):'';
   var xIdx=text.indexOf('【Xサマリー】');
   var xEnd=text.indexOf('\n【',xIdx+1);
-  var xRaw=xIdx>=0?(xEnd>=0?text.slice(xIdx+8,xEnd):text.slice(xIdx+8)):'';
+  var xRaw=xIdx>=0?(xEnd>=0?text.slice(xIdx+7,xEnd):text.slice(xIdx+7)):'';
   var out='';
   if(sogoRaw)out+=sogoRaw.trim();
   if(xRaw)out+=(out?'\n\n':'')+'【Xサマリー】\n'+formatXSummary(xRaw);
@@ -1764,27 +1784,20 @@ async function generate(){
         var m3=ln.match(/(\d)位[\s\u3000]*(\d)号艇[\s\u3000]*▲/);if(m3)sankakuFromAI=m3[2];
       });
 
-      // manualOverrideがあれば優先
+      // モードA/B/Cに関わらず◎○▲はsogoRankで固定
+      // （モードの違いは買い目構成のみ、buildAreBetsFinal内で処理）
       var maru,shiro,sankaku;
       if(window._manualOverride){
         var mo=window._manualOverride;
-        maru=mo.maru||maruFromAI||String(sogoSorted[0]?sogoSorted[0].n:'1');
-        shiro=mo.shiro||shiroFromAI||String(sogoSorted[1]?sogoSorted[1].n:'2');
-        sankaku=mo.sankaku||sankakuFromAI||String(sogoSorted[2]?sogoSorted[2].n:'3');
+        maru=mo.maru||String(sogoSorted[0]?sogoSorted[0].n:'1');
+        shiro=mo.shiro||String(sogoSorted[1]?sogoSorted[1].n:'2');
+        sankaku=mo.sankaku||String(sogoSorted[2]?sogoSorted[2].n:'3');
         window._manualOverride=null;
-      } else if(shinkido==='A'){
-        maru='1';
-        var shiroList=sogoSorted.filter(function(b){return String(b.n)!=='1';});
-        shiro=shiroFromAI||(shiroList[0]?String(shiroList[0].n):'2');
-        sankaku=sankakuFromAI||(shiroList[1]?String(shiroList[1].n):'3');
-      } else if(shinkido==='B'){
-        maru=maruFromAI||String(sogoSorted[0]?sogoSorted[0].n:'1');
-        shiro=shiroFromAI||(maru!=='1'?'1':String(sogoSorted[1]?sogoSorted[1].n:'2'));
-        sankaku=sankakuFromAI||String(sogoSorted.filter(function(b){return String(b.n)!==maru&&String(b.n)!==shiro;})[0]?sogoSorted.filter(function(b){return String(b.n)!==maru&&String(b.n)!==shiro;})[0].n:'3');
       } else {
-        maru=maruFromAI||String(sogoSorted[0]?sogoSorted[0].n:'1');
-        shiro=shiroFromAI||String(sogoSorted[1]?sogoSorted[1].n:'2');
-        sankaku=sankakuFromAI||String(sogoSorted[2]?sogoSorted[2].n:'3');
+        maru=String(sogoSorted[0]?sogoSorted[0].n:'1');
+        shiro=String(sogoSorted[1]?sogoSorted[1].n:'2');
+        var remG=sogoSorted.filter(function(b){return String(b.n)!==maru&&String(b.n)!==shiro;});
+        sankaku=String(remG[0]?remG[0].n:'3');
       }
 
       // go=sogoRank5位（◎○▲と重複しない）
