@@ -278,6 +278,8 @@ function goStep2(){
   initMarkGrid();
   initStep2ModeRow();
   initStep2Shinkido();
+  // 点数を8点にリセット（前回の選択をクリア）
+  setPts(8);
   showSec('sec2');
   setTimeout(function(){
     var el=document.getElementById('sec2');
@@ -435,7 +437,7 @@ function initStep2Shinkido(){
 }
 
 var currentMode = 'normal';
-var currentPts = 12; // 荒れモード買い目点数
+var currentPts = 8; // デフォルト点数
 var calcData = null;
 
 function clearAll(){
@@ -1828,18 +1830,43 @@ async function generate(){
         var xLines2=after2.split('\n');
         for(var xi2=1;xi2<xLines2.length;xi2++){
           var xl2=xLines2[xi2].trim();
-          if(!xl2||xl2===venue+raceNum+'R'||xl2.indexOf('本線')===0||xl2.indexOf('抑え')===0||xl2==='G.'||/^[\d><=＞＜＝]+$/.test(xl2))continue;
+          // スキップ条件：空行・場所R行・本線・抑え・G.・数字のみの評価順
+          if(!xl2)continue;
+          if(xl2===venue+raceNum+'R')continue;
+          if(xl2.indexOf('本線')===0||xl2.indexOf('抑え')===0)continue;
+          if(xl2==='G.')continue;
+          if(/^[\d><=＞＜＝>>]+$/.test(xl2))continue;
+          if(xl2.startsWith('【'))break; // 次のブロックに入ったら終了
           commentLine=xl2;break;
         }
-        var newX='【Xサマリー】\n'+venue+raceNum+'R\n';
-        if(commentLine)newX+=commentLine+'\n\n';
-        newX+=hyokaOrder+'\n';
-        newX+='本線\u3000'+honsen.join('/')+'\n';
-        if(osaee.length)newX+='抑え\u3000'+osaee.join('/')+'\n';
-        newX+='\nG.';
-        text=before2+newX;
+      }
+      // コメントが取れなかった場合：【評価】ブロックから◎の短評を拾う
+      if(!commentLine){
+        var evalIdx=text.indexOf('【評価】');
+        if(evalIdx>=0){
+          var evalLines=text.slice(evalIdx).split('\n');
+          for(var ei=1;ei<evalLines.length;ei++){
+            var el2=evalLines[ei].trim();
+            if(!el2||el2.startsWith('【'))break;
+            if(el2.startsWith('◎')){
+              // 「◎1 苗字(短評)」から短評部分を取り出す
+              var mp=el2.match(/◎\d\s+\S+\((.+?)\)/);
+              if(mp)commentLine='❶'+el2.replace(/^◎\d\s*/,'').replace(/\(.+\)/,'').trim()+'。';
+              break;
+            }
+          }
+        }
+      }
+      var newX='【Xサマリー】\n'+venue+raceNum+'R\n';
+      if(commentLine)newX+=commentLine+'\n\n';
+      newX+=hyokaOrder+'\n';
+      newX+='本線\u3000'+honsen.join('/')+'\n';
+      if(osaee.length)newX+='抑え\u3000'+osaee.join('/')+'\n';
+      newX+='\nG.';
+      if(xIdx2>=0){
+        text=text.slice(0,xIdx2)+newX;
       } else {
-        text+='\n【Xサマリー】\n'+venue+raceNum+'R\n\n'+hyokaOrder+'\n本線\u3000'+honsen.join('/')+(osaee.length?'\n抑え\u3000'+osaee.join('/'):'')+'\n\nG.';
+        text+='\n'+newX;
       }
     }
 
