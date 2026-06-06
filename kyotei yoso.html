@@ -80,20 +80,15 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
 .copy-btn.ok{background:var(--green-light);color:var(--green);border-color:#a0d8b0;}
 .div{height:1px;background:var(--border);margin:4px 0 14px;}
 
-/* ===== 対話型STEP UI ===== */
-.step-section{display:none;animation:fadeIn 0.2s ease;}
-.step-section.active{display:block;}
-@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
-.step-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
-.step-num{width:22px;height:22px;background:var(--text);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;}
-.step-num.done{background:var(--green);}
-.step-title{font-size:13px;font-weight:700;color:var(--text);}
-.step-next-btn{width:100%;padding:13px;background:var(--text);color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:700;-webkit-appearance:none;margin-top:12px;font-family:'Noto Serif JP',serif;letter-spacing:1px;cursor:pointer;}
-.step-next-btn:disabled{background:var(--border);color:var(--text-muted);}
+/* ===== 縦並びレイアウト ===== */
+.section-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;margin-bottom:12px;}
+.section-card.hidden{display:none;}
+.sec-step-label{font-size:10px;color:var(--text-sub);letter-spacing:1.5px;font-weight:700;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px;text-transform:uppercase;}
+.step-next-btn{width:100%;padding:13px;background:var(--text);color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:700;-webkit-appearance:none;margin-top:12px;font-family:'Noto Serif JP',serif;letter-spacing:1px;cursor:pointer;touch-action:manipulation;}
 /* 印選択ボタン */
-.mark-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;position:relative;z-index:100;isolation:isolate;}
 .mark-boat-btn{aspect-ratio:1;border-radius:6px;border:1px solid var(--border);background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;-webkit-appearance:none;gap:2px;position:relative;z-index:101;-webkit-tap-highlight-color:rgba(0,0,0,0.1);touch-action:manipulation;user-select:none;-webkit-user-select:none;}
 /* プルダウン式印カード */
+.mark-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;position:relative;z-index:100;isolation:isolate;}
 .mark-card{border-radius:8px;border:2px solid var(--border);background:var(--bg);padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:5px;position:relative;}
 .mark-card.mark-maru{border-color:var(--accent);background:var(--accent-light);}
 .mark-card.mark-shiro{border-color:var(--blue);background:var(--blue-light);}
@@ -158,12 +153,9 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
   </div>
 </div>
 
-<!-- STEP1：データ入力・解析 -->
-<div class="sec step-section active" id="step1">
-  <div class="step-header">
-    <div class="step-num" id="stepNum1">1</div>
-    <div class="step-title">レースデータを入力</div>
-  </div>
+<!-- セクション1：データ入力・解析 -->
+<div class="section-card" id="sec1">
+  <div class="sec-step-label">① レースデータを入力</div>
   <div class="race-row" style="margin-bottom:10px;">
     <div class="sel-w">
       <select class="sel" id="venue" onchange="saveVenueRace()">
@@ -188,21 +180,17 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
     <button class="calc-btn" style="flex:1;margin-top:0;" onclick="runCalc()">⚡ データを解析する</button>
     <button onclick="clearAll()" style="padding:13px 16px;background:#f8f7f4;color:#888;border:1px solid #e0dcd6;border-radius:4px;font-size:13px;cursor:pointer;-webkit-appearance:none;">✕</button>
   </div>
-  <button class="step-next-btn" id="step1Next" onclick="goStep2()" style="opacity:0.4;pointer-events:none;">次へ：印・点数を確認 →</button>
 </div>
 
-<!-- 解析結果：STEP間で常時表示 -->
+<!-- 解析結果：常時表示 -->
 <div class="calc-result" id="calcResult" style="margin-bottom:12px;">
   <div style="font-size:11px;color:#c9a84c;font-weight:700;margin-bottom:8px;">📊 解析結果</div>
   <div id="calcContent"></div>
 </div>
 
-<!-- STEP2：印確認・点数選択 -->
-<div class="sec step-section" id="step2">
-  <div class="step-header">
-    <div class="step-num" id="stepNum2">2</div>
-    <div class="step-title">印と点数を確認・調整</div>
-  </div>
+<!-- セクション2：印・点数設定（解析後に表示） -->
+<div class="section-card hidden" id="sec2">
+  <div class="sec-step-label">② 印と点数を確認・調整</div>
 
   <!-- 信頼度表示 -->
   <div id="step2ShinkidoDisp" style="margin-bottom:12px;"></div>
@@ -227,23 +215,16 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
     <button class="pts-btn inactive" id="pts15" onclick="setPts(15)">15点<br><span style="font-size:10px;font-weight:400;">本線6+抑え9</span></button>
   </div>
 
-  <div style="display:flex;gap:8px;margin-top:4px;">
-    <button onclick="goStep1()" style="padding:12px 16px;background:var(--bg);color:var(--text-sub);border:1px solid var(--border);border-radius:4px;font-size:13px;-webkit-appearance:none;">← 戻る</button>
-    <button class="step-next-btn" style="margin-top:0;" onclick="goStep3()">予想を生成する 🎯</button>
-  </div>
+  <button class="step-next-btn" id="generateBtn" onclick="doGenerate()">予想を生成する 🎯</button>
 </div>
 
-<!-- STEP3：生成・結果 -->
-<div class="sec step-section" id="step3">
-  <div class="step-header">
-    <div class="step-num done" id="stepNum3">3</div>
-    <div class="step-title">予想結果</div>
-  </div>
-  <button onclick="goStep2()" style="width:100%;padding:10px;background:var(--bg);color:var(--text-sub);border:1px solid var(--border);border-radius:4px;font-size:12px;-webkit-appearance:none;margin-bottom:12px;">← 印・点数を変更する</button>
+<!-- セクション3：生成結果（生成後に表示） -->
+<div class="section-card hidden" id="sec3">
+  <div class="sec-step-label">③ 予想結果</div>
   <div class="loading" id="loading">
     <div class="spinner"></div>
     <div class="loading-txt">Gemini が予想を生成中...</div>
-</div>
+  </div>
   <div class="out-wrap" id="outWrap">
   <div class="div"></div>
   <div class="out-hdr">予想結果</div>
@@ -273,52 +254,58 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
     <p class="eval-hint">または📱<span>スクリーンショット</span>でも保存できます</p>
   </div>
 </div>
+</div>
 <div id="logSummary" style="display:none;margin-top:12px;padding:0 0 20px;"></div>
 <div id="logAnalysis" style="display:none;margin-top:4px;"></div>
 
 <script>
 
-// ===== STEP制御 =====
+// ===== 縦並びレイアウト制御 =====
 var currentStep = 1;
-var manualMarks = {}; // {1:'maru', 2:'shiro', 3:'sankaku', 4:'yonkaku', 5:'batsu', 6:'batsu'}
+var manualMarks = {};
+
+function showSec(id){
+  var el=document.getElementById(id);
+  if(el){el.classList.remove('hidden');}
+}
 
 function goStep1(){
-  showStep(1);
+  // clearAllで代替（何もしない）
 }
 
 function goStep2(){
   if(!calcData){showStatus('先にデータを解析してください','err');return;}
-  // STEPナンバー更新
-  document.getElementById('stepNum1').classList.add('done');
-  // STEP2の印グリッドを初期化
   initMarkGrid();
-  // モードボタン初期化
   initStep2ModeRow();
-  // 信頼度表示
   initStep2Shinkido();
-  showStep(2);
+  showSec('sec2');
+  setTimeout(function(){
+    var el=document.getElementById('sec2');
+    if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  },100);
 }
 
 function goStep3(){
-  // 印をmanualMarksから取得してoverride
   applyManualMarks();
-  showStep(3);
-  document.getElementById('stepNum2').classList.add('done');
-  // 生成実行
+  showSec('sec3');
+  setTimeout(function(){
+    var el=document.getElementById('sec3');
+    if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  },100);
   generate();
 }
 
-function showStep(n){
-  currentStep = n;
-  [1,2,3].forEach(function(i){
-    var el = document.getElementById('step'+i);
-    if(el){
-      if(i===n) el.classList.add('active');
-      else el.classList.remove('active');
-    }
-  });
-  window.scrollTo(0,0);
+function doGenerate(){
+  applyManualMarks();
+  showSec('sec3');
+  setTimeout(function(){
+    var el=document.getElementById('sec3');
+    if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  },100);
+  generate();
 }
+
+function showStep(n){currentStep=n;}
 
 function initMarkGrid(){
   if(!calcData)return;
@@ -454,16 +441,17 @@ var calcData = null;
 function clearAll(){
   var editWrap=document.getElementById('editMarkWrap');
   if(editWrap)editWrap.style.display='none';
-  var s1n=document.getElementById('step1Next');if(s1n){s1n.style.opacity='0.4';s1n.style.pointerEvents='none';}
   document.getElementById('raceData').value='';
   document.getElementById('calcResult').classList.remove('show');
   document.getElementById('calcContent').innerHTML='';
   document.getElementById('outWrap').classList.remove('show');
   document.getElementById('outText').textContent='';
-  document.getElementById('status').style.display='none';
+  var s2=document.getElementById('sec2');if(s2)s2.classList.add('hidden');
+  var s3=document.getElementById('sec3');if(s3)s3.classList.add('hidden');
   try{document.getElementById('venue').value='';}catch(e){}
   try{document.getElementById('raceNum').value='';}catch(e){}
   calcData=null;
+  window.scrollTo(0,0);
 }
 
 function saveKey(){
@@ -988,6 +976,7 @@ function runCalc(){
   displayCalcResults(calcData);
   document.getElementById('calcResult').classList.add('show');
   var step1Next=document.getElementById('step1Next');if(step1Next){step1Next.style.opacity='1';step1Next.style.pointerEvents='auto';step1Next.style.cursor='pointer';}
+  goStep2();
   }catch(e){showStatus('エラー: '+e.message,'err');console.error(e);}
 }
 
@@ -1729,21 +1718,36 @@ async function generate(){
   var prompt=buildPrompt();
   document.getElementById('loading').classList.add('show');
   document.getElementById('outWrap').classList.remove('show');
-  document.getElementById('status').style.display='none';
+
+  // 60秒タイムアウト
+  var controller=new AbortController();
+  var timeoutId=setTimeout(function(){controller.abort();},60000);
 
   try{
     var res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
+      signal:controller.signal,
       body:JSON.stringify({
         contents:[{role:'user',parts:[{text:prompt}]}],
         generationConfig:{temperature:0.15,maxOutputTokens:3000,thinkingConfig:{thinkingBudget:0}}
       })
     });
+    clearTimeout(timeoutId);
     var json=await res.json();
-    if(!res.ok)throw new Error(json.error&&json.error.message||'APIエラー');
+    if(!res.ok)throw new Error(json.error&&json.error.message||'APIエラー '+res.status);
     var text=json.candidates&&json.candidates[0]&&json.candidates[0].content&&json.candidates[0].content.parts[0].text;
-    if(!text)throw new Error('レスポンスが空です');
+    if(!text){
+      // finishReasonを確認
+      var reason=json.candidates&&json.candidates[0]&&json.candidates[0].finishReason||'不明';
+      throw new Error('レスポンスが空です (finishReason:'+reason+')');
+    }
+
+    // 見送り推奨は表示するだけで生成続行
+    if(text.indexOf('見送り推奨')>=0&&text.length<300){
+      showStatus('⚠️ 見送り推奨レース（生成続行）','ok');
+      // 通常の買い目生成に続ける
+    }
 
     // ===== 全モード共通：JS固定買い目生成 =====
     if(calcData){
@@ -1767,18 +1771,15 @@ async function generate(){
         sankaku=mo.sankaku||sankakuFromAI||String(sogoSorted[2]?sogoSorted[2].n:'3');
         window._manualOverride=null;
       } else if(shinkido==='A'){
-        // Aモード：◎は1号固定、○はsogoRank1位(1号以外)
         maru='1';
         var shiroList=sogoSorted.filter(function(b){return String(b.n)!=='1';});
         shiro=shiroFromAI||(shiroList[0]?String(shiroList[0].n):'2');
         sankaku=sankakuFromAI||(shiroList[1]?String(shiroList[1].n):'3');
       } else if(shinkido==='B'){
-        // Bモード：◎はsogoRank1位、○は1号(sogoRank1位が1号なら2位)
         maru=maruFromAI||String(sogoSorted[0]?sogoSorted[0].n:'1');
         shiro=shiroFromAI||(maru!=='1'?'1':String(sogoSorted[1]?sogoSorted[1].n:'2'));
         sankaku=sankakuFromAI||String(sogoSorted.filter(function(b){return String(b.n)!==maru&&String(b.n)!==shiro;})[0]?sogoSorted.filter(function(b){return String(b.n)!==maru&&String(b.n)!==shiro;})[0].n:'3');
       } else {
-        // Cモード：sogoRankそのまま
         maru=maruFromAI||String(sogoSorted[0]?sogoSorted[0].n:'1');
         shiro=shiroFromAI||String(sogoSorted[1]?sogoSorted[1].n:'2');
         sankaku=sankakuFromAI||String(sogoSorted[2]?sogoSorted[2].n:'3');
@@ -1789,7 +1790,7 @@ async function generate(){
       var goList=sogoSorted.filter(function(b){return usedMSS.indexOf(String(b.n))<0;});
       var go=String(goList[1]?goList[1].n:goList[0]?goList[0].n:'5');
 
-      // ng艇取得（AIの×印）
+      // ng艇取得
       var ngBoats=[];
       text.split('\n').forEach(function(ln){
         var mx=ln.match(/(\d)位[\s\u3000]*(\d)号艇[\s\u3000]*×/);if(mx)ngBoats.push(mx[2]);
@@ -1855,7 +1856,11 @@ async function generate(){
     var kFT=text.match(/3位[\s\u3000]*(\d)号艇[\s\u3000]*▲/);
     if(mFT&&sFT&&kFT)showEditMarkUI(mFT[1],sFT[1],kFT[1]);
 
-  } catch(e){showStatus('エラー: '+e.message,'err');}
+  } catch(e){
+    clearTimeout(timeoutId);
+    var msg=e.name==='AbortError'?'タイムアウト（60秒）。再試行してください':'エラー: '+e.message;
+    showStatus(msg,'err');
+  }
   finally{
     document.getElementById('loading').classList.remove('show');
   }
