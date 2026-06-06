@@ -1030,127 +1030,8 @@ function displayCalcResults(data){
   var earlyMode=rc2>0?(rc2<=3):(validTok2<=2||maxTok2<=6);
   html+='<div class="info-row">スコアモード: <b style="color:'+(earlyMode?'var(--accent)':'var(--blue)')+';">'+(earlyMode?'序盤モード（勝率重視）':'終盤モード（今節重視）')+'</b>'+(rc2>0?' 平均'+rc2+'走':'（推定）')+'</div>';
 
-  if(currentMode==='are'||(calcData&&calcData.normalResult&&calcData.normalResult.shinkido==='C'&&currentPts>=12)){
-    var cls=areResult.score>=8?'score-pass':'score-fail';
-    html+='<div class="are-box"><div style="display:flex;align-items:baseline;gap:8px;"><span class="are-score '+cls+'">'+areResult.score+'点</span><span class="are-label">荒れ指数</span></div>';
-    html+='<div class="bd-list">';
-    if(areResult.breakdown.length)areResult.breakdown.forEach(function(b){html+='<span>'+b+'</span> ';});
-    else html+='<span style="color:#445;">加算なし</span>';
-    html+='</div></div>';
-
-    var fpass=furikiriResult.pass;
-    html+='<div class="furikiri '+(fpass?'pass':'fail')+'">';
-    if(fpass)html+='✅ 足切りクリア → 予想生成可';
-    else html+='❌ 見送り推奨: '+furikiriResult.reason;
-    html+='</div>';
-
-    if(fpass){
-      html+='<div class="cr-sec">1着候補</div><div class="cand-row">';
-      if(cands1st.length)cands1st.forEach(function(c){html+='<span class="chip c1">'+c.n+'号艇（'+c.reason+'）</span>';});
-      else html+='<span style="font-size:11px;color:#e55;">外枠条件未達</span>';
-      html+='</div>';
-    }
-  } else {
-    var jsShinkido=normalResult.shinkido;
-    html+='<div class="are-box">';
-    html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">';
-    html+='<div style="display:flex;align-items:baseline;gap:8px;"><span class="are-score" style="font-size:22px;color:var(--accent);" id="shinkidoLabel">【'+jsShinkido+'】</span><span class="are-label">イン信頼度</span><span id="shinkidoManual" style="font-size:10px;color:var(--accent);display:none;">手動</span></div>';
-    html+='<div style="display:flex;gap:4px;">'+['A','B','C'].map(function(x){return'<button onclick="overrideShinkido(\''+x+'\')" id="sh_'+x+'" style="padding:6px 12px;border-radius:4px;font-size:12px;font-weight:700;-webkit-appearance:none;border:1px solid '+(x===jsShinkido?'var(--text)':'var(--border)')+';background:'+(x===jsShinkido?'var(--text)':'var(--surface)')+';color:'+(x===jsShinkido?'#fff':'var(--text-sub)')+';">'+x+'</button>';}).join('')+'</div>';
-    html+='</div></div>';
-    html+='<div class="info-row">荒れ指数: <b>'+areResult.score+'点</b> → '+(areResult.score>=8?'⚠️ 荒れ転用可':'転用不可')+'</div>';
-    html+='<div class="cr-sec">2着候補</div><div class="cand-row">';
-    normalResult.ab.forEach(function(c){html+='<span class="chip c2">'+c.n+'号艇（'+c.reason+'）</span>';});
-    html+='</div>';
-  }
-
-  document.getElementById('calcContent').innerHTML=html;
-}
-
-/* ===== AIプロンプト構築 ===== */
-function buildPrompt(){
-  var venue=document.getElementById('venue').value||'?';
-  var raceNum=document.getElementById('raceNum').value||'?';
-  var parsed=calcData.parsed,areResult=calcData.areResult,furikiriResult=calcData.furikiriResult,cands1st=calcData.cands1st,normalResult=calcData.normalResult;
-  var boats=parsed.boats,nigeRate=parsed.nigeRate,nigeRateSrc=parsed.nigeRateSrc;
-  var p='';
-
-  if(currentMode==='are'||(calcData&&calcData.normalResult&&calcData.normalResult.shinkido==='C'&&currentPts>=12)){
-    if(!furikiriResult.pass){
-      p='以下の1行のみ出力してください。余計な説明不要:\n';
-      p+=venue+raceNum+'R 荒れ指数'+areResult.score+'点（'+areResult.breakdown.join('、')+'）→ '+furikiriResult.reason+' → 見送り推奨';
-      return p;
-    }
-
-    // JS固定値を取得
-    var sogoSorted=boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
-    var maru  = String(sogoSorted[0]?sogoSorted[0].n:'1');
-    var shiro = String(sogoSorted[1]?sogoSorted[1].n:'2');
-    var sankaku = String(sogoSorted[2]?sogoSorted[2].n:'3');
-    var yonkaku = String(sogoSorted[3]?sogoSorted[3].n:'4');
-    var go      = String(sogoSorted[4]?sogoSorted[4].n:'5');
-    // maru=shiro安全弁
-    if(maru===shiro){shiro=['1','2','3','4','5','6'].filter(function(x){return x!==maru;})[0]||'2';}
-
-    p='【重要】思考過程・候補選定説明・計算過程は一切出力禁止。最終フォーマットのみ出力せよ。\n\n荒れモード v2.4。JS計算済みデータを使用（再計算不要）。\n\n';
-    p+='レース: '+venue+' '+raceNum+'R\n';
-    p+='逃げ率: '+(nigeRate!==null?nigeRate+'% ('+nigeRateSrc+')':'取得できず')+'\n\n';
-    p+='【機力スコア順位（変更禁止）】\n';
-    boats.slice().sort(function(a,b){return (a.kiryokuRank||99)-(b.kiryokuRank||99);}).forEach(function(b){
-      p+=(b.kiryokuRank!==null?b.kiryokuRank:'-')+'位 '+b.n+'号艇 '+b.name+' 合計'+(b.kiryoku!==null?b.kiryoku.toFixed(2):'-')+'\n';
-    });
-    p+='\n【荒れ指数】'+areResult.score+'点\n内訳: '+areResult.breakdown.join(' / ')+'\n';
-    p+='【足切り】クリア\n\n';
-    p+='【1着候補（JS算出）】\n';
-    if(cands1st.length)cands1st.forEach(function(c){p+=c.n+'号艇（'+c.reason+'）\n';});
-    else p+='外枠条件未達\n';
-    p+='\n【各艇データ】\n';
-    boats.forEach(function(b){
-      var st=b.avgST!==null?b.avgST:(b.stKoki!==null?b.stKoki:null);
-      p+=b.n+'号 '+b.name+' コース'+b.nyuse+' 今節得点率'+(b.tokuten!==null?b.tokuten:'-')+' 平均ST'+(st!==null?st:'-')+' 直前ST'+(b.st!==null?(b.stF?'F':'')+b.st:'-')+' F今期'+b.fKi+' 機力'+b.kiryokuRank+'位'+(b.buhin?' 【部品交換】':'')+(b.tilt!==0?' チルト'+b.tilt:'')+'\n';
-    });
-    p+='\n【JS総合評価順位（変更禁止・必ずこの順位で総合評価を出力せよ）】\n';
-    sogoSorted.forEach(function(b){
-      p+=b.sogoRank+'位 '+b.n+'号艇 '+b.name+'\n';
-    });
-    p+='\n【買い目パラメータ（JS固定・変更禁止）】\n';
-    p+='◎: '+maru+'号艇\n';
-    p+='○: '+shiro+'号艇\n';
-    p+='▲: '+sankaku+'号艇\n';
-    p+='△: '+yonkaku+'号艇\n';
-    p+='⑤: '+go+'号艇\n';
-    p+='買い目点数: '+currentPts+'点（本線6点＋抑え'+(currentPts-6)+'点）\n';
-    p+='\n【賞除艇の扱い】今節得点率「-」の艇は賞除。出走可能。得点率のみ0点、他は通常評価。\n';
-    p+='\n【出力フォーマット（必須・この順で）】\n';
-    p+='【荒れ指数】'+areResult.score+'点（上記内訳）\n';
-    p+='【機力順位】上記の通り\n';
-    p+='【特記】（1行。なければ省略）\n\n';
-    // 総合評価：gtoolsパーサーに合わせて「X位 X号艇 印」形式を厳命
-    p+='【総合評価】(G.Tools連携用・必ず以下フォーマットで6艇出力・スペース厳守)\n';
-    p+='1位 '+maru+'号艇 ◎\n';
-    p+='2位 '+shiro+'号艇 ○\n';
-    p+='3位 '+sankaku+'号艇 ▲\n';
-    p+='4位 '+yonkaku+'号艇 △\n';
-    p+='5位 '+go+'号艇 ×\n';
-    // 6位は残りの艇
-    var usedNums=[maru,shiro,sankaku,yonkaku,go];
-    var sixth=boats.map(function(b){return String(b.n);}).filter(function(n){return usedNums.indexOf(n)<0;})[0]||'?';
-    p+='6位 '+sixth+'号艇 ×\n\n';
-    p+='【評価】(印は◎○▲△××のみ。注・穴などの表記は禁止)\n';
-    p+='◎'+maru+' 苗字(短評)\n';
-    p+='○'+shiro+' 苗字(短評)\n';
-    p+='▲'+sankaku+' 苗字(短評)\n';
-    p+='△'+yonkaku+' 苗字(短評)\n';
-    p+='×'+go+' 苗字(短評)\n';
-    p+='×'+sixth+' 苗字(短評)\n\n';
-    p+='【Xサマリー】\n'+venue+raceNum+'R\n';
-    p+='一言コメントを以下の出力例から最も当てはまるものを選び、丸数字と苗字を実際のデータに当てはめて1行のみ出力せよ。説明・テンプレ名・矢印は一切出力禁止。【出力例】❶苗字◯。／機力は❶苗字。／攻めの起点は❹苗字。／❶苗字の連対。／気になる❻苗字の舟足。／❶苗字のイン戦。／波乱想定も機力は❶苗字。／❶苗字残し。／狙いは❷苗字の差し抜け。\n';
-    p+='HYOKA_ORDER\n';
-    p+='本線　HONSEN_PLACEHOLDER\n';
-    p+='抑え　OSAEE_PLACEHOLDER\n';
-    p+='G.';
-
-  } else {
-    // 通常モード
+  // 通常モード
+  {
     var b1=boats.find(function(b){return b.nyuse===1;})||boats[0];
     var st1=b1.avgST!==null?b1.avgST:b1.stKoki;
     var sogoSortedN=boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
@@ -1728,7 +1609,7 @@ function regenerateBets(){
       commentC=xlc;break;
     }
     var hyokaC=buildHyokaOrder(calcData.parsed.boats);
-    var newXC='【Xサマリー】\n'+venue+raceNum+'R\n'+(commentC?commentC+'\n\n':'')+hyokaC+'\n本線　'+honsenStrC+'\n抑え　'+osaeeStrC+'\n\nG.';
+    var newXC='【Xサマリー】\n'+venue+raceNum+'R\n'+(commentC?commentC+'\n\n':'')+hyokaC+'\n本線\u3000'+honsenStrC+(osaeeC.length?'\n抑え\u3000'+osaeeStrC:'')+'\n\nG.';
     text=beforeC+newXC;
   }
   document.getElementById('outText').textContent=text;
