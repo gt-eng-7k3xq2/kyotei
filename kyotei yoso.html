@@ -80,6 +80,29 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
 .copy-btn.ok{background:var(--green-light);color:var(--green);border-color:#a0d8b0;}
 .div{height:1px;background:var(--border);margin:4px 0 14px;}
 
+/* ===== 対話型STEP UI ===== */
+.step-section{display:none;animation:fadeIn 0.2s ease;}
+.step-section.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.step-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.step-num{width:22px;height:22px;background:var(--text);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;}
+.step-num.done{background:var(--green);}
+.step-title{font-size:13px;font-weight:700;color:var(--text);}
+.step-next-btn{width:100%;padding:13px;background:var(--text);color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:700;-webkit-appearance:none;margin-top:12px;font-family:'Noto Serif JP',serif;letter-spacing:1px;cursor:pointer;}
+.step-next-btn:disabled{background:var(--border);color:var(--text-muted);}
+/* 印選択ボタン */
+.mark-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:10px;}
+.mark-boat-btn{aspect-ratio:1;border-radius:6px;border:1px solid var(--border);background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;-webkit-appearance:none;gap:2px;}
+.mark-boat-btn .boat-num{font-size:18px;font-weight:700;}
+.mark-boat-btn .boat-mark{font-size:11px;font-weight:700;}
+.mark-boat-btn.mark-maru{background:var(--accent-light);border-color:var(--accent);color:var(--accent);}
+.mark-boat-btn.mark-shiro{background:var(--blue-light);border-color:var(--blue);color:var(--blue);}
+.mark-boat-btn.mark-sankaku{background:#f5f0e8;border-color:#a0856a;color:#7a6040;}
+.mark-boat-btn.mark-yonkaku{background:#f0f5e8;border-color:#6a8050;color:#4a6030;}
+.mark-boat-btn.mark-batsu{background:var(--bg);border-color:var(--border);color:var(--text-muted);}
+.mark-legend{display:flex;gap:8px;flex-wrap:wrap;font-size:10px;color:var(--text-sub);margin-bottom:8px;}
+.mark-legend span{display:flex;align-items:center;gap:3px;}
+
 /* ===== 評価カード ===== */
 .eval-card-wrap{margin-top:14px;display:none;}
 .eval-card-wrap.show{display:block;}
@@ -117,6 +140,7 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
   <div class="ver">v2.1</div>
 </div>
 
+<!-- API KEY -->
 <div class="sec">
   <div class="sec-label">Gemini API Key</div>
   <div class="api-row">
@@ -125,21 +149,13 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
   </div>
 </div>
 
-<div class="sec">
-  <div class="sec-label">モード・レース情報</div>
-  <!-- 点数セレクター（信頼度C/荒れ展開時に表示） -->
-  <div id="arePtsSection" style="display:block;margin-bottom:10px;">
-    <div class="pts-label">買い目点数（信頼度C）</div>
-    <div class="pts-row">
-      <button class="pts-btn inactive" id="pts4" onclick="setPts(4)">4点<br><span style="font-size:10px;font-weight:400;">本線4</span></button>
-      <button class="pts-btn inactive" id="pts6" onclick="setPts(6)">6点<br><span style="font-size:10px;font-weight:400;">本線6</span></button>
-      <button class="pts-btn active" id="pts8" onclick="setPts(8)">8点<br><span style="font-size:10px;font-weight:400;">通常</span></button>
-      <button class="pts-btn inactive" id="pts12" onclick="setPts(12)">12点<br><span style="font-size:10px;font-weight:400;">本線6+抑え6</span></button>
-      <button class="pts-btn inactive" id="pts14" onclick="setPts(14)">14点<br><span style="font-size:10px;font-weight:400;">本線6+抑え8</span></button>
-      <button class="pts-btn inactive" id="pts15" onclick="setPts(15)">15点<br><span style="font-size:10px;font-weight:400;">本線6+抑え9</span></button>
-    </div>
+<!-- STEP1：データ入力・解析 -->
+<div class="sec step-section active" id="step1">
+  <div class="step-header">
+    <div class="step-num" id="stepNum1">1</div>
+    <div class="step-title">レースデータを入力</div>
   </div>
-  <div class="race-row">
+  <div class="race-row" style="margin-bottom:10px;">
     <div class="sel-w">
       <select class="sel" id="venue" onchange="saveVenueRace()">
         <option value="">場所を選択</option>
@@ -158,36 +174,82 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
       </select>
     </div>
   </div>
+  <textarea id="raceData" rows="7" placeholder="データ抽出BMで4タブ収集 → コピー → ここに貼り付け"></textarea>
+  <div style="display:flex;gap:8px;margin-top:10px;">
+    <button class="calc-btn" style="flex:1;margin-top:0;" onclick="runCalc()">⚡ データを解析する</button>
+    <button onclick="clearAll()" style="padding:13px 16px;background:#f8f7f4;color:#888;border:1px solid #e0dcd6;border-radius:4px;font-size:13px;cursor:pointer;-webkit-appearance:none;">✕</button>
+  </div>
+  <div class="calc-result" id="calcResult">
+    <div style="font-size:11px;color:#c9a84c;font-weight:700;margin-bottom:8px;">📊 解析結果</div>
+    <div id="calcContent"></div>
+  </div>
+  <button class="step-next-btn" id="step1Next" onclick="goStep2()" disabled>次へ：印・点数を確認 →</button>
 </div>
 
-<div class="sec">
-  <div class="sec-label">レースデータ（データ抽出BMでコピー）</div>
-  <textarea id="raceData" rows="7" placeholder="データ抽出BMで4タブ収集 → コピー → ここに貼り付け"></textarea>
-  <div style="display:flex;gap:8px;"><button class="calc-btn" style="flex:1;margin-top:0;" onclick="runCalc()">⚡ データを解析する</button><button onclick="clearAll()" style="padding:13px 16px;background:#1a1a2a;color:#888;border:1px solid #2a2a3a;border-radius:10px;font-size:13px;cursor:pointer;-webkit-appearance:none;">✕</button></div>
-  <div class="calc-result" id="calcResult">
-    <div style="font-size:11px;color:#c9a84c;font-weight:700;margin-bottom:8px;">📊 解析結果（AIに送信する前に確認）</div>
-    <div id="calcContent"></div>
+<!-- STEP2：印確認・点数選択 -->
+<div class="sec step-section" id="step2">
+  <div class="step-header">
+    <div class="step-num" id="stepNum2">2</div>
+    <div class="step-title">印と点数を確認・調整</div>
+  </div>
+
+  <!-- 信頼度表示 -->
+  <div id="step2ShinkidoDisp" style="margin-bottom:12px;"></div>
+
+  <!-- 6艇印選択 -->
+  <div style="font-size:10px;color:var(--text-sub);margin-bottom:6px;font-weight:700;">◎○▲△ をタップして変更</div>
+  <div class="mark-legend">
+    <span><b style="color:var(--accent);">◎</b>1着本命</span>
+    <span><b style="color:var(--blue);">○</b>2着本命</span>
+    <span><b style="color:#7a6040;">▲</b>3着候補</span>
+    <span><b style="color:#4a6030;">△</b>4着候補</span>
+    <span><b style="color:var(--text-muted);">×</b>切り</span>
+  </div>
+  <div class="mark-grid" id="markGrid"></div>
+  <div style="font-size:10px;color:var(--text-muted);margin-bottom:12px;">※ ◎○は1艇ずつ、▲△は変更可、残りは×</div>
+
+  <!-- A/B/C切り替え -->
+  <div style="font-size:10px;color:var(--text-sub);margin-bottom:6px;font-weight:700;">モード</div>
+  <div style="display:flex;gap:6px;margin-bottom:12px;" id="step2ModeRow"></div>
+
+  <!-- 点数選択 -->
+  <div style="font-size:10px;color:var(--text-sub);margin-bottom:6px;font-weight:700;">買い目点数</div>
+  <div class="pts-row">
+    <button class="pts-btn inactive" id="pts4" onclick="setPts(4)">4点<br><span style="font-size:10px;font-weight:400;">本線4</span></button>
+    <button class="pts-btn inactive" id="pts6" onclick="setPts(6)">6点<br><span style="font-size:10px;font-weight:400;">本線6</span></button>
+    <button class="pts-btn active" id="pts8" onclick="setPts(8)">8点<br><span style="font-size:10px;font-weight:400;">通常</span></button>
+    <button class="pts-btn inactive" id="pts12" onclick="setPts(12)">12点<br><span style="font-size:10px;font-weight:400;">本線6+抑え6</span></button>
+    <button class="pts-btn inactive" id="pts14" onclick="setPts(14)">14点<br><span style="font-size:10px;font-weight:400;">本線6+抑え8</span></button>
+    <button class="pts-btn inactive" id="pts15" onclick="setPts(15)">15点<br><span style="font-size:10px;font-weight:400;">本線6+抑え9</span></button>
+  </div>
+
+  <div style="display:flex;gap:8px;margin-top:4px;">
+    <button onclick="goStep1()" style="padding:12px 16px;background:var(--bg);color:var(--text-sub);border:1px solid var(--border);border-radius:4px;font-size:13px;-webkit-appearance:none;">← 戻る</button>
+    <button class="step-next-btn" style="margin-top:0;" onclick="goStep3()">予想を生成する 🎯</button>
+  </div>
+</div>
+
+<!-- STEP3：生成・結果 -->
+<div class="sec step-section" id="step3">
+  <div class="step-header">
+    <div class="step-num done" id="stepNum3">3</div>
+    <div class="step-title">予想結果</div>
+  </div>
+  <button onclick="goStep2()" style="width:100%;padding:10px;background:var(--bg);color:var(--text-sub);border:1px solid var(--border);border-radius:4px;font-size:12px;-webkit-appearance:none;margin-bottom:12px;">← 印・点数を変更する</button>
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-txt">Gemini が予想を生成中...</div>
   </div>
 </div>
 
 <div class="status" id="status"></div>
-<button class="gen-btn" id="genBtn" onclick="generate()" disabled>🎯 予想を生成する</button>
+<button class="gen-btn" id="genBtn" onclick="generate()" disabled style="display:none;">🎯 予想を生成する</button>
 
 <div class="loading" id="loading">
   <div class="spinner"></div>
   <div class="loading-txt">Gemini が予想を生成中...</div>
 </div>
 
-<!-- 信頼度C用：◎○▲差し替えUI -->
-<div id="editMarkWrap" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;">
-  <div style="font-size:10px;color:var(--text-sub);font-weight:700;letter-spacing:1.5px;margin-bottom:10px;">◎○▲ 差し替え（再生成）</div>
-  <div style="display:flex;gap:8px;margin-bottom:10px;">
-    <div style="flex:1;"><div style="font-size:10px;color:var(--accent);margin-bottom:4px;">◎ 1着本命</div><select id="editMaru" class="sel" style="width:100%;"></select></div>
-    <div style="flex:1;"><div style="font-size:10px;color:var(--blue);margin-bottom:4px;">○ 2着本命</div><select id="editShiro" class="sel" style="width:100%;"></select></div>
-    <div style="flex:1;"><div style="font-size:10px;color:var(--text-sub);margin-bottom:4px;">▲ 3着候補</div><select id="editSankaku" class="sel" style="width:100%;"></select></div>
-  </div>
-  <button onclick="regenerateBets()" style="width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;-webkit-appearance:none;">🔄 買い目を再生成</button>
-</div>
 <div class="out-wrap" id="outWrap">
   <div class="div"></div>
   <div class="out-hdr">予想結果</div>
@@ -221,6 +283,163 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
 <div id="logAnalysis" style="display:none;margin-top:4px;"></div>
 
 <script>
+
+// ===== STEP制御 =====
+var currentStep = 1;
+var manualMarks = {}; // {1:'maru', 2:'shiro', 3:'sankaku', 4:'yonkaku', 5:'batsu', 6:'batsu'}
+
+function goStep1(){
+  showStep(1);
+}
+
+function goStep2(){
+  if(!calcData){showStatus('先にデータを解析してください','err');return;}
+  // STEPナンバー更新
+  document.getElementById('stepNum1').classList.add('done');
+  // STEP2の印グリッドを初期化
+  initMarkGrid();
+  // モードボタン初期化
+  initStep2ModeRow();
+  // 信頼度表示
+  initStep2Shinkido();
+  showStep(2);
+}
+
+function goStep3(){
+  // 印をmanualMarksから取得してoverride
+  applyManualMarks();
+  showStep(3);
+  document.getElementById('stepNum2').classList.add('done');
+  // 生成実行
+  generate();
+}
+
+function showStep(n){
+  currentStep = n;
+  [1,2,3].forEach(function(i){
+    var el = document.getElementById('step'+i);
+    if(el){
+      if(i===n) el.classList.add('active');
+      else el.classList.remove('active');
+    }
+  });
+  window.scrollTo(0,0);
+}
+
+function initMarkGrid(){
+  if(!calcData)return;
+  var boats = calcData.parsed.boats.slice().sort(function(a,b){return a.nyuse-b.nyuse;});
+  var shinkido = calcData.normalResult.shinkido;
+  var sogoSorted = calcData.parsed.boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
+
+  // デフォルト印をモード別に設定
+  manualMarks = {};
+  var maruN, shiroN, sankakuN, yonkakuN;
+  if(shinkido==='A'){
+    maruN='1';
+    shiroN=String(sogoSorted[0]&&sogoSorted[0].n!==1?sogoSorted[0].n:sogoSorted[1]?sogoSorted[1].n:2);
+  } else if(shinkido==='B'){
+    maruN=String(sogoSorted[0]?sogoSorted[0].n:1);
+    shiroN=maruN!=='1'?'1':String(sogoSorted[1]?sogoSorted[1].n:2);
+  } else {
+    maruN=String(sogoSorted[0]?sogoSorted[0].n:1);
+    shiroN=String(sogoSorted[1]?sogoSorted[1].n:2);
+  }
+  sankakuN=String(sogoSorted.filter(function(b){return String(b.n)!==maruN&&String(b.n)!==shiroN;})[0]?sogoSorted.filter(function(b){return String(b.n)!==maruN&&String(b.n)!==shiroN;})[0].n:3);
+  yonkakuN=String(sogoSorted.filter(function(b){return String(b.n)!==maruN&&String(b.n)!==shiroN&&String(b.n)!==sankakuN;})[0]?sogoSorted.filter(function(b){return String(b.n)!==maruN&&String(b.n)!==shiroN&&String(b.n)!==sankakuN;})[0].n:4);
+
+  [1,2,3,4,5,6].forEach(function(n){
+    var ns=String(n);
+    if(ns===maruN) manualMarks[ns]='maru';
+    else if(ns===shiroN) manualMarks[ns]='shiro';
+    else if(ns===sankakuN) manualMarks[ns]='sankaku';
+    else if(ns===yonkakuN) manualMarks[ns]='yonkaku';
+    else manualMarks[ns]='batsu';
+  });
+
+  renderMarkGrid(boats);
+}
+
+function renderMarkGrid(boats){
+  var grid = document.getElementById('markGrid');
+  if(!grid)return;
+  var markLabels = {maru:'◎',shiro:'○',sankaku:'▲',yonkaku:'△',batsu:'×'};
+  var markColors = {maru:'mark-maru',shiro:'mark-shiro',sankaku:'mark-sankaku',yonkaku:'mark-yonkaku',batsu:'mark-batsu'};
+  grid.innerHTML = (boats||calcData.parsed.boats.slice().sort(function(a,b){return a.nyuse-b.nyuse;})).map(function(b){
+    var ns=String(b.n);
+    var mark=manualMarks[ns]||'batsu';
+    return '<button class="mark-boat-btn '+markColors[mark]+'" onclick="cycleMarkBoat('+JSON.stringify(ns)+')" id="markBtn'+ns+'">'+
+      '<span class="boat-num">'+b.n+'</span>'+
+      '<span class="boat-mark">'+markLabels[mark]+'</span>'+
+      '</button>';
+  }).join('');
+}
+
+function cycleMarkBoat(ns){
+  // ◎→○→▲→△→×→◎ のサイクル
+  var order=['maru','shiro','sankaku','yonkaku','batsu'];
+  var cur=manualMarks[ns]||'batsu';
+  var next=order[(order.indexOf(cur)+1)%order.length];
+  // ◎○は1艇のみ
+  if(next==='maru'){
+    Object.keys(manualMarks).forEach(function(k){if(manualMarks[k]==='maru')manualMarks[k]='batsu';});
+  }
+  if(next==='shiro'){
+    Object.keys(manualMarks).forEach(function(k){if(manualMarks[k]==='shiro')manualMarks[k]='batsu';});
+  }
+  manualMarks[ns]=next;
+  renderMarkGrid();
+}
+
+function applyManualMarks(){
+  if(!calcData)return;
+  var maruN=null,shiroN=null,sankakuN=null,yonkakuN=null;
+  Object.keys(manualMarks).forEach(function(n){
+    if(manualMarks[n]==='maru')maruN=n;
+    if(manualMarks[n]==='shiro')shiroN=n;
+    if(manualMarks[n]==='sankaku')sankakuN=n;
+    if(manualMarks[n]==='yonkaku')yonkakuN=n;
+  });
+  // calcData.normalResultに反映
+  if(maruN&&shiroN){
+    window._manualOverride={maru:maruN,shiro:shiroN,sankaku:sankakuN,yonkaku:yonkakuN};
+  }
+}
+
+function initStep2ModeRow(){
+  if(!calcData)return;
+  var shinkido=calcData.normalResult.shinkido;
+  var row=document.getElementById('step2ModeRow');
+  if(!row)return;
+  row.innerHTML=['A','B','C'].map(function(x){
+    var isActive=x===shinkido;
+    var color=x==='A'?'var(--blue)':x==='B'?'var(--green)':'var(--accent)';
+    return '<button onclick="step2OverrideShinkido('+JSON.stringify(x)+')" id="step2sh_'+x+'" style="flex:1;padding:10px;border-radius:4px;font-size:15px;font-weight:700;-webkit-appearance:none;border:2px solid '+(isActive?color:'var(--border)')+';background:'+(isActive?color:'var(--surface)')+';color:'+(isActive?'#fff':'var(--text-sub)')+';">'+x+'</button>';
+  }).join('');
+}
+
+function step2OverrideShinkido(x){
+  if(!calcData)return;
+  calcData.normalResult.shinkido=x;
+  initStep2ModeRow();
+  initMarkGrid();
+  initStep2Shinkido();
+}
+
+function initStep2Shinkido(){
+  if(!calcData)return;
+  var s=calcData.normalResult.shinkido;
+  var color=s==='A'?'var(--blue)':s==='B'?'var(--green)':'var(--accent)';
+  var label=s==='A'?'信頼度A（イン戦強）':s==='B'?'信頼度B（標準）':'信頼度C（荒れ注意）';
+  var disp=document.getElementById('step2ShinkidoDisp');
+  if(disp)disp.innerHTML='<div style="text-align:center;padding:8px;background:var(--bg);border-radius:4px;margin-bottom:8px;"><div style="font-size:32px;font-weight:900;color:'+color+';">'+s+'</div><div style="font-size:11px;color:'+color+';">'+label+'</div></div>';
+  // 荒れ指数も表示
+  if(calcData.areResult){
+    var sc=calcData.areResult.score;
+    var pass=calcData.furikiriResult&&calcData.furikiriResult.pass;
+    disp.innerHTML+='<div style="font-size:12px;color:var(--text-sub);text-align:center;margin-bottom:4px;">荒れ指数: <b style="color:'+(sc>=10?'var(--green)':'var(--text-sub)')+';">'+sc+'点</b>'+(pass?' ✅ 荒れ展開有力':'')+' / 逃げ率: <b>'+(calcData.parsed.nigeRate!==null?calcData.parsed.nigeRate+'%':'?')+'</b></div>';
+  }
+}
 
 var currentMode = 'normal';
 var currentPts = 12; // 荒れモード買い目点数
@@ -753,6 +972,7 @@ function runCalc(){
   document.getElementById('calcResult').classList.add('show');
   document.getElementById('genBtn').disabled=false;
   document.getElementById('genBtn').scrollIntoView({behavior:'smooth',block:'center'});
+  var step1Next=document.getElementById('step1Next');if(step1Next)step1Next.disabled=false;
   }catch(e){showStatus('エラー: '+e.message,'err');document.getElementById('genBtn').disabled=false;console.error(e);}
 }
 
@@ -1171,34 +1391,44 @@ function buildAreBetsFinal(maru,shiro,sankaku,go,ngBoats){
     honsen=honsen.slice(0,6);
     return{honsen:honsen,osaee:[]};
   } else if(currentPts===12){
-    addBet(osaee,maru,sankaku,go);
-    addBet(osaee,maru,yonkaku,go);
-    addBet(osaee,shiro,sankaku,go);
-    addBet(osaee,shiro,yonkaku,go);
-    addBet(osaee,maru,go,sankaku);
-    addBet(osaee,shiro,go,sankaku);
+    // 12点：◎○▲を軸に△とgo(5位)を3着に組む
+    // 本線6点
+    addBet(honsen,maru,shiro,sankaku);   // 1-2-3
+    addBet(honsen,maru,sankaku,shiro);   // 1-3-2
+    addBet(honsen,shiro,maru,sankaku);   // 2-1-3
+    addBet(honsen,shiro,sankaku,maru);   // 2-3-1
+    addBet(honsen,maru,yonkaku,shiro);   // 1-4-2
+    addBet(honsen,maru,shiro,yonkaku);   // 1-2-4
+    // 抑え6点
+    addBet(osaee,shiro,yonkaku,maru);    // 2-4-1
+    addBet(osaee,shiro,maru,yonkaku);    // 2-1-4
+    addBet(osaee,maru,shiro,go);         // 1-2-5
+    addBet(osaee,maru,go,shiro);         // 1-5-2
+    addBet(osaee,shiro,maru,go);         // 2-1-5
+    addBet(osaee,shiro,go,maru);         // 2-5-1
     osaee=osaee.slice(0,6);
   } else if(currentPts===14){
-    addBet(osaee,maru,sankaku,go);
-    addBet(osaee,maru,yonkaku,go);
-    addBet(osaee,shiro,sankaku,go);
-    addBet(osaee,shiro,yonkaku,go);
-    addBet(osaee,maru,go,sankaku);
-    addBet(osaee,shiro,go,sankaku);
-    addBet(osaee,go,maru,sankaku);
-    addBet(osaee,go,shiro,sankaku);
+    // 14点：12点＋go（5位評価）3着2点追加
+    addBet(osaee,shiro,maru,sankaku);
+    addBet(osaee,shiro,maru,yonkaku);
+    addBet(osaee,shiro,sankaku,maru);
+    addBet(osaee,shiro,sankaku,yonkaku);
+    addBet(osaee,shiro,yonkaku,maru);
+    addBet(osaee,shiro,yonkaku,sankaku);
+    addBet(osaee,maru,shiro,go);
+    addBet(osaee,shiro,maru,go);
     osaee=osaee.slice(0,8);
   } else {
-    // 15点
+    // 15点：12点＋go（5位評価）3着3点追加
+    addBet(osaee,shiro,maru,sankaku);
+    addBet(osaee,shiro,maru,yonkaku);
+    addBet(osaee,shiro,sankaku,maru);
+    addBet(osaee,shiro,sankaku,yonkaku);
+    addBet(osaee,shiro,yonkaku,maru);
+    addBet(osaee,shiro,yonkaku,sankaku);
+    addBet(osaee,maru,shiro,go);
+    addBet(osaee,shiro,maru,go);
     addBet(osaee,maru,sankaku,go);
-    addBet(osaee,maru,yonkaku,go);
-    addBet(osaee,shiro,sankaku,go);
-    addBet(osaee,shiro,yonkaku,go);
-    addBet(osaee,maru,go,sankaku);
-    addBet(osaee,shiro,go,sankaku);
-    addBet(osaee,go,maru,sankaku);
-    addBet(osaee,go,shiro,sankaku);
-    addBet(osaee,go,maru,yonkaku);
     osaee=osaee.slice(0,9);
   }
 
@@ -1475,6 +1705,16 @@ async function generate(){
       var p1=r1?r1[1]:'1';
       var p2,p3,p4,p5;
 
+      // manualOverrideがあれば印を優先適用（全モード共通）
+      if(window._manualOverride){
+        var mo=window._manualOverride;
+        if(mo.maru)p1=mo.maru;
+        if(mo.shiro)p2=mo.shiro;
+        if(mo.sankaku)p3=mo.sankaku;
+        if(mo.yonkaku)p4=mo.yonkaku;
+        window._manualOverride=null;
+      }
+
       if(shinkido==='C'){
         // Cモード：総合評価順そのまま
         var usedP=[p1];
@@ -1591,7 +1831,7 @@ async function generate(){
       showEditMarkUI(mFromText[1],sFromText[1],kFromText[1]);
     }
 
-  }catch(e){showStatus('エラー: '+e.message,'err');}
+  } catch(e){showStatus('エラー: '+e.message,'err');}
   finally{
     document.getElementById('genBtn').disabled=false;
     document.getElementById('loading').classList.remove('show');
@@ -1912,12 +2152,13 @@ function autoSaveLog(text){
   if(!calcData)return;
   var venue=document.getElementById('venue').value||'?';
   var raceNum=document.getElementById('raceNum').value||'?';
-  // 直前ログと同じvenue+raceNumなら重複防止（60秒以内）
+  // 同日同レースが既存なら上書き（重複防止）
   var existingLogs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
-  if(existingLogs.length>0){
-    var last=existingLogs[existingLogs.length-1];
-    if(last.venue===venue&&last.raceNum===raceNum&&Date.now()-last.savedAt<60000){return;}
-  }
+  var today=new Date().toISOString().slice(0,10);
+  var dupIdx=existingLogs.findIndex(function(l){
+    return l.venue===venue&&l.raceNum===raceNum&&l.datetime&&l.datetime.slice(0,10)===today&&!l.result;
+  });
+  if(dupIdx>=0){existingLogs.splice(dupIdx,1);}
   var aiRanking=[];
   for(var r=1;r<=6;r++){
     var m=text.match(new RegExp(r+'位[\\s　]*(\\d)号艇'));
