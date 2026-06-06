@@ -967,6 +967,7 @@ function runCalc(){
 
 /* ===== 表示 ===== */
 function displayCalcResults(data){
+  try{
   var parsed=data.parsed,areResult=data.areResult,furikiriResult=data.furikiriResult,cands1st=data.cands1st,normalResult=data.normalResult;
   var boats=parsed.boats,nigeRate=parsed.nigeRate,nigeRateSrc=parsed.nigeRateSrc;
   var html='';
@@ -1053,6 +1054,7 @@ function displayCalcResults(data){
   }
 
   document.getElementById('calcContent').innerHTML=html;
+  }catch(e){alert('displayCalcResultsエラー: '+e.message+'\n'+e.stack);}
 }
 
 /* ===== AIプロンプト構築 ===== */
