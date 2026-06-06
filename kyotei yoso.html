@@ -183,7 +183,7 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
     <div style="font-size:11px;color:#c9a84c;font-weight:700;margin-bottom:8px;">📊 解析結果</div>
     <div id="calcContent"></div>
   </div>
-  <button class="step-next-btn" id="step1Next" onclick="goStep2()" style="opacity:0.4;">次へ：印・点数を確認 →</button>
+  <button class="step-next-btn" id="step1Next" onclick="goStep2()" style="opacity:0.4;pointer-events:none;">次へ：印・点数を確認 →</button>
 </div>
 
 <!-- STEP2：印確認・点数選択 -->
@@ -963,12 +963,11 @@ function runCalc(){
   document.getElementById('calcResult').classList.add('show');
   document.getElementById('genBtn').disabled=false;
   var step1Next=document.getElementById('step1Next');if(step1Next){step1Next.style.opacity='1';step1Next.style.pointerEvents='auto';}
-  }catch(e){showStatus('エラー: '+e.message,'err');alert('runCalcエラー: '+e.message+'\n'+e.stack);document.getElementById('genBtn').disabled=false;console.error(e);}
+  }catch(e){showStatus('エラー: '+e.message,'err');document.getElementById('genBtn').disabled=false;console.error(e);}
 }
 
 /* ===== 表示 ===== */
 function displayCalcResults(data){
-  try{
   var parsed=data.parsed,areResult=data.areResult,furikiriResult=data.furikiriResult,cands1st=data.cands1st,normalResult=data.normalResult;
   var boats=parsed.boats,nigeRate=parsed.nigeRate,nigeRateSrc=parsed.nigeRateSrc;
   var html='';
@@ -1055,7 +1054,6 @@ function displayCalcResults(data){
   }
 
   document.getElementById('calcContent').innerHTML=html;
-  }catch(e){alert('displayCalcResultsエラー: '+e.message+'\n'+e.stack);}
 }
 
 /* ===== AIプロンプト構築 ===== */
