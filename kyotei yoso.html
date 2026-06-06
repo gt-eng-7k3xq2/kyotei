@@ -83,7 +83,7 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
 /* ===== 対話型STEP UI ===== */
 .step-section{display:none;animation:fadeIn 0.2s ease;}
 .step-section.active{display:block;}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
 .step-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
 .step-num{width:22px;height:22px;background:var(--text);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;}
 .step-num.done{background:var(--green);}
@@ -91,8 +91,8 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
 .step-next-btn{width:100%;padding:13px;background:var(--text);color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:700;-webkit-appearance:none;margin-top:12px;font-family:'Noto Serif JP',serif;letter-spacing:1px;cursor:pointer;}
 .step-next-btn:disabled{background:var(--border);color:var(--text-muted);}
 /* 印選択ボタン */
-.mark-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:10px;position:relative;z-index:5;}
-.mark-boat-btn{aspect-ratio:1;border-radius:6px;border:1px solid var(--border);background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;-webkit-appearance:none;gap:2px;position:relative;z-index:10;-webkit-tap-highlight-color:rgba(0,0,0,0.1);}
+.mark-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:10px;position:relative;z-index:100;isolation:isolate;}
+.mark-boat-btn{aspect-ratio:1;border-radius:6px;border:1px solid var(--border);background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;-webkit-appearance:none;gap:2px;position:relative;z-index:101;-webkit-tap-highlight-color:rgba(0,0,0,0.1);touch-action:manipulation;user-select:none;-webkit-user-select:none;}
 .mark-boat-btn .boat-num{font-size:18px;font-weight:700;}
 .mark-boat-btn .boat-mark{font-size:11px;font-weight:700;}
 .mark-boat-btn.mark-maru{background:var(--accent-light);border-color:var(--accent);color:var(--accent);}
@@ -358,9 +358,9 @@ function renderMarkGrid(boats){
   grid.innerHTML = (boats||calcData.parsed.boats.slice().sort(function(a,b){return a.nyuse-b.nyuse;})).map(function(b){
     var ns=String(b.n);
     var mark=manualMarks[ns]||'batsu';
-    return '<button class="mark-boat-btn '+markColors[mark]+'" onclick="cycleMarkBoat('+JSON.stringify(ns)+')" id="markBtn'+ns+'">'+
-      '<span class="boat-num">'+b.n+'</span>'+
-      '<span class="boat-mark">'+markLabels[mark]+'</span>'+
+    return '<button class="mark-boat-btn '+markColors[mark]+'" onclick="cycleMarkBoat(\''+ns+'\')" id="markBtn'+ns+'">'+
+      '<span class="boat-num" style="pointer-events:none;">'+b.n+'</span>'+
+      '<span class="boat-mark" style="pointer-events:none;">'+markLabels[mark]+'</span>'+
       '</button>';
   }).join('');
 }
@@ -445,7 +445,6 @@ function clearAll(){
   document.getElementById('outWrap').classList.remove('show');
   document.getElementById('outText').textContent='';
   document.getElementById('status').style.display='none';
-  document.getElementById('genBtn').disabled=true;
   try{document.getElementById('venue').value='';}catch(e){}
   try{document.getElementById('raceNum').value='';}catch(e){}
   calcData=null;
@@ -495,10 +494,21 @@ function setPts(pts){
 }
 
 function showStatus(msg,type){
-  var el=document.getElementById('status');
-  el.textContent=msg;el.className='status '+type;
+  var el=document.getElementById('statusToast');
+  if(!el){
+    el=document.createElement('div');
+    el.id='statusToast';
+    el.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;padding:10px 18px;border-radius:6px;font-size:13px;font-weight:700;font-family:\'Noto Sans JP\',sans-serif;max-width:90vw;text-align:center;display:none;';
+    document.body.appendChild(el);
+  }
+  el.textContent=msg;
+  if(type==='err'){el.style.background='#fdf0ef';el.style.color='#c0392b';el.style.border='1px solid #f0c0bc';}
+  else{el.style.background='#eef8f2';el.style.color='#1a7a3a';el.style.border='1px solid #a0d8b0';}
   el.style.display='block';
+  clearTimeout(el._t);
+  el._t=setTimeout(function(){el.style.display='none';},3000);
 }
+function showToast(msg){showStatus(msg,'err');}
 
 /* ===== PARSER ===== */
 function parseData(raw){
@@ -961,9 +971,8 @@ function runCalc(){
   calcData={parsed:parsed,areResult:areResult,furikiriResult:furikiriResult,cands1st:cands1st,normalResult:normalResult};
   displayCalcResults(calcData);
   document.getElementById('calcResult').classList.add('show');
-  document.getElementById('genBtn').disabled=false;
-  var step1Next=document.getElementById('step1Next');if(step1Next){step1Next.style.opacity='1';step1Next.style.pointerEvents='auto';}
-  }catch(e){showStatus('エラー: '+e.message,'err');document.getElementById('genBtn').disabled=false;console.error(e);}
+  var step1Next=document.getElementById('step1Next');if(step1Next){step1Next.style.opacity='1';step1Next.style.pointerEvents='auto';step1Next.style.cursor='pointer';}
+  }catch(e){showStatus('エラー: '+e.message,'err');console.error(e);}
 }
 
 /* ===== 表示 ===== */
@@ -1702,7 +1711,6 @@ async function generate(){
   var key=getKey();
   if(!key){showStatus('APIキーを保存してください','err');return;}
   var prompt=buildPrompt();
-  document.getElementById('genBtn').disabled=true;
   document.getElementById('loading').classList.add('show');
   document.getElementById('outWrap').classList.remove('show');
   document.getElementById('status').style.display='none';
@@ -1833,7 +1841,6 @@ async function generate(){
 
   } catch(e){showStatus('エラー: '+e.message,'err');}
   finally{
-    document.getElementById('genBtn').disabled=false;
     document.getElementById('loading').classList.remove('show');
   }
 }
