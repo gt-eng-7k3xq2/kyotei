@@ -522,11 +522,18 @@ function parseData(raw){
       nyuse:i+1,exT:null,lapT:null,strT:null,st:null,stF:false,tilt:0,
       kiryoku:null,kiryokuRank:null,
       buhin:false,zenkokuRate:null,totiRate:null,renRate:null,
+      courseRen2:null,courseRen3:null,
       sogoScore:null,sogoRank:null});
   }
   var section='',nigeContext='';
   var nigeRate6M=null,nigeRateLocal=null,nigeRateKoki=null,localCount=0;
   var afterFrank=false,afterNigeRow=false;
+  // コース別連対率の優先管理（当地10走以上→直近6ヶ月→今期）
+  var courseRen2Local=null,courseRen2_6M=null,courseRen2Koki=null;
+  var courseRen3Local=null,courseRen3_6M=null,courseRen3Koki=null;
+  var courseLocalCount=0;
+  var waku2RenContext='',waku3RenContext='';
+  var inWaku2Ren=false,inWaku3Ren=false;
 
   function v6(line){
     var cols=line.split('\t'),out=[];
@@ -623,6 +630,30 @@ function parseData(raw){
       else if(line.includes('直近1年')||line.includes('直近 1年')||line.includes('直近１年'))nigeContext='1Y';
       else if(label==='当地'&&!line.includes('%'))nigeContext='local';
       else if(label==='今期'&&nigeContext==='')nigeContext='koki';
+
+      // コース別2連対率・3連対率（枠別勝率タブ）
+      if(label==='2連対率'&&!line.includes('%'))inWaku2Ren=true;
+      else if(label==='3連対率'&&!line.includes('%'))inWaku3Ren=true;
+      else if(label==='平均ST')inWaku2Ren=false;// 次セクションに入ったらフラグ解除
+
+      if(inWaku2Ren&&line.includes('%')){
+        var r2vals=v6(line);
+        if(label==='当地'&&!courseRen2Local){
+          var lcm2=line.match(/\((\d+)\)/);if(lcm2)courseLocalCount=parseInt(lcm2[1]);
+          courseRen2Local=r2vals;
+        } else if((label.includes('直近 6')||label.includes('直近6'))&&!courseRen2_6M){
+          courseRen2_6M=r2vals;
+        } else if(label==='今期'&&!courseRen2Koki){
+          courseRen2Koki=r2vals;
+        }
+      }
+      if(inWaku3Ren&&line.includes('%')){
+        var r3vals=v6(line);
+        if(label==='当地'&&!courseRen3Local){courseRen3Local=r3vals;}
+        else if((label.includes('直近 6')||label.includes('直近6'))&&!courseRen3_6M){courseRen3_6M=r3vals;}
+        else if(label==='今期'&&!courseRen3Koki){courseRen3Koki=r3vals;}
+      }
+
       if(label.startsWith('逃げ')&&!line.includes('%')){afterNigeRow=true;}
       else if(afterNigeRow){
         var pct=parseFloat((line.split('\t')[0]||'').replace(/%/,''));
@@ -640,6 +671,12 @@ function parseData(raw){
   if(localCount>=10&&nigeRateLocal!==null){nigeRate=nigeRateLocal;nigeRateSrc='当地('+localCount+'戦)';}
   else if(nigeRate6M!==null){nigeRate=nigeRate6M;nigeRateSrc='直近6M';}
   else if(nigeRateKoki!==null){nigeRate=nigeRateKoki;nigeRateSrc='今期';}
+
+  // コース別連対率を各艇に反映（当地10走以上→直近6ヶ月→今期）
+  var bestRen2 = (courseLocalCount>=10&&courseRen2Local)?courseRen2Local : (courseRen2_6M||courseRen2Koki||null);
+  var bestRen3 = (courseLocalCount>=10&&courseRen3Local)?courseRen3Local : (courseRen3_6M||courseRen3Koki||null);
+  if(bestRen2){boats.forEach(function(b,i){if(bestRen2[i]!==null)b.courseRen2=bestRen2[i];});}
+  if(bestRen3){boats.forEach(function(b,i){if(bestRen3[i]!==null)b.courseRen3=bestRen3[i];});}
 
   return{boats:boats,nigeRate:nigeRate,nigeRateSrc:nigeRateSrc,localCount:localCount};
 }
@@ -753,6 +790,20 @@ function calcSogoScore(boats,nigeRate,raceCount){
     if(!isEarlyRace&&b.winsRate===0&&b.tokuten!==null&&b.tokuten>0)score-=2;
     // 1号艇ボーナス：逃げ率65%以上で+5点
     if(b.nyuse===1&&nigeRate!==null&&nigeRate>=65)score+=5;
+
+    // コース別ボーナス（控えめに設定・1号艇の過剰評価を避ける）
+    var courseBonus=[3,2,1,1,0,-2];
+    score+=courseBonus[b.nyuse-1]||0;
+
+    // コース別2連対率（5pt）
+    var allCR2=boats.map(function(x){return x.courseRen2!==null?x.courseRen2:0;});
+    var maxCR2=Math.max.apply(null,allCR2)||1;
+    if(b.courseRen2!==null&&maxCR2>0)score+=b.courseRen2/maxCR2*5;
+
+    // コース別3連対率（4pt）
+    var allCR3=boats.map(function(x){return x.courseRen3!==null?x.courseRen3:0;});
+    var maxCR3=Math.max.apply(null,allCR3)||1;
+    if(b.courseRen3!==null&&maxCR3>0)score+=b.courseRen3/maxCR3*4;
 
     b.sogoScore=Math.max(0,score);
   });
@@ -1103,14 +1154,14 @@ function buildPrompt(){
     p+='2位 '+shiroN_disp+'号艇 ○\n';
     p+='3位 '+sankakuN_disp+'号艇 ▲\n';
     p+='4位 '+yonkakuN_disp+'号艇 △\n';
-    p+='5位 '+goN_disp+'号艇 ×\n';
+    p+='5位 '+goN_disp+'号艇 ▽\n';
     p+='6位 '+sixthN_disp+'号艇 ×\n\n';
-    p+='【評価】(印は◎○▲△××のみ)\n';
+    p+='【評価】(印は◎○▲△▽×のみ)\n';
     p+='◎'+maruN_disp+' 苗字(短評)\n';
     p+='○'+shiroN_disp+' 苗字(短評)\n';
     p+='▲'+sankakuN_disp+' 苗字(短評)\n';
     p+='△'+yonkakuN_disp+' 苗字(短評)\n';
-    p+='×'+goN_disp+' 苗字(短評)\n';
+    p+='▽'+goN_disp+' 苗字(短評)\n';
     p+='×'+sixthN_disp+' 苗字(短評)\n\n';
     p+='【Xサマリー】\n'+venue+raceNum+'R\n';
     p+='一言コメントを以下の出力例から最も当てはまるものを選び、丸数字と苗字を実際のデータに当てはめて1行のみ出力せよ。説明・テンプレ名・矢印は一切出力禁止。【出力例】❶苗字◯。／機力は❶苗字。／攻めの起点は❹苗字。／❶苗字の連対。／気になる❻苗字の舟足。／❶苗字のイン戦。／波乱想定も機力は❶苗字。／❶苗字残し。／狙いは❷苗字の差し抜け。\n';
