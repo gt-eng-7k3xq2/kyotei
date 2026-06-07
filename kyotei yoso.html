@@ -1497,13 +1497,13 @@ function showOddsResult(){
 
 /* ===== 評価カード描画 ===== */
 var BOAT_COLORS={1:{bg:'#a8a8a8',text:'#000'},2:{bg:'#1c1c1c',text:'#fff'},3:{bg:'#c42222',text:'#fff'},4:{bg:'#1e52cc',text:'#fff'},5:{bg:'#cc9a00',text:'#000'},6:{bg:'#168432',text:'#fff'}};
-var MARK_TO_STARS={'◎':5,'○':4,'▲':3,'△':2,'×':1};
+var MARK_TO_STARS={'◎':5,'○':4,'▲':3,'△':2,'▽':1,'×':1};
 
 function renderEvalCard(text,venue,raceNum){
   // 総合評価から順位・印を取得
   var rankData=[];
   text.split('\n').forEach(function(line){
-    var m=line.match(/(\d)位[\s　]+(\d)号艇[\s　]*(◎|○|▲|△|×)/);
+    var m=line.match(/(\d)位[\s　]+(\d)号艇[\s　]*(◎|○|▲|△|▽|×)/);
     if(m)rankData.push({rank:parseInt(m[1]),boat:parseInt(m[2]),mark:m[3]});
   });
   if(!rankData.length)return;
