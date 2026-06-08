@@ -1292,12 +1292,12 @@ function buildAreBetsFinal(maru,shiro,sankaku,go,ngBoats){
   var sixth=allBoats.filter(function(x){return x!==maru&&x!==shiro&&x!==sankaku&&x!==yonkaku&&x!==go;})[0]||'6';
   var shinkido=calcData?calcData.normalResult.shinkido:'B';
 
-  // 評価順位マップ（◎=1,○=2,▲=3,△=4,⑤=5）
+  // 評価順位マップ（◎=1,○=2,▲=3,△=4,⑤=5,sixth=6）
   var rank={};
-  rank[maru]=1; rank[shiro]=2; rank[sankaku]=3; rank[yonkaku]=4; rank[go]=5;
+  rank[maru]=1; rank[shiro]=2; rank[sankaku]=3; rank[yonkaku]=4; rank[go]=5; rank[sixth]=6;
 
-  // 総合評価最下位（sixth=sogoRank6位）は除外、5艇で買い目生成
-  var boats=[maru,shiro,sankaku,yonkaku,go];
+  // 6艇全部で買い目生成（sixthは1着のみ除外、2着・3着は解放）
+  var boats=[maru,shiro,sankaku,yonkaku,go,sixth];
   var all=[];
 
   boats.forEach(function(a){
@@ -1309,6 +1309,8 @@ function buildAreBetsFinal(maru,shiro,sankaku,go,ngBoats){
         // A: 1号頭のみ（逃げ一本）
         // B: 1号(=◎)頭 OR ○頭（◎は必ず1号）
         // C: ◎頭 OR ○頭（◎は1号以外）
+        // sixth: 1着からは除外（2着・3着は解放）
+        if(a===sixth)return;
         if(shinkido==='A' && a!=='1')return;
         if(shinkido==='B' && a!=='1' && a!==shiro)return;
         if(shinkido==='C' && a!==maru && a!==shiro)return;
@@ -2178,7 +2180,10 @@ function showHitAnalysis(){
   var html='<div id="hitAnalysisWrap" style="margin-top:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;">';
   html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px;">';
   html+='<div style="font-size:10px;font-weight:700;color:var(--green);letter-spacing:1.5px;">🎯 当たり分析</div>';
+  html+='<div style="display:flex;gap:6px;align-items:center;">';
   html+='<div style="font-size:10px;color:var(--text-sub);">'+done.length+'件 / 的中'+hits.length+'件 ('+hitRate+'%)</div>';
+  html+='<button id="copyHitBtn" onclick="copyHitAnalysis()" style="padding:5px 12px;background:var(--text);color:#fff;border:none;border-radius:4px;font-size:11px;font-weight:700;-webkit-appearance:none;cursor:pointer;">📋 コピー</button>';
+  html+='</div>';
   html+='</div>';
 
   // ① 信頼度別
@@ -2254,6 +2259,26 @@ function showHitAnalysis(){
   analysisEl.style.display='block';
   analysisEl.innerHTML=html;
   analysisEl.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function copyHitAnalysis(){
+  var el=document.getElementById('hitAnalysisWrap');
+  if(!el)return;
+  // テキストとして抽出
+  var text=el.innerText||el.textContent;
+  var btn=document.getElementById('copyHitBtn');
+  navigator.clipboard.writeText(text).then(function(){
+    if(btn){btn.textContent='✅ コピー完了';setTimeout(function(){btn.textContent='📋 コピー';},2000);}
+  }).catch(function(){
+    // fallback
+    var ta=document.createElement('textarea');
+    ta.value=text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    if(btn){btn.textContent='✅ コピー完了';setTimeout(function(){btn.textContent='📋 コピー';},2000);}
+  });
 }
 
 function showMissDetail(){
