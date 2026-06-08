@@ -125,7 +125,6 @@ html,body{min-height:100vh;background:#04040c;}
 #tool-1 .miss-tag.tensu{background:rgba(68,196,122,0.15);color:var(--green);}
 #tool-1 .log-bets-preview{font-size:11px;color:var(--text2);font-family:'Courier New',monospace;line-height:1.8;}
 #tool-1 .log-actions{display:flex;gap:7px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
-#tool-1 .btn-edit{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text2);font-size:12px;font-weight:600;padding:8px;cursor:pointer;text-align:center;}
 #tool-1 .btn-del{background:rgba(224,85,102,0.1);border:1px solid rgba(224,85,102,0.3);border-radius:var(--r2);color:var(--red);font-size:12px;font-weight:600;padding:8px 14px;cursor:pointer;}
 #tool-1 .log-bets-toggle{font-size:11px;color:var(--text2);cursor:pointer;margin-top:6px;display:inline-block;}
 #tool-1 .log-bets-detail{display:none;margin-top:6px;}
@@ -159,8 +158,6 @@ html,body{min-height:100vh;background:#04040c;}
 </head>
 <body>
 
-<div id="bridge-banner" style="display:none;position:sticky;top:0;z-index:300;background:linear-gradient(135deg,#0a1a2a,#0d1f35);border-bottom:1px solid #2a3a6a;padding:10px 16px;flex-direction:row;align-items:center;justify-content:space-between;gap:10px;"><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:16px;">⚡</span><div><div style="font-size:11px;font-weight:700;color:#7aabee;">予想エンジンから新しいデータあり</div><div style="font-size:10px;color:#556;margin-top:1px;" id="bridge-info"></div></div></div><div style="display:flex;gap:6px;flex-shrink:0;"><button onclick="loadFromBridge()" style="background:#7aabee;color:#080a0f;border:none;border-radius:8px;font-size:11px;font-weight:700;padding:7px 12px;">読み込む</button><button onclick="dismissBridge()" style="background:transparent;color:#445;border:1px solid #2a3a6a;border-radius:8px;font-size:11px;padding:7px 10px;">✕</button></div></div>
-
 
 <!-- ===== SECTION 3: ログ管理 ===== -->
 <div class="sec-hd">
@@ -175,45 +172,11 @@ html,body{min-height:100vh;background:#04040c;}
 </header>
 <div class="page active" id="page-input">
   <div class="card" style="border-color:rgba(201,168,76,0.4);background:rgba(201,168,76,0.05);">
-    <div class="card-title">💰 払戻を一括取込（ブックマークレット）</div>
+    <div class="card-title">💰 払戻を一括取込</div>
     <div class="sub-label" style="margin-bottom:8px;">boatrace.jpでブックマークレット実行→コピーされたデータをここに貼り付け</div>
-    <textarea id="pay-paste" placeholder="ブックマークレットを実行するとクリップボードにコピーされます。ここに貼り付けてください。" oninput="applyPayPaste(this.value)" style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:12px;padding:10px;outline:none;font-family:monospace;resize:none;min-height:70px;line-height:1.6;"></textarea>
+    <textarea id="pay-paste" placeholder="ブックマークレットを実行するとクリップボードにコピーされます。ここに貼り付けてください。" oninput="applyPayPaste(this.value)" style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:12px;padding:10px;outline:none;font-family:monospace;resize:none;min-height:100px;line-height:1.6;"></textarea>
     <div id="pay-paste-status" style="font-size:11px;color:var(--text2);margin-top:6px;min-height:16px;"></div>
   </div>
-  <div class="card"><div class="card-title">⚡ 結果を貼り付け（自動入力）</div><div class="sub-label">形式: 蒲郡 9R,4-3-5,¥13,400</div><input class="paste-input" id="result-paste" type="text" placeholder="ブックマークレットでコピーした結果を貼り付け" oninput="pasteResult(this.value)"></div>
-  <div class="card"><div class="card-title">📱 X投稿文を貼り付け（自動入力）</div><div class="sub-label">場名・R・買い目が自動入力されます</div><textarea id="xpost-paste" placeholder="蒲郡12R&#10;&#10;本線　1-6-34/34-1-6&#10;&#10;抑え　1-34-6/34-6-1&#10;&#10;G." oninput="pasteXPost(this.value)" style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:13px;padding:10px;outline:none;font-family:inherit;resize:none;min-height:100px;line-height:1.8;"></textarea><div id="xpost-status" style="font-size:11px;color:var(--text2);margin-top:6px;min-height:16px;"></div></div>
-  <div class="card"><div class="card-title">📍 レース情報</div>
-    <div class="row2">
-      <div class="field"><label>場名</label><select id="venue"><option value="">選択</option><option>桐生</option><option>戸田</option><option>江戸川</option><option>平和島</option><option>多摩川</option><option>浜名湖</option><option>蒲郡</option><option>常滑</option><option>津</option><option>三国</option><option>びわこ</option><option>住之江</option><option>尼崎</option><option>鳴門</option><option>丸亀</option><option>児島</option><option>宮島</option><option>徳山</option><option>下関</option><option>若松</option><option>芦屋</option><option>福岡</option><option>唐津</option><option>大村</option></select></div>
-      <div class="field"><label>レース番号</label><select id="race-num"><option value="">選択</option><option>1R</option><option>2R</option><option>3R</option><option>4R</option><option>5R</option><option>6R</option><option>7R</option><option>8R</option><option>9R</option><option>10R</option><option>11R</option><option>12R</option></select></div>
-    </div>
-    <div class="row2">
-      <div class="field"><label>日付</label><input type="date" id="race-date"></div>
-      <div class="field"><label>プロンプトVer.</label><select id="prompt-ver"><option>v2.0</option><option>v6.4</option><option>v6.3</option><option>v6.2</option><option>v6.1</option><option>v6.0</option><option>その他</option></select></div>
-    </div>
-  </div>
-  <div class="card"><div class="card-title">🎯 実際の結果</div>
-    <div class="row3">
-      <div class="field"><label>1着</label><select id="result1"><option value="">-</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
-      <div class="field"><label>2着</label><select id="result2"><option value="">-</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
-      <div class="field"><label>3着</label><select id="result3"><option value="">-</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
-    </div>
-    <div class="field" style="margin-top:4px;"><label>配当金</label><div style="display:flex;align-items:center;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);overflow:hidden;"><span style="padding:0 8px;color:var(--green);font-weight:700;font-family:'Courier New',monospace;font-size:15px;flex-shrink:0;">¥</span><input type="text" id="payout" placeholder="13,400" style="flex:1;background:transparent;border:none;color:var(--green);font-size:15px;font-weight:700;font-family:'Courier New',monospace;padding:9px 8px 9px 0;outline:none;"></div></div>
-  </div>
-  <div class="card"><div class="card-title">📋 買い目入力</div>
-    <div class="expand-area"><div class="sub-label">📋 買い目テキストを貼り付け（自動展開）</div><input class="expand-input" id="bet-paste" type="text" placeholder="例: 本線 1-24-246 / 抑え 4-1=26"><button class="btn-expand" onclick="expandBets()">⚡ 自動展開</button></div>
-    <div class="bet-builder">
-      <div class="bet-builder-header"><div><div class="bet-builder-title">号艇をタップして入力</div><div class="bet-pos-hint" id="pos-hint"><span class="pos-badge p1">1着</span><span class="pos-badge inactive">2着</span><span class="pos-badge inactive">3着</span></div></div><div class="bet-preview empty" id="bet-preview">---</div></div>
-      <div class="boat-btns" id="boat-btns"><div class="boat-btn" data-n="1" onclick="tapBoat(1)">1</div><div class="boat-btn" data-n="2" onclick="tapBoat(2)">2</div><div class="boat-btn" data-n="3" onclick="tapBoat(3)">3</div><div class="boat-btn" data-n="4" onclick="tapBoat(4)">4</div><div class="boat-btn" data-n="5" onclick="tapBoat(5)">5</div><div class="boat-btn" data-n="6" onclick="tapBoat(6)">6</div></div>
-      <div class="bet-actions"><button class="btn-add-bet" id="btn-add-bet" onclick="addBet()" disabled>追加</button><button class="btn-clear-bet" onclick="clearBetInput()">クリア</button></div>
-    </div>
-    <div class="bets-list" id="bets-list"></div><div class="bet-count" id="bet-count"></div>
-  </div>
-  <div class="card"><div class="card-title">❌ 結果分類</div>
-    <div class="miss-grid" id="miss-grid-input"><div class="miss-btn" data-val="hit" onclick="toggleMiss(this,'input')">✅ 的中</div><div class="miss-btn" data-val="miseru" onclick="toggleMiss(this,'input')">👁 見送り</div><div class="miss-btn" data-val="ichaku" onclick="toggleMiss(this,'input')">1着ハズレ</div><div class="miss-btn" data-val="nichaku" onclick="toggleMiss(this,'input')">2着ハズレ</div><div class="miss-btn" data-val="sankaku" onclick="toggleMiss(this,'input')">3着ハズレ</div><div class="miss-btn" data-val="tensu" onclick="toggleMiss(this,'input')">点数外れ</div></div>
-  </div>
-  <div class="card"><div class="card-title">📝 メモ（任意）</div><div class="field"><input type="text" id="memo" placeholder="展開コメント・気づきなど"></div></div>
-  <button class="btn-primary" onclick="saveLog()">保存する</button>
 </div>
 
 <div class="page" id="page-analysis">
@@ -251,39 +214,9 @@ html,body{min-height:100vh;background:#04040c;}
   <div id="nippo-card-inner" onclick="exitScreenshotMode()"></div>
 </div>
 
-<div class="modal-overlay" id="edit-modal">
-  <div class="modal"><div class="modal-title">✏️ ログを編集</div>
-    <div class="row2">
-      <div class="field"><label>場名</label><select id="edit-venue"><option value="">選択</option><option>桐生</option><option>戸田</option><option>江戸川</option><option>平和島</option><option>多摩川</option><option>浜名湖</option><option>蒲郡</option><option>常滑</option><option>津</option><option>三国</option><option>びわこ</option><option>住之江</option><option>尼崎</option><option>鳴門</option><option>丸亀</option><option>児島</option><option>宮島</option><option>徳山</option><option>下関</option><option>若松</option><option>芦屋</option><option>福岡</option><option>唐津</option><option>大村</option></select></div>
-      <div class="field"><label>レース番号</label><select id="edit-race-num"><option value="">選択</option><option>1R</option><option>2R</option><option>3R</option><option>4R</option><option>5R</option><option>6R</option><option>7R</option><option>8R</option><option>9R</option><option>10R</option><option>11R</option><option>12R</option></select></div>
-    </div>
-    <div class="row3">
-      <div class="field"><label>1着</label><select id="edit-r1"><option value="">-</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
-      <div class="field"><label>2着</label><select id="edit-r2"><option value="">-</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
-      <div class="field"><label>3着</label><select id="edit-r3"><option value="">-</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
-    </div>
-    <div class="field"><label>配当金</label><div style="display:flex;align-items:center;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);overflow:hidden;"><span style="padding:0 8px;color:var(--green);font-weight:700;font-family:'Courier New',monospace;font-size:15px;flex-shrink:0;">¥</span><input type="text" id="edit-payout" placeholder="13,400" style="flex:1;background:transparent;border:none;color:var(--green);font-size:15px;font-weight:700;font-family:'Courier New',monospace;padding:9px 8px 9px 0;outline:none;"></div></div>
-    <div class="field"><label>プロンプトVer.</label><select id="edit-ver"><option>v2.0</option><option>v6.4</option><option>v6.3</option><option>v6.2</option><option>v6.1</option><option>v6.0</option><option>その他</option></select></div>
-    <div class="field"><label>日付</label><input type="date" id="edit-date"></div>
-    <div style="margin-bottom:12px;">
-      <div class="card-title" style="margin-bottom:8px;">買い目</div>
-      <div class="bet-builder" style="margin-bottom:8px;">
-        <div class="bet-builder-header"><div><div class="bet-builder-title">号艇タップで追加</div><div class="bet-pos-hint" id="edit-pos-hint"><span class="pos-badge p1">1着</span><span class="pos-badge inactive">2着</span><span class="pos-badge inactive">3着</span></div></div><div class="bet-preview empty" id="edit-bet-preview">---</div></div>
-        <div class="boat-btns" id="edit-boat-btns"><div class="boat-btn" onclick="tapBoatEdit(1)">1</div><div class="boat-btn" onclick="tapBoatEdit(2)">2</div><div class="boat-btn" onclick="tapBoatEdit(3)">3</div><div class="boat-btn" onclick="tapBoatEdit(4)">4</div><div class="boat-btn" onclick="tapBoatEdit(5)">5</div><div class="boat-btn" onclick="tapBoatEdit(6)">6</div></div>
-        <div class="bet-actions"><button class="btn-add-bet" id="edit-btn-add-bet" onclick="addBetEdit()" disabled>追加</button><button class="btn-clear-bet" onclick="clearBetInputEdit()">クリア</button></div>
-      </div>
-      <div id="edit-bets-list"></div><div class="bet-count" id="edit-bet-count"></div>
-    </div>
-    <div style="margin-bottom:12px;"><div class="card-title" style="margin-bottom:8px;">結果分類</div>
-      <div class="miss-grid" id="miss-grid-edit"><div class="miss-btn" data-val="hit" onclick="toggleMiss(this,'edit')">✅ 的中</div><div class="miss-btn" data-val="miseru" onclick="toggleMiss(this,'edit')">👁 見送り</div><div class="miss-btn" data-val="ichaku" onclick="toggleMiss(this,'edit')">1着ハズレ</div><div class="miss-btn" data-val="nichaku" onclick="toggleMiss(this,'edit')">2着ハズレ</div><div class="miss-btn" data-val="sankaku" onclick="toggleMiss(this,'edit')">3着ハズレ</div><div class="miss-btn" data-val="tensu" onclick="toggleMiss(this,'edit')">点数外れ</div></div>
-    </div>
-    <div class="field"><label>メモ</label><input type="text" id="edit-memo" placeholder="展開コメント・気づきなど"></div>
-    <div class="modal-actions"><button class="btn-secondary" onclick="closeEditModal()">キャンセル</button><button class="btn-primary" style="flex:1;margin-top:0;" onclick="saveEdit()">保存する</button></div>
-  </div>
-</div>
 
 <nav class="nav">
-  <div class="nav-item active" onclick="switchPage('input')"><div class="nav-icon">✏️</div><div class="nav-label">記録</div></div>
+  <div class="nav-item active" onclick="switchPage('input')"><div class="nav-icon">💰</div><div class="nav-label">取込</div></div>
   <div class="nav-item" onclick="switchPage('analysis')"><div class="nav-icon">📊</div><div class="nav-label">分析</div></div>
   <div class="nav-item" onclick="switchPage('logs')"><div class="nav-icon">📋</div><div class="nav-label">ログ</div></div>
   <div class="nav-item" onclick="switchPage('nippo')"><div class="nav-icon">📅</div><div class="nav-label">日報</div></div>
@@ -294,48 +227,15 @@ html,body{min-height:100vh;background:#04040c;}
 <script>
 /* ===== TOOL 1 ===== */
 const MISS_LABELS={hit:'的中',miseru:'見送り',ichaku:'1着ハズレ',nichaku:'2着ハズレ',sankaku:'3着ハズレ',tensu:'点数外れ'};
-let inputBets=[],inputCurrent=[];
-let editBets=[],editCurrent=[],editingId=null;
 let currentDateFilter='all',analysisDFilter='all';
 let honsenUnit=500,osaeeUnit=300;
 
-document.getElementById('race-date').value=new Date().toISOString().split('T')[0];
 document.getElementById('nippo-date').value=new Date().toISOString().split('T')[0];
 
-function pasteXPost(text){
-  if(!text.trim())return;
-  const lines=text.split('\n').map(l=>l.trim()).filter(l=>l);
-  let detected=[];
-  const venueNames=['桐生','戸田','江戸川','平和島','多摩川','浜名湖','蒲郡','常滑','津','三国','びわこ','住之江','尼崎','鳴門','丸亀','児島','宮島','徳山','下関','若松','芦屋','福岡','唐津','大村'];
-  let venueFound=false;
-  for(const line of lines){if(venueFound)break;for(const vn of venueNames){if(line.startsWith(vn)){const rest=line.slice(vn.length);const rm=rest.match(/^(\d{1,2})R/);if(rm){const venueEl=document.getElementById('venue');for(let i=0;i<venueEl.options.length;i++){if(venueEl.options[i].value===vn){venueEl.value=vn;break;}}document.getElementById('race-num').value=rm[1]+'R';detected.push(vn+rm[1]+'R');venueFound=true;break;}}}}
-  const allBets=[];let mode=null;
-  for(const line of lines){const hl=line.replace(/^(本線|抑え)[\s\u3000]*/,(match,p1)=>{mode=p1;return '';}).trim();if(!hl&&line.match(/^(本線|抑え)/))continue;const target=hl||(mode?line:null);if(!target)continue;target.split('/').forEach(item=>{item=item.trim();if(!item)return;expandOne(item).forEach(bet=>{if(!allBets.includes(bet)&&allBets.length<15)allBets.push(bet);});});}
-  if(allBets.length>0){inputBets=allBets.map((v,i)=>({val:v,type:i<8?'honsen':'osaee'}));renderBetsList();clearBetInput();detected.push(allBets.length+'点');}
-  const statusEl=document.getElementById('xpost-status');
-  if(detected.length){statusEl.style.color='var(--green)';statusEl.textContent='✅ 自動入力: '+detected.join(' / ');}
-}
-function pasteResult(val){
-  if(!val.trim())return;
-  const parts=val.split(',');const first=parts[0].trim();
-  const rm=first.match(/^(.+?)\s+(\d{1,2}R)$/);
-  if(rm){const venueEl=document.getElementById('venue');for(let i=0;i<venueEl.options.length;i++){if(venueEl.options[i].value===rm[1]){venueEl.value=rm[1];break;}}document.getElementById('race-num').value=rm[2];}
-  else{const nums=first.split('-').map(s=>s.trim()).filter(s=>/^[1-6]$/.test(s));if(nums[0])document.getElementById('result1').value=nums[0];if(nums[1])document.getElementById('result2').value=nums[1];if(nums[2])document.getElementById('result3').value=nums[2];}
-  if(parts[1]){const nums=parts[1].trim().split('-').map(s=>s.trim()).filter(s=>/^[1-6]$/.test(s));if(nums[0])document.getElementById('result1').value=nums[0];if(nums[1])document.getElementById('result2').value=nums[1];if(nums[2])document.getElementById('result3').value=nums[2];}
-  if(parts[2]){document.getElementById('payout').value=parts[2].trim().replace(/^¥/,'').replace(/[^\d,]/g,'');}
-}
-function expandBets(){
-  const text=document.getElementById('bet-paste').value;if(!text.trim())return;
-  const allBets=[];
-  text.split('/').forEach(block=>{block=block.trim().replace(/^(本線|抑え)[\s\u3000]*/,'');if(!block)return;block.split(/[,，]/).forEach(item=>{item=item.trim();if(!item)return;expandOne(item).forEach(bet=>{if(!allBets.includes(bet)&&allBets.length<15)allBets.push(bet);});});});
-  if(!allBets.length){showToast('買い目を解析できませんでした');return;}
-  inputBets=allBets.map((v,i)=>({val:v,type:i<8?'honsen':'osaee'}));renderBetsList();clearBetInput();showToast(allBets.length+'点を自動入力しました');
-}
-function expandOne(notation){
-  if(notation.indexOf('=')>=0){const segs=notation.split(/[-=]/);if(segs.length>=3){const a=segs[0].split('').filter(c=>/[1-6]/.test(c)),b=segs[1].split('').filter(c=>/[1-6]/.test(c)),c=segs[2].split('').filter(c=>/[1-6]/.test(c)),r=[];a.forEach(x=>b.forEach(y=>c.forEach(z=>{if(x!==y&&y!==z&&x!==z){const s=x+'-'+y+'-'+z;if(!r.includes(s))r.push(s);}})));a.forEach(x=>c.forEach(y=>b.forEach(z=>{if(x!==y&&y!==z&&x!==z){const s=x+'-'+y+'-'+z;if(!r.includes(s))r.push(s);}})));return r;}}
-  const segs=notation.split('-');if(segs.length===3){const s1=segs[0].split('').filter(c=>/[1-6]/.test(c)),s2=segs[1].split('').filter(c=>/[1-6]/.test(c)),s3=segs[2].split('').filter(c=>/[1-6]/.test(c)),r=[];s1.forEach(a=>s2.forEach(b=>s3.forEach(c=>{if(a!==b&&b!==c&&a!==c){const s=a+'-'+b+'-'+c;if(!r.includes(s))r.push(s);}})));return r;}
-  if(/^[1-6]-[1-6]-[1-6]$/.test(notation))return[notation];return[];
-}
+
+
+
+
 function switchPage(p){
   document.querySelectorAll('#tool-1 .page').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('#tool-1 .nav-item').forEach(el=>el.classList.remove('active'));
@@ -346,74 +246,25 @@ function switchPage(p){
 }
 function getLogs(){try{return JSON.parse(localStorage.getItem('kyotei_v2')||'[]');}catch{return[];}}
 function saveLogs(logs){localStorage.setItem('kyotei_v2',JSON.stringify(logs));}
-function tapBoat(n){if(inputCurrent.includes(n))return;inputCurrent.push(n);updateBetInput();}
-function updateBetInput(){
-  const preview=document.getElementById('bet-preview'),hint=document.getElementById('pos-hint'),addBtn=document.getElementById('btn-add-bet'),btns=document.querySelectorAll('#boat-btns .boat-btn');
-  if(!inputCurrent.length){preview.textContent='---';preview.className='bet-preview empty';}
-  else{if(inputCurrent.length===1)preview.textContent=inputCurrent[0]+'-?-?';if(inputCurrent.length===2)preview.textContent=inputCurrent[0]+'-'+inputCurrent[1]+'-?';if(inputCurrent.length===3)preview.textContent=inputCurrent.join('-');preview.className='bet-preview';}
-  const posNames=['p1','p2','p3'],posLabels=['1着','2着','3着'];
-  hint.innerHTML=posLabels.map((l,i)=>`<span class="pos-badge ${i<inputCurrent.length?posNames[i]:'inactive'}">${l}</span>`).join('');
-  btns.forEach(b=>{const n=parseInt(b.dataset.n);b.className='boat-btn';if(inputCurrent.includes(n)){const idx=inputCurrent.indexOf(n);b.className='boat-btn pos-'+(idx+1)+' disabled';}});
-  addBtn.disabled=inputCurrent.length!==3;
-}
-function addBet(){if(inputCurrent.length!==3)return;const val=inputCurrent.join('-');if(inputBets.some(b=>b.val===val)){showToast('同じ買い目があります');return;}if(inputBets.length>=15){showToast('15点が上限です');return;}inputBets.push({val,type:'honsen'});clearBetInput();renderBetsList();}
-function clearBetInput(){inputCurrent=[];updateBetInput();}
-function removeBet(i){inputBets.splice(i,1);renderBetsList();}
-function toggleBetType(i){inputBets[i].type=inputBets[i].type==='honsen'?'osaee':'honsen';renderBetsList();}
-function toggleBetTypeEdit(i){editBets[i].type=editBets[i].type==='honsen'?'osaee':'honsen';renderEditBetsList();}
-function renderBetsList(){
-  const el=document.getElementById('bets-list'),countEl=document.getElementById('bet-count');
-  if(!inputBets.length){el.innerHTML='';countEl.innerHTML='';return;}
-  el.innerHTML=inputBets.map((b,i)=>`<div class="bet-item"><span class="bet-item-num">${i+1}</span><span class="bet-item-val">${b.val}</span><span class="bet-item-type ${b.type}" onclick="toggleBetType(${i})" style="cursor:pointer;user-select:none;">${b.type==='honsen'?'本線':'抑え'}</span><button class="bet-item-del" onclick="removeBet(${i})">×</button></div>`).join('');
-  countEl.innerHTML=`<span>${inputBets.length}</span> / 15点`;
-}
-function tapBoatEdit(n){if(editCurrent.includes(n))return;editCurrent.push(n);updateBetInputEdit();}
-function updateBetInputEdit(){
-  const preview=document.getElementById('edit-bet-preview'),hint=document.getElementById('edit-pos-hint'),addBtn=document.getElementById('edit-btn-add-bet'),btns=document.querySelectorAll('#edit-boat-btns .boat-btn');
-  if(!editCurrent.length){preview.textContent='---';preview.className='bet-preview empty';}
-  else{if(editCurrent.length===1)preview.textContent=editCurrent[0]+'-?-?';if(editCurrent.length===2)preview.textContent=editCurrent[0]+'-'+editCurrent[1]+'-?';if(editCurrent.length===3)preview.textContent=editCurrent.join('-');preview.className='bet-preview';}
-  const posNames=['p1','p2','p3'],posLabels=['1着','2着','3着'];
-  hint.innerHTML=posLabels.map((l,i)=>`<span class="pos-badge ${i<editCurrent.length?posNames[i]:'inactive'}">${l}</span>`).join('');
-  btns.forEach(b=>{const n=parseInt(b.textContent);b.className='boat-btn';if(editCurrent.includes(n)){const idx=editCurrent.indexOf(n);b.className='boat-btn pos-'+(idx+1)+' disabled';}});
-  addBtn.disabled=editCurrent.length!==3;
-}
-function addBetEdit(){if(editCurrent.length!==3)return;const val=editCurrent.join('-');if(editBets.some(b=>b.val===val)){showToast('同じ買い目があります');return;}if(editBets.length>=15){showToast('15点が上限です');return;}editBets.push({val,type:'honsen'});clearBetInputEdit();renderEditBetsList();}
-function clearBetInputEdit(){editCurrent=[];updateBetInputEdit();}
-function removeBetEdit(i){editBets.splice(i,1);renderEditBetsList();}
-function renderEditBetsList(){
-  const el=document.getElementById('edit-bets-list'),countEl=document.getElementById('edit-bet-count');
-  if(!editBets.length){el.innerHTML='';countEl.innerHTML='';return;}
-  el.innerHTML=editBets.map((b,i)=>`<div class="bet-item"><span class="bet-item-num">${i+1}</span><span class="bet-item-val">${b.val}</span><span class="bet-item-type ${b.type}" onclick="toggleBetTypeEdit(${i})" style="cursor:pointer;user-select:none;">${b.type==='honsen'?'本線':'抑え'}</span><button class="bet-item-del" onclick="removeBetEdit(${i})">×</button></div>`).join('');
-  countEl.innerHTML=`<span>${editBets.length}</span> / 15点`;
-}
-function toggleMiss(el,ctx){
-  const val=el.dataset.val,gridId=ctx==='input'?'miss-grid-input':'miss-grid-edit';
-  if(val==='hit'||val==='miseru'){document.querySelectorAll(`#${gridId} .miss-btn`).forEach(b=>b.classList.remove('selected'));}
-  else{document.querySelectorAll(`#${gridId} .miss-btn[data-val="hit"],#${gridId} .miss-btn[data-val="miseru"]`).forEach(b=>b.classList.remove('selected'));}
-  el.classList.toggle('selected');
-}
-function saveLog(){
-  const venue=document.getElementById('venue').value,raceNum=document.getElementById('race-num').value;
-  if(!venue||!raceNum){showToast('場名・レース番号を入力してください');return;}
-  const log={id:Date.now(),date:document.getElementById('race-date').value,venue,raceNum,ver:document.getElementById('prompt-ver').value,result:[document.getElementById('result1').value,document.getElementById('result2').value,document.getElementById('result3').value].filter(Boolean).join('-'),payout:'¥'+document.getElementById('payout').value.replace(/^¥/,'').replace(/[^\d,]/g,''),bets:[...inputBets],miss:[...document.querySelectorAll('#miss-grid-input .miss-btn.selected')].map(b=>b.dataset.val),memo:document.getElementById('memo').value};
-  const logs=getLogs();logs.unshift(log);saveLogs(logs);
-  document.getElementById('venue').value='';document.getElementById('race-num').value='';document.getElementById('result1').value='';document.getElementById('result2').value='';document.getElementById('result3').value='';document.getElementById('payout').value='';document.getElementById('memo').value='';document.getElementById('result-paste').value='';document.getElementById('bet-paste').value='';document.getElementById('xpost-paste').value='';document.getElementById('xpost-status').textContent='';document.getElementById('race-date').value=new Date().toISOString().split('T')[0];
-  inputBets=[];clearBetInput();renderBetsList();document.querySelectorAll('#miss-grid-input .miss-btn').forEach(b=>b.classList.remove('selected'));showToast('保存しました ✓');
-}
-function openEditModal(id){
-  const log=getLogs().find(l=>l.id===id);if(!log)return;
-  editingId=id;editBets=log.bets?[...log.bets]:[];editCurrent=[];
-  document.getElementById('edit-venue').value=log.venue||'';document.getElementById('edit-race-num').value=log.raceNum||'';document.getElementById('edit-ver').value=log.ver||'v2.0';document.getElementById('edit-date').value=log.date||'';document.getElementById('edit-memo').value=log.memo||'';document.getElementById('edit-payout').value=log.payout||'';
-  const parts=(log.result||'').split('-');document.getElementById('edit-r1').value=parts[0]||'';document.getElementById('edit-r2').value=parts[1]||'';document.getElementById('edit-r3').value=parts[2]||'';
-  document.querySelectorAll('#miss-grid-edit .miss-btn').forEach(b=>b.classList.toggle('selected',(log.miss||[]).includes(b.dataset.val)));
-  renderEditBetsList();updateBetInputEdit();document.getElementById('edit-modal').classList.add('open');
-}
-function closeEditModal(){document.getElementById('edit-modal').classList.remove('open');editingId=null;editBets=[];editCurrent=[];}
-function saveEdit(){
-  const logs=getLogs(),idx=logs.findIndex(l=>l.id===editingId);if(idx===-1)return;
-  logs[idx]={...logs[idx],venue:document.getElementById('edit-venue').value,raceNum:document.getElementById('edit-race-num').value,ver:document.getElementById('edit-ver').value,date:document.getElementById('edit-date').value,memo:document.getElementById('edit-memo').value,payout:document.getElementById('edit-payout').value,result:[document.getElementById('edit-r1').value,document.getElementById('edit-r2').value,document.getElementById('edit-r3').value].filter(Boolean).join('-'),bets:[...editBets],miss:[...document.querySelectorAll('#miss-grid-edit .miss-btn.selected')].map(b=>b.dataset.val)};
-  saveLogs(logs);closeEditModal();renderLogs();showToast('更新しました ✓');
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 function getUniqueDates(){return[...new Set(getLogs().map(l=>l.date).filter(Boolean))].sort().reverse();}
 function renderLogs(){
   const logs=getLogs(),dates=getUniqueDates();
@@ -422,7 +273,7 @@ function renderLogs(){
   const filtered=currentDateFilter==='all'?logs:logs.filter(l=>l.date===currentDateFilter);
   const listEl=document.getElementById('log-list');
   if(!filtered.length){listEl.innerHTML='<div class="empty-state"><div class="icon">📋</div>記録がありません</div>';return;}
-  listEl.innerHTML=filtered.map(log=>{const tags=(log.miss||[]).map(m=>`<span class="miss-tag ${m}">${MISS_LABELS[m]||m}</span>`).join('');const betsHtml=(log.bets||[]).map((b,i)=>`${b.val}<span style="color:var(--text3);font-size:9px;">(${b.type==='honsen'?'本':'抑'})</span>${i<(log.bets.length-1)?'　':''}`).join('');return `<div class="log-item"><div class="log-header"><div><span class="log-venue">${log.venue} ${log.raceNum}</span>${log.ver?`<span class="ver-badge">${log.ver}</span>`:''}</div><div class="log-date-small">${log.date||''}</div></div><div class="log-result-row"><span>結果</span><span class="log-result-val">${log.result||'未入力'}</span>${log.payout?`<span class="log-payout">${log.payout}</span>`:''}</div><div class="miss-tags">${tags}</div>${log.bets&&log.bets.length?`<div class="log-bets-toggle" onclick="toggleBetsDetail(${log.id})">▶ 買い目 ${log.bets.length}点</div><div class="log-bets-detail" id="bets-${log.id}"><div class="log-bets-preview">${betsHtml}</div></div>`:''}${log.memo?`<div style="font-size:11px;color:var(--text2);margin-top:6px;">💬 ${log.memo}</div>`:''}<div class="log-actions"><div class="btn-edit" onclick="openEditModal(${log.id})">✏️ 編集</div><div class="btn-del" onclick="deleteLog(${log.id})">削除</div></div></div>`;}).join('');
+  listEl.innerHTML=filtered.map(log=>{const tags=(log.miss||[]).map(m=>`<span class="miss-tag ${m}">${MISS_LABELS[m]||m}</span>`).join('');const betsHtml=(log.bets||[]).map((b,i)=>`${b.val}<span style="color:var(--text3);font-size:9px;">(${b.type==='honsen'?'本':'抑'})</span>${i<(log.bets.length-1)?'　':''}`).join('');return `<div class="log-item"><div class="log-header"><div><span class="log-venue">${log.venue} ${log.raceNum}</span>${log.ver?`<span class="ver-badge">${log.ver}</span>`:''}</div><div class="log-date-small">${log.date||''}</div></div><div class="log-result-row"><span>結果</span><span class="log-result-val">${log.result||'未入力'}</span>${log.payout?`<span class="log-payout">${log.payout}</span>`:''}</div><div class="miss-tags">${tags}</div>${log.bets&&log.bets.length?`<div class="log-bets-toggle" onclick="toggleBetsDetail(${log.id})">▶ 買い目 ${log.bets.length}点</div><div class="log-bets-detail" id="bets-${log.id}"><div class="log-bets-preview">${betsHtml}</div></div>`:''}${log.memo?`<div style="font-size:11px;color:var(--text2);margin-top:6px;">💬 ${log.memo}</div>`:''}<div class="log-actions"><div class="btn-del" onclick="deleteLog(${log.id})">削除</div></div></div>`;}).join('');
 }
 function toggleBetsDetail(id){const el=document.getElementById('bets-'+id);if(!el)return;el.classList.toggle('open');const t=el.previousElementSibling;t.textContent=el.classList.contains('open')?'▼ 買い目を隠す':'▶ 買い目 '+(getLogs().find(l=>l.id===id)?.bets?.length||0)+'点';}
 function filterDate(d){currentDateFilter=d;renderLogs();}
@@ -521,9 +372,9 @@ function applyPayPaste(text){
   }
 }
 
-function checkBridge(){try{var raw=localStorage.getItem('yoso_bridge');if(!raw)return;var data=JSON.parse(raw);if(!data||!data.ts)return;if(Date.now()-data.ts>7200000)return;var min=Math.round((Date.now()-data.ts)/60000);document.getElementById('bridge-info').textContent=(data.venue||'')+(data.raceNum?data.raceNum+'R ':'')+( min<1?'たった今':min+'分前');document.getElementById('bridge-banner').style.display='flex';}catch(e){}}
-function dismissBridge(){document.getElementById('bridge-banner').style.display='none';}
-function loadFromBridge(){try{var raw=localStorage.getItem('yoso_bridge');if(!raw)return;var data=JSON.parse(raw);if(data.outputText){document.getElementById('t3pasteArea').value=data.outputText;t3parsePrediction();}if(data.outputText){var lines=data.outputText.split('\n'),xStart=-1,xLines=[];for(var i=0;i<lines.length;i++){if(lines[i].indexOf('Xサマリー')>=0)xStart=i;if(xStart>=0&&i>xStart)xLines.push(lines[i]);}if(xLines.length){var xpostArea=document.getElementById('xpost-paste');if(xpostArea){xpostArea.value=xLines.join('\n').trim();pasteXPost(xpostArea.value);}}}if(data.venue){var sel=document.getElementById('in-venue');for(var i=0;i<sel.options.length;i++){if(sel.options[i].text===data.venue){sel.value=sel.options[i].value;break;}}}if(data.raceNum)document.getElementById('in-rn').value=data.raceNum;t2update();dismissBridge();showToast('連携データを読み込みました ✓');document.getElementById('tool-3').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){showToast('読み込みに失敗しました');}}
+
+
+
 
 // ===== URLパラメータから配当を受け取ってkyotei_v2に反映 =====
 function applyPayFromUrl(){
@@ -570,7 +421,6 @@ function applyPayFromUrl(){
   }
 }
 
-checkBridge();
 applyPayFromUrl();
 </script>
 </body>
