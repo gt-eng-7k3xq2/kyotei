@@ -1006,8 +1006,13 @@ function select1st(boats){
 function calcNormal(boats,nigeRate){
   var b1=boats.find(function(b){return b.nyuse===1;})||boats[0];
   var st=b1.avgST!==null?b1.avgST:b1.stKoki;
+  var sogoSorted=boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
+  var sogoTop=sogoSorted[0]?sogoSorted[0].nyuse:1;
   var shinkido='B';
-  if(nigeRate!==null&&st!==null){
+  // sogoRank1位が1号以外 → Cモード確定
+  if(sogoTop!==1){
+    shinkido='C';
+  } else if(nigeRate!==null&&st!==null){
     if(nigeRate>=65&&st<=0.15)shinkido='A';
     else if(nigeRate<55||(st!==null&&st>=0.18))shinkido='C';
   }
@@ -1328,9 +1333,12 @@ function buildAreBetsFinal(maru,shiro,sankaku,go,ngBoats){
       boats.forEach(function(c){
         if(c===a||c===b)return;
         // モード別1着制約
+        // A: 1号頭のみ（逃げ一本）
+        // B: 1号(=◎)頭 OR ○頭（◎は必ず1号）
+        // C: ◎頭 OR ○頭（◎は1号以外）
         if(shinkido==='A' && a!=='1')return;
-        if(shinkido==='B' && a!=='1' && a!==maru)return; // 1号 OR ◎
-        if(shinkido==='C' && a!==maru && a!==shiro)return; // ◎ OR ○
+        if(shinkido==='B' && a!=='1' && a!==shiro)return;
+        if(shinkido==='C' && a!==maru && a!==shiro)return;
         var firstBonus=(a===maru)?0:0.5;
         var score=rank[a]*10+rank[b]*10+rank[c]+firstBonus;
         all.push({bet:a+'-'+b+'-'+c, score:score});
@@ -1843,6 +1851,7 @@ async function generate(){
     document.getElementById('outWrap').classList.add('show');
     showOddsResult();
     renderEvalCard(text,venue,raceNum);
+    window._lastGenMeta={maru:maru,shiro:shiro,sankaku:sankaku,pts:currentPts,honsen:honsen,osaee:osaee};
     autoSaveLog(text);
     showStatus('生成完了','ok');
 
@@ -1905,6 +1914,8 @@ function autoSaveLog(text){
   }
   honsen=honsenM?expandBetsLog(honsenM[1]):[];
   osaee=osaeM?expandBetsLog(osaeM[1]):[];
+  // window._lastGenMetaからmaru/shiro/sankaku/pts取得
+  var meta=window._lastGenMeta||{};
   var boats=calcData.parsed.boats.map(function(b){
     return{n:b.n,name:b.name,tokuten:b.tokuten,avgST:b.avgST||b.stKoki,kiryokuRank:b.kiryokuRank,sogoRank:b.sogoRank,sogoScore:b.sogoScore?Math.round(b.sogoScore*10)/10:null};
   });
@@ -1913,12 +1924,13 @@ function autoSaveLog(text){
     datetime:new Date().toISOString(),
     venue:venue,
     raceNum:raceNum,
-    mode:currentMode,
-    shinkido:currentMode==='normal'?(calcData.normalResult?calcData.normalResult.shinkido:null):null,
+    shinkido:calcData.normalResult?calcData.normalResult.shinkido:null,
     nigeRate:calcData.parsed.nigeRate,
     areScore:calcData.areResult?calcData.areResult.score:null,
-    furikiriPass:currentMode==='are'?(calcData.furikiriResult?calcData.furikiriResult.pass:null):null,
-    arePts:currentMode==='are'?currentPts:null,
+    pts:meta.pts||currentPts,
+    maru:meta.maru||null,
+    shiro:meta.shiro||null,
+    sankaku:meta.sankaku||null,
     boats:boats,
     aiRanking:aiRanking,
     bets:{honsen:honsen,osaee:osaee},
@@ -1929,7 +1941,94 @@ function autoSaveLog(text){
   logs.push(entry);
   if(logs.length>200)logs=logs.slice(-200);
   localStorage.setItem('kyotei_logs',JSON.stringify(logs));
+
+  // ===== kyotei_v2にも書き込む =====
+  writeToV2(entry,honsen,osaee);
+
   updateLogSummary();
+}
+
+// kyotei_v2の結果を更新（commitLog時）
+function updateV2Result(kyoteiLogId,sel,payout,hitResult,logs){
+  try{
+    var v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+    var idx=v2logs.findIndex(function(l){return l.id===kyoteiLogId;});
+    if(idx<0)return; // 対応するエントリがなければ何もしない
+
+    var l=v2logs[idx];
+    var combo=sel[1]+'-'+sel[2]+'-'+sel[3];
+    l.result=combo;
+    l.payout=payout>0?'¥'+payout.toLocaleString():'';
+
+    // miss分類を自動判定
+    var miss=[];
+    if(hitResult){
+      miss=['hit'];
+    } else {
+      // ◎の着順を確認
+      var kyoteiLog=logs.find(function(k){return k.id===kyoteiLogId;});
+      var maruN=l.maru;
+      var maruPos=null;
+      if(maruN){
+        if(String(sel[1])===String(maruN))maruPos=1;
+        else if(String(sel[2])===String(maruN))maruPos=2;
+        else if(String(sel[3])===String(maruN))maruPos=3;
+      }
+      // 買い目と結果の照合
+      var allBets=(l.bets||[]).map(function(b){return b.val;});
+      var inBets=allBets.indexOf(combo)>=0;
+      if(maruPos===null){
+        miss=['ichaku']; // ◎着外
+      } else if(maruPos===1&&!inBets){
+        miss=['nichaku']; // ◎1着だが紐ズレ（2着または3着が合わない）
+      } else if(maruPos===2||maruPos===3){
+        miss=['ichaku']; // ◎が2着以下
+      } else {
+        miss=['tensu']; // その他（点数外れ等）
+      }
+    }
+    l.miss=miss;
+    localStorage.setItem('kyotei_v2',JSON.stringify(v2logs));
+  }catch(e){console.error('updateV2Result error:',e);}
+}
+
+// kyotei_v2（予想ログG.html）用フォーマットで書き込む
+function writeToV2(entry,honsen,osaee){
+  try{
+    // betsをG.html形式（{val,type}の配列）に変換
+    var betsV2=[];
+    honsen.forEach(function(b){betsV2.push({val:b,type:'honsen'});});
+    osaee.forEach(function(b){betsV2.push({val:b,type:'osaee'});});
+    var raceNumV2=String(entry.raceNum).replace(/R$/i,'')+'R';
+    var v2entry={
+      id:entry.id,
+      date:entry.datetime.slice(0,10),
+      venue:entry.venue,
+      raceNum:raceNumV2,
+      ver:'v2.0',
+      shinkido:entry.shinkido,
+      nigeRate:entry.nigeRate,
+      areScore:entry.areScore,
+      pts:entry.pts,
+      maru:entry.maru,
+      shiro:entry.shiro,
+      sankaku:entry.sankaku,
+      result:'',
+      payout:'',
+      bets:betsV2,
+      miss:[],
+      memo:''
+    };
+    var v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+    // 同日同レースの重複排除
+    var today=v2entry.date;
+    v2logs=v2logs.filter(function(l){
+      return !(l.venue===v2entry.venue&&l.raceNum===v2entry.raceNum&&l.date===today&&!l.result);
+    });
+    v2logs.unshift(v2entry);
+    if(v2logs.length>300)v2logs=v2logs.slice(0,300);
+    localStorage.setItem('kyotei_v2',JSON.stringify(v2logs));
+  }catch(e){console.error('writeToV2 error:',e);}
 }
 
 function updateLogSummary(){
@@ -2056,6 +2155,10 @@ function commitLog(id){
   delete window['_rb_'+id];
   var combo2=sel[1]+'-'+sel[2]+'-'+sel[3];
   showStatus(combo2+' '+(hitResult?'✅ 的中':'❌ 外れ'),'ok');
+
+  // ===== kyotei_v2も更新 =====
+  updateV2Result(id,sel,payout,hitResult,logs);
+
   updateLogSummary();
 }
 
