@@ -2258,6 +2258,8 @@ function showHitAnalysis(){
 
 function showMissDetail(){
   var logs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
+  var missLogs=logs.filter(function(l){return l.result&&l.result!=='skip'&&!l.hit;});
+  if(!missLogs.length){alert('外れデータなし');return;}
   var el=document.getElementById('logSummary');
   var html='<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;">';
   html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:6px;"><div style="font-size:10px;color:var(--accent);font-weight:700;letter-spacing:1.5px;">外れ詳細（'+missLogs.length+'件）</div><button onclick="copyMissDetail()" id="copyMissBtn" style="padding:5px 12px;background:var(--text);color:#fff;border:none;border-radius:4px;font-size:11px;font-weight:700;-webkit-appearance:none;cursor:pointer;">📋 コピー</button></div>';
