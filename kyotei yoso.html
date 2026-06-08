@@ -107,30 +107,21 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
 .mark-legend{display:flex;gap:8px;flex-wrap:wrap;font-size:10px;color:var(--text-sub);margin-bottom:8px;}
 .mark-legend span{display:flex;align-items:center;gap:3px;}
 
-/* ===== 評価カード ===== */
-.eval-card-wrap{margin-top:14px;display:none;}
-.eval-card-wrap.show{display:block;}
-.eval-card-hdr{font-size:10px;color:var(--text-sub);letter-spacing:1.5px;font-weight:700;margin-bottom:8px;text-transform:uppercase;}
-.eval-card{position:relative;border-radius:10px;overflow:hidden;padding:16px 14px 18px;background:#0c0c0c;}
-.eval-card-title{text-align:center;font-family:'Noto Serif JP',serif;font-style:italic;font-weight:900;font-size:clamp(20px,5vw,32px);letter-spacing:.04em;color:#e8c96a;text-shadow:0 0 20px rgba(200,153,60,0.3),0 2px 4px rgba(0,0,0,1);margin-bottom:5px;line-height:1.1;}
-.eval-brush{display:block;height:9px;margin:0 auto 12px;width:52%;background:linear-gradient(90deg,transparent 0%,rgba(180,140,30,.45) 20%,rgba(255,220,80,.65) 50%,rgba(180,140,30,.45) 80%,transparent 100%);border-radius:50%;filter:blur(2.5px);}
-.eval-boats{background:#141414;border:1px solid #2e2e2e;border-radius:8px;padding:14px 10px 12px;position:relative;display:flex;align-items:center;justify-content:space-between;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 4px 24px rgba(0,0,0,.9);}
-.eval-boats::before{content:'';position:absolute;top:5px;left:5px;width:16px;height:16px;border-top:2px solid #c9a84c;border-left:2px solid #c9a84c;}
-.eval-boats::after{content:'';position:absolute;bottom:5px;right:5px;width:16px;height:16px;border-bottom:2px solid #c9a84c;border-right:2px solid #c9a84c;}
-.eval-corner-tr{position:absolute;top:5px;right:5px;width:16px;height:16px;border-top:2px solid #c9a84c;border-right:2px solid #c9a84c;}
-.eval-corner-bl{position:absolute;bottom:5px;left:5px;width:16px;height:16px;border-bottom:2px solid #c9a84c;border-left:2px solid #c9a84c;}
-.eval-slot{display:flex;flex-direction:column;align-items:center;gap:7px;flex:1;min-width:0;}
-.eval-arrow{color:#555;font-size:clamp(12px,2.5vw,18px);font-weight:bold;flex-shrink:0;line-height:1;padding:0 1px;margin-bottom:20px;}
-.eval-badge{width:clamp(36px,9.5vw,58px);height:clamp(36px,9.5vw,58px);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Anton',sans-serif;font-size:clamp(22px,5.8vw,36px);position:relative;flex-shrink:0;}
-.eval-stars{display:flex;gap:1px;font-size:clamp(8px,2.1vw,13px);line-height:1;}
-.eval-star-on{color:#f0c800;filter:drop-shadow(0 0 3px rgba(255,210,0,.7));}
-.eval-star-off{color:#252525;}
-.eval-gold-lines{position:relative;margin-top:10px;display:flex;flex-direction:column;gap:3px;padding:0 0 2px;}
-.eval-gold-dot{position:absolute;width:9px;height:9px;left:50%;transform:translateX(-50%);top:0;background:radial-gradient(circle,#ffe580 0%,#c9a84c 55%,transparent 100%);border-radius:50%;}
-.eval-gold-line{height:1.4px;background:linear-gradient(90deg,transparent 0%,#8a6010 12%,#c9a84c 32%,#ffe580 50%,#c9a84c 68%,#8a6010 88%,transparent 100%);}
-.eval-hint{margin-top:9px;color:#4a4a4a;font-size:.65rem;text-align:center;}
-.eval-hint span{color:#c9a84c;}
-.eval-save-btn{width:100%;margin-top:8px;padding:11px;background:linear-gradient(135deg,#7a5800,#c9a84c,#ffe580,#c9a84c,#7a5800);color:#000;border:none;border-radius:6px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;cursor:pointer;letter-spacing:.05em;}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -243,25 +234,7 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
     <button onclick="regenerateBets()" style="width:100%;padding:11px;background:var(--blue-light);color:var(--blue);border:1px solid #c0d8f0;border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;touch-action:manipulation;">🔄 買い目を再生成</button>
   </div>
   <div id="oddsResult"></div>
-  <div class="eval-card-wrap" id="evalCardWrap">
-    <div class="div"></div>
-    <div class="eval-card-hdr">評価カード</div>
-    <div class="eval-card" id="evalCard">
-      <div class="eval-card-title" id="evalCardTitle">G.の総合評価🚤</div>
-      <span class="eval-brush"></span>
-      <div class="eval-boats" id="evalBoats">
-        <div class="eval-corner-tr"></div>
-        <div class="eval-corner-bl"></div>
-      </div>
-      <div class="eval-gold-lines">
-        <div class="eval-gold-line"></div>
-        <div class="eval-gold-line"></div>
-        <div class="eval-gold-dot"></div>
-      </div>
-    </div>
-    <button class="eval-save-btn" onclick="saveEvalCard()">📥 評価カードを保存・共有</button>
-    <p class="eval-hint">または📱<span>スクリーンショット</span>でも保存できます</p>
-  </div>
+
 </div>
 </div>
 <div id="logSummary" style="display:none;margin-top:12px;padding:0 0 20px;"></div>
@@ -1519,104 +1492,10 @@ function showOddsResult(){
 }
 
 
-/* ===== 評価カード描画 ===== */
-var BOAT_COLORS={1:{bg:'#a8a8a8',text:'#000'},2:{bg:'#1c1c1c',text:'#fff'},3:{bg:'#c42222',text:'#fff'},4:{bg:'#1e52cc',text:'#fff'},5:{bg:'#cc9a00',text:'#000'},6:{bg:'#168432',text:'#fff'}};
-var MARK_TO_STARS={'◎':5,'○':4,'▲':3,'△':2,'▽':1,'×':1};
 
-function renderEvalCard(text,venue,raceNum){
-  // 総合評価から順位・印を取得
-  var rankData=[];
-  text.split('\n').forEach(function(line){
-    var m=line.match(/(\d)位[\s　]+(\d)号艇[\s　]*(◎|○|▲|△|▽|×)/);
-    if(m)rankData.push({rank:parseInt(m[1]),boat:parseInt(m[2]),mark:m[3]});
-  });
-  if(!rankData.length)return;
-  rankData.sort(function(a,b){return a.rank-b.rank;});
 
-  // タイトル
-  var title='G.の総合評価🚤';
-  if(venue&&venue!=='?'&&raceNum&&raceNum!=='?')title='G.の総合評価🚤　'+venue+raceNum+'R';
-  document.getElementById('evalCardTitle').textContent=title;
 
-  // 艇バッジ生成
-  var container=document.getElementById('evalBoats');
-  var ctr=container.querySelector('.eval-corner-tr');
-  var cbl=container.querySelector('.eval-corner-bl');
-  container.innerHTML='';
-  container.appendChild(ctr);
-  container.appendChild(cbl);
 
-  rankData.forEach(function(d,idx){
-    if(idx>0){
-      var arrow=document.createElement('div');
-      arrow.className='eval-arrow';
-      arrow.textContent='›';
-      container.appendChild(arrow);
-    }
-    var slot=document.createElement('div');
-    slot.className='eval-slot';
-    var badge=document.createElement('div');
-    badge.className='eval-badge';
-    var c=BOAT_COLORS[d.boat]||BOAT_COLORS[1];
-    badge.style.background=c.bg;
-    badge.style.color=c.text;
-    badge.textContent=d.boat;
-    var stars=document.createElement('div');
-    stars.className='eval-stars';
-    var starCount=MARK_TO_STARS[d.mark]||1;
-    var starsHtml='';
-    for(var i=0;i<5;i++)starsHtml+='<span class="'+(starCount>i?'eval-star-on':'eval-star-off')+'">★</span>';
-    stars.innerHTML=starsHtml;
-    slot.appendChild(badge);
-    slot.appendChild(stars);
-    container.appendChild(slot);
-  });
-
-  document.getElementById('evalCardWrap').classList.add('show');
-}
-
-function saveEvalCard(){
-  var card=document.getElementById('evalCard');
-  if(!card)return;
-  var btn=document.querySelector('.eval-save-btn');
-  btn.textContent='生成中...';
-  btn.disabled=true;
-  html2canvas(card,{
-    scale:3,
-    useCORS:true,
-    backgroundColor:'#0a0a0a',
-    logging:false,
-    allowTaint:true
-  }).then(function(canvas){
-    canvas.toBlob(function(blob){
-      var file=new File([blob],'GARON_評価カード.png',{type:'image/png'});
-      // Web Share API（iOS Safari対応・カメラロールに保存可能）
-      if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-        navigator.share({files:[file],title:'G.の総合評価'}).then(function(){
-          btn.textContent='✅ 共有しました';
-          setTimeout(function(){btn.textContent='📥 評価カードを保存・共有';btn.disabled=false;},2000);
-        }).catch(function(){
-          btn.textContent='📥 評価カードを保存・共有';
-          btn.disabled=false;
-        });
-      } else {
-        // フォールバック：通常ダウンロード
-        var url=URL.createObjectURL(blob);
-        var link=document.createElement('a');
-        link.download='GARON_評価カード.png';
-        link.href=url;
-        link.click();
-        setTimeout(function(){URL.revokeObjectURL(url);},1000);
-        btn.textContent='✅ 保存しました';
-        setTimeout(function(){btn.textContent='📥 評価カードを保存・共有';btn.disabled=false;},2000);
-      }
-    },'image/png');
-  }).catch(function(){
-    btn.textContent='📥 評価カードを保存・共有';
-    btn.disabled=false;
-    showStatus('生成失敗。スクショをお試しください。','err');
-  });
-}
 
 
 /* ===== ◎○▲差し替え・再生成 ===== */
@@ -1676,7 +1555,6 @@ function regenerateBets(){
   }
   document.getElementById('outText').textContent=text;
   showOddsResult();
-  renderEvalCard(text,venue,raceNum);
   showStatus('買い目を再生成しました','ok');
 }
 
@@ -1850,7 +1728,6 @@ async function generate(){
     document.getElementById('outText').textContent=text;
     document.getElementById('outWrap').classList.add('show');
     showOddsResult();
-    renderEvalCard(text,venue,raceNum);
     window._lastGenMeta={maru:maru,shiro:shiro,sankaku:sankaku,pts:currentPts,honsen:honsen,osaee:osaee};
     autoSaveLog(text);
     showStatus('生成完了','ok');
@@ -2063,6 +1940,7 @@ function updateLogSummary(){
     if(allMissLogs.length>0){
       html+='<button onclick="showMissDetail()" style="width:100%;padding:11px;background:rgba(224,85,102,0.08);color:var(--accent);border:1px solid rgba(224,85,102,0.3);border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:\'Noto Sans JP\',sans-serif;margin-bottom:6px;">📊 外れ詳細（'+allMissLogs.length+'件）</button>';
     }
+    html+='<button onclick="showHitAnalysis()" style="width:100%;padding:11px;background:rgba(68,196,122,0.08);color:var(--green);border:1px solid rgba(68,196,122,0.3);border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:\'Noto Sans JP\',sans-serif;margin-bottom:6px;'+(done.length<5?'opacity:0.5;':'')+'">🎯 当たり分析'+(done.length<5?' ('+done.length+'/5件)':'')+'</button>';
     html+='<button onclick="analyzeLog()" style="width:100%;padding:11px;background:var(--blue-light);color:var(--blue);border:1px solid #c0d8f0;border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:\'Noto Sans JP\',sans-serif;'+(done.length<10?'opacity:0.5;':'')+'">🔍 AIに改善提案させる'+(done.length<10?' ('+done.length+'/10件)':'')+'</button>';
     html+='<button onclick="resetLog()" style="width:100%;margin-top:6px;padding:10px;background:var(--surface);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;font-size:11px;font-weight:700;-webkit-appearance:none;font-family:\'Noto Sans JP\',sans-serif;">🗑 ログをリセット</button>';
   }
@@ -2111,6 +1989,12 @@ function skipLog(id){
     if(logs[i].id===id){logs[i].result='skip';logs[i].hit=false;break;}
   }
   localStorage.setItem('kyotei_logs',JSON.stringify(logs));
+  // kyotei_v2にも見送りを反映
+  try{
+    var v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+    var idx=v2logs.findIndex(function(l){return l.id===id;});
+    if(idx>=0){v2logs[idx].miss=['miseru'];localStorage.setItem('kyotei_v2',JSON.stringify(v2logs));}
+  }catch(e){}
   delete window['_rb_'+id];
   showStatus('見送りとして記録しました','ok');
   updateLogSummary();
@@ -2171,10 +2055,209 @@ function resetLog(){
   showStatus('ログをリセットしました','ok');
 }
 
+function showHitAnalysis(){
+  // kyotei_v2から全データ取得
+  var v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+  // 見送り除外・結果入力済みのみ
+  var done=v2logs.filter(function(l){
+    return l.result&&l.result!==''&&l.miss&&l.miss.length>0&&l.miss.indexOf('miseru')<0;
+  });
+  if(done.length<5){showStatus('データが不足しています（5件以上必要）','err');return;}
+
+  var hits=done.filter(function(l){return l.miss.indexOf('hit')>=0;});
+  var misses=done.filter(function(l){return l.miss.indexOf('hit')<0;});
+  var hitRate=done.length>0?Math.round(hits.length/done.length*100):0;
+
+  // ヘルパー
+  function pct(h,t){return t>0?Math.round(h/t*100):0;}
+  function avg(arr){return arr.length>0?Math.round(arr.reduce(function(s,v){return s+v;},0)/arr.length):0;}
+  function parsePay(p){return parseInt((p||'').replace(/[¥￥,]/g,''))||0;}
+
+  // ① 信頼度別
+  var shinkidoData={A:{hit:0,total:0},B:{hit:0,total:0},C:{hit:0,total:0}};
+  done.forEach(function(l){
+    var s=l.shinkido;
+    if(!s||!shinkidoData[s])return;
+    shinkidoData[s].total++;
+    if(l.miss.indexOf('hit')>=0)shinkidoData[s].hit++;
+  });
+
+  // ② 逃げ率帯別
+  var nigeBands=[
+    {label:'〜49%',min:0,max:49,hit:0,total:0},
+    {label:'50〜64%',min:50,max:64,hit:0,total:0},
+    {label:'65%〜',min:65,max:999,hit:0,total:0},
+    {label:'不明',min:-1,max:-1,hit:0,total:0}
+  ];
+  done.forEach(function(l){
+    var nr=l.nigeRate;
+    var isHit=l.miss.indexOf('hit')>=0;
+    if(nr===null||nr===undefined){nigeBands[3].total++;if(isHit)nigeBands[3].hit++;return;}
+    for(var i=0;i<3;i++){
+      if(nr>=nigeBands[i].min&&nr<=nigeBands[i].max){nigeBands[i].total++;if(isHit)nigeBands[i].hit++;return;}
+    }
+  });
+
+  // ③ 荒れ指数帯別
+  var areBands=[
+    {label:'0〜3点',min:0,max:3,hit:0,total:0},
+    {label:'4〜7点',min:4,max:7,hit:0,total:0},
+    {label:'8〜11点',min:8,max:11,hit:0,total:0},
+    {label:'12点〜',min:12,max:999,hit:0,total:0}
+  ];
+  done.forEach(function(l){
+    var sc=l.areScore;
+    if(sc===null||sc===undefined)return;
+    for(var i=0;i<areBands.length;i++){
+      if(sc>=areBands[i].min&&sc<=areBands[i].max){areBands[i].total++;if(l.miss.indexOf('hit')>=0)areBands[i].hit++;return;}
+    }
+  });
+
+  // ④ 点数別
+  var ptsBands={4:{hit:0,total:0},6:{hit:0,total:0},8:{hit:0,total:0},12:{hit:0,total:0},14:{hit:0,total:0},15:{hit:0,total:0}};
+  done.forEach(function(l){
+    var p=l.pts;
+    if(!p||!ptsBands[p])return;
+    ptsBands[p].total++;
+    if(l.miss.indexOf('hit')>=0)ptsBands[p].hit++;
+  });
+
+  // ⑤ 本線/抑え別的中
+  var honsenHit=0,osaeeHit=0,totalHit=hits.length;
+  hits.forEach(function(l){
+    if(!l.bets||!l.result)return;
+    var matched=l.bets.find(function(b){return b.val===l.result;});
+    if(!matched)return;
+    if(matched.type==='honsen')honsenHit++;
+    else osaeeHit++;
+  });
+
+  // ⑥ 的中時の平均・最高配当
+  var hitPayouts=hits.map(function(l){return parsePay(l.payout);}).filter(function(v){return v>0;});
+  var avgPay=hitPayouts.length>0?Math.round(hitPayouts.reduce(function(s,v){return s+v;},0)/hitPayouts.length):0;
+  var maxPay=hitPayouts.length>0?Math.max.apply(null,hitPayouts):0;
+
+  // ⑦ 的中/外れ時の◎sogoScore比較
+  function getMaruScore(l){
+    if(!l.boats||!l.maru)return null;
+    var b=l.boats.find(function(b){return String(b.n)===String(l.maru);});
+    return b?b.sogoScore:null;
+  }
+  var hitScores=hits.map(getMaruScore).filter(function(v){return v!==null;});
+  var missScores=misses.map(getMaruScore).filter(function(v){return v!==null;});
+  var avgHitScore=hitScores.length>0?Math.round(hitScores.reduce(function(s,v){return s+v;},0)/hitScores.length*10)/10:null;
+  var avgMissScore=missScores.length>0?Math.round(missScores.reduce(function(s,v){return s+v;},0)/missScores.length*10)/10:null;
+
+  // ⑧ 的中/外れ時の平均逃げ率
+  var hitNige=hits.map(function(l){return l.nigeRate;}).filter(function(v){return v!==null&&v!==undefined;});
+  var missNige=misses.map(function(l){return l.nigeRate;}).filter(function(v){return v!==null&&v!==undefined;});
+  var avgHitNige=hitNige.length>0?Math.round(hitNige.reduce(function(s,v){return s+v;},0)/hitNige.length):null;
+  var avgMissNige=missNige.length>0?Math.round(missNige.reduce(function(s,v){return s+v;},0)/missNige.length):null;
+
+  // ===== HTML生成 =====
+  function barRow(label,hitN,totalN,color){
+    var p=pct(hitN,totalN);
+    var barColor=color||'var(--green)';
+    return '<div style="margin-bottom:10px;">'
+      +'<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;">'
+      +'<span style="color:var(--text);">'+label+'</span>'
+      +'<span style="color:'+barColor+';font-weight:700;">'+hitN+'/'+totalN+'件 ('+p+'%)</span>'
+      +'</div>'
+      +'<div style="height:5px;background:var(--bg);border-radius:3px;">'
+      +'<div style="height:5px;width:'+p+'%;background:'+barColor+';border-radius:3px;transition:width 0.4s;"></div>'
+      +'</div></div>';
+  }
+
+  function section(title,content){
+    return '<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);">'
+      +'<div style="font-size:10px;font-weight:700;color:var(--text-sub);letter-spacing:1.5px;margin-bottom:10px;">'+title+'</div>'
+      +content
+      +'</div>';
+  }
+
+  var html='<div id="hitAnalysisWrap" style="margin-top:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;">';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px;">';
+  html+='<div style="font-size:10px;font-weight:700;color:var(--green);letter-spacing:1.5px;">🎯 当たり分析</div>';
+  html+='<div style="font-size:10px;color:var(--text-sub);">'+done.length+'件 / 的中'+hits.length+'件 ('+hitRate+'%)</div>';
+  html+='</div>';
+
+  // ① 信頼度別
+  var sHtml='';
+  ['A','B','C'].forEach(function(s){
+    var d=shinkidoData[s];
+    if(d.total===0)return;
+    var color=s==='A'?'var(--blue)':s==='B'?'var(--green)':'var(--accent)';
+    sHtml+=barRow('信頼度'+s,d.hit,d.total,color);
+  });
+  if(sHtml)html+=section('① 信頼度別',sHtml);
+
+  // ② 逃げ率帯別
+  var nHtml='';
+  nigeBands.forEach(function(b){if(b.total>0)nHtml+=barRow(b.label,b.hit,b.total);});
+  if(nHtml)html+=section('② 逃げ率帯別',nHtml);
+
+  // ③ 荒れ指数帯別
+  var aHtml='';
+  areBands.forEach(function(b){if(b.total>0)aHtml+=barRow(b.label,b.hit,b.total);});
+  if(aHtml)html+=section('③ 荒れ指数帯別',aHtml);
+
+  // ④ 点数別
+  var pHtml='';
+  [4,6,8,12,14,15].forEach(function(p){
+    var d=ptsBands[p];
+    if(d.total>0)pHtml+=barRow(p+'点',d.hit,d.total);
+  });
+  if(pHtml)html+=section('④ 点数別',pHtml);
+
+  // ⑤ 本線/抑え別
+  if(totalHit>0){
+    var bHtml=barRow('本線的中',honsenHit,totalHit,'var(--gold)');
+    bHtml+=barRow('抑え的中',osaeeHit,totalHit,'var(--blue)');
+    html+=section('⑤ 本線/抑え別的中',bHtml);
+  }
+
+  // ⑥ 的中時の配当
+  if(hitPayouts.length>0){
+    html+=section('⑥ 的中配当',
+      '<div style="display:flex;gap:8px;">'
+      +'<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;">'
+      +'<div style="font-size:16px;font-weight:700;color:var(--green);">¥'+avgPay.toLocaleString()+'</div>'
+      +'<div style="font-size:10px;color:var(--text-sub);">平均配当</div></div>'
+      +'<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;">'
+      +'<div style="font-size:16px;font-weight:700;color:var(--gold);">¥'+maxPay.toLocaleString()+'</div>'
+      +'<div style="font-size:10px;color:var(--text-sub);">最高配当</div></div>'
+      +'</div>'
+    );
+  }
+
+  // ⑦ 的中/外れの◎sogoScore比較
+  if(avgHitScore!==null||avgMissScore!==null){
+    var cHtml='<div style="display:flex;gap:8px;">';
+    if(avgHitScore!==null)cHtml+='<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:16px;font-weight:700;color:var(--green);">'+avgHitScore+'pt</div><div style="font-size:10px;color:var(--text-sub);">的中時◎スコア</div></div>';
+    if(avgMissScore!==null)cHtml+='<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:16px;font-weight:700;color:var(--accent);">'+avgMissScore+'pt</div><div style="font-size:10px;color:var(--text-sub);">外れ時◎スコア</div></div>';
+    cHtml+='</div>';
+    html+=section('⑦ ◎スコア比較（的中vs外れ）',cHtml);
+  }
+
+  // ⑧ 平均逃げ率比較
+  if(avgHitNige!==null||avgMissNige!==null){
+    var nCHtml='<div style="display:flex;gap:8px;">';
+    if(avgHitNige!==null)nCHtml+='<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:16px;font-weight:700;color:var(--green);">'+avgHitNige+'%</div><div style="font-size:10px;color:var(--text-sub);">的中時逃げ率</div></div>';
+    if(avgMissNige!==null)nCHtml+='<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:16px;font-weight:700;color:var(--accent);">'+avgMissNige+'%</div><div style="font-size:10px;color:var(--text-sub);">外れ時逃げ率</div></div>';
+    nCHtml+='</div>';
+    html+=section('⑧ 逃げ率比較（的中vs外れ）',nCHtml);
+  }
+
+  html+='</div>';
+
+  var analysisEl=document.getElementById('logAnalysis');
+  analysisEl.style.display='block';
+  analysisEl.innerHTML=html;
+  analysisEl.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
 function showMissDetail(){
   var logs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
-  var missLogs=logs.filter(function(l){return l.result&&l.result!=='skip'&&!l.hit;});
-  if(!missLogs.length){alert('外れデータなし');return;}
   var el=document.getElementById('logSummary');
   var html='<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;">';
   html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:6px;"><div style="font-size:10px;color:var(--accent);font-weight:700;letter-spacing:1.5px;">外れ詳細（'+missLogs.length+'件）</div><button onclick="copyMissDetail()" id="copyMissBtn" style="padding:5px 12px;background:var(--text);color:#fff;border:none;border-radius:4px;font-size:11px;font-weight:700;-webkit-appearance:none;cursor:pointer;">📋 コピー</button></div>';
@@ -2457,6 +2540,7 @@ function copyAnalysis(){
 loadKey();
 loadVenueRace();
 updateLogSummary();
+
 </script>
 </body>
 </html>
