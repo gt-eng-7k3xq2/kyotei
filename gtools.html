@@ -174,6 +174,12 @@ html,body{min-height:100vh;background:#04040c;}
   <div class="header-left"><h1>⚡ 予想ログ G.</h1><p>STEP改修サイクル管理</p></div>
 </header>
 <div class="page active" id="page-input">
+  <div class="card" style="border-color:rgba(201,168,76,0.4);background:rgba(201,168,76,0.05);">
+    <div class="card-title">💰 払戻を一括取込（ブックマークレット）</div>
+    <div class="sub-label" style="margin-bottom:8px;">boatrace.jpでブックマークレット実行→コピーされたデータをここに貼り付け</div>
+    <textarea id="pay-paste" placeholder="ブックマークレットを実行するとクリップボードにコピーされます。ここに貼り付けてください。" oninput="applyPayPaste(this.value)" style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:12px;padding:10px;outline:none;font-family:monospace;resize:none;min-height:70px;line-height:1.6;"></textarea>
+    <div id="pay-paste-status" style="font-size:11px;color:var(--text2);margin-top:6px;min-height:16px;"></div>
+  </div>
   <div class="card"><div class="card-title">⚡ 結果を貼り付け（自動入力）</div><div class="sub-label">形式: 蒲郡 9R,4-3-5,¥13,400</div><input class="paste-input" id="result-paste" type="text" placeholder="ブックマークレットでコピーした結果を貼り付け" oninput="pasteResult(this.value)"></div>
   <div class="card"><div class="card-title">📱 X投稿文を貼り付け（自動入力）</div><div class="sub-label">場名・R・買い目が自動入力されます</div><textarea id="xpost-paste" placeholder="蒲郡12R&#10;&#10;本線　1-6-34/34-1-6&#10;&#10;抑え　1-34-6/34-6-1&#10;&#10;G." oninput="pasteXPost(this.value)" style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:13px;padding:10px;outline:none;font-family:inherit;resize:none;min-height:100px;line-height:1.8;"></textarea><div id="xpost-status" style="font-size:11px;color:var(--text2);margin-top:6px;min-height:16px;"></div></div>
   <div class="card"><div class="card-title">📍 レース情報</div>
@@ -481,6 +487,40 @@ function showNippoCard(){
 function enterScreenshotMode(){document.getElementById('nippo-ui-bar').style.display='none';setTimeout(()=>window.scrollTo(0,1),100);}
 function exitScreenshotMode(){document.getElementById('nippo-ui-bar').style.display='flex';}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+// ===== 払戻一括取込（ブックマークレットからのコピペ） =====
+function applyPayPaste(text){
+  if(!text||text.trim().length<10)return;
+  var statusEl=document.getElementById('pay-paste-status');
+  try{
+    var payData=JSON.parse(text.trim());
+    if(!Array.isArray(payData)||!payData.length){statusEl.style.color='var(--red)';statusEl.textContent='❌ 形式が正しくありません';return;}
+    var v2logs=getLogs();
+    var updated=0;
+    payData.forEach(function(pd){
+      var idx=v2logs.findIndex(function(l){
+        return l.venue===pd.v
+          &&l.raceNum===pd.r
+          &&l.result===pd.c
+          &&(!l.payout||l.payout===''||l.payout==='¥0');
+      });
+      if(idx>=0){v2logs[idx].payout=pd.p;updated++;}
+    });
+    if(updated>0){
+      saveLogs(v2logs);
+      statusEl.style.color='var(--green)';
+      statusEl.textContent='✅ '+updated+'件の配当を反映しました';
+      document.getElementById('pay-paste').value='';
+      setTimeout(function(){switchPage('logs');renderLogs();},800);
+    } else {
+      statusEl.style.color='var(--gold)';
+      statusEl.textContent='⚠️ 反映できるレースがありませんでした（着順入力済みのレースと照合します）';
+    }
+  }catch(e){
+    statusEl.style.color='var(--red)';
+    statusEl.textContent='❌ データの解析に失敗しました';
+  }
+}
+
 function checkBridge(){try{var raw=localStorage.getItem('yoso_bridge');if(!raw)return;var data=JSON.parse(raw);if(!data||!data.ts)return;if(Date.now()-data.ts>7200000)return;var min=Math.round((Date.now()-data.ts)/60000);document.getElementById('bridge-info').textContent=(data.venue||'')+(data.raceNum?data.raceNum+'R ':'')+( min<1?'たった今':min+'分前');document.getElementById('bridge-banner').style.display='flex';}catch(e){}}
 function dismissBridge(){document.getElementById('bridge-banner').style.display='none';}
 function loadFromBridge(){try{var raw=localStorage.getItem('yoso_bridge');if(!raw)return;var data=JSON.parse(raw);if(data.outputText){document.getElementById('t3pasteArea').value=data.outputText;t3parsePrediction();}if(data.outputText){var lines=data.outputText.split('\n'),xStart=-1,xLines=[];for(var i=0;i<lines.length;i++){if(lines[i].indexOf('Xサマリー')>=0)xStart=i;if(xStart>=0&&i>xStart)xLines.push(lines[i]);}if(xLines.length){var xpostArea=document.getElementById('xpost-paste');if(xpostArea){xpostArea.value=xLines.join('\n').trim();pasteXPost(xpostArea.value);}}}if(data.venue){var sel=document.getElementById('in-venue');for(var i=0;i<sel.options.length;i++){if(sel.options[i].text===data.venue){sel.value=sel.options[i].value;break;}}}if(data.raceNum)document.getElementById('in-rn').value=data.raceNum;t2update();dismissBridge();showToast('連携データを読み込みました ✓');document.getElementById('tool-3').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){showToast('読み込みに失敗しました');}}
