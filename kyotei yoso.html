@@ -723,7 +723,7 @@ function calcSogoScore(boats,nigeRate,raceCount){
   var minST=allST.length?Math.min.apply(null,allST):0.10;
   var maxST=allST.length?Math.max.apply(null,allST):0.30;
   var maxKr=boats.filter(function(b){return b.kiryokuRank!==null;}).length||6;
-  var allDirST=boats.map(function(b){return b.st;}).filter(function(v){return v!==null;});
+  var allDirST=boats.map(function(b){return (!b.stF&&b.st!==null)?b.st:null;}).filter(function(v){return v!==null;});
   var minDirST=allDirST.length?Math.min.apply(null,allDirST):0.10;
   var maxDirST=allDirST.length?Math.max.apply(null,allDirST):0.30;
   var allRen=boats.map(function(b){return b.renRate!==null?b.renRate:0;});
@@ -743,8 +743,8 @@ function calcSogoScore(boats,nigeRate,raceCount){
   boats.forEach(function(b){
     var score=0;
 
-    // 今節得点率：序盤は10点、終盤は30点（動的切替）
-    var tokWeight=isEarlyRace?10:30;
+    // 今節得点率：序盤は10点、終盤は25点（動的切替）
+    var tokWeight=isEarlyRace?10:25;
     if(b.tokuten!==null&&maxTok>minTok)score+=(b.tokuten-minTok)/(maxTok-minTok)*tokWeight;
     else if(b.tokuten!==null)score+=tokWeight/2;
 
@@ -753,10 +753,10 @@ function calcSogoScore(boats,nigeRate,raceCount){
     var rate=b.totiRate||b.zenkokuRate||0;
     if(maxRate>0)score+=rate/maxRate*rateWeight;
 
-    // 平均ST 15点（今節の傾向として固定）
+    // 平均ST 8点（今節の傾向として固定）
     var st=b.avgST||b.stKoki;
-    if(st!==null&&maxST>minST)score+=(maxST-st)/(maxST-minST)*15;
-    else if(st!==null)score+=7.5;
+    if(st!==null&&maxST>minST)score+=(maxST-st)/(maxST-minST)*8;
+    else if(st!==null)score+=4;
 
     // 機力 28点（当日の舟の状態を最重視・序盤終盤問わず）
     if(b.kiryokuRank!==null&&maxKr>1)score+=(maxKr-b.kiryokuRank)/(maxKr-1)*28;
