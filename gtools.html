@@ -480,11 +480,58 @@ function showNippoCard(){
 }
 function enterScreenshotMode(){document.getElementById('nippo-ui-bar').style.display='none';setTimeout(()=>window.scrollTo(0,1),100);}
 function exitScreenshotMode(){document.getElementById('nippo-ui-bar').style.display='flex';}
-function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
 function checkBridge(){try{var raw=localStorage.getItem('yoso_bridge');if(!raw)return;var data=JSON.parse(raw);if(!data||!data.ts)return;if(Date.now()-data.ts>7200000)return;var min=Math.round((Date.now()-data.ts)/60000);document.getElementById('bridge-info').textContent=(data.venue||'')+(data.raceNum?data.raceNum+'R ':'')+( min<1?'たった今':min+'分前');document.getElementById('bridge-banner').style.display='flex';}catch(e){}}
 function dismissBridge(){document.getElementById('bridge-banner').style.display='none';}
 function loadFromBridge(){try{var raw=localStorage.getItem('yoso_bridge');if(!raw)return;var data=JSON.parse(raw);if(data.outputText){document.getElementById('t3pasteArea').value=data.outputText;t3parsePrediction();}if(data.outputText){var lines=data.outputText.split('\n'),xStart=-1,xLines=[];for(var i=0;i<lines.length;i++){if(lines[i].indexOf('Xサマリー')>=0)xStart=i;if(xStart>=0&&i>xStart)xLines.push(lines[i]);}if(xLines.length){var xpostArea=document.getElementById('xpost-paste');if(xpostArea){xpostArea.value=xLines.join('\n').trim();pasteXPost(xpostArea.value);}}}if(data.venue){var sel=document.getElementById('in-venue');for(var i=0;i<sel.options.length;i++){if(sel.options[i].text===data.venue){sel.value=sel.options[i].value;break;}}}if(data.raceNum)document.getElementById('in-rn').value=data.raceNum;t2update();dismissBridge();showToast('連携データを読み込みました ✓');document.getElementById('tool-3').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){showToast('読み込みに失敗しました');}}
+
+// ===== URLパラメータから配当を受け取ってkyotei_v2に反映 =====
+function applyPayFromUrl(){
+  try{
+    var params=new URLSearchParams(window.location.search);
+    var payRaw=params.get('pay');
+    if(!payRaw)return;
+    // URLからパラメータを消す（履歴を汚さない）
+    var cleanUrl=window.location.pathname;
+    window.history.replaceState({},'',cleanUrl);
+
+    var payData=JSON.parse(decodeURIComponent(payRaw));
+    // payData = [{venue:'大村', raceNum:'9R', combo:'1-2-3', payout:'¥1300'}, ...]
+
+    var v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+    var updated=0;
+    payData.forEach(function(pd){
+      // 結果入力済み・配当未入力のエントリを探す
+      var idx=v2logs.findIndex(function(l){
+        return l.venue===pd.venue
+          && l.raceNum===pd.raceNum
+          && l.result===pd.combo
+          && (!l.payout||l.payout===''||l.payout==='¥0');
+      });
+      if(idx>=0){
+        v2logs[idx].payout=pd.payout;
+        updated++;
+      }
+    });
+    if(updated>0){
+      localStorage.setItem('kyotei_v2',JSON.stringify(v2logs));
+      setTimeout(function(){
+        showToast('✅ '+updated+'件の配当を反映しました');
+        switchPage('logs');
+        renderLogs();
+      },300);
+    } else {
+      setTimeout(function(){
+        showToast('⚠️ 反映できるレースがありませんでした');
+      },300);
+    }
+  }catch(e){
+    console.error('applyPayFromUrl error:',e);
+  }
+}
+
 checkBridge();
+applyPayFromUrl();
 </script>
 </body>
 </html>
