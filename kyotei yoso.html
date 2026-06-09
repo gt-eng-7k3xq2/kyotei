@@ -1021,12 +1021,20 @@ function calcNormal(boats,nigeRate){
   var sogoSorted=boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
   var sogoTop=sogoSorted[0]?sogoSorted[0].nyuse:1;
   var shinkido='B';
-  // sogoRank1位が1号以外 → Cモード確定
+  // sogoRank1位が1号以外の場合
   if(sogoTop!==1){
-    shinkido='C';
+    // 1号艇のsogoScoreと1位艇のスコア差が7pt以内ならB（僅差の場合）
+    var b1score=boats.find(function(b){return b.nyuse===1;})?boats.find(function(b){return b.nyuse===1;}).sogoScore||0:0;
+    var top1score=sogoSorted[0]?sogoSorted[0].sogoScore||0:0;
+    if(nigeRate!==null&&nigeRate>=60&&(top1score-b1score)<=7){
+      shinkido='B'; // 逃げ率60%以上かつ僅差ならB
+    } else {
+      shinkido='C';
+    }
   } else if(nigeRate!==null&&st!==null){
     if(nigeRate>=65&&st<=0.15)shinkido='A';
-    else if(nigeRate<55||(st!==null&&st>=0.18))shinkido='C';
+    else if(nigeRate<50||(st!==null&&st>=0.20))shinkido='C';
+    // 50〜64%はB維持
   }
   // 2着候補はsogoRankベースで選定（1号除く上位2艇）
   var sorted=boats.filter(function(b){return b.nyuse!==1;}).sort(function(a,b){
@@ -1050,9 +1058,10 @@ function runCalc(){
   var areResult=calcAreIndex(parsed.boats,parsed.nigeRate);
   var furikiriResult=checkFurikiri(areResult.score,parsed.boats,parsed.nigeRate);
   var cands1st=select1st(parsed.boats);
+  // 仮モード判定（補正前）→ applyShinkidoAreBonus → 再モード判定（補正後）
+  var normalResultTmp=calcNormal(parsed.boats,parsed.nigeRate);
+  applyShinkidoAreBonus(parsed.boats,normalResultTmp.shinkido,areResult.score);
   var normalResult=calcNormal(parsed.boats,parsed.nigeRate);
-  // 信頼度・荒れ指数による後補正
-  applyShinkidoAreBonus(parsed.boats,normalResult.shinkido,areResult.score);
   calcData={parsed:parsed,areResult:areResult,furikiriResult:furikiriResult,cands1st:cands1st,normalResult:normalResult};
   displayCalcResults(calcData);
   document.getElementById('calcResult').classList.add('show');
@@ -1155,7 +1164,10 @@ function buildPrompt(){
     p+='【イン信頼度】'+normalResult.shinkido+'（逃げ率'+(nigeRate||'?')+'% ST'+(st1||'?')+'）\n';
     p+='【荒れ指数】'+areResult.score+'点（'+(areResult.score>=8?'転用可':'転用不可')+'）\n';
     p+='【特記】\n\n';
-    p+='【最終買い目】8点\n本線\n1-X-X\n1-X-X\n1-X-X\n1-X-X\n抑え\n1-X-X\n1-X-X\n1-X-X\n1-X-X\n\n';
+    var shinkidoTmp=normalResult.shinkido;
+    var maruTmp=(shinkidoTmp==='A')?'1':String(sogoSortedN[0]?sogoSortedN[0].n:'◎');
+    var shiroTmp=(shinkidoTmp==='B'&&maruTmp!=='1')?'1':String(sogoSortedN[1]?sogoSortedN[1].n:'○');
+    p+='【最終買い目】8点\n本線\n'+maruTmp+'-X-X\n'+maruTmp+'-X-X\n'+maruTmp+'-X-X\n'+maruTmp+'-X-X\n抑え\n'+(shinkidoTmp==='C'?shiroTmp+'-X-X\n':maruTmp+'-X-X\n')+maruTmp+'-X-X\n'+maruTmp+'-X-X\n'+maruTmp+'-X-X\n\n';
 
     // 総合評価：モードに応じて印を固定割り当て
     var shinkido=normalResult.shinkido;
