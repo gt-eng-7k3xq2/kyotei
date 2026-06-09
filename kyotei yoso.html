@@ -1021,10 +1021,12 @@ function calcNormal(boats,nigeRate){
   var sogoSorted=boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
   var sogoTop=sogoSorted[0]?sogoSorted[0].nyuse:1;
   var shinkido='B';
+  console.log('[calcNormal] sogoTop='+sogoTop+' nigeRate='+nigeRate+' boats ranks:'+boats.map(function(b){return b.nyuse+'号:rank'+b.sogoRank+'('+Math.round(b.sogoScore)+'pt)';}).join(' '));
   // sogoRank1位が1号以外の場合
   if(sogoTop!==1){
     var b1obj=boats.find(function(b){return b.nyuse===1;});
     var b1rank=b1obj?b1obj.sogoRank:99;
+    console.log('[calcNormal] 1号rank='+b1rank+' nigeRate>=65:'+(nigeRate>=65)+' b1rank===2:'+(b1rank===2));
     // 逃げ率65%以上かつ1号がsogoRank2位 → B（1号逃げ残りが十分期待できる）
     if(nigeRate!==null&&nigeRate>=65&&b1rank===2){
       shinkido='B';
