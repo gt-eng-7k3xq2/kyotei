@@ -215,6 +215,36 @@ html,body{min-height:100vh;background:#04040c;}
 </div>
 
 
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal"><div class="modal-title">✏️ ログを編集</div>
+    <div class="row2">
+      <div class="field"><label>場名</label><select id="edit-venue"><option value="">選択</option><option>桐生</option><option>戸田</option><option>江戸川</option><option>平和島</option><option>多摩川</option><option>浜名湖</option><option>蒲郡</option><option>常滑</option><option>津</option><option>三国</option><option>びわこ</option><option>住之江</option><option>尼崎</option><option>鳴門</option><option>丸亀</option><option>児島</option><option>宮島</option><option>徳山</option><option>下関</option><option>若松</option><option>芦屋</option><option>福岡</option><option>唐津</option><option>大村</option></select></div>
+      <div class="field"><label>レース番号</label><select id="edit-race-num"><option value="">選択</option><option>1R</option><option>2R</option><option>3R</option><option>4R</option><option>5R</option><option>6R</option><option>7R</option><option>8R</option><option>9R</option><option>10R</option><option>11R</option><option>12R</option></select></div>
+    </div>
+    <div class="row3">
+      <div class="field"><label>1着</label><select id="edit-r1"><option value="">-</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
+      <div class="field"><label>2着</label><select id="edit-r2"><option value="">-</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
+      <div class="field"><label>3着</label><select id="edit-r3"><option value="">-</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
+    </div>
+    <div class="field"><label>配当金</label><div style="display:flex;align-items:center;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);overflow:hidden;"><span style="padding:0 8px;color:var(--green);font-weight:700;font-family:'Courier New',monospace;font-size:15px;flex-shrink:0;">¥</span><input type="text" id="edit-payout" placeholder="13,400" style="flex:1;background:transparent;border:none;color:var(--green);font-size:15px;font-weight:700;font-family:'Courier New',monospace;padding:9px 8px 9px 0;outline:none;"></div></div>
+    <div class="field"><label>プロンプトVer.</label><select id="edit-ver"><option>v2.0</option><option>v6.4</option><option>v6.3</option><option>v6.2</option><option>v6.1</option><option>v6.0</option><option>その他</option></select></div>
+    <div class="field"><label>日付</label><input type="date" id="edit-date"></div>
+    <div style="margin-bottom:12px;">
+      <div class="card-title" style="margin-bottom:8px;">買い目</div>
+      <div class="bet-builder" style="margin-bottom:8px;">
+        <div class="bet-builder-header"><div><div class="bet-builder-title">号艇タップで追加</div><div class="bet-pos-hint" id="edit-pos-hint"><span class="pos-badge p1">1着</span><span class="pos-badge inactive">2着</span><span class="pos-badge inactive">3着</span></div></div><div class="bet-preview empty" id="edit-bet-preview">---</div></div>
+        <div class="boat-btns" id="edit-boat-btns"><div class="boat-btn" onclick="tapBoatEdit(1)">1</div><div class="boat-btn" onclick="tapBoatEdit(2)">2</div><div class="boat-btn" onclick="tapBoatEdit(3)">3</div><div class="boat-btn" onclick="tapBoatEdit(4)">4</div><div class="boat-btn" onclick="tapBoatEdit(5)">5</div><div class="boat-btn" onclick="tapBoatEdit(6)">6</div></div>
+        <div class="bet-actions"><button class="btn-add-bet" id="edit-btn-add-bet" onclick="addBetEdit()" disabled>追加</button><button class="btn-clear-bet" onclick="clearBetInputEdit()">クリア</button></div>
+      </div>
+      <div id="edit-bets-list"></div><div class="bet-count" id="edit-bet-count"></div>
+    </div>
+    <div style="margin-bottom:12px;"><div class="card-title" style="margin-bottom:8px;">結果分類</div>
+      <div class="miss-grid" id="miss-grid-edit"><div class="miss-btn" data-val="hit" onclick="toggleMiss(this,'edit')">✅ 的中</div><div class="miss-btn" data-val="miseru" onclick="toggleMiss(this,'edit')">👁 見送り</div><div class="miss-btn" data-val="ichaku" onclick="toggleMiss(this,'edit')">1着ハズレ</div><div class="miss-btn" data-val="nichaku" onclick="toggleMiss(this,'edit')">2着ハズレ</div><div class="miss-btn" data-val="sankaku" onclick="toggleMiss(this,'edit')">3着ハズレ</div><div class="miss-btn" data-val="tensu" onclick="toggleMiss(this,'edit')">点数外れ</div></div>
+    </div>
+    <div class="field"><label>メモ</label><input type="text" id="edit-memo" placeholder="展開コメント・気づきなど"></div>
+    <div class="modal-actions"><button class="btn-secondary" onclick="closeEditModal()">キャンセル</button><button class="btn-primary" style="flex:1;margin-top:0;" onclick="saveEdit()">保存する</button></div>
+  </div>
+</div>
 <nav class="nav">
   <div class="nav-item active" onclick="switchPage('input')"><div class="nav-icon">💰</div><div class="nav-label">取込</div></div>
   <div class="nav-item" onclick="switchPage('analysis')"><div class="nav-icon">📊</div><div class="nav-label">分析</div></div>
@@ -375,6 +405,52 @@ function applyPayPaste(text){
 
 
 
+
+
+// ===== 編集モーダル =====
+let inputBets=[],inputCurrent=[];
+let editBets=[],editCurrent=[],editingId=null;
+function closeEditModal(){document.getElementById('edit-modal').classList.remove('open');editingId=null;editBets=[];editCurrent=[];}
+function openEditModal(id){
+  const log=getLogs().find(l=>l.id===id);if(!log)return;
+  document.getElementById('edit-venue').value=log.venue||'';document.getElementById('edit-race-num').value=log.raceNum||'';document.getElementById('edit-ver').value=log.ver||'v2.0';document.getElementById('edit-date').value=log.date||'';document.getElementById('edit-memo').value=log.memo||'';document.getElementById('edit-payout').value=log.payout||'';
+  const parts=(log.result||'').split('-');document.getElementById('edit-r1').value=parts[0]||'';document.getElementById('edit-r2').value=parts[1]||'';document.getElementById('edit-r3').value=parts[2]||'';
+  document.querySelectorAll('#miss-grid-edit .miss-btn').forEach(b=>b.classList.toggle('selected',(log.miss||[]).includes(b.dataset.val)));
+  renderEditBetsList();updateBetInputEdit();document.getElementById('edit-modal').classList.add('open');
+}
+
+function saveEdit(){
+  const logs=getLogs(),idx=logs.findIndex(l=>l.id===editingId);if(idx===-1)return;
+  logs[idx]={...logs[idx],venue:document.getElementById('edit-venue').value,raceNum:document.getElementById('edit-race-num').value,ver:document.getElementById('edit-ver').value,date:document.getElementById('edit-date').value,memo:document.getElementById('edit-memo').value,payout:document.getElementById('edit-payout').value,result:[document.getElementById('edit-r1').value,document.getElementById('edit-r2').value,document.getElementById('edit-r3').value].filter(Boolean).join('-'),bets:[...editBets],miss:[...document.querySelectorAll('#miss-grid-edit .miss-btn.selected')].map(b=>b.dataset.val)};
+  saveLogs(logs);closeEditModal();renderLogs();showToast('更新しました ✓');
+}
+function tapBoatEdit(n){if(editCurrent.includes(n))return;editCurrent.push(n);updateBetInputEdit();}
+function updateBetInputEdit(){
+  const preview=document.getElementById('edit-bet-preview'),hint=document.getElementById('edit-pos-hint'),addBtn=document.getElementById('edit-btn-add-bet'),btns=document.querySelectorAll('#edit-boat-btns .boat-btn');
+  if(!editCurrent.length){preview.textContent='---';preview.className='bet-preview empty';}
+  else{if(editCurrent.length===1)preview.textContent=editCurrent[0]+'-?-?';if(editCurrent.length===2)preview.textContent=editCurrent[0]+'-'+editCurrent[1]+'-?';if(editCurrent.length===3)preview.textContent=editCurrent.join('-');preview.className='bet-preview';}
+  const posNames=['p1','p2','p3'],posLabels=['1着','2着','3着'];
+  hint.innerHTML=posLabels.map((l,i)=>`<span class="pos-badge ${i<editCurrent.length?posNames[i]:'inactive'}">${l}</span>`).join('');
+  btns.forEach(b=>{const n=parseInt(b.textContent);b.className='boat-btn';if(editCurrent.includes(n)){const idx=editCurrent.indexOf(n);b.className='boat-btn pos-'+(idx+1)+' disabled';}});
+  addBtn.disabled=editCurrent.length!==3;
+}
+function addBetEdit(){if(editCurrent.length!==3)return;const val=editCurrent.join('-');if(editBets.some(b=>b.val===val)){showToast('同じ買い目があります');return;}if(editBets.length>=15){showToast('15点が上限です');return;}editBets.push({val,type:'honsen'});clearBetInputEdit();renderEditBetsList();}
+function clearBetInputEdit(){editCurrent=[];updateBetInputEdit();}
+
+function toggleBetTypeEdit(i){if(!editBets[i])return;editBets[i].type=editBets[i].type==='honsen'?'osaee':'honsen';renderEditBetsList();}
+function removeBetEdit(i){editBets.splice(i,1);renderEditBetsList();}
+function renderEditBetsList(){
+  const el=document.getElementById('edit-bets-list'),countEl=document.getElementById('edit-bet-count');
+  if(!editBets.length){el.innerHTML='';countEl.innerHTML='';return;}
+  el.innerHTML=editBets.map((b,i)=>`<div class="bet-item"><span class="bet-item-num">${i+1}</span><span class="bet-item-val">${b.val}</span><span class="bet-item-type ${b.type}" onclick="toggleBetTypeEdit(${i})" style="cursor:pointer;user-select:none;">${b.type==='honsen'?'本線':'抑え'}</span><button class="bet-item-del" onclick="removeBetEdit(${i})">×</button></div>`).join('');
+  countEl.innerHTML=`<span>${editBets.length}</span> / 15点`;
+}
+function toggleMiss(el,ctx){
+  const val=el.dataset.val,gridId=ctx==='input'?'miss-grid-input':'miss-grid-edit';
+  if(val==='hit'||val==='miseru'){document.querySelectorAll(`#${gridId} .miss-btn`).forEach(b=>b.classList.remove('selected'));}
+  else{document.querySelectorAll(`#${gridId} .miss-btn[data-val="hit"],#${gridId} .miss-btn[data-val="miseru"]`).forEach(b=>b.classList.remove('selected'));}
+  el.classList.toggle('selected');
+}
 
 // ===== URLパラメータから配当を受け取ってkyotei_v2に反映 =====
 function applyPayFromUrl(){
