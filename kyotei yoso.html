@@ -128,7 +128,7 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
 .eval-card{position:relative;border-radius:10px;overflow:hidden;padding:16px 14px 18px;background:#0c0c0c;}
 .eval-card-title{text-align:center;font-family:'Noto Serif JP',serif;font-style:italic;font-weight:900;font-size:clamp(20px,5vw,32px);letter-spacing:.04em;color:#e8c96a;text-shadow:0 0 20px rgba(200,153,60,0.3),0 2px 4px rgba(0,0,0,1);margin-bottom:5px;line-height:1.1;}
 .eval-brush{display:block;height:9px;margin:0 auto 12px;width:52%;background:linear-gradient(90deg,transparent 0%,rgba(180,140,30,.45) 20%,rgba(255,220,80,.65) 50%,rgba(180,140,30,.45) 80%,transparent 100%);border-radius:50%;filter:blur(2.5px);}
-.eval-boats{background:#141414;border:1px solid #2e2e2e;border-radius:8px;padding:14px 10px 12px;position:relative;display:flex;align-items:center;justify-content:space-between;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 4px 24px rgba(0,0,0,.9);}
+.eval-boats{background:#141414;border:1px solid #2e2e2e;border-radius:8px;padding:14px 8px 12px;position:relative;display:flex;align-items:flex-start;justify-content:space-between;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 4px 24px rgba(0,0,0,.9);}
 .eval-corner-tr{position:absolute;top:5px;right:5px;width:16px;height:16px;border-top:2px solid #c9a84c;border-right:2px solid #c9a84c;}
 .eval-corner-bl{position:absolute;bottom:5px;left:5px;width:16px;height:16px;border-bottom:2px solid #c9a84c;border-left:2px solid #c9a84c;}
 .eval-gold-lines{position:relative;margin-top:10px;display:flex;flex-direction:column;gap:3px;padding:0 0 2px;}
@@ -136,12 +136,12 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
 .eval-gold-line{height:1.4px;background:linear-gradient(90deg,transparent 0%,#8a6010 12%,#c9a84c 32%,#ffe580 50%,#c9a84c 68%,#8a6010 88%,transparent 100%);}
 .eval-hint{margin-top:9px;color:#4a4a4a;font-size:.65rem;text-align:center;}
 .eval-save-btn{width:100%;margin-top:8px;padding:11px;background:linear-gradient(135deg,#7a5800,#c9a84c,#ffe580,#c9a84c,#7a5800);color:#000;border:none;border-radius:6px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;cursor:pointer;letter-spacing:.05em;}
-.eval-slot{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;}
-.eval-badge{width:100%;aspect-ratio:1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:clamp(18px,5vw,28px);font-weight:900;font-family:'Anton',sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.6);min-width:0;}
-.eval-arrow{color:#4a4a4a;font-size:14px;font-weight:700;flex-shrink:0;padding:0 1px;align-self:flex-start;margin-top:8px;}
-.eval-stars{display:flex;gap:1px;justify-content:center;flex-wrap:nowrap;}
-.eval-star-on{color:#c9a84c;font-size:clamp(7px,2vw,11px);line-height:1;}
-.eval-star-off{color:#2e2e2e;font-size:clamp(7px,2vw,11px);line-height:1;}
+.eval-slot{display:flex;flex-direction:column;align-items:center;gap:6px;width:13%;}
+.eval-badge{width:100%;aspect-ratio:1;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:clamp(22px,7vw,40px);font-weight:900;font-family:'Anton',sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.7);}
+.eval-arrow{color:#4a4a4a;font-size:14px;font-weight:700;align-self:center;margin-bottom:22px;flex-shrink:0;}
+.eval-stars{display:flex;gap:1px;justify-content:center;flex-wrap:nowrap;width:100%;}
+.eval-star-on{color:#c9a84c;font-size:clamp(8px,2.3vw,13px);line-height:1;}
+.eval-star-off{color:#2a2a2a;font-size:clamp(8px,2.3vw,13px);line-height:1;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -2301,7 +2301,7 @@ function showHitAnalysis(){
   analysisEl.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-var BOAT_COLORS={1:{bg:'#a8a8a8',text:'#000'},2:{bg:'#1c1c1c',text:'#fff'},3:{bg:'#c42222',text:'#fff'},4:{bg:'#1e52cc',text:'#fff'},5:{bg:'#cc9a00',text:'#000'},6:{bg:'#168432',text:'#fff'}};
+var BOAT_COLORS={1:{bg:'#a8a8a8',text:'#000'},2:{bg:'#3a3a3a',text:'#fff'},3:{bg:'#c42222',text:'#fff'},4:{bg:'#1e52cc',text:'#fff'},5:{bg:'#cc9a00',text:'#000'},6:{bg:'#168432',text:'#fff'}};
 var MARK_TO_STARS={'◎':5,'○':4,'▲':3,'△':2,'▽':1,'×':1};
 function renderEvalCard(text,venue,raceNum){
   // 総合評価から順位・印を取得（スペース種類を問わず柔軟にマッチ）
