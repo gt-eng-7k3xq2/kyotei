@@ -2301,7 +2301,7 @@ function renderEvalCard(text,venue,raceNum){
   // 総合評価から順位・印を取得
   var rankData=[];
   text.split('\n').forEach(function(line){
-    var m=line.match(/(\d)位[\s　]+(\d)号艇[\s　]*(◎|○|▲|△|×)/);
+    var m=line.match(/(\d)位[\s　]+(\d)号艇[\s　]*(◎|○|▲|△|▽|×)/);
     if(m)rankData.push({rank:parseInt(m[1]),boat:parseInt(m[2]),mark:m[3]});
   });
   if(!rankData.length)return;
