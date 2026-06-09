@@ -1021,29 +1021,22 @@ function calcNormal(boats,nigeRate){
   var sogoSorted=boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
   var sogoTop=sogoSorted[0]?sogoSorted[0].nyuse:1;
   var shinkido='B';
-  // sogoRank1位が1号以外の場合
+
   if(sogoTop!==1){
-    var b1obj=boats.find(function(b){return b.nyuse===1;});
-    var b1rank=b1obj?b1obj.sogoRank:99;
-    // デバッグ：画面表示
-    var dbgEl=document.getElementById('status');
-    if(dbgEl)dbgEl.textContent='[DEBUG] sogoTop='+sogoTop+'号 1号rank='+b1rank+' nigeRate='+nigeRate+'% → '+(nigeRate!==null&&nigeRate>=65&&b1rank===2?'B':'C');
-    // 逃げ率65%以上かつ1号がsogoRank2位 → B（1号逃げ残りが十分期待できる）
-    if(nigeRate!==null&&nigeRate>=65&&b1rank===2){
+    // 逃げ率65%以上 → 1号は十分逃げ期待できるのでB
+    if(nigeRate!==null&&nigeRate>=65){
+      shinkido='B';
+    } else if(nigeRate!==null&&nigeRate>=60&&st!==null&&st<=0.17){
       shinkido='B';
     } else {
-      // 逃げ率60%以上かつsogoRank2位かつSTが良い → B
-      var b1st=b1obj?(b1obj.avgST||b1obj.stKoki):null;
-      if(nigeRate!==null&&nigeRate>=60&&b1rank===2&&b1st!==null&&b1st<=0.17){
-        shinkido='B';
-      } else {
-        shinkido='C';
-      }
+      shinkido='C';
     }
-  } else if(nigeRate!==null&&st!==null){
-    if(nigeRate>=65&&st<=0.15)shinkido='A';
-    else if(nigeRate<50||(st!==null&&st>=0.20))shinkido='C';
-    // 50〜64%はB維持
+  } else {
+    // sogoRank1位=1号
+    if(nigeRate!==null&&st!==null){
+      if(nigeRate>=65&&st<=0.15)shinkido='A';
+      else if(nigeRate<50||st>=0.20)shinkido='C';
+    }
   }
   // 2着候補はsogoRankベースで選定（1号除く上位2艇）
   var sorted=boats.filter(function(b){return b.nyuse!==1;}).sort(function(a,b){
