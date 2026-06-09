@@ -192,6 +192,10 @@ html,body{min-height:100vh;background:#04040c;}
 
 <div class="page" id="page-logs">
   <div class="date-tabs-wrap"><div class="date-tabs" id="date-tabs"></div></div>
+  <div style="display:flex;gap:8px;margin-bottom:10px;">
+    <button class="btn-secondary" style="flex:1;font-size:12px;padding:9px;" onclick="exportForClaude()">🤖 Claudeに共有</button>
+    <button class="btn-secondary" style="flex:1;font-size:12px;padding:9px;" onclick="exportJSON()">📥 JSONエクスポート</button>
+  </div>
   <div id="log-list"></div>
 </div>
 
@@ -303,10 +307,47 @@ function renderLogs(){
   const filtered=currentDateFilter==='all'?logs:logs.filter(l=>l.date===currentDateFilter);
   const listEl=document.getElementById('log-list');
   if(!filtered.length){listEl.innerHTML='<div class="empty-state"><div class="icon">📋</div>記録がありません</div>';return;}
-  listEl.innerHTML=filtered.map(log=>{const tags=(log.miss||[]).map(m=>`<span class="miss-tag ${m}">${MISS_LABELS[m]||m}</span>`).join('');const betsHtml=(log.bets||[]).map((b,i)=>`${b.val}<span style="color:var(--text3);font-size:9px;">(${b.type==='honsen'?'本':'抑'})</span>${i<(log.bets.length-1)?'　':''}`).join('');return `<div class="log-item"><div class="log-header"><div><span class="log-venue">${log.venue} ${log.raceNum}</span>${log.ver?`<span class="ver-badge">${log.ver}</span>`:''}</div><div class="log-date-small">${log.date||''}</div></div><div class="log-result-row"><span>結果</span><span class="log-result-val">${log.result||'未入力'}</span>${log.payout?`<span class="log-payout">${log.payout}</span>`:''}</div><div class="miss-tags">${tags}</div>${log.bets&&log.bets.length?`<div class="log-bets-toggle" onclick="toggleBetsDetail(${log.id})">▶ 買い目 ${log.bets.length}点</div><div class="log-bets-detail" id="bets-${log.id}"><div class="log-bets-preview">${betsHtml}</div></div>`:''}${log.memo?`<div style="font-size:11px;color:var(--text2);margin-top:6px;">💬 ${log.memo}</div>`:''}<div class="log-actions"><div class="btn-del" onclick="deleteLog(${log.id})">削除</div><button class="btn-secondary" style="flex:1;font-size:12px;padding:8px;" onclick="openEditModal(${log.id})">✏️ 編集</button></div></div>`;}).join('');
+  listEl.innerHTML=filtered.map(log=>{const tags=(log.miss||[]).map(m=>`<span class="miss-tag ${m}">${MISS_LABELS[m]||m}</span>`).join('');const betsHtml=(log.bets||[]).map((b,i)=>`${b.val}<span style="color:var(--text3);font-size:9px;">(${b.type==='honsen'?'本':'抑'})</span>${i<(log.bets.length-1)?'　':''}`).join('');return `<div class="log-item"><div class="log-header"><div><span class="log-venue">${log.venue} ${log.raceNum}</span>${log.ver?`<span class="ver-badge">${log.ver}</span>`:''}</div><div class="log-date-small">${log.date||''}</div></div><div class="log-result-row"><span>結果</span><span class="log-result-val">${log.result||'未入力'}</span>${log.payout?`<span class="log-payout">${log.payout}</span>`:''}</div><div class="miss-tags">${tags}</div>${log.bets&&log.bets.length?`<div class="log-bets-toggle" onclick="toggleBetsDetail(${log.id})">▶ 買い目 ${log.bets.length}点</div><div class="log-bets-detail" id="bets-${log.id}"><div class="log-bets-preview">${betsHtml}</div></div>`:''}${log.memo?`<div style="font-size:11px;color:var(--text2);margin-top:6px;">💬 ${log.memo}</div>`:''}<div class="log-actions"><div class="btn-del" onclick="deleteLog(${log.id})">削除</div></div></div>`;}).join('');
 }
 function toggleBetsDetail(id){const el=document.getElementById('bets-'+id);if(!el)return;el.classList.toggle('open');const t=el.previousElementSibling;t.textContent=el.classList.contains('open')?'▼ 買い目を隠す':'▶ 買い目 '+(getLogs().find(l=>l.id===id)?.bets?.length||0)+'点';}
 function filterDate(d){currentDateFilter=d;renderLogs();}
+
+function exportForClaude(){
+  const logs=getLogs();
+  if(!logs.length){showToast('ログがありません');return;}
+  const total=logs.length;
+  const hits=logs.filter(l=>(l.miss||[]).includes('hit')).length;
+  const rate=total?Math.round(hits/total*100):0;
+  let txt='=== 予想ログ（Claudeへ共有）===\n';
+  txt+='総件数:'+total+'件 / 的中:'+hits+'件 ('+rate+'%)\n\n';
+  // 外れログ
+  const misses=logs.filter(l=>!(l.miss||[]).includes('hit'));
+  txt+='--- 外れ詳細（'+misses.length+'件）---\n';
+  misses.forEach(l=>{
+    const missLabel=(l.miss||[]).filter(m=>m!=='hit').join('/');
+    const bets=(l.bets||[]).map(b=>b.val).join('/');
+    txt+='['+l.date+'] '+l.venue+(l.raceNum||'')+' ['+missLabel+'] 荒れ'+(l.areScore||'?')+'点 逃げ'+(l.nigeRate||'?')+'% ◎'+(l.maru||'?')+'○'+(l.shiro||'?')+'\n';
+    txt+='結果:'+(l.result||'?')+' 買い目:'+bets+'\n';
+  });
+  txt+='\n--- 的中ログ（'+hits+'件）---\n';
+  const hitLogs=logs.filter(l=>(l.miss||[]).includes('hit'));
+  hitLogs.forEach(l=>{
+    txt+='['+l.date+'] '+l.venue+(l.raceNum||'')+' 逃げ'+(l.nigeRate||'?')+'% 荒れ'+(l.areScore||'?')+'点 配当'+(l.payout||'?')+'\n';
+  });
+  navigator.clipboard.writeText(txt).then(()=>showToast('クリップボードにコピーしました')).catch(()=>{
+    // fallback
+    const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('コピーしました');
+  });
+}
+
+function exportJSON(){
+  const logs=getLogs();
+  if(!logs.length){showToast('ログがありません');return;}
+  const json=JSON.stringify(logs,null,2);
+  navigator.clipboard.writeText(json).then(()=>showToast('JSONをクリップボードにコピーしました')).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=json;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('JSONコピーしました');
+  });
+}
 function deleteLog(id){const logs=getLogs().filter(l=>l.id!==id);saveLogs(logs);renderLogs();showToast('削除しました');}
 function renderAnalysisTabs(){
   const allLogs=getLogs().filter(l=>!(l.miss||[]).includes('miseru'));
@@ -411,10 +452,9 @@ function applyPayPaste(text){
 let inputBets=[],inputCurrent=[];
 let editBets=[],editCurrent=[],editingId=null;
 function closeEditModal(){document.getElementById('edit-modal').classList.remove('open');editingId=null;editBets=[];editCurrent=[];}
+const logs=getLogs(),idx=logs.findIndex(l=>l.id===editingId);if(idx===-1)return;
 function openEditModal(id){
-  editingId=id;
   const log=getLogs().find(l=>l.id===id);if(!log)return;
-  editBets=log.bets?[...log.bets]:[]; editCurrent=[];
   document.getElementById('edit-venue').value=log.venue||'';document.getElementById('edit-race-num').value=log.raceNum||'';document.getElementById('edit-ver').value=log.ver||'v2.0';document.getElementById('edit-date').value=log.date||'';document.getElementById('edit-memo').value=log.memo||'';document.getElementById('edit-payout').value=log.payout||'';
   const parts=(log.result||'').split('-');document.getElementById('edit-r1').value=parts[0]||'';document.getElementById('edit-r2').value=parts[1]||'';document.getElementById('edit-r3').value=parts[2]||'';
   document.querySelectorAll('#miss-grid-edit .miss-btn').forEach(b=>b.classList.toggle('selected',(log.miss||[]).includes(b.dataset.val)));
