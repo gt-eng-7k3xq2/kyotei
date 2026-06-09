@@ -1023,13 +1023,19 @@ function calcNormal(boats,nigeRate){
   var shinkido='B';
   // sogoRank1位が1号以外の場合
   if(sogoTop!==1){
-    // 1号艇のsogoScoreと1位艇のスコア差が7pt以内ならB（僅差の場合）
-    var b1score=boats.find(function(b){return b.nyuse===1;})?boats.find(function(b){return b.nyuse===1;}).sogoScore||0:0;
-    var top1score=sogoSorted[0]?sogoSorted[0].sogoScore||0:0;
-    if(nigeRate!==null&&nigeRate>=60&&(top1score-b1score)<=7){
-      shinkido='B'; // 逃げ率60%以上かつ僅差ならB
+    var b1obj=boats.find(function(b){return b.nyuse===1;});
+    var b1rank=b1obj?b1obj.sogoRank:99;
+    // 逃げ率65%以上かつ1号がsogoRank2位 → B（1号逃げ残りが十分期待できる）
+    if(nigeRate!==null&&nigeRate>=65&&b1rank===2){
+      shinkido='B';
     } else {
-      shinkido='C';
+      // 逃げ率60%以上かつsogoRank2位かつSTが良い → B
+      var b1st=b1obj?(b1obj.avgST||b1obj.stKoki):null;
+      if(nigeRate!==null&&nigeRate>=60&&b1rank===2&&b1st!==null&&b1st<=0.17){
+        shinkido='B';
+      } else {
+        shinkido='C';
+      }
     }
   } else if(nigeRate!==null&&st!==null){
     if(nigeRate>=65&&st<=0.15)shinkido='A';
