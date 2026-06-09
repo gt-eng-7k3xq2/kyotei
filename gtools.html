@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>G. Tools</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Noto+Sans+JP:wght@200;300;400;700&family=Noto+Serif+JP:wght@700;900&family=Tenor+Sans&family=DM+Serif+Display:ital@0;1&family=Anton&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{min-height:100vh;background:#04040c;}
+
+/* ===== SECTION HEADERS ===== */
+.sec-hd{display:flex;align-items:center;gap:10px;padding:20px 16px 8px;position:sticky;top:0;z-index:100;background:linear-gradient(to bottom,#04040c 80%,transparent);}
+.sec-hd-dot{width:8px;height:8px;border-radius:50%;background:#c9a84c;box-shadow:0 0 8px rgba(201,168,76,0.8);}
+.sec-hd-label{font-family:'Tenor Sans',sans-serif;font-size:10px;letter-spacing:0.45em;color:#c9a84c;text-transform:uppercase;}
+.sec-hd-line{flex:1;height:1px;background:linear-gradient(to right,rgba(201,168,76,0.4),transparent);}
+.sec-hd-num{font-family:'Playfair Display',serif;font-size:11px;color:rgba(201,168,76,0.4);letter-spacing:0.1em;}
+
+.sec-sep{height:24px;margin:0 16px;border-bottom:1px solid #1e1e35;}
+
+/* sync-badge (link indicator on thumbnail section) */
+.sync-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.3);border-radius:20px;padding:3px 10px;font-size:10px;color:#c9a84c;margin-left:8px;letter-spacing:0.04em;}
+.sync-badge .sync-dot{width:5px;height:5px;border-radius:50%;background:#c9a84c;animation:syncpulse 2s infinite;}
+@keyframes syncpulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+.sync-badge.inactive{opacity:0.3;animation:none;}
+
+:root{--bg:#080810;--surface:#10101c;--surface2:#181828;--surface3:#1e1e32;--gold:#c9a84c;--gold2:#e8c96a;--gold3:rgba(201,168,76,0.15);--text:#e8e8f0;--text2:#7070a0;--text3:#404068;--red:#e05566;--blue:#5588e0;--green:#44c47a;--border:#1e1e35;--border2:#2a2a45;--r:12px;--r2:8px;}
+
+/* ===== TOOL 1 ===== */
+#tool-1{background:var(--bg);color:var(--text);font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif;padding-bottom:90px;overscroll-behavior:none;}
+#tool-1 header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 18px 10px;position:sticky;top:36px;z-index:99;display:flex;align-items:center;justify-content:space-between;}
+#tool-1 .header-left h1{font-size:17px;font-weight:800;color:var(--gold);letter-spacing:0.08em;}
+#tool-1 .header-left p{font-size:10px;color:var(--text2);margin-top:1px;letter-spacing:0.05em;}
+#tool-1 .nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);display:flex;z-index:200;padding-bottom:env(safe-area-inset-bottom);}
+#tool-1 .nav-item{flex:1;padding:10px 0 8px;text-align:center;cursor:pointer;}
+#tool-1 .nav-item .nav-icon{font-size:20px;line-height:1;}
+#tool-1 .nav-item .nav-label{font-size:9px;color:var(--text2);margin-top:3px;letter-spacing:0.05em;}
+#tool-1 .nav-item.active .nav-label{color:var(--gold);}
+#tool-1 .nav-item.active .nav-icon{filter:drop-shadow(0 0 4px var(--gold));}
+#tool-1 .page{display:none;padding:14px;}
+#tool-1 .page.active{display:block;}
+#tool-1 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px;}
+#tool-1 .card-title{font-size:10px;font-weight:700;color:var(--gold);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:12px;}
+#tool-1 .field{margin-bottom:12px;}
+#tool-1 .field:last-child{margin-bottom:0;}
+#tool-1 .field label{display:block;font-size:10px;color:var(--text2);margin-bottom:5px;font-weight:600;letter-spacing:0.06em;}
+#tool-1 .field select,#tool-1 .field input[type="date"],#tool-1 .field input[type="text"]{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:14px;padding:9px 11px;outline:none;-webkit-appearance:none;font-family:inherit;}
+#tool-1 .field select:focus,#tool-1 .field input:focus{border-color:var(--gold);}
+#tool-1 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+#tool-1 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+#tool-1 .bet-builder{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:12px;margin-bottom:10px;}
+#tool-1 .bet-builder-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+#tool-1 .bet-builder-title{font-size:11px;color:var(--text2);font-weight:600;letter-spacing:0.06em;}
+#tool-1 .bet-preview{font-size:18px;font-weight:700;color:var(--gold2);font-family:'Courier New',monospace;letter-spacing:0.1em;min-width:80px;text-align:right;}
+#tool-1 .bet-preview.empty{color:var(--text3);font-size:13px;}
+#tool-1 .boat-btns{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:10px;}
+#tool-1 .boat-btn{aspect-ratio:1;border-radius:8px;border:1px solid var(--border2);background:var(--surface3);color:var(--text2);font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.12s;user-select:none;}
+#tool-1 .boat-btn:active{transform:scale(0.92);}
+#tool-1 .boat-btn.pos-1{border-color:rgba(201,168,76,0.6);color:var(--gold);background:rgba(201,168,76,0.1);}
+#tool-1 .boat-btn.pos-2{border-color:rgba(85,136,224,0.6);color:#88aaee;background:rgba(85,136,224,0.1);}
+#tool-1 .boat-btn.pos-3{border-color:rgba(224,85,102,0.6);color:#ee8899;background:rgba(224,85,102,0.1);}
+#tool-1 .boat-btn.disabled{opacity:0.3;pointer-events:none;}
+#tool-1 .bet-pos-hint{display:flex;gap:6px;margin-bottom:8px;}
+#tool-1 .pos-badge{font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;letter-spacing:0.05em;}
+#tool-1 .pos-badge.p1{background:rgba(201,168,76,0.2);color:var(--gold);}
+#tool-1 .pos-badge.p2{background:rgba(85,136,224,0.2);color:#88aaee;}
+#tool-1 .pos-badge.p3{background:rgba(224,85,102,0.2);color:#ee8899;}
+#tool-1 .pos-badge.inactive{background:var(--surface3);color:var(--text3);}
+#tool-1 .bet-actions{display:flex;gap:8px;}
+#tool-1 .btn-add-bet{flex:1;background:var(--gold);color:#080810;border:none;border-radius:var(--r2);font-size:13px;font-weight:700;padding:9px;cursor:pointer;letter-spacing:0.05em;}
+#tool-1 .btn-add-bet:disabled{opacity:0.4;pointer-events:none;}
+#tool-1 .btn-add-bet:active{opacity:0.85;}
+#tool-1 .btn-clear-bet{background:var(--surface3);color:var(--text2);border:1px solid var(--border2);border-radius:var(--r2);font-size:12px;padding:9px 14px;cursor:pointer;}
+#tool-1 .bets-list{margin-top:10px;}
+#tool-1 .bet-item{display:flex;align-items:center;padding:8px 10px;background:var(--surface3);border-radius:var(--r2);margin-bottom:6px;gap:10px;}
+#tool-1 .bet-item-num{font-size:10px;color:var(--text2);width:16px;flex-shrink:0;}
+#tool-1 .bet-item-val{flex:1;font-size:15px;font-weight:700;font-family:'Courier New',monospace;color:var(--text);letter-spacing:0.08em;}
+#tool-1 .bet-item-type{font-size:11px;padding:6px 12px;border-radius:10px;font-weight:700;min-width:48px;text-align:center;}
+#tool-1 .bet-item-type.honsen{background:rgba(201,168,76,0.2);color:var(--gold);}
+#tool-1 .bet-item-type.osaee{background:rgba(85,136,224,0.15);color:#88aaee;}
+#tool-1 .bet-item-del{background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:2px 4px;flex-shrink:0;}
+#tool-1 .bet-count{font-size:11px;color:var(--text2);text-align:right;margin-top:4px;}
+#tool-1 .bet-count span{color:var(--gold);font-weight:700;}
+#tool-1 .miss-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+#tool-1 .miss-btn{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text2);font-size:12px;padding:10px 8px;text-align:center;cursor:pointer;transition:all 0.15s;user-select:none;font-weight:500;}
+#tool-1 .miss-btn.selected{background:rgba(201,168,76,0.12);border-color:var(--gold);color:var(--gold);font-weight:700;}
+#tool-1 .btn-primary{width:100%;background:var(--gold);color:#080810;border:none;border-radius:var(--r);font-size:15px;font-weight:800;padding:14px;cursor:pointer;letter-spacing:0.08em;margin-top:4px;}
+#tool-1 .btn-primary:active{opacity:0.85;}
+#tool-1 .btn-secondary{background:var(--surface2);color:var(--text2);border:1px solid var(--border2);border-radius:var(--r2);font-size:13px;font-weight:600;padding:10px 16px;cursor:pointer;}
+#tool-1 .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+#tool-1 .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 8px;text-align:center;}
+#tool-1 .stat-val{font-size:24px;font-weight:800;color:var(--gold);line-height:1;}
+#tool-1 .stat-label{font-size:9px;color:var(--text2);margin-top:4px;}
+#tool-1 .bar-row{margin-bottom:9px;}
+#tool-1 .bar-label{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;}
+#tool-1 .bar-track{height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;}
+#tool-1 .bar-fill{height:100%;border-radius:3px;background:var(--gold);transition:width 0.5s ease;}
+#tool-1 .bar-fill.red{background:var(--red);}
+#tool-1 .bar-fill.blue{background:var(--blue);}
+#tool-1 .bar-fill.green{background:var(--green);}
+#tool-1 .section-title{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:0.1em;margin-bottom:10px;text-transform:uppercase;}
+#tool-1 .insight-box{background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:var(--r);padding:12px;margin-bottom:8px;}
+#tool-1 .insight-label{font-size:9px;font-weight:700;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px;}
+#tool-1 .insight-box p{font-size:12px;line-height:1.7;color:var(--text);}
+#tool-1 .date-tabs-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:12px;scrollbar-width:none;}
+#tool-1 .date-tabs-wrap::-webkit-scrollbar{display:none;}
+#tool-1 .date-tabs{display:flex;gap:6px;padding-bottom:2px;min-width:max-content;}
+#tool-1 .date-tab{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;color:var(--text2);background:var(--surface);border:1px solid var(--border2);cursor:pointer;white-space:nowrap;transition:all 0.15s;flex-shrink:0;}
+#tool-1 .date-tab.active{background:var(--gold3);border-color:var(--gold);color:var(--gold);}
+#tool-1 .log-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:13px;margin-bottom:8px;}
+#tool-1 .log-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+#tool-1 .log-venue{font-size:14px;font-weight:700;}
+#tool-1 .log-date-small{font-size:10px;color:var(--text2);}
+#tool-1 .log-result-row{font-size:12px;color:var(--text2);margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+#tool-1 .log-result-val{font-family:'Courier New',monospace;font-weight:700;color:var(--gold2);font-size:14px;}
+#tool-1 .log-payout{font-size:12px;color:var(--green);font-weight:700;}
+#tool-1 .miss-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;}
+#tool-1 .miss-tag{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;}
+#tool-1 .miss-tag.hit{background:rgba(68,196,122,0.2);color:var(--green);}
+#tool-1 .miss-tag.miseru{background:rgba(112,112,160,0.2);color:var(--text2);}
+#tool-1 .miss-tag.ichaku{background:rgba(224,85,102,0.2);color:var(--red);}
+#tool-1 .miss-tag.nichaku{background:rgba(85,136,224,0.2);color:var(--blue);}
+#tool-1 .miss-tag.sankaku{background:rgba(201,168,76,0.2);color:var(--gold);}
+#tool-1 .miss-tag.tensu{background:rgba(68,196,122,0.15);color:var(--green);}
+#tool-1 .log-bets-preview{font-size:11px;color:var(--text2);font-family:'Courier New',monospace;line-height:1.8;}
+#tool-1 .log-actions{display:flex;gap:7px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+#tool-1 .btn-del{background:rgba(224,85,102,0.1);border:1px solid rgba(224,85,102,0.3);border-radius:var(--r2);color:var(--red);font-size:12px;font-weight:600;padding:8px 14px;cursor:pointer;}
+#tool-1 .log-bets-toggle{font-size:11px;color:var(--text2);cursor:pointer;margin-top:6px;display:inline-block;}
+#tool-1 .log-bets-detail{display:none;margin-top:6px;}
+#tool-1 .log-bets-detail.open{display:block;}
+#tool-1 .ver-badge{font-size:9px;padding:2px 6px;border-radius:4px;background:rgba(85,136,224,0.15);color:#88aaee;font-weight:700;margin-left:6px;}
+#tool-1 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:500;display:none;align-items:flex-end;justify-content:center;}
+#tool-1 .modal-overlay.open{display:flex;}
+#tool-1 .modal{background:var(--surface);border-radius:20px 20px 0 0;border:1px solid var(--border2);width:100%;max-height:92vh;overflow-y:auto;padding:20px 16px;padding-bottom:calc(20px + env(safe-area-inset-bottom));}
+#tool-1 .modal-title{font-size:15px;font-weight:700;color:var(--gold);margin-bottom:16px;text-align:center;}
+#tool-1 .modal-actions{display:flex;gap:10px;margin-top:14px;}
+#tool-1 .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--gold);color:#080810;font-size:13px;font-weight:700;padding:9px 20px;border-radius:20px;opacity:0;transition:opacity 0.25s;pointer-events:none;white-space:nowrap;z-index:999;}
+#tool-1 .toast.show{opacity:1;}
+#tool-1 .empty-state{text-align:center;padding:40px 20px;color:var(--text2);font-size:12px;}
+#tool-1 .empty-state .icon{font-size:32px;margin-bottom:10px;}
+#tool-1 select option{background:#181828;}
+#tool-1 .paste-input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--gold);font-size:15px;font-weight:700;padding:10px 12px;outline:none;font-family:'Courier New',monospace;letter-spacing:0.06em;-webkit-appearance:none;}
+#tool-1 .paste-input:focus{border-color:var(--gold);}
+#tool-1 .paste-input::placeholder{color:var(--text3);font-weight:400;font-size:13px;}
+#tool-1 .expand-area{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:10px;margin-bottom:10px;}
+#tool-1 .expand-input{width:100%;background:var(--surface3);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:12px;padding:8px 10px;outline:none;font-family:inherit;margin-bottom:8px;-webkit-appearance:none;}
+#tool-1 .expand-input:focus{border-color:var(--gold);}
+#tool-1 .btn-expand{width:100%;background:var(--gold);color:#080810;border:none;border-radius:var(--r2);font-size:13px;font-weight:700;padding:9px;cursor:pointer;letter-spacing:0.05em;}
+#tool-1 .sub-label{font-size:10px;color:var(--text2);font-weight:600;letter-spacing:0.06em;margin-bottom:6px;}
+#tool-1 #nippo-overlay{display:none;position:fixed;inset:0;background:#04040c;z-index:900;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+#tool-1 .nippo-close-btn{position:fixed;top:calc(14px + env(safe-area-inset-top));right:16px;background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.3);color:#c9a84c;padding:7px 16px;border-radius:20px;font-size:13px;cursor:pointer;z-index:901;font-weight:700;letter-spacing:0.04em;}
+#tool-1 .unit-selector{display:flex;gap:6px;flex-wrap:wrap;}
+#tool-1 .unit-btn{flex:1;min-width:60px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text2);font-size:13px;font-weight:700;padding:9px 4px;text-align:center;cursor:pointer;transition:all 0.15s;}
+#tool-1 .unit-btn.active{background:rgba(201,168,76,0.15);border-color:var(--gold);color:var(--gold);}
+
+</style>
+</head>
+<body>
+
+
+<!-- ===== SECTION 3: ログ管理 ===== -->
+<div class="sec-hd">
+  <div class="sec-hd-dot"></div>
+  <div class="sec-hd-label">ログ管理</div>
+  <div class="sec-hd-line"></div>
+  <div class="sec-hd-num">03</div>
+</div>
+<div id="tool-1">
+<header>
+  <div class="header-left"><h1>⚡ 予想ログ G.</h1><p>STEP改修サイクル管理</p></div>
+</header>
+<div class="page active" id="page-input">
+  <div class="card" style="border-color:rgba(201,168,76,0.4);background:rgba(201,168,76,0.05);">
+    <div class="card-title">💰 払戻を一括取込</div>
+    <div class="sub-label" style="margin-bottom:8px;">boatrace.jpでブックマークレット実行→コピーされたデータをここに貼り付け</div>
+    <textarea id="pay-paste" placeholder="ブックマークレットを実行するとクリップボードにコピーされます。ここに貼り付けてください。" oninput="applyPayPaste(this.value)" style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:12px;padding:10px;outline:none;font-family:monospace;resize:none;min-height:100px;line-height:1.6;"></textarea>
+    <div id="pay-paste-status" style="font-size:11px;color:var(--text2);margin-top:6px;min-height:16px;"></div>
+  </div>
+</div>
+
+<div class="page" id="page-analysis">
+  <div class="date-tabs-wrap"><div class="date-tabs" id="analysis-date-tabs"></div></div>
+  <div id="analysis-daily-summary"></div>
+  <div class="stat-grid"><div class="stat-card"><div class="stat-val" id="stat-total">0</div><div class="stat-label">予想数</div></div><div class="stat-card"><div class="stat-val" id="stat-hit">0</div><div class="stat-label">的中</div></div><div class="stat-card"><div class="stat-val" id="stat-rate">-%</div><div class="stat-label">的中率</div></div></div>
+  <div id="analysis-daily-list"></div>
+  <div class="card"><div class="section-title">ハズレパターン分布</div><div id="miss-bars"></div></div>
+  <div class="card"><div class="section-title">改修インサイト</div><div id="insight-area"><div class="empty-state"><div class="icon">📊</div>10レース以上記録すると表示されます</div></div></div>
+  <div class="card"><div class="section-title">バージョン別的中率</div><div id="ver-stats"><div style="font-size:12px;color:var(--text2);text-align:center;padding:10px 0;">記録が増えると表示されます</div></div></div>
+  <div class="card"><div class="section-title">場別的中率</div><div id="venue-stats"><div style="font-size:12px;color:var(--text2);text-align:center;padding:10px 0;">記録が増えると表示されます</div></div></div>
+</div>
+
+<div class="page" id="page-logs">
+  <div class="date-tabs-wrap"><div class="date-tabs" id="date-tabs"></div></div>
+  <div id="log-list"></div>
+</div>
+
+<div class="page" id="page-nippo">
+  <div class="card"><div class="card-title">📅 日報生成</div>
+    <div class="field"><label>対象日</label><input type="date" id="nippo-date"></div>
+    <div class="field" style="margin-bottom:10px;"><label>本線 単価</label><div class="unit-selector" id="honsen-selector"><div class="unit-btn" data-val="300" onclick="selectHonsen(this)">¥300</div><div class="unit-btn active" data-val="500" onclick="selectHonsen(this)">¥500</div><div class="unit-btn" data-val="1000" onclick="selectHonsen(this)">¥1,000</div><div class="unit-btn" data-val="2000" onclick="selectHonsen(this)">¥2,000</div></div></div>
+    <div class="field" style="margin-bottom:14px;"><label>抑え 単価</label><div class="unit-selector" id="osaee-selector"><div class="unit-btn active" data-val="300" onclick="selectOsaee(this)">¥300</div><div class="unit-btn" data-val="500" onclick="selectOsaee(this)">¥500</div><div class="unit-btn" data-val="1000" onclick="selectOsaee(this)">¥1,000</div><div class="unit-btn" data-val="2000" onclick="selectOsaee(this)">¥2,000</div></div></div>
+    <button class="btn-primary" style="margin-top:0;" onclick="generateNippo()">集計する</button>
+  </div>
+  <div id="nippo-result"></div>
+  <div id="nippo-card-actions" style="display:none;"><button class="btn-primary" onclick="showNippoCard()">📸 スクショ用カードを表示</button></div>
+</div>
+
+<div id="nippo-overlay">
+  <div id="nippo-ui-bar" style="position:fixed;top:calc(14px + env(safe-area-inset-top));left:0;right:0;z-index:901;display:flex;align-items:center;justify-content:space-between;padding:0 16px;">
+    <button onclick="enterScreenshotMode()" style="background:rgba(201,168,76,0.2);border:1px solid rgba(201,168,76,0.4);color:#c9a84c;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;">📸 スクショモード</button>
+    <button class="nippo-close-btn" onclick="document.getElementById('nippo-overlay').style.display='none'">✕ 閉じる</button>
+  </div>
+  <div id="nippo-card-inner" onclick="exitScreenshotMode()"></div>
+</div>
+
+
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal"><div class="modal-title">✏️ ログを編集</div>
+    <div class="row2">
+      <div class="field"><label>場名</label><select id="edit-venue"><option value="">選択</option><option>桐生</option><option>戸田</option><option>江戸川</option><option>平和島</option><option>多摩川</option><option>浜名湖</option><option>蒲郡</option><option>常滑</option><option>津</option><option>三国</option><option>びわこ</option><option>住之江</option><option>尼崎</option><option>鳴門</option><option>丸亀</option><option>児島</option><option>宮島</option><option>徳山</option><option>下関</option><option>若松</option><option>芦屋</option><option>福岡</option><option>唐津</option><option>大村</option></select></div>
+      <div class="field"><label>レース番号</label><select id="edit-race-num"><option value="">選択</option><option>1R</option><option>2R</option><option>3R</option><option>4R</option><option>5R</option><option>6R</option><option>7R</option><option>8R</option><option>9R</option><option>10R</option><option>11R</option><option>12R</option></select></div>
+    </div>
+    <div class="row3">
+      <div class="field"><label>1着</label><select id="edit-r1"><option value="">-</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
+      <div class="field"><label>2着</label><select id="edit-r2"><option value="">-</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
+      <div class="field"><label>3着</label><select id="edit-r3"><option value="">-</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
+    </div>
+    <div class="field"><label>配当金</label><div style="display:flex;align-items:center;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);overflow:hidden;"><span style="padding:0 8px;color:var(--green);font-weight:700;font-family:'Courier New',monospace;font-size:15px;flex-shrink:0;">¥</span><input type="text" id="edit-payout" placeholder="13,400" style="flex:1;background:transparent;border:none;color:var(--green);font-size:15px;font-weight:700;font-family:'Courier New',monospace;padding:9px 8px 9px 0;outline:none;"></div></div>
+    <div class="field"><label>プロンプトVer.</label><select id="edit-ver"><option>v2.0</option><option>v6.4</option><option>v6.3</option><option>v6.2</option><option>v6.1</option><option>v6.0</option><option>その他</option></select></div>
+    <div class="field"><label>日付</label><input type="date" id="edit-date"></div>
+    <div style="margin-bottom:12px;">
+      <div class="card-title" style="margin-bottom:8px;">買い目</div>
+      <div class="bet-builder" style="margin-bottom:8px;">
+        <div class="bet-builder-header"><div><div class="bet-builder-title">号艇タップで追加</div><div class="bet-pos-hint" id="edit-pos-hint"><span class="pos-badge p1">1着</span><span class="pos-badge inactive">2着</span><span class="pos-badge inactive">3着</span></div></div><div class="bet-preview empty" id="edit-bet-preview">---</div></div>
+        <div class="boat-btns" id="edit-boat-btns"><div class="boat-btn" onclick="tapBoatEdit(1)">1</div><div class="boat-btn" onclick="tapBoatEdit(2)">2</div><div class="boat-btn" onclick="tapBoatEdit(3)">3</div><div class="boat-btn" onclick="tapBoatEdit(4)">4</div><div class="boat-btn" onclick="tapBoatEdit(5)">5</div><div class="boat-btn" onclick="tapBoatEdit(6)">6</div></div>
+        <div class="bet-actions"><button class="btn-add-bet" id="edit-btn-add-bet" onclick="addBetEdit()" disabled>追加</button><button class="btn-clear-bet" onclick="clearBetInputEdit()">クリア</button></div>
+      </div>
+      <div id="edit-bets-list"></div><div class="bet-count" id="edit-bet-count"></div>
+    </div>
+    <div style="margin-bottom:12px;"><div class="card-title" style="margin-bottom:8px;">結果分類</div>
+      <div class="miss-grid" id="miss-grid-edit"><div class="miss-btn" data-val="hit" onclick="toggleMiss(this,'edit')">✅ 的中</div><div class="miss-btn" data-val="miseru" onclick="toggleMiss(this,'edit')">👁 見送り</div><div class="miss-btn" data-val="ichaku" onclick="toggleMiss(this,'edit')">1着ハズレ</div><div class="miss-btn" data-val="nichaku" onclick="toggleMiss(this,'edit')">2着ハズレ</div><div class="miss-btn" data-val="sankaku" onclick="toggleMiss(this,'edit')">3着ハズレ</div><div class="miss-btn" data-val="tensu" onclick="toggleMiss(this,'edit')">点数外れ</div></div>
+    </div>
+    <div class="field"><label>メモ</label><input type="text" id="edit-memo" placeholder="展開コメント・気づきなど"></div>
+    <div class="modal-actions"><button class="btn-secondary" onclick="closeEditModal()">キャンセル</button><button class="btn-primary" style="flex:1;margin-top:0;" onclick="saveEdit()">保存する</button></div>
+  </div>
+</div>
+<nav class="nav">
+  <div class="nav-item active" onclick="switchPage('input')"><div class="nav-icon">💰</div><div class="nav-label">取込</div></div>
+  <div class="nav-item" onclick="switchPage('analysis')"><div class="nav-icon">📊</div><div class="nav-label">分析</div></div>
+  <div class="nav-item" onclick="switchPage('logs')"><div class="nav-icon">📋</div><div class="nav-label">ログ</div></div>
+  <div class="nav-item" onclick="switchPage('nippo')"><div class="nav-icon">📅</div><div class="nav-label">日報</div></div>
+</nav>
+<div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ===== TOOL 1 ===== */
+const MISS_LABELS={hit:'的中',miseru:'見送り',ichaku:'1着ハズレ',nichaku:'2着ハズレ',sankaku:'3着ハズレ',tensu:'点数外れ'};
+let currentDateFilter='all',analysisDFilter='all';
+let honsenUnit=500,osaeeUnit=300;
+
+document.getElementById('nippo-date').value=new Date().toISOString().split('T')[0];
+
+
+
+
+
+function switchPage(p){
+  document.querySelectorAll('#tool-1 .page').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('#tool-1 .nav-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  const pages=['input','analysis','logs','nippo'];
+  document.querySelectorAll('#tool-1 .nav-item')[pages.indexOf(p)].classList.add('active');
+  if(p==='analysis')renderAnalysis();if(p==='logs')renderLogs();
+}
+function getLogs(){try{return JSON.parse(localStorage.getItem('kyotei_v2')||'[]');}catch{return[];}}
+function saveLogs(logs){localStorage.setItem('kyotei_v2',JSON.stringify(logs));}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function getUniqueDates(){return[...new Set(getLogs().map(l=>l.date).filter(Boolean))].sort().reverse();}
+function renderLogs(){
+  const logs=getLogs(),dates=getUniqueDates();
+  const tabsEl=document.getElementById('date-tabs');
+  tabsEl.innerHTML=`<div class="date-tab ${currentDateFilter==='all'?'active':''}" onclick="filterDate('all')">すべて</div>`+dates.map(d=>`<div class="date-tab ${currentDateFilter===d?'active':''}" onclick="filterDate('${d}')">${d.replace(/^\d{4}-/,'').replace('-','/')}</div>`).join('');
+  const filtered=currentDateFilter==='all'?logs:logs.filter(l=>l.date===currentDateFilter);
+  const listEl=document.getElementById('log-list');
+  if(!filtered.length){listEl.innerHTML='<div class="empty-state"><div class="icon">📋</div>記録がありません</div>';return;}
+  listEl.innerHTML=filtered.map(log=>{const tags=(log.miss||[]).map(m=>`<span class="miss-tag ${m}">${MISS_LABELS[m]||m}</span>`).join('');const betsHtml=(log.bets||[]).map((b,i)=>`${b.val}<span style="color:var(--text3);font-size:9px;">(${b.type==='honsen'?'本':'抑'})</span>${i<(log.bets.length-1)?'　':''}`).join('');return `<div class="log-item"><div class="log-header"><div><span class="log-venue">${log.venue} ${log.raceNum}</span>${log.ver?`<span class="ver-badge">${log.ver}</span>`:''}</div><div class="log-date-small">${log.date||''}</div></div><div class="log-result-row"><span>結果</span><span class="log-result-val">${log.result||'未入力'}</span>${log.payout?`<span class="log-payout">${log.payout}</span>`:''}</div><div class="miss-tags">${tags}</div>${log.bets&&log.bets.length?`<div class="log-bets-toggle" onclick="toggleBetsDetail(${log.id})">▶ 買い目 ${log.bets.length}点</div><div class="log-bets-detail" id="bets-${log.id}"><div class="log-bets-preview">${betsHtml}</div></div>`:''}${log.memo?`<div style="font-size:11px;color:var(--text2);margin-top:6px;">💬 ${log.memo}</div>`:''}<div class="log-actions"><div class="btn-del" onclick="deleteLog(${log.id})">削除</div><button class="btn-secondary" style="flex:1;font-size:12px;padding:8px;" onclick="openEditModal(${log.id})">✏️ 編集</button></div></div>`;}).join('');
+}
+function toggleBetsDetail(id){const el=document.getElementById('bets-'+id);if(!el)return;el.classList.toggle('open');const t=el.previousElementSibling;t.textContent=el.classList.contains('open')?'▼ 買い目を隠す':'▶ 買い目 '+(getLogs().find(l=>l.id===id)?.bets?.length||0)+'点';}
+function filterDate(d){currentDateFilter=d;renderLogs();}
+function deleteLog(id){const logs=getLogs().filter(l=>l.id!==id);saveLogs(logs);renderLogs();showToast('削除しました');}
+function renderAnalysisTabs(){
+  const allLogs=getLogs().filter(l=>!(l.miss||[]).includes('miseru'));
+  const dates=[...new Set(allLogs.map(l=>l.date).filter(Boolean))].sort().reverse();
+  document.getElementById('analysis-date-tabs').innerHTML=`<div class="date-tab ${analysisDFilter==='all'?'active':''}" onclick="setAnalysisFilter('all')">すべて</div>`+dates.map(d=>`<div class="date-tab ${analysisDFilter===d?'active':''}" onclick="setAnalysisFilter('${d}')">${d.replace(/^\d{4}-/,'').replace('-','/')}</div>`).join('');
+}
+function setAnalysisFilter(d){analysisDFilter=d;renderAnalysis();}
+function renderAnalysis(){
+  renderAnalysisTabs();
+  const allLogs=getLogs().filter(l=>!(l.miss||[]).includes('miseru'));
+  const logs=analysisDFilter==='all'?allLogs:allLogs.filter(l=>l.date===analysisDFilter);
+  const total=logs.length,hits=logs.filter(l=>(l.miss||[]).includes('hit')).length,rate=total?Math.round(hits/total*100):0;
+  document.getElementById('stat-total').textContent=total;document.getElementById('stat-hit').textContent=hits;document.getElementById('stat-rate').textContent=total?rate+'%':'-%';
+  const dailyListEl=document.getElementById('analysis-daily-list'),dailySummaryEl=document.getElementById('analysis-daily-summary');
+  if(analysisDFilter==='all'){
+    const dates=[...new Set(allLogs.map(l=>l.date).filter(Boolean))].sort().reverse();
+    if(dates.length>0){const rows=dates.map(d=>{const dl=allLogs.filter(l=>l.date===d),dt=dl.length,dh=dl.filter(l=>(l.miss||[]).includes('hit')).length,dr=dt?Math.round(dh/dt*100):0,rc=dr>=40?'var(--green)':dr>=25?'var(--gold)':'var(--red)';return `<tr style="border-bottom:1px solid var(--border);"><td style="padding:9px 10px;font-size:13px;color:var(--text);">${d.replace(/^\d{4}-/,'').replace('-','/')}</td><td style="padding:9px 10px;font-size:13px;text-align:center;color:var(--text2);">${dt}</td><td style="padding:9px 10px;font-size:13px;text-align:center;color:var(--text2);">${dh}</td><td style="padding:9px 10px;font-size:14px;text-align:center;font-weight:700;color:${rc};">${dr}%</td></tr>`;}).join('');dailyListEl.innerHTML=`<div class="card" style="padding:0;overflow:hidden;"><table style="width:100%;border-collapse:collapse;"><thead><tr style="background:var(--surface2);border-bottom:1px solid var(--border2);"><th style="padding:8px 10px;font-size:10px;color:var(--gold);font-weight:700;text-align:left;">日付</th><th style="padding:8px 10px;font-size:10px;color:var(--gold);font-weight:700;text-align:center;">予想数</th><th style="padding:8px 10px;font-size:10px;color:var(--gold);font-weight:700;text-align:center;">的中</th><th style="padding:8px 10px;font-size:10px;color:var(--gold);font-weight:700;text-align:center;">的中率</th></tr></thead><tbody>${rows}</tbody></table></div>`;}else{dailyListEl.innerHTML='';}dailySummaryEl.innerHTML='';
+  }else{dailyListEl.innerHTML='';dailySummaryEl.innerHTML=`<div class="card" style="background:var(--gold3);border-color:rgba(201,168,76,0.3);margin-bottom:10px;"><div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:6px;">${analysisDFilter.replace(/^\d{4}-/,'').replace('-','/')} の結果</div><div style="display:flex;gap:20px;align-items:center;"><div style="text-align:center;"><div style="font-size:22px;font-weight:800;color:var(--gold);">${total}</div><div style="font-size:10px;color:var(--text2);">予想数</div></div><div style="text-align:center;"><div style="font-size:22px;font-weight:800;color:var(--gold);">${hits}</div><div style="font-size:10px;color:var(--text2);">的中</div></div><div style="text-align:center;"><div style="font-size:28px;font-weight:800;color:${rate>=40?'var(--green)':rate>=25?'var(--gold2)':'var(--red)'};">${total?rate+'%':'-%'}</div><div style="font-size:10px;color:var(--text2);">的中率</div></div></div></div>`;}
+  const missTypes=['ichaku','nichaku','sankaku','tensu'],missCounts={};missTypes.forEach(m=>missCounts[m]=0);
+  const missLogs=logs.filter(l=>!(l.miss||[]).includes('hit'));missLogs.forEach(l=>(l.miss||[]).forEach(m=>{if(missCounts[m]!==undefined)missCounts[m]++;}));
+  const missTotal=missLogs.length||1,colors={ichaku:'red',nichaku:'blue',sankaku:'',tensu:'green'};
+  document.getElementById('miss-bars').innerHTML=missLogs.length>0?missTypes.map(m=>{const pct=Math.round(missCounts[m]/missTotal*100);return `<div class="bar-row"><div class="bar-label"><span>${MISS_LABELS[m]}</span><span>${missCounts[m]}回 (${pct}%)</span></div><div class="bar-track"><div class="bar-fill ${colors[m]}" style="width:${pct}%"></div></div></div>`;}).join(''):'<div style="font-size:12px;color:var(--text2);text-align:center;padding:8px 0;">ハズレデータなし</div>';
+  const insightEl=document.getElementById('insight-area');
+  if(analysisDFilter!=='all'){insightEl.closest('.card').style.display='none';}
+  else{insightEl.closest('.card').style.display='';if(total<10){insightEl.innerHTML='<div class="empty-state"><div class="icon">📊</div>10レース以上記録すると表示されます</div>';}else{const sorted=missTypes.slice().sort((a,b)=>missCounts[b]-missCounts[a]),top=sorted[0],topPct=Math.round(missCounts[top]/missTotal*100);const advice={ichaku:'1着ハズレが最多。STEP4の見直しか見送り基準の強化が有効。',nichaku:'2着ハズレが最多。STEP6の機力序列比重を上げると改善しやすい。',sankaku:'3着ハズレが最多。直前展示・機力序列の重みを確認。',tensu:'点数外れが最多。STEP8の買い目構築を見直す。'};const insights=[];if(topPct>=35)insights.push({label:'最頻ハズレ: '+MISS_LABELS[top],text:advice[top]});if(rate>=40)insights.push({label:'的中率 '+rate+'%',text:'良好なペース。現状維持で次の20レースで傾向確認。'});else if(rate<=20)insights.push({label:'的中率 '+rate+'%',text:'見送り基準を厳しくして買うレースを絞ることを優先。'});if(!insights.length)insights.push({label:'分析中',text:'ハズレパターンが分散。もう5〜10レース記録してから再分析。'});insightEl.innerHTML=insights.map(i=>`<div class="insight-box"><div class="insight-label">${i.label}</div><p>${i.text}</p></div>`).join('');}}
+  const verEl=document.getElementById('ver-stats');
+  if(analysisDFilter!=='all'){verEl.closest('.card').style.display='none';}else{verEl.closest('.card').style.display='';const verMap={};logs.forEach(l=>{const v=l.ver||'不明';if(!verMap[v])verMap[v]={total:0,hit:0};verMap[v].total++;if((l.miss||[]).includes('hit'))verMap[v].hit++;});const vers=Object.entries(verMap).sort((a,b)=>b[0].localeCompare(a[0]));verEl.innerHTML=vers.length?vers.map(([v,d])=>{const pct=Math.round(d.hit/d.total*100);return `<div class="bar-row"><div class="bar-label"><span>${v}</span><span>${d.hit}/${d.total}（${pct}%）</span></div><div class="bar-track"><div class="bar-fill blue" style="width:${pct}%"></div></div></div>`;}).join(''):'<div style="font-size:12px;color:var(--text2);text-align:center;padding:10px 0;">記録が増えると表示されます</div>';}
+  const venueEl=document.getElementById('venue-stats'),venueMap={};logs.forEach(l=>{if(!l.venue)return;if(!venueMap[l.venue])venueMap[l.venue]={total:0,hit:0};venueMap[l.venue].total++;if((l.miss||[]).includes('hit'))venueMap[l.venue].hit++;});const venues=Object.entries(venueMap).filter(([,v])=>v.total>=2).sort((a,b)=>b[1].total-a[1].total);venueEl.innerHTML=venues.length?venues.map(([v,d])=>{const pct=Math.round(d.hit/d.total*100);return `<div class="bar-row"><div class="bar-label"><span>${v}</span><span>${d.hit}/${d.total}（${pct}%）</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div></div>`;}).join(''):'<div style="font-size:12px;color:var(--text2);text-align:center;padding:10px 0;">2レース以上記録した場が表示されます</div>';
+}
+function parsePayout(p){if(!p)return 0;return parseInt((p+'').replace(/[¥￥,\s]/g,''))||0;}
+function selectHonsen(el){document.querySelectorAll('#honsen-selector .unit-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');honsenUnit=parseInt(el.dataset.val);}
+function selectOsaee(el){document.querySelectorAll('#osaee-selector .unit-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');osaeeUnit=parseInt(el.dataset.val);}
+function generateNippo(){
+  const date=document.getElementById('nippo-date').value;if(!date){showToast('日付を選択してください');return;}
+  const allLogs=getLogs(),logs=allLogs.filter(l=>l.date===date&&!(l.miss||[]).includes('miseru'));
+  if(!logs.length){document.getElementById('nippo-result').innerHTML='<div class="empty-state"><div class="icon">📅</div>この日の記録がありません</div>';document.getElementById('nippo-card-actions').style.display='none';return;}
+  const total=logs.length,hits=logs.filter(l=>(l.miss||[]).includes('hit')),hitCount=hits.length,rate=Math.round(hitCount/total*100);
+  const hMult=honsenUnit/100,oMult=osaeeUnit/100;
+  function getHitMult(log){if(!log.result||!log.bets||!log.bets.length)return hMult;const matched=log.bets.find(b=>b.val===log.result);if(!matched)return hMult;return matched.type==='honsen'?hMult:oMult;}
+  function calcInvest(log){if(!log.bets||!log.bets.length)return 0;return log.bets.reduce((s,b)=>s+(b.type==='honsen'?honsenUnit:osaeeUnit),0);}
+  const totalPayout=hits.reduce((sum,l)=>sum+Math.round(parsePayout(l.payout)*getHitMult(l)),0);
+  const totalInvest=logs.reduce((sum,l)=>sum+calcInvest(l),0);
+  const roi=totalInvest>0?Math.round(totalPayout/totalInvest*100):0;
+  const mansen=hits.filter(l=>parsePayout(l.payout)>=10000);
+  window._nippoData={date,total,hitCount,rate,totalPayout,totalInvest,roi,mansen,hits,logs,honsenUnit,osaeeUnit,hMult,oMult,getHitMult,calcInvest};
+  const rateColor=rate>=40?'var(--green)':rate>=25?'var(--gold)':'var(--red)';
+  document.getElementById('nippo-result').innerHTML=`<div class="card"><div class="stat-grid" style="margin-bottom:12px;"><div class="stat-card"><div class="stat-val">${total}</div><div class="stat-label">予想数</div></div><div class="stat-card"><div class="stat-val">${hitCount}</div><div class="stat-label">的中</div></div><div class="stat-card"><div class="stat-val" style="color:${rateColor};">${rate}%</div><div class="stat-label">的中率</div></div></div><div style="background:var(--surface2);border-radius:var(--r2);padding:12px 14px;margin-bottom:8px;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><div style="font-size:10px;color:var(--text2);letter-spacing:0.06em;">払い戻し想定</div><div style="font-size:10px;color:var(--text3);">本線¥${honsenUnit} / 抑え¥${osaeeUnit}</div></div><div style="font-size:26px;font-weight:800;color:var(--green);font-family:'Courier New',monospace;">¥${totalPayout.toLocaleString()}</div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><div style="background:var(--surface2);border-radius:var(--r2);padding:10px 12px;"><div style="font-size:10px;color:var(--text2);margin-bottom:3px;">総投資額</div><div style="font-size:18px;font-weight:800;color:var(--red);font-family:'Courier New',monospace;">¥${totalInvest.toLocaleString()}</div></div><div style="background:var(--surface2);border-radius:var(--r2);padding:10px 12px;"><div style="font-size:10px;color:var(--text2);margin-bottom:3px;">回収率</div><div style="font-size:18px;font-weight:800;font-family:'Courier New',monospace;color:${roi>=100?'var(--green)':roi>=70?'var(--gold)':'var(--red)'};">${roi}%</div></div></div>${mansen.length?`<div style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.3);border-radius:var(--r2);padding:12px;margin-top:10px;"><div style="font-size:10px;font-weight:700;color:var(--gold);margin-bottom:6px;letter-spacing:0.1em;">🏆 万舟的中</div>${mansen.map(l=>`<div style="font-size:14px;font-weight:700;color:var(--gold2);">${l.venue} ${l.raceNum} — ${l.payout}</div>`).join('')}</div>`:''}</div>`;
+  document.getElementById('nippo-card-actions').style.display='block';
+}
+function showNippoCard(){
+  const d=window._nippoData;if(!d)return;
+  const rateColor=d.rate>=40?'#44c47a':d.rate>=25?'#e8c96a':'#e05566',rateGlow=d.rate>=40?'rgba(68,196,122,0.4)':d.rate>=25?'rgba(232,201,106,0.4)':'rgba(224,85,102,0.35)';
+  const dateObj=new Date(d.date+'T00:00:00'),weekdays=['日','月','火','水','木','金','土'],mm=dateObj.getMonth()+1,dd=dateObj.getDate(),ww=weekdays[dateObj.getDay()],dateStr=`${mm}月${dd}日（${ww}）`;
+  const topHits=d.hits.slice().sort((a,b)=>{const aP=parsePayout(a.payout)*(d.getHitMult?d.getHitMult(a):d.hMult),bP=parsePayout(b.payout)*(d.getHitMult?d.getHitMult(b):d.hMult);return bP-aP;}).slice(0,5);
+  const hitsHtml=topHits.length?topHits.map((l,i)=>{const rawP=parsePayout(l.payout),hitMult=d.getHitMult?d.getHitMult(l):d.hMult,dispP=Math.round(rawP*hitMult),isMansen=rawP>=10000,isKohai=rawP>=5000&&rawP<10000,isTop=i===0,amtColor=isMansen?'#f0d878':'#44c47a',badge=isMansen?`<span style="font-size:8px;background:rgba(201,168,76,0.3);color:#e8c96a;padding:1px 7px;border-radius:4px;font-weight:800;letter-spacing:0.04em;">万舟</span>`:isKohai?`<span style="font-size:8px;background:rgba(68,196,122,0.18);color:#44c47a;padding:1px 7px;border-radius:4px;font-weight:800;">高配当</span>`:'';return `<div style="display:flex;justify-content:space-between;align-items:center;padding:${isTop?'8px':'6px'} 0;border-bottom:1px solid rgba(255,255,255,0.04);"><div style="display:flex;align-items:center;gap:7px;"><span style="font-size:${isTop?'16px':'14px'};color:${isTop?'#e8e8f8':'#b0b0c8'};font-weight:${isTop?'700':'500'};">${l.venue} ${l.raceNum}</span>${badge}</div><span style="font-size:${isTop?'18px':'15px'};font-weight:900;color:${amtColor};font-family:'Courier New',monospace;text-shadow:${isTop?`0 0 12px rgba(68,196,122,0.4)`:'none'};">¥${dispP.toLocaleString()}</span></div>`;}).join(''):`<div style="font-size:12px;color:#606080;text-align:center;padding:12px 0;">的中なし</div>`;
+  document.getElementById('nippo-card-inner').innerHTML=`<div style="height:100vh;background:linear-gradient(170deg,#06060f 0%,#080814 50%,#060612 100%);display:flex;flex-direction:column;padding:48px 22px 22px;box-sizing:border-box;position:relative;overflow:hidden;"><div style="position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(201,168,76,0.07) 0%,transparent 65%);pointer-events:none;"></div><div style="position:absolute;bottom:80px;left:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,${rateGlow.replace('0.4','0.04')} 0%,transparent 70%);pointer-events:none;"></div><div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;flex-shrink:0;"><div><div style="font-size:40px;font-weight:900;line-height:1;background:linear-gradient(135deg,#f0d878,#c9a84c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:0.02em;">G.</div><div style="font-size:7px;color:#7070a0;letter-spacing:0.22em;margin-top:2px;">競艇予想</div></div><div style="text-align:right;"><div style="font-size:9px;color:#606088;letter-spacing:0.1em;margin-bottom:3px;">今日の予想結果</div><div style="font-size:20px;font-weight:800;color:#e8e8f8;letter-spacing:0.01em;">${dateStr}</div></div></div><div style="height:1px;background:linear-gradient(to right,rgba(201,168,76,0.8),rgba(201,168,76,0.15),transparent);margin-bottom:16px;flex-shrink:0;"></div><div style="text-align:center;margin-bottom:14px;position:relative;flex-shrink:0;"><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);width:180px;height:90px;border-radius:50%;background:radial-gradient(ellipse,${rateGlow} 0%,transparent 68%);pointer-events:none;"></div><div style="font-size:9px;color:#8080a8;letter-spacing:0.28em;margin-bottom:5px;text-transform:uppercase;">Hit Rate</div><div style="font-size:82px;font-weight:900;line-height:1;color:${rateColor};text-shadow:0 0 40px ${rateGlow},0 0 2px rgba(255,255,255,0.1);">${d.rate}<span style="font-size:34px;font-weight:700;">%</span></div><div style="font-size:12px;color:#8080a8;margin-top:6px;letter-spacing:0.06em;">${d.hitCount}&nbsp;的中&nbsp;&nbsp;/&nbsp;&nbsp;${d.total}&nbsp;レース</div></div><div style="background:rgba(68,196,122,0.04);border:1px solid rgba(68,196,122,0.18);border-radius:14px;padding:14px 18px;margin-bottom:10px;flex-shrink:0;position:relative;overflow:hidden;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent,rgba(68,196,122,0.4),transparent);"></div><div style="font-size:46px;font-weight:900;color:#44c47a;font-family:'Courier New',monospace;text-shadow:0 0 30px rgba(68,196,122,0.45),0 0 60px rgba(68,196,122,0.2);letter-spacing:0.01em;line-height:1;">¥${d.totalPayout.toLocaleString()}</div></div>${d.mansen.length?`<div style="background:rgba(201,168,76,0.07);border:1px solid rgba(201,168,76,0.4);border-radius:10px;padding:9px 16px;margin-bottom:8px;flex-shrink:0;position:relative;overflow:hidden;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent,rgba(201,168,76,0.7),transparent);"></div><div style="font-size:9px;font-weight:700;color:#c9a84c;letter-spacing:0.16em;margin-bottom:5px;">🏆 &nbsp;万舟的中</div>${d.mansen.map(l=>{const dispP=Math.round(parsePayout(l.payout)*(d.getHitMult?d.getHitMult(l):d.hMult));return`<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:15px;font-weight:700;color:#e8c96a;">${l.venue} ${l.raceNum}</span><span style="font-size:17px;font-weight:900;color:#f0d878;font-family:'Courier New',monospace;">¥${dispP.toLocaleString()}</span></div>`;}).join('')}</div>`:''}<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:10px 16px;flex:1;min-height:0;overflow:hidden;"><div style="font-size:9px;color:#505068;letter-spacing:0.14em;margin-bottom:6px;">${topHits.length<d.hits.length?`TOP ${topHits.length}`:`${topHits.length}件的中`}</div>${hitsHtml}</div><div style="margin-top:10px;flex-shrink:0;"><div style="height:1px;background:linear-gradient(to right,transparent,rgba(201,168,76,0.25),transparent);margin-bottom:8px;"></div><div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-size:10px;color:#404065;letter-spacing:0.08em;">@gallonboat_24</div><div style="font-size:9px;background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.25);color:#c9a84c;padding:2px 10px;border-radius:10px;font-weight:700;letter-spacing:0.06em;">競艇予想 G.</div></div></div></div>`;
+  document.getElementById('nippo-overlay').style.display='block';window.scrollTo(0,0);
+}
+function enterScreenshotMode(){document.getElementById('nippo-ui-bar').style.display='none';setTimeout(()=>window.scrollTo(0,1),100);}
+function exitScreenshotMode(){document.getElementById('nippo-ui-bar').style.display='flex';}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+// ===== 払戻一括取込（ブックマークレットからのコピペ） =====
+function applyPayPaste(text){
+  if(!text||text.trim().length<10)return;
+  var statusEl=document.getElementById('pay-paste-status');
+  try{
+    var payData=JSON.parse(text.trim());
+    if(!Array.isArray(payData)||!payData.length){statusEl.style.color='var(--red)';statusEl.textContent='❌ 形式が正しくありません';return;}
+    var v2logs=getLogs();
+    var updated=0;
+    payData.forEach(function(pd){
+      var idx=v2logs.findIndex(function(l){
+        return l.venue===pd.v
+          &&l.raceNum===pd.r
+          &&l.result===pd.c
+          &&(!l.payout||l.payout===''||l.payout==='¥0');
+      });
+      if(idx>=0){v2logs[idx].payout=pd.p;updated++;}
+    });
+    if(updated>0){
+      saveLogs(v2logs);
+      statusEl.style.color='var(--green)';
+      statusEl.textContent='✅ '+updated+'件の配当を反映しました';
+      document.getElementById('pay-paste').value='';
+      setTimeout(function(){switchPage('logs');renderLogs();},800);
+    } else {
+      statusEl.style.color='var(--gold)';
+      statusEl.textContent='⚠️ 反映できるレースがありませんでした（着順入力済みのレースと照合します）';
+    }
+  }catch(e){
+    statusEl.style.color='var(--red)';
+    statusEl.textContent='❌ データの解析に失敗しました';
+  }
+}
+
+
+
+
+
+
+// ===== 編集モーダル =====
+let inputBets=[],inputCurrent=[];
+let editBets=[],editCurrent=[],editingId=null;
+function closeEditModal(){document.getElementById('edit-modal').classList.remove('open');editingId=null;editBets=[];editCurrent=[];}
+function openEditModal(id){
+  editingId=id;
+  const log=getLogs().find(l=>l.id===id);if(!log)return;
+  editBets=log.bets?[...log.bets]:[]; editCurrent=[];
+  document.getElementById('edit-venue').value=log.venue||'';document.getElementById('edit-race-num').value=log.raceNum||'';document.getElementById('edit-ver').value=log.ver||'v2.0';document.getElementById('edit-date').value=log.date||'';document.getElementById('edit-memo').value=log.memo||'';document.getElementById('edit-payout').value=log.payout||'';
+  const parts=(log.result||'').split('-');document.getElementById('edit-r1').value=parts[0]||'';document.getElementById('edit-r2').value=parts[1]||'';document.getElementById('edit-r3').value=parts[2]||'';
+  document.querySelectorAll('#miss-grid-edit .miss-btn').forEach(b=>b.classList.toggle('selected',(log.miss||[]).includes(b.dataset.val)));
+  renderEditBetsList();updateBetInputEdit();document.getElementById('edit-modal').classList.add('open');
+}
+
+function saveEdit(){
+  const logs=getLogs(),idx=logs.findIndex(l=>l.id===editingId);if(idx===-1)return;
+  logs[idx]={...logs[idx],venue:document.getElementById('edit-venue').value,raceNum:document.getElementById('edit-race-num').value,ver:document.getElementById('edit-ver').value,date:document.getElementById('edit-date').value,memo:document.getElementById('edit-memo').value,payout:document.getElementById('edit-payout').value,result:[document.getElementById('edit-r1').value,document.getElementById('edit-r2').value,document.getElementById('edit-r3').value].filter(Boolean).join('-'),bets:[...editBets],miss:[...document.querySelectorAll('#miss-grid-edit .miss-btn.selected')].map(b=>b.dataset.val)};
+  saveLogs(logs);closeEditModal();renderLogs();showToast('更新しました ✓');
+}
+function tapBoatEdit(n){if(editCurrent.includes(n))return;editCurrent.push(n);updateBetInputEdit();}
+function updateBetInputEdit(){
+  const preview=document.getElementById('edit-bet-preview'),hint=document.getElementById('edit-pos-hint'),addBtn=document.getElementById('edit-btn-add-bet'),btns=document.querySelectorAll('#edit-boat-btns .boat-btn');
+  if(!editCurrent.length){preview.textContent='---';preview.className='bet-preview empty';}
+  else{if(editCurrent.length===1)preview.textContent=editCurrent[0]+'-?-?';if(editCurrent.length===2)preview.textContent=editCurrent[0]+'-'+editCurrent[1]+'-?';if(editCurrent.length===3)preview.textContent=editCurrent.join('-');preview.className='bet-preview';}
+  const posNames=['p1','p2','p3'],posLabels=['1着','2着','3着'];
+  hint.innerHTML=posLabels.map((l,i)=>`<span class="pos-badge ${i<editCurrent.length?posNames[i]:'inactive'}">${l}</span>`).join('');
+  btns.forEach(b=>{const n=parseInt(b.textContent);b.className='boat-btn';if(editCurrent.includes(n)){const idx=editCurrent.indexOf(n);b.className='boat-btn pos-'+(idx+1)+' disabled';}});
+  addBtn.disabled=editCurrent.length!==3;
+}
+function addBetEdit(){if(editCurrent.length!==3)return;const val=editCurrent.join('-');if(editBets.some(b=>b.val===val)){showToast('同じ買い目があります');return;}if(editBets.length>=15){showToast('15点が上限です');return;}editBets.push({val,type:'honsen'});clearBetInputEdit();renderEditBetsList();}
+function clearBetInputEdit(){editCurrent=[];updateBetInputEdit();}
+
+function toggleBetTypeEdit(i){if(!editBets[i])return;editBets[i].type=editBets[i].type==='honsen'?'osaee':'honsen';renderEditBetsList();}
+function removeBetEdit(i){editBets.splice(i,1);renderEditBetsList();}
+function renderEditBetsList(){
+  const el=document.getElementById('edit-bets-list'),countEl=document.getElementById('edit-bet-count');
+  if(!editBets.length){el.innerHTML='';countEl.innerHTML='';return;}
+  el.innerHTML=editBets.map((b,i)=>`<div class="bet-item"><span class="bet-item-num">${i+1}</span><span class="bet-item-val">${b.val}</span><span class="bet-item-type ${b.type}" onclick="toggleBetTypeEdit(${i})" style="cursor:pointer;user-select:none;">${b.type==='honsen'?'本線':'抑え'}</span><button class="bet-item-del" onclick="removeBetEdit(${i})">×</button></div>`).join('');
+  countEl.innerHTML=`<span>${editBets.length}</span> / 15点`;
+}
+function toggleMiss(el,ctx){
+  const val=el.dataset.val,gridId=ctx==='input'?'miss-grid-input':'miss-grid-edit';
+  if(val==='hit'||val==='miseru'){document.querySelectorAll(`#${gridId} .miss-btn`).forEach(b=>b.classList.remove('selected'));}
+  else{document.querySelectorAll(`#${gridId} .miss-btn[data-val="hit"],#${gridId} .miss-btn[data-val="miseru"]`).forEach(b=>b.classList.remove('selected'));}
+  el.classList.toggle('selected');
+}
+
+// ===== URLパラメータから配当を受け取ってkyotei_v2に反映 =====
+function applyPayFromUrl(){
+  try{
+    var params=new URLSearchParams(window.location.search);
+    var payRaw=params.get('pay');
+    if(!payRaw)return;
+    // URLからパラメータを消す（履歴を汚さない）
+    var cleanUrl=window.location.pathname;
+    window.history.replaceState({},'',cleanUrl);
+
+    var payData=JSON.parse(decodeURIComponent(payRaw));
+    // payData = [{venue:'大村', raceNum:'9R', combo:'1-2-3', payout:'¥1300'}, ...]
+
+    var v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+    var updated=0;
+    payData.forEach(function(pd){
+      // 結果入力済み・配当未入力のエントリを探す
+      var idx=v2logs.findIndex(function(l){
+        return l.venue===pd.venue
+          && l.raceNum===pd.raceNum
+          && l.result===pd.combo
+          && (!l.payout||l.payout===''||l.payout==='¥0');
+      });
+      if(idx>=0){
+        v2logs[idx].payout=pd.payout;
+        updated++;
+      }
+    });
+    if(updated>0){
+      localStorage.setItem('kyotei_v2',JSON.stringify(v2logs));
+      setTimeout(function(){
+        showToast('✅ '+updated+'件の配当を反映しました');
+        switchPage('logs');
+        renderLogs();
+      },300);
+    } else {
+      setTimeout(function(){
+        showToast('⚠️ 反映できるレースがありませんでした');
+      },300);
+    }
+  }catch(e){
+    console.error('applyPayFromUrl error:',e);
+  }
+}
+
+applyPayFromUrl();
+</script>
+</body>
+</html>
