@@ -698,6 +698,7 @@ function parseData(raw){
   var nigeRate=null,nigeRateSrc='';
   if(localCount>=10&&nigeRateLocal!==null){nigeRate=nigeRateLocal;nigeRateSrc='当地('+localCount+'戦)';}
   else if(nigeRate6M!==null){nigeRate=nigeRate6M;nigeRateSrc='直近6M';}
+  else if(nigeRate1Y!==null){nigeRate=nigeRate1Y;nigeRateSrc='直近1年';}
   else if(nigeRateKoki!==null){nigeRate=nigeRateKoki;nigeRateSrc='今期';}
 
   // コース別連対率を各艇に反映（当地10走以上→直近6ヶ月→今期）
@@ -1168,8 +1169,14 @@ function buildPrompt(){
     p+='【特記】\n\n';
     var shinkidoTmp=normalResult.shinkido;
     var maruTmp=(shinkidoTmp==='A')?'1':String(sogoSortedN[0]?sogoSortedN[0].n:'◎');
-    var shiroTmp=(shinkidoTmp==='B'&&maruTmp!=='1')?'1':String(sogoSortedN[1]?sogoSortedN[1].n:'○');
-    p+='【最終買い目】8点\n本線\n'+maruTmp+'-X-X\n'+maruTmp+'-X-X\n'+maruTmp+'-X-X\n'+maruTmp+'-X-X\n抑え\n'+(shinkidoTmp==='C'?shiroTmp+'-X-X\n':maruTmp+'-X-X\n')+maruTmp+'-X-X\n'+maruTmp+'-X-X\n'+maruTmp+'-X-X\n\n';
+    var shiroTmp=String(sogoSortedN[1]?sogoSortedN[1].n:'○');
+    // Aモード: ◎頭4本線/4抑え
+    // B/Cモード: ◎頭2本線+○頭2本線 / ◎頭2抑え+○頭2抑え
+    if(shinkidoTmp==='A'){
+      p+='【最終買い目】8点\n本線\n'+maruTmp+'-X-X\n'+maruTmp+'-X-X\n'+maruTmp+'-X-X\n'+maruTmp+'-X-X\n抑え\n'+maruTmp+'-X-X\n'+maruTmp+'-X-X\n'+maruTmp+'-X-X\n'+maruTmp+'-X-X\n\n';
+    } else {
+      p+='【最終買い目】8点\n本線\n'+maruTmp+'-X-X\n'+maruTmp+'-X-X\n'+shiroTmp+'-X-X\n'+shiroTmp+'-X-X\n抑え\n'+maruTmp+'-X-X\n'+maruTmp+'-X-X\n'+shiroTmp+'-X-X\n'+shiroTmp+'-X-X\n\n';
+    }
 
     // 総合評価：モードに応じて印を固定割り当て
     var shinkido=normalResult.shinkido;
@@ -1360,13 +1367,15 @@ function buildAreBetsFinal(maru,shiro,sankaku,go,ngBoats){
         if(c===a||c===b)return;
         // モード別1着制約
         // A: 1号頭のみ（逃げ一本）
-        // B: 1号(=◎)頭 OR ○頭（◎は必ず1号）
+        // B: ◎頭 OR ○頭
         // C: ◎頭 OR ○頭（◎は1号以外）
         // sixth: 1着からは除外（2着・3着は解放）
         if(a===sixth)return;
         if(shinkido==='A' && a!=='1')return;
-        if(shinkido==='B' && a!=='1' && a!==shiro)return;
+        if(shinkido==='B' && a!==maru && a!==shiro)return;
         if(shinkido==='C' && a!==maru && a!==shiro)return;
+        // 3着はrank4以下（△▽×）を除外して絞る
+        if(rank[c]>=5)return;
         var firstBonus=(a===maru)?0:0.5;
         var score=rank[a]*10+rank[b]*10+rank[c]+firstBonus;
         all.push({bet:a+'-'+b+'-'+c, score:score});
