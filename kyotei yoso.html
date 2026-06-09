@@ -136,6 +136,12 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
 .eval-gold-line{height:1.4px;background:linear-gradient(90deg,transparent 0%,#8a6010 12%,#c9a84c 32%,#ffe580 50%,#c9a84c 68%,#8a6010 88%,transparent 100%);}
 .eval-hint{margin-top:9px;color:#4a4a4a;font-size:.65rem;text-align:center;}
 .eval-save-btn{width:100%;margin-top:8px;padding:11px;background:linear-gradient(135deg,#7a5800,#c9a84c,#ffe580,#c9a84c,#7a5800);color:#000;border:none;border-radius:6px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;cursor:pointer;letter-spacing:.05em;}
+.eval-slot{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;}
+.eval-badge{width:100%;aspect-ratio:1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:clamp(18px,5vw,28px);font-weight:900;font-family:'Anton',sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.6);min-width:0;}
+.eval-arrow{color:#4a4a4a;font-size:14px;font-weight:700;flex-shrink:0;padding:0 1px;align-self:flex-start;margin-top:8px;}
+.eval-stars{display:flex;gap:1px;justify-content:center;flex-wrap:nowrap;}
+.eval-star-on{color:#c9a84c;font-size:clamp(7px,2vw,11px);line-height:1;}
+.eval-star-off{color:#2e2e2e;font-size:clamp(7px,2vw,11px);line-height:1;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -2298,12 +2304,27 @@ function showHitAnalysis(){
 var BOAT_COLORS={1:{bg:'#a8a8a8',text:'#000'},2:{bg:'#1c1c1c',text:'#fff'},3:{bg:'#c42222',text:'#fff'},4:{bg:'#1e52cc',text:'#fff'},5:{bg:'#cc9a00',text:'#000'},6:{bg:'#168432',text:'#fff'}};
 var MARK_TO_STARS={'◎':5,'○':4,'▲':3,'△':2,'▽':1,'×':1};
 function renderEvalCard(text,venue,raceNum){
-  // 総合評価から順位・印を取得
+  // 総合評価から順位・印を取得（スペース種類を問わず柔軟にマッチ）
   var rankData=[];
   text.split('\n').forEach(function(line){
-    var m=line.match(/(\d)位[\s　]+(\d)号艇[\s　]*(◎|○|▲|△|▽|×)/);
+    var m=line.match(/([1-6])位[\s\u3000]*([1-6])号艇[\s\u3000]*(◎|○|▲|△|▽|×)/);
     if(m)rankData.push({rank:parseInt(m[1]),boat:parseInt(m[2]),mark:m[3]});
   });
+  // パース結果が6未満ならcalcDataのsogoRankで補完
+  if(rankData.length<6&&window.calcData&&calcData.parsed&&calcData.parsed.boats){
+    var MARK_ORDER_F=['◎','○','▲','△','▽','×'];
+    var sogoSorted=calcData.parsed.boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
+    var parsedBoats=rankData.map(function(d){return d.boat;});
+    sogoSorted.forEach(function(b,i){
+      if(parsedBoats.indexOf(b.n)<0){
+        rankData.push({rank:i+1,boat:b.n,mark:MARK_ORDER_F[Math.min(i,5)]});
+      }
+    });
+    var seen={};
+    rankData=rankData.filter(function(d){if(seen[d.boat])return false;seen[d.boat]=true;return true;});
+    rankData.sort(function(a,b){return a.rank-b.rank;});
+    rankData.forEach(function(d,i){d.rank=i+1;});
+  }
   if(!rankData.length)return;
   rankData.sort(function(a,b){return a.rank-b.rank;});
 
