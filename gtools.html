@@ -452,9 +452,10 @@ function applyPayPaste(text){
 let inputBets=[],inputCurrent=[];
 let editBets=[],editCurrent=[],editingId=null;
 function closeEditModal(){document.getElementById('edit-modal').classList.remove('open');editingId=null;editBets=[];editCurrent=[];}
-const logs=getLogs(),idx=logs.findIndex(l=>l.id===editingId);if(idx===-1)return;
 function openEditModal(id){
+  editingId=id;
   const log=getLogs().find(l=>l.id===id);if(!log)return;
+  editBets=log.bets?[...log.bets]:[]; editCurrent=[];
   document.getElementById('edit-venue').value=log.venue||'';document.getElementById('edit-race-num').value=log.raceNum||'';document.getElementById('edit-ver').value=log.ver||'v2.0';document.getElementById('edit-date').value=log.date||'';document.getElementById('edit-memo').value=log.memo||'';document.getElementById('edit-payout').value=log.payout||'';
   const parts=(log.result||'').split('-');document.getElementById('edit-r1').value=parts[0]||'';document.getElementById('edit-r2').value=parts[1]||'';document.getElementById('edit-r3').value=parts[2]||'';
   document.querySelectorAll('#miss-grid-edit .miss-btn').forEach(b=>b.classList.toggle('selected',(log.miss||[]).includes(b.dataset.val)));
