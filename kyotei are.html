@@ -159,7 +159,7 @@ textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radi
   <div class="sec-step-label">② 荒れスコア確認</div>
   <div id="condBadges" style="margin-bottom:10px;"></div>
   <table class="are-rank-table" id="rankTable">
-    <thead><tr><th>順位</th><th>艇番</th><th>選手</th><th>スコア</th><th>攻撃力</th></tr></thead>
+    <thead><tr><th>順位</th><th>艇番</th><th>選手</th><th>スコア／内訳</th></tr></thead>
     <tbody id="rankBody"></tbody>
   </table>
   <div style="margin-top:14px;">
@@ -619,14 +619,25 @@ function doCalc(){
   var maxScore = sorted[0].areScore||1;
   tbody.innerHTML = sorted.map(function(b){
     var rowClass = b.areRank===1?'top1':b.areRank===2?'top2':'';
-    var attackStr = b.attackRate>0 ? '差し'+b.sashiRate+'%／捲り'+b.makuriRate+'%／捲差'+b.makuriSashiRate+'%' : '—';
     var barW = Math.round(b.areScore/maxScore*100);
+    var detail = [];
+    var attack = (b.sashiRate||0)+(b.makuriRate||0)+(b.makuriSashiRate||0);
+    if(attack>0) detail.push('攻撃力'+Math.round(attack*0.4*10)/10+'pt（差し'+b.sashiRate+'%・捲り'+b.makuriRate+'%・捲差'+b.makuriSashiRate+'%）');
+    if(b.exRank!==null&&b.exRank!==undefined) detail.push('展示機力'+(Math.round((5-b.exRank)*3*10)/10)+'pt（'+b.exRank+'位）');
+    if(b.lapRank!==null&&b.lapRank!==undefined) detail.push('周回機力'+(Math.round((5-b.lapRank)*3*10)/10)+'pt（'+b.lapRank+'位）');
+    if(!b.stF && b.st!==null&&b.st!==undefined) detail.push('直前ST '+b.st);
+    if(b.tokuten!==null&&b.tokuten!==undefined) detail.push('得点率 '+b.tokuten);
+    if(b.stF) detail.push('⚠️展示F');
+    if(b.nyuse===1) detail.push('⚠️1号ペナ');
     return '<tr class="'+rowClass+'">'
       +'<td class="rank-num">'+b.areRank+'位</td>'
       +'<td class="boat-num">'+b.n+'号</td>'
       +'<td>'+b.name+'</td>'
-      +'<td>'+(Math.round(b.areScore*10)/10)+'<div class="score-bar"><div class="score-bar-fill" style="width:'+barW+'%"></div></div></td>'
-      +'<td class="attack-bar">'+attackStr+'</td>'
+      +'<td>'
+        +'<span style="font-size:15px;font-weight:700;">'+(Math.round(b.areScore*10)/10)+'</span>'
+        +'<div class="score-bar"><div class="score-bar-fill" style="width:'+barW+'%"></div></div>'
+        +'<div style="font-size:10px;color:var(--text-sub);margin-top:3px;line-height:1.7;">'+detail.join('<br>')+'</div>'
+      +'</td>'
       +'</tr>';
   }).join('');
 
