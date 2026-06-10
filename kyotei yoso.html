@@ -463,7 +463,20 @@ function initStep2Shinkido(){
     var sc=calcData.areResult.score;
     var pass=calcData.furikiriResult&&calcData.furikiriResult.pass;
     disp.innerHTML+='<div style="font-size:12px;color:var(--text-sub);text-align:center;margin-bottom:4px;">荒れ指数: <b style="color:'+(sc>=10?'var(--green)':'var(--text-sub)')+';">'+sc+'点</b>'+(pass?' ✅ 荒れ展開有力':'')+' / 逃げ率: <b>'+(calcData.parsed.nigeRate!==null?calcData.parsed.nigeRate+'%':'?')+'</b></div>';
+    // 荒れ版誘導ボタン（荒れ指数8〜11点 かつ 逃げ率50%未満）
+    var nr=calcData.parsed.nigeRate;
+    if(sc>=8&&sc<=11&&nr!==null&&nr<50){
+      disp.innerHTML+='<div style="margin-top:8px;"><button onclick="goAreVersion()" style="width:100%;padding:11px;background:#c0392b;color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:700;-webkit-appearance:none;cursor:pointer;letter-spacing:1px;">⚡ 荒れ版で予想する</button></div>';
+    }
   }
+}
+
+function goAreVersion(){
+  var venue=document.getElementById('venue').value||'';
+  var raceNum=document.getElementById('raceNum').value||'';
+  var rawData=document.getElementById('rawData').value||'';
+  localStorage.setItem('kyotei_are_transfer',JSON.stringify({venue:venue,raceNum:raceNum,rawData:rawData}));
+  window.location.href='kyotei_are.html';
 }
 
 var currentMode = 'normal';
