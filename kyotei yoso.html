@@ -204,6 +204,7 @@ textarea::placeholder{color:var(--text-muted);font-size:11px;}
   <div class="sec-step-label">② 印と点数を確認・調整</div>
 
   <!-- 信頼度表示 -->
+  <div id="shinkido-c-warn" style="display:none;background:#5c1a1a;border:1px solid #c0392b;border-radius:6px;padding:10px 14px;margin-bottom:10px;color:#ff6b6b;font-size:13px;font-weight:700;">⚠️ 信頼度C：的中率17%。見送りを強く推奨。</div>
   <div id="step2ShinkidoDisp" style="margin-bottom:12px;"></div>
 
   <!-- 6艇印選択（プルダウン式） -->
@@ -1068,6 +1069,9 @@ function runCalc(){
   calcData={parsed:parsed,areResult:areResult,furikiriResult:furikiriResult,cands1st:cands1st,normalResult:normalResult};
   displayCalcResults(calcData);
   document.getElementById('calcResult').classList.add('show');
+  // 信頼度C警告
+  var cWarn=document.getElementById('shinkido-c-warn');
+  if(cWarn)cWarn.style.display=(normalResult.shinkido==='C')?'block':'none';
   goStep2();
   }catch(e){showStatus('エラー: '+e.message,'err');console.error(e);}
 }
@@ -1374,8 +1378,8 @@ function buildAreBetsFinal(maru,shiro,sankaku,go,ngBoats){
         if(shinkido==='A' && a!=='1')return;
         if(shinkido==='B' && a!==maru && a!==shiro)return;
         if(shinkido==='C' && a!==maru && a!==shiro)return;
-        // 3着はrank4以下（△▽×）を除外して絞る
-        if(rank[c]>=5)return;
+        // 3着は▽×を除外（△まで許容）
+        if(rank[c]>=6)return;
         var firstBonus=(a===maru)?0:0.5;
         var score=rank[a]*10+rank[b]*10+rank[c]+firstBonus;
         all.push({bet:a+'-'+b+'-'+c, score:score});
