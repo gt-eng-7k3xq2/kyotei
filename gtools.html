@@ -419,9 +419,11 @@ function applyPayPaste(text){
     var v2logs=getLogs();
     var updated=0;
     payData.forEach(function(pd){
+      var pdR=pd.r?String(pd.r).replace(/R$/,''):'';
       var idx=v2logs.findIndex(function(l){
+        var lR=l.raceNum?String(l.raceNum).replace(/R$/,''):'';
         return l.venue===pd.v
-          &&l.raceNum===pd.r
+          &&lR===pdR
           &&(!l.payout||l.payout===''||l.payout==='¥0');
       });
       if(idx>=0){
