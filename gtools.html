@@ -422,13 +422,10 @@ function applyPayPaste(text){
       var pdR=pd.r?String(pd.r).replace(/R$/,''):'';
       var idx=v2logs.findIndex(function(l){
         var lR=l.raceNum?String(l.raceNum).replace(/R$/,''):'';
-        return l.venue===pd.v
-          &&lR===pdR
-          &&(!l.payout||l.payout===''||l.payout==='¥0');
+        return l.venue===pd.v&&lR===pdR;
       });
       if(idx>=0){
         v2logs[idx].payout=pd.p;
-        // 着順も未入力なら反映
         if(!v2logs[idx].result&&pd.c)v2logs[idx].result=pd.c;
         updated++;
       }
