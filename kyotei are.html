@@ -892,22 +892,47 @@ function showOddsResult(){
   var oddsData=parseOdds(oddsRaw);
   var outText=document.getElementById('outText').textContent;
   var bets=[],seen={};
+
+  // 圧縮買い目を展開する関数（例: 2-6-345 → 2-6-3, 2-6-4, 2-6-5）
+  function expandBet(s){
+    var expanded=[];
+    // 単独形式: X-X-X
+    if(/^\d-\d-\d$/.test(s)){expanded.push(s);return expanded;}
+    // 圧縮形式: 複数桁あり
+    var m=s.match(/^(\d+)-(\d+)-(\d+)$/);
+    if(m){
+      var firsts=m[1].split(''),seconds=m[2].split(''),thirds=m[3].split('');
+      firsts.forEach(function(f){seconds.forEach(function(s2){thirds.forEach(function(t){
+        if(f!==s2&&f!==t&&s2!==t)expanded.push(f+'-'+s2+'-'+t);
+      });});});
+    }
+    return expanded;
+  }
+
+  // 本線行から取得（圧縮形式対応）
+  outText.split('\n').forEach(function(ln){
+    var t=ln.trim();
+    if(t.indexOf('本線')===0){
+      var parts=t.replace(/^本線[\s\u3000]*/,'').split('/');
+      parts.forEach(function(p){
+        p=p.trim();
+        expandBet(p).forEach(function(b){if(!seen[b]){seen[b]=true;bets.push(b);}});
+      });
+    }
+  });
+
+  // 【最終買い目】セクションからも取得
   var lines=outText.split('\n');
   var inBetSection=false;
   lines.forEach(function(ln){
     var t=ln.trim();
     if(t.indexOf('【最終買い目】')>=0||t.indexOf('【買い目】')>=0){inBetSection=true;return;}
     if(inBetSection&&t.startsWith('【')&&t.indexOf('買い目')<0){inBetSection=false;}
-    if(inBetSection&&/^\d-\d-\d$/.test(t)&&!seen[t]){seen[t]=true;bets.push(t);}
-  });
-  // 本線行からも取得
-  outText.split('\n').forEach(function(ln){
-    var t=ln.trim();
-    if(t.indexOf('本線')===0){
-      var parts=t.replace('本線','').replace(/[\s\u3000]/g,'').split('/');
-      parts.forEach(function(p){if(/^\d-\d-\d$/.test(p)&&!seen[p]){seen[p]=true;bets.push(p);}});
+    if(inBetSection){
+      expandBet(t).forEach(function(b){if(!seen[b]){seen[b]=true;bets.push(b);}});
     }
   });
+
   if(bets.length===0){document.getElementById('oddsResult').innerHTML='';return;}
   var html='<div style="margin-top:14px;"><div style="font-size:10px;color:var(--text-sub);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;padding-left:6px;border-left:2px solid var(--accent);">買い目オッズ</div>';
   html+='<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr><th style="text-align:left;padding:5px 6px;background:var(--bg);color:var(--text-sub);font-size:10px;border-bottom:1px solid var(--border);">買い目</th><th style="text-align:right;padding:5px 6px;background:var(--bg);color:var(--text-sub);font-size:10px;border-bottom:1px solid var(--border);">オッズ</th></tr></thead><tbody>';
