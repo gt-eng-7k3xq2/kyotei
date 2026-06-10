@@ -307,7 +307,7 @@ function renderLogs(){
   const filtered=currentDateFilter==='all'?logs:logs.filter(l=>l.date===currentDateFilter);
   const listEl=document.getElementById('log-list');
   if(!filtered.length){listEl.innerHTML='<div class="empty-state"><div class="icon">📋</div>記録がありません</div>';return;}
-  listEl.innerHTML=filtered.map(log=>{const tags=(log.miss||[]).map(m=>`<span class="miss-tag ${m}">${MISS_LABELS[m]||m}</span>`).join('');const betsHtml=(log.bets||[]).map((b,i)=>`${b.val}<span style="color:var(--text3);font-size:9px;">(${b.type==='honsen'?'本':'抑'})</span>${i<(log.bets.length-1)?'　':''}`).join('');return `<div class="log-item"><div class="log-header"><div><span class="log-venue">${log.venue} ${log.raceNum}</span>${log.ver?`<span class="ver-badge">${log.ver}</span>`:''}</div><div class="log-date-small">${log.date||''}</div></div><div class="log-result-row"><span>結果</span><span class="log-result-val">${log.result||'未入力'}</span>${log.payout?`<span class="log-payout">${log.payout}</span>`:''}</div><div class="miss-tags">${tags}</div>${log.bets&&log.bets.length?`<div class="log-bets-toggle" onclick="toggleBetsDetail(${log.id})">▶ 買い目 ${log.bets.length}点</div><div class="log-bets-detail" id="bets-${log.id}"><div class="log-bets-preview">${betsHtml}</div></div>`:''}${log.memo?`<div style="font-size:11px;color:var(--text2);margin-top:6px;">💬 ${log.memo}</div>`:''}<div class="log-actions"><div class="btn-del" onclick="deleteLog(${log.id})">削除</div></div></div>`;}).join('');
+  listEl.innerHTML=filtered.map(log=>{const tags=(log.miss||[]).map(m=>`<span class="miss-tag ${m}">${MISS_LABELS[m]||m}</span>`).join('');const betsHtml=(log.bets||[]).map((b,i)=>`${b.val}<span style="color:var(--text3);font-size:9px;">(${b.type==='honsen'?'本':'抑'})</span>${i<(log.bets.length-1)?'　':''}`).join('');return `<div class="log-item"><div class="log-header"><div><span class="log-venue">${log.venue} ${log.raceNum}</span>${log.ver?`<span class="ver-badge">${log.ver}</span>`:''}</div><div class="log-date-small">${log.date||''}</div></div><div class="log-result-row"><span>結果</span><span class="log-result-val">${log.result||'未入力'}</span>${log.payout?`<span class="log-payout">${log.payout}</span>`:''}</div><div class="miss-tags">${tags}</div>${log.bets&&log.bets.length?`<div class="log-bets-toggle" onclick="toggleBetsDetail(${log.id})">▶ 買い目 ${log.bets.length}点</div><div class="log-bets-detail" id="bets-${log.id}"><div class="log-bets-preview">${betsHtml}</div></div>`:''}${log.memo?`<div style="font-size:11px;color:var(--text2);margin-top:6px;">💬 ${log.memo}</div>`:''}<div class="log-actions"><div class="btn-del" onclick="deleteLog(${log.id})">削除</div><button class="btn-secondary" style="flex:1;font-size:12px;padding:8px;" onclick="openEditModal(${log.id})">✏️ 編集</button></div></div>`;}).join('');
 }
 function toggleBetsDetail(id){const el=document.getElementById('bets-'+id);if(!el)return;el.classList.toggle('open');const t=el.previousElementSibling;t.textContent=el.classList.contains('open')?'▼ 買い目を隠す':'▶ 買い目 '+(getLogs().find(l=>l.id===id)?.bets?.length||0)+'点';}
 function filterDate(d){currentDateFilter=d;renderLogs();}
@@ -422,10 +422,14 @@ function applyPayPaste(text){
       var idx=v2logs.findIndex(function(l){
         return l.venue===pd.v
           &&l.raceNum===pd.r
-          &&l.result===pd.c
           &&(!l.payout||l.payout===''||l.payout==='¥0');
       });
-      if(idx>=0){v2logs[idx].payout=pd.p;updated++;}
+      if(idx>=0){
+        v2logs[idx].payout=pd.p;
+        // 着順も未入力なら反映
+        if(!v2logs[idx].result&&pd.c)v2logs[idx].result=pd.c;
+        updated++;
+      }
     });
     if(updated>0){
       saveLogs(v2logs);
