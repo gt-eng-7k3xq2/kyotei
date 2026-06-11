@@ -575,96 +575,6 @@ function formatBetBlock(betsResult, pts){
 }
 
 
-  var used={};var final=[];
-
-  // パターン1: 1着2着が入れ替わり、3着が複数 → A=B-CD
-  // 例: 2-5-3/2-5-1/5-2-3/5-2-1 → 2=5-13
-  var by3rd={};
-  bets.forEach(function(b){var sp=b.split('-');var key=sp[2];if(!by3rd[key])by3rd[key]=[];by3rd[key].push(b);});
-  Object.keys(by3rd).forEach(function(third){
-    var grp=by3rd[third];
-    // 1着2着が入れ替わるペアを探す
-    var map={};
-    grp.forEach(function(b){var sp=b.split('-');map[sp[0]+':'+sp[1]]=b;});
-    var paired={};
-    Object.keys(map).forEach(function(k){
-      var sp=k.split(':');var rev=sp[1]+':'+sp[0];
-      if(map[rev]&&!paired[k]&&!paired[rev]){
-        paired[k]=true;paired[rev]=true;
-        used[map[k]]=true;used[map[rev]]=true;
-      }
-    });
-  });
-  // 1着2着入れ替わりペアがある場合、3着でまとめる
-  var pairMap={};
-  bets.forEach(function(b){
-    if(!used[b])return;
-    var sp=b.split('-');
-    var key=[sp[0],sp[1]].sort().join('=');
-    if(!pairMap[key])pairMap[key]=[];
-    if(pairMap[key].indexOf(sp[2])<0)pairMap[key].push(sp[2]);
-  });
-  Object.keys(pairMap).forEach(function(key){
-    var thirds=pairMap[key].sort().join('');
-    var f=key+'-'+thirds;
-    if(final.indexOf(f)<0)final.push(f);
-  });
-
-  // パターン2: 1着3着が入れ替わり、2着固定 → A=B-C（3着は相手）
-  // 例: 3-2-4/4-2-3 → 3=4-2, 3-5-4/4-5-3 → 3=4-5 → まとめて 3=4-25
-  var remaining=bets.filter(function(b){return !used[b];});
-  var by2nd={};
-  remaining.forEach(function(b){var sp=b.split('-');if(!by2nd[sp[1]])by2nd[sp[1]]=[];by2nd[sp[1]].push(b);});
-  var usedR={};
-  // 1着3着入れ替わりペアを同じ2着でまとめる
-  var swapPairs={}; // key: 'A=C', val: [2着リスト]
-  Object.keys(by2nd).forEach(function(sec){
-    var grp=by2nd[sec];
-    var map13={};
-    grp.forEach(function(b){var sp=b.split('-');map13[sp[0]+':'+sp[2]]=b;});
-    Object.keys(map13).forEach(function(k){
-      var sp=k.split(':');var rev=sp[1]+':'+sp[0];
-      if(map13[rev]&&!usedR[map13[k]]&&!usedR[map13[rev]]){
-        var pairKey=[sp[0],sp[1]].sort().join('=');
-        if(!swapPairs[pairKey])swapPairs[pairKey]=[];
-        if(swapPairs[pairKey].indexOf(sec)<0)swapPairs[pairKey].push(sec);
-        usedR[map13[k]]=true;usedR[map13[rev]]=true;
-      }
-    });
-  });
-  Object.keys(swapPairs).forEach(function(pairKey){
-    var seconds=swapPairs[pairKey].sort().join('');
-    var f=pairKey+'-'+seconds;
-    if(final.indexOf(f)<0)final.push(f);
-  });
-
-  // パターン3: 2着3着入れ替わり → A-B=C
-  var remaining2=remaining.filter(function(b){return !usedR[b];});
-  var by1st={};
-  remaining2.forEach(function(b){var sp=b.split('-');if(!by1st[sp[0]])by1st[sp[0]]=[];by1st[sp[0]].push(b);});
-  var usedR2={};
-  Object.keys(by1st).forEach(function(first){
-    var grp=by1st[first];
-    var map23={};
-    grp.forEach(function(b){var sp=b.split('-');map23[sp[1]+':'+sp[2]]=b;});
-    Object.keys(map23).forEach(function(k){
-      var sp=k.split(':');var rev=sp[1]+':'+sp[0];
-      if(map23[rev]&&!usedR2[map23[k]]&&!usedR2[map23[rev]]){
-        var f=first+'-'+[sp[0],sp[1]].sort().join('=');
-        if(final.indexOf(f)<0)final.push(f);
-        usedR2[map23[k]]=true;usedR2[map23[rev]]=true;
-      }
-    });
-  });
-
-  // 残り：通常圧縮（1着2着固定で3着まとめ→1着まとめ）
-  var remaining3=remaining.filter(function(b){return !usedR[b]&&!usedR2[b];});
-  var byFirst12={};
-  remaining3.forEach(function(b){var sp=b.split('-');var key=sp[0]+'-'+sp[1];if(!byFirst12[key])byFirst12[key]=[];byFirst12[key].push(sp[2]);});
-  var by23={};
-  Object.keys(byFirst12).forEach(function(key){var sp=key.split('-');var thirds=byFirst12[key].sort().join('');var k23=sp[1]+'-'+thirds;if(!by23[k23])by23[k23]=[];by23[k23].push(sp[0]);});
-  Object.keys(by23).forEach(function(k23){var firsts=by23[k23].sort().join('');final.push(firsts+'-'+k23);});
-
 /* ===== 買い目圧縮 ===== */
 function compressBets(betsArr){
   var valid=betsArr.filter(function(b){return /^[1-6]-[1-6]-[1-6]$/.test(b);});
@@ -1214,7 +1124,7 @@ function renderEvalCard(text,venue,raceNum){
     if(idx>0){var arrow=document.createElement('div');arrow.className='eval-arrow';arrow.textContent='›';container.appendChild(arrow);}
     var slot=document.createElement('div');slot.className='eval-slot';
     var badge=document.createElement('div');badge.className='eval-badge';
-    var c=BOAT_COLORS[d.boat]||BOAT_COLORS[1];
+    var c=BOAT_COLORS[parseInt(d.boat)]||BOAT_COLORS[1];
     badge.style.background=c.bg;badge.style.color=c.text;badge.textContent=d.boat;
     var stars=document.createElement('div');stars.className='eval-stars';
     var starCount=MARK_TO_STARS[d.mark]||1;var starsHtml='';
