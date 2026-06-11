@@ -1005,22 +1005,22 @@ var BOAT_COLORS={1:{bg:'#a8a8a8',text:'#000'},2:{bg:'#3a3a3a',text:'#fff'},3:{bg
 var MARK_TO_STARS={'◎':5,'○':4,'▲':3,'△':2,'▽':1,'×':1};
 
 function renderEvalCard(text,venue,raceNum){
+  var MARK_ORDER_F=['◎','○','▲','△','▽','×'];
   var rankData=[];
-  text.split('\n').forEach(function(line){
-    var m=line.match(/([1-6])位[\s\u3000]*([1-6])号艇[\s\u3000]*(◎|○|▲|△|▽|×)/);
-    if(m)rankData.push({rank:parseInt(m[1]),boat:parseInt(m[2]),mark:m[3]});
-  });
-  if(rankData.length<6&&calcData&&calcData.sorted){
-    var MARK_ORDER_F=['◎','○','▲','△','▽','×'];
-    var parsedBoats=rankData.map(function(d){return d.boat;});
+
+  // まずcalcData.sortedから確実に生成（荒れ版はareScoreランキングが正確）
+  if(calcData&&calcData.sorted&&calcData.sorted.length===6){
     calcData.sorted.forEach(function(b,i){
-      if(parsedBoats.indexOf(b.n)<0)rankData.push({rank:i+1,boat:b.n,mark:MARK_ORDER_F[Math.min(i,5)]});
+      rankData.push({rank:i+1,boat:b.n,mark:MARK_ORDER_F[i]});
     });
-    var seen={};
-    rankData=rankData.filter(function(d){if(seen[d.boat])return false;seen[d.boat]=true;return true;});
-    rankData.sort(function(a,b){return a.rank-b.rank;});
-    rankData.forEach(function(d,i){d.rank=i+1;});
+  } else {
+    // fallback: テキストパース
+    text.split('\n').forEach(function(line){
+      var m=line.match(/([1-6])位[\s\u3000]*([1-6])号艇[\s\u3000]*(◎|○|▲|△|▽|×)/);
+      if(m)rankData.push({rank:parseInt(m[1]),boat:parseInt(m[2]),mark:m[3]});
+    });
   }
+
   if(!rankData.length)return;
   rankData.sort(function(a,b){return a.rank-b.rank;});
   var title='G.の総合評価🚤';
