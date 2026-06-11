@@ -1267,8 +1267,17 @@ function commitLog(){
 }
 
 function skipLog(){
-  document.getElementById('status4').textContent = 'スキップしました';
-  document.getElementById('status4').className = 'status ok';
+  if(currentEntry){
+    var v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+    var idx=v2logs.findIndex(function(l){return l.id===currentEntry.id;});
+    if(idx>=0){
+      v2logs[idx].result='skip';
+      v2logs[idx].miss=['miseru'];
+      localStorage.setItem('kyotei_v2',JSON.stringify(v2logs));
+    }
+  }
+  document.getElementById('status4').textContent='スキップしました';
+  document.getElementById('status4').className='status ok';
   updateLogSummary();
 }
 
