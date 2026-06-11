@@ -181,6 +181,13 @@ html,body{min-height:100vh;background:#04040c;}
 
 <div class="page" id="page-analysis">
   <div class="date-tabs-wrap"><div class="date-tabs" id="analysis-date-tabs"></div></div>
+  <div class="date-tabs-wrap" style="margin-bottom:10px;">
+    <div class="date-tabs" id="analysis-mode-tabs">
+      <div class="date-tab active" onclick="setModeFilter('all')" id="mode-tab-all">📊 全て</div>
+      <div class="date-tab" onclick="setModeFilter('normal')" id="mode-tab-normal">通常エンジン</div>
+      <div class="date-tab" onclick="setModeFilter('are')" id="mode-tab-are">⚡ 荒れエンジン</div>
+    </div>
+  </div>
   <div id="analysis-daily-summary"></div>
   <div class="stat-grid"><div class="stat-card"><div class="stat-val" id="stat-total">0</div><div class="stat-label">予想数</div></div><div class="stat-card"><div class="stat-val" id="stat-hit">0</div><div class="stat-label">的中</div></div><div class="stat-card"><div class="stat-val" id="stat-rate">-%</div><div class="stat-label">的中率</div></div></div>
   <div id="analysis-daily-list"></div>
@@ -188,6 +195,7 @@ html,body{min-height:100vh;background:#04040c;}
   <div class="card"><div class="section-title">改修インサイト</div><div id="insight-area"><div class="empty-state"><div class="icon">📊</div>10レース以上記録すると表示されます</div></div></div>
   <div class="card"><div class="section-title">バージョン別的中率</div><div id="ver-stats"><div style="font-size:12px;color:var(--text2);text-align:center;padding:10px 0;">記録が増えると表示されます</div></div></div>
   <div class="card"><div class="section-title">場別的中率</div><div id="venue-stats"><div style="font-size:12px;color:var(--text2);text-align:center;padding:10px 0;">記録が増えると表示されます</div></div></div>
+  <div class="card" id="are-analysis-card" style="display:none;"><div class="section-title">⚡ 荒れ版専用分析</div><div id="are-stats"></div></div>
 </div>
 
 <div class="page" id="page-logs">
@@ -261,7 +269,7 @@ html,body{min-height:100vh;background:#04040c;}
 <script>
 /* ===== TOOL 1 ===== */
 const MISS_LABELS={hit:'的中',miseru:'見送り',ichaku:'1着ハズレ',nichaku:'2着ハズレ',sankaku:'3着ハズレ',tensu:'点数外れ'};
-let currentDateFilter='all',analysisDFilter='all';
+let currentDateFilter='all',analysisDFilter='all',analysisModeFilter='all';
 let honsenUnit=500,osaeeUnit=300;
 
 document.getElementById('nippo-date').value=new Date().toISOString().split('T')[0];
@@ -354,11 +362,22 @@ function renderAnalysisTabs(){
   const dates=[...new Set(allLogs.map(l=>l.date).filter(Boolean))].sort().reverse();
   document.getElementById('analysis-date-tabs').innerHTML=`<div class="date-tab ${analysisDFilter==='all'?'active':''}" onclick="setAnalysisFilter('all')">すべて</div>`+dates.map(d=>`<div class="date-tab ${analysisDFilter===d?'active':''}" onclick="setAnalysisFilter('${d}')">${d.replace(/^\d{4}-/,'').replace('-','/')}</div>`).join('');
 }
+function setModeFilter(m){
+  analysisModeFilter=m;
+  ['all','normal','are'].forEach(function(k){
+    var el=document.getElementById('mode-tab-'+k);
+    if(el)el.classList.toggle('active',k===m);
+  });
+  renderAnalysis();
+}
 function setAnalysisFilter(d){analysisDFilter=d;renderAnalysis();}
 function renderAnalysis(){
   renderAnalysisTabs();
   const allLogs=getLogs().filter(l=>!(l.miss||[]).includes('miseru'));
-  const logs=analysisDFilter==='all'?allLogs:allLogs.filter(l=>l.date===analysisDFilter);
+  // モードフィルター適用
+  const modeLogs=analysisModeFilter==='normal'?allLogs.filter(l=>l.shinkido!=='荒'):
+                 analysisModeFilter==='are'?allLogs.filter(l=>l.shinkido==='荒'):allLogs;
+  const logs=analysisDFilter==='all'?modeLogs:modeLogs.filter(l=>l.date===analysisDFilter);
   const total=logs.length,hits=logs.filter(l=>(l.miss||[]).includes('hit')).length,rate=total?Math.round(hits/total*100):0;
   document.getElementById('stat-total').textContent=total;document.getElementById('stat-hit').textContent=hits;document.getElementById('stat-rate').textContent=total?rate+'%':'-%';
   const dailyListEl=document.getElementById('analysis-daily-list'),dailySummaryEl=document.getElementById('analysis-daily-summary');
@@ -376,6 +395,82 @@ function renderAnalysis(){
   const verEl=document.getElementById('ver-stats');
   if(analysisDFilter!=='all'){verEl.closest('.card').style.display='none';}else{verEl.closest('.card').style.display='';const verMap={};logs.forEach(l=>{const v=l.ver||'不明';if(!verMap[v])verMap[v]={total:0,hit:0};verMap[v].total++;if((l.miss||[]).includes('hit'))verMap[v].hit++;});const vers=Object.entries(verMap).sort((a,b)=>b[0].localeCompare(a[0]));verEl.innerHTML=vers.length?vers.map(([v,d])=>{const pct=Math.round(d.hit/d.total*100);return `<div class="bar-row"><div class="bar-label"><span>${v}</span><span>${d.hit}/${d.total}（${pct}%）</span></div><div class="bar-track"><div class="bar-fill blue" style="width:${pct}%"></div></div></div>`;}).join(''):'<div style="font-size:12px;color:var(--text2);text-align:center;padding:10px 0;">記録が増えると表示されます</div>';}
   const venueEl=document.getElementById('venue-stats'),venueMap={};logs.forEach(l=>{if(!l.venue)return;if(!venueMap[l.venue])venueMap[l.venue]={total:0,hit:0};venueMap[l.venue].total++;if((l.miss||[]).includes('hit'))venueMap[l.venue].hit++;});const venues=Object.entries(venueMap).filter(([,v])=>v.total>=2).sort((a,b)=>b[1].total-a[1].total);venueEl.innerHTML=venues.length?venues.map(([v,d])=>{const pct=Math.round(d.hit/d.total*100);return `<div class="bar-row"><div class="bar-label"><span>${v}</span><span>${d.hit}/${d.total}（${pct}%）</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div></div>`;}).join(''):'<div style="font-size:12px;color:var(--text2);text-align:center;padding:10px 0;">2レース以上記録した場が表示されます</div>';
+  renderAreAnalysis(logs);
+}
+
+function renderAreAnalysis(logs){
+  var card=document.getElementById('are-analysis-card');
+  var el=document.getElementById('are-stats');
+  var areLogs=logs.filter(function(l){return l.shinkido==='荒';});
+  // 荒れエンジンログが0件 または 通常モードフィルター中は非表示
+  if(!areLogs.length||analysisModeFilter==='normal'){card.style.display='none';return;}
+  card.style.display='';
+  var total=areLogs.length;
+  var hits=areLogs.filter(function(l){return (l.miss||[]).includes('hit');}).length;
+  var rate=total?Math.round(hits/total*100):0;
+  var html='';
+
+  // 荒れ版全体サマリー
+  html+='<div style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:12px;">';
+  html+='<div style="font-size:10px;color:var(--gold);font-weight:700;margin-bottom:6px;">荒れ版全体</div>';
+  html+='<div style="display:flex;gap:20px;">';
+  html+='<div style="text-align:center;"><div style="font-size:20px;font-weight:800;color:var(--text);">'+total+'</div><div style="font-size:10px;color:var(--text2);">予想数</div></div>';
+  html+='<div style="text-align:center;"><div style="font-size:20px;font-weight:800;color:var(--text);">'+hits+'</div><div style="font-size:10px;color:var(--text2);">的中</div></div>';
+  html+='<div style="text-align:center;"><div style="font-size:24px;font-weight:800;color:'+(rate>=35?'var(--green)':rate>=20?'var(--gold)':'var(--red)')+';">'+rate+'%</div><div style="font-size:10px;color:var(--text2);">的中率</div></div>';
+  html+='</div></div>';
+
+  // 逃げ率帯別
+  html+='<div style="font-size:10px;color:var(--gold);font-weight:700;margin:10px 0 6px;">逃げ率帯別</div>';
+  var nigeRanges=[{label:'〜49%',min:0,max:50},{label:'50〜64%',min:50,max:65},{label:'65%+',min:65,max:200}];
+  nigeRanges.forEach(function(r){
+    var sub=areLogs.filter(function(l){return (l.nigeRate||0)>=r.min&&(l.nigeRate||0)<r.max;});
+    var sh=sub.filter(function(l){return (l.miss||[]).includes('hit');}).length;
+    var sp=sub.length?Math.round(sh/sub.length*100):0;
+    if(sub.length===0)return;
+    html+='<div class="bar-row"><div class="bar-label"><span>'+r.label+'</span><span>'+sh+'/'+sub.length+'（'+sp+'%）</span></div><div class="bar-track"><div class="bar-fill '+(sp>=35?'':'')+ '" style="width:'+sp+'%"></div></div></div>';
+  });
+
+  // 荒れ指数帯別（荒れ版ならareScoreが入っている）
+  var areScoreLogs=areLogs.filter(function(l){return l.areScore!==null&&l.areScore!==undefined;});
+  if(areScoreLogs.length){
+    html+='<div style="font-size:10px;color:var(--gold);font-weight:700;margin:10px 0 6px;">荒れ指数帯別</div>';
+    var areRanges=[{label:'8〜9点',min:8,max:10},{label:'10〜11点',min:10,max:12}];
+    areRanges.forEach(function(r){
+      var sub=areScoreLogs.filter(function(l){return (l.areScore||0)>=r.min&&(l.areScore||0)<r.max;});
+      var sh=sub.filter(function(l){return (l.miss||[]).includes('hit');}).length;
+      var sp=sub.length?Math.round(sh/sub.length*100):0;
+      if(sub.length===0)return;
+      html+='<div class="bar-row"><div class="bar-label"><span>'+r.label+'</span><span>'+sh+'/'+sub.length+'（'+sp+'%）</span></div><div class="bar-track"><div class="bar-fill blue" style="width:'+sp+'%"></div></div></div>';
+    });
+  }
+
+  // 的中配当帯別
+  var hitLogs=areLogs.filter(function(l){return (l.miss||[]).includes('hit')&&l.payout;});
+  if(hitLogs.length){
+    html+='<div style="font-size:10px;color:var(--gold);font-weight:700;margin:10px 0 6px;">的中配当帯別</div>';
+    var payRanges=[{label:'〜999円',min:0,max:1000},{label:'1000〜2999円',min:1000,max:3000},{label:'3000〜6999円',min:3000,max:7000},{label:'7000円+（70倍+）',min:7000,max:999999}];
+    payRanges.forEach(function(r){
+      var sub=hitLogs.filter(function(l){var p=parseInt((l.payout+'').replace(/[¥￥,\s]/g,''))||0;return p>=r.min&&p<r.max;});
+      if(!sub.length)return;
+      var avg=Math.round(sub.reduce(function(s,l){return s+(parseInt((l.payout+'').replace(/[¥￥,\s]/g,''))||0);},0)/sub.length);
+      html+='<div class="bar-row"><div class="bar-label"><span>'+r.label+'</span><span>'+sub.length+'件 / 平均¥'+avg.toLocaleString()+'</span></div><div class="bar-track"><div class="bar-fill '+(r.min>=7000?'gold':'')+ '" style="width:'+Math.min(100,sub.length/hitLogs.length*100)+'%"></div></div></div>';
+    });
+  }
+
+  // ハズレ主因
+  html+='<div style="font-size:10px;color:var(--gold);font-weight:700;margin:10px 0 6px;">ハズレ主因</div>';
+  var missLogs=areLogs.filter(function(l){return !(l.miss||[]).includes('hit');});
+  var missMap={ichaku:0,nichaku:0,sankaku:0};
+  missLogs.forEach(function(l){(l.miss||[]).forEach(function(m){if(missMap[m]!==undefined)missMap[m]++;});});
+  var MLABELS={ichaku:'1着ハズレ',nichaku:'2着紐ズレ',sankaku:'3着紐ズレ'};
+  Object.entries(missMap).sort(function(a,b){return b[1]-a[1];}).forEach(function(entry){
+    var k=entry[0],v=entry[1];
+    if(!v)return;
+    var pct=missLogs.length?Math.round(v/missLogs.length*100):0;
+    html+='<div class="bar-row"><div class="bar-label"><span>'+MLABELS[k]+'</span><span>'+v+'回（'+pct+'%）</span></div><div class="bar-track"><div class="bar-fill red" style="width:'+pct+'%"></div></div></div>';
+  });
+
+  el.innerHTML=html;
 }
 function parsePayout(p){if(!p)return 0;return parseInt((p+'').replace(/[¥￥,\s]/g,''))||0;}
 function selectHonsen(el){document.querySelectorAll('#honsen-selector .unit-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');honsenUnit=parseInt(el.dataset.val);}
