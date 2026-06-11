@@ -163,7 +163,14 @@ textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radi
     <tbody id="rankBody"></tbody>
   </table>
   <div style="margin-top:14px;">
-    <div class="bet-label">【買い目 12点】◎○頭 × ▲穴2着 × 穴3着</div>
+    <div style="font-size:10px;color:var(--text-sub);font-weight:700;margin-bottom:6px;">買い目点数</div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <button class="pts-btn inactive" id="pts12" onclick="setPts(12)">12点</button>
+      <button class="pts-btn active"   id="pts14" onclick="setPts(14)">14点</button>
+      <button class="pts-btn inactive" id="pts15" onclick="setPts(15)">15点</button>
+      <button class="pts-btn inactive" id="pts16" onclick="setPts(16)">16点</button>
+    </div>
+    <div class="bet-label" id="betLabel">【買い目 14点】</div>
     <div class="bet-block" id="betBlock"></div>
   </div>
   <button class="gen-btn" onclick="doGenerate()">🎯 AI予想を生成する</button>
@@ -224,11 +231,35 @@ textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radi
     <button class="commit-btn" onclick="commitLog()">✅ 確定</button>
     <button class="skip-btn" onclick="skipLog()">スキップ</button>
   </div>
+  <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+    <span style="font-size:12px;color:var(--text-sub);">配当</span>
+    <input type="number" id="payoutInput" placeholder="0" style="width:120px;padding:8px;border:1px solid var(--border);border-radius:4px;font-size:13px;background:var(--surface);">
+    <span style="font-size:12px;color:var(--text-sub);">円</span>
+  </div>
   <div class="status" id="status4"></div>
 </div>
 
 <script>
 var calcData = null;
+var currentPts = 14; // デフォルト14点
+
+function setPts(pts){
+  currentPts = pts;
+  [12,14,15,16].forEach(function(p){
+    var btn = document.getElementById('pts'+p);
+    if(btn) btn.className = 'pts-btn '+(p===pts?'active':'inactive');
+  });
+  var label = document.getElementById('betLabel');
+  if(label) label.textContent = '【買い目 '+pts+'点】';
+  // 買い目再生成
+  if(calcData && calcData.sorted){
+    var betsResult = makeAreBets(calcData.sorted, pts);
+    var allBets = betsResult.honsen.concat(betsResult.osaee);
+    calcData.bets = allBets;
+    calcData.betsResult = betsResult;
+    document.getElementById('betBlock').textContent = allBets.join('\n');
+  }
+}
 var currentEntry = null;
 
 // ===== API KEY =====
@@ -571,22 +602,63 @@ function buildHyokaOrder(sorted){
   return result;
 }
 
-// ===== 買い目生成（1着固定12点） =====
-function makeBets12(sorted){
-  // 案C: ◎○2頭軸・2着に◎○▲・3着穴全開放 = 12点
-  // ◎-○-穴×3 / ○-◎-穴×3 / ◎-▲-穴×3 / ○-▲-穴×3
-  // データ根拠: 的中4件全て1着が◎か○、3着は穴が3/4件
-  var maru    = String(sorted[0].n);
-  var shiro   = String(sorted[1].n);
-  var sankaku = String(sorted[2].n);
-  var ana     = sorted.slice(3).map(function(b){ return String(b.n); }); // 4〜6位（穴）
+// ===== 買い目生成（12/14/15/16点・万舟構成）=====
+function makeAreBets(sorted, pts){
+  var m  = String(sorted[0].n); // ◎ スコア1位
+  var s  = String(sorted[1].n); // ○ スコア2位
+  var sa = String(sorted[2].n); // ▲ スコア3位
+  var yo = String(sorted[3].n); // △ スコア4位
+  var go = String(sorted[4].n); // ▽ スコア5位
+  // ×（6位）は除外
 
-  var bets = [];
-  ana.forEach(function(t){ bets.push(maru +'-'+shiro  +'-'+t); }); // ◎-○-穴×3
-  ana.forEach(function(t){ bets.push(shiro+'-'+maru   +'-'+t); }); // ○-◎-穴×3
-  ana.forEach(function(t){ bets.push(maru +'-'+sankaku+'-'+t); }); // ◎-▲-穴×3
-  ana.forEach(function(t){ bets.push(shiro+'-'+sankaku+'-'+t); }); // ○-▲-穴×3
-  return bets;
+  // G1: ◎○で1・2着、3着に▲か▽（4点）
+  var g1 = [
+    m+'-'+s+'-'+sa,  // ◎-○-▲
+    m+'-'+s+'-'+go,  // ◎-○-▽
+    s+'-'+m+'-'+sa,  // ○-◎-▲
+    s+'-'+m+'-'+go,  // ○-◎-▽
+  ];
+
+  // G3: ▲△で1・2着、3着に◎か○（4点）
+  var g3 = [
+    sa+'-'+yo+'-'+m, // ▲-△-◎
+    sa+'-'+yo+'-'+s, // ▲-△-○
+    yo+'-'+sa+'-'+m, // △-▲-◎
+    yo+'-'+sa+'-'+s, // △-▲-○
+  ];
+
+  // G4: ▲か△が1着、上位軸◎○が2着、相手▲△が3着（4点）
+  var g4 = [
+    sa+'-'+m+'-'+yo, // ▲-◎-△
+    sa+'-'+s+'-'+yo, // ▲-○-△
+    yo+'-'+m+'-'+sa, // △-◎-▲
+    yo+'-'+s+'-'+sa, // △-○-▲
+  ];
+
+  // G2: ○1着固定パターン（追加枠・最大4点）
+  var g2 = [
+    s+'-'+go+'-'+m,  // ○-▽-◎
+    s+'-'+sa+'-'+m,  // ○-▲-◎
+    s+'-'+sa+'-'+go, // ○-▲-▽
+    s+'-'+go+'-'+sa, // ○-▽-▲
+  ];
+
+  var honsen, osaee;
+  if(pts===12){
+    honsen = g1.concat(g3).concat(g4); osaee = [];
+  } else if(pts===14){
+    honsen = g1.concat(g3).concat(g4); osaee = g2.slice(0,2);
+  } else if(pts===15){
+    honsen = g1.concat(g3).concat(g4); osaee = g2.slice(0,3);
+  } else { // 16点
+    honsen = g1.concat(g3).concat(g4); osaee = g2;
+  }
+  return {honsen:honsen, osaee:osaee};
+}
+
+// 後方互換（旧コードから呼ばれる場合）
+function makeBets12(sorted){
+  return makeAreBets(sorted, currentPts).honsen.concat(makeAreBets(sorted, currentPts).osaee);
 }
 
 // ===== メイン計算 =====
@@ -599,9 +671,10 @@ function doCalc(){
 
   var parsed = parseData(raw);
   var sorted = calcAreScore(parsed.boats, parsed.nigeRate);
-  var bets = makeBets12(sorted);
+  var betsResult = makeAreBets(sorted, currentPts);
+  var allBets = betsResult.honsen.concat(betsResult.osaee);
 
-  calcData = {parsed:parsed, sorted:sorted, bets:bets};
+  calcData = {parsed:parsed, sorted:sorted, bets:allBets, betsResult:betsResult};
 
   // 条件バッジ表示
   var badgeHtml = '';
@@ -636,7 +709,9 @@ function doCalc(){
   }).join('');
 
   // 買い目表示
-  document.getElementById('betBlock').textContent = bets.join('\n');
+  var label = document.getElementById('betLabel');
+  if(label) label.textContent = '【買い目 '+currentPts+'点】';
+  document.getElementById('betBlock').textContent = allBets.join('\n');
 
   // STEP2表示
   document.getElementById('sec2').classList.remove('hidden');
@@ -682,13 +757,17 @@ function buildPrompt(){
     p += '\n';
   });
 
-  p += '\n【買い目 12点（変更禁止）】\n';
-  p += '◎'+sorted[0].n+'号-○'+sorted[1].n+'号-穴3着 3点\n';
-  p += '○'+sorted[1].n+'号-◎'+sorted[0].n+'号-穴3着 3点\n';
-  p += '◎'+sorted[0].n+'号-▲'+sorted[2].n+'号-穴3着 3点\n';
-  p += '○'+sorted[1].n+'号-▲'+sorted[2].n+'号-穴3着 3点\n';
-  p += '穴（3着候補）: '+sorted.slice(3).map(function(b){return b.n+'号';}).join('／')+'\n';
-  p += bets.join('\n')+'\n\n';
+  var betsResult = calcData.betsResult || {honsen:bets, osaee:[]};
+  var honsen = betsResult.honsen;
+  var osaee  = betsResult.osaee;
+
+  p += '\n【買い目 '+currentPts+'点（変更禁止）】\n';
+  p += '本線（G1: ◎○で1・2着）: '+honsen.slice(0,4).join(' / ')+'\n';
+  p += '本線（G3: ▲△で1・2着）: '+honsen.slice(4,8).join(' / ')+'\n';
+  p += '本線（G4: ▲△頭・上位2着）: '+honsen.slice(8,12).join(' / ')+'\n';
+  if(osaee.length) p += '抑え（G2追加）: '+osaee.join(' / ')+'\n';
+  p += '×（'+sorted[5].n+'号）は全除外\n';
+  p += honsen.concat(osaee).join('\n')+'\n\n';
 
   p += '【出力フォーマット（必須・この順で）】\n';
   p += '【荒れ版】'+venue+raceNum+'R\n';
@@ -746,21 +825,24 @@ async function doGenerate(){
     var text = json.candidates&&json.candidates[0]&&json.candidates[0].content&&json.candidates[0].content.parts[0].text;
     if(!text) throw new Error('レスポンスが空です');
 
-    // 買い目を確定値で置換（compressBets圧縮）
-    var honsenStr = compressBets(calcData.bets) || calcData.bets.join('/');
+    // 買い目を確定値で置換（本線・抑え対応）
+    var betsResultG = calcData.betsResult || {honsen:calcData.bets, osaee:[]};
+    var honsenG = betsResultG.honsen;
+    var osaeeG  = betsResultG.osaee;
+    var honsenStr = compressBets(honsenG) || honsenG.join('/');
+    var osaeeStr  = osaeeG.length ? (compressBets(osaeeG) || osaeeG.join('/')) : '';
     text = text.replace('HONSEN_PLACEHOLDER', honsenStr);
 
     // HYOKA_ORDER置換
     var hyokaOrder = buildHyokaOrder(calcData.sorted);
     text = text.replace('HYOKA_ORDER', hyokaOrder);
 
-    // Xサマリー再構築（一言コメント取得→整形）
+    // Xサマリー再構築（本線・抑え対応）
     var venue = document.getElementById('venue').value;
     var raceNum = document.getElementById('raceNum').value;
     var xIdx = text.indexOf('【Xサマリー】');
     if(xIdx >= 0){
-      var afterX = text.slice(xIdx);
-      var xLines = afterX.split('\n');
+      var xLines = text.slice(xIdx).split('\n');
       var commentLine = '';
       for(var xi = 1; xi < xLines.length; xi++){
         var xl = xLines[xi].trim();
@@ -777,6 +859,7 @@ async function doGenerate(){
       if(commentLine) newX += commentLine+'\n\n';
       newX += hyokaOrder+'\n';
       newX += '本線\u3000'+honsenStr+'\n';
+      if(osaeeStr) newX += '抑え\u3000'+osaeeStr+'\n';
       newX += '\nG.';
       text = text.slice(0, xIdx) + newX;
     }
@@ -963,20 +1046,14 @@ function regenerateBets(){
   if(!calcData)return;
   var venue=document.getElementById('venue').value||'?';
   var raceNum=document.getElementById('raceNum').value||'?';
-  var maruCA=document.getElementById('editMaru').value;
-  var shiroCA=document.getElementById('editShiro').value;
-  var sankakuCA=document.getElementById('editSankaku').value;
-  // 荒れ版: ◎○▲頭・3着穴全開放
-  var anaCA=calcData.sorted.slice(3).map(function(b){return String(b.n);});
-  var newBets=[];
-  anaCA.forEach(function(t){ newBets.push(maruCA+'-'+shiroCA+'-'+t); });   // ◎-○-穴
-  anaCA.forEach(function(t){ newBets.push(shiroCA+'-'+maruCA+'-'+t); });   // ○-◎-穴
-  anaCA.forEach(function(t){ newBets.push(maruCA+'-'+sankakuCA+'-'+t); }); // ◎-▲-穴
-  anaCA.forEach(function(t){ newBets.push(shiroCA+'-'+sankakuCA+'-'+t); });// ○-▲-穴
-  var honsenStr=compressBets(newBets)||newBets.join('/');
+  // 新構成：makeAreBetsで再生成（差し替えUIは参考表示のみ）
+  var betsResult=makeAreBets(calcData.sorted, currentPts);
+  var honsen=betsResult.honsen;
+  var osaee=betsResult.osaee;
+  var honsenStr=compressBets(honsen)||honsen.join('/');
+  var osaeeStr=osaee.length?(compressBets(osaee)||osaee.join('/')):'';
   var hyokaOrder=buildHyokaOrder(calcData.sorted);
   var text=document.getElementById('outText').textContent;
-  // Xサマリー再構築
   var xIdxC=text.indexOf('【Xサマリー】');
   var commentC='';
   if(xIdxC>=0){
@@ -986,7 +1063,7 @@ function regenerateBets(){
       if(!xlc||xlc===venue+raceNum+'R'||xlc.indexOf('本線')===0||xlc==='G.'||xlc===hyokaOrder||/^[\d><=]+$/.test(xlc))continue;
       commentC=xlc;break;
     }
-    var newXC='【Xサマリー】\n'+venue+raceNum+'R\n'+(commentC?commentC+'\n\n':'')+hyokaOrder+'\n本線\u3000'+honsenStr+'\n\nG.';
+    var newXC='【Xサマリー】\n'+venue+raceNum+'R\n'+(commentC?commentC+'\n\n':'')+hyokaOrder+'\n本線\u3000'+honsenStr+(osaeeStr?'\n抑え\u3000'+osaeeStr:'')+'\n\nG.';
     text=text.slice(0,xIdxC)+newXC;
   }
   document.getElementById('outText').textContent=text;
@@ -1086,10 +1163,14 @@ function autoSaveLog(text){
     shinkido: '荒',
     nigeRate: calcData.parsed.nigeRate,
     areScore: calcData.sorted[0]?Math.round(calcData.sorted[0].areScore*10)/10:null,
-    pts: 12,
-    maru: String(sorted[0]?sorted[0].n:''),
-    shiro: String(sorted[1]?sorted[1].n:''),
+    pts: currentPts,
+    maru:    String(sorted[0]?sorted[0].n:''),
+    shiro:   String(sorted[1]?sorted[1].n:''),
     sankaku: String(sorted[2]?sorted[2].n:''),
+    yonkaku: String(sorted[3]?sorted[3].n:''),
+    go:      String(sorted[4]?sorted[4].n:''),
+    sixth:   String(sorted[5]?sorted[5].n:''),
+    scores: sorted.map(function(b){return {n:String(b.n), score:Math.round(b.areScore*10)/10};}),
     result: '',
     payout: '',
     bets: bets.map(function(b){return{val:b,type:'honsen'};}),
@@ -1123,28 +1204,45 @@ function commitLog(){
     return;
   }
 
+  var payoutRaw = parseInt(document.getElementById('payoutInput').value)||0;
+  var payoutStr = payoutRaw>0?'¥'+payoutRaw.toLocaleString():'';
+
   var v2logs = JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
   var idx = v2logs.findIndex(function(l){return l.id===currentEntry.id;});
   if(idx>=0){
     v2logs[idx].result = result;
-    // 的中判定
+    v2logs[idx].payout = payoutStr;
+
+    // 的中・miss判定
     var bets = v2logs[idx].bets.map(function(b){return b.val;});
     var miss = [];
+    var r1=result.split('-')[0], r2=result.split('-')[1], r3=result.split('-')[2];
+
     if(bets.indexOf(result)>=0){
       miss = ['hit'];
     } else {
-      var r1 = result.split('-')[0];
-      var r2 = result.split('-')[1];
-      if(currentEntry.maru===r1) miss.push('nichaku');
-      else miss.push('ichaku');
+      // 1着が◎か○か
+      var maru=currentEntry.maru, shiro=currentEntry.shiro, sankaku=currentEntry.sankaku;
+      if(r1===maru||r1===shiro){
+        // 1着は◎か○→紐ズレ
+        miss.push('nichaku');
+      } else if(r2===maru||r2===shiro||r3===maru||r3===shiro){
+        // ◎○が2〜3着→着順違い
+        miss.push('ichaku');
+      } else {
+        // ◎○着外
+        miss.push('ichaku');
+      }
     }
     v2logs[idx].miss = miss;
     localStorage.setItem('kyotei_v2', JSON.stringify(v2logs));
   }
 
-  document.getElementById('status4').textContent = '✅ 結果を保存しました';
-  document.getElementById('status4').className = 'status ok';
+  var isHit = miss.indexOf('hit')>=0;
+  document.getElementById('status4').textContent = result+' '+(isHit?'✅ 的中':'❌ 外れ');
+  document.getElementById('status4').className = 'status '+(isHit?'ok':'err');
   document.getElementById('resultInput').value = '';
+  document.getElementById('payoutInput').value = '';
 }
 
 function skipLog(){
