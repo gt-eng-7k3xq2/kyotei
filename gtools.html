@@ -470,6 +470,74 @@ function renderAreAnalysis(logs){
     html+='<div class="bar-row"><div class="bar-label"><span>'+MLABELS[k]+'</span><span>'+v+'回（'+pct+'%）</span></div><div class="bar-track"><div class="bar-fill red" style="width:'+pct+'%"></div></div></div>';
   });
 
+  // 着順パターン分析（yonkaku/go/sixthがある場合）
+  var patternLogs = areLogs.filter(function(l){
+    return l.result && l.result.match(/^\d-\d-\d$/) && l.maru && l.yonkaku;
+  });
+  if(patternLogs.length >= 3){
+    html+='<div style="font-size:10px;color:var(--gold);font-weight:700;margin:10px 0 6px;">着順パターン分析（'+patternLogs.length+'件）</div>';
+
+    var MARKS=['◎','○','▲','△','▽','×'];
+    function getRankLabel(l, n){
+      var order=[l.maru,l.shiro,l.sankaku,l.yonkaku,l.go,l.sixth];
+      var idx=order.indexOf(String(n));
+      return idx>=0?MARKS[idx]:'?';
+    }
+
+    // 1着スコア順位分布
+    var r1dist={};
+    MARKS.forEach(function(m){r1dist[m]=0;});
+    patternLogs.forEach(function(l){
+      var r1=l.result.split('-')[0];
+      var lbl=getRankLabel(l,r1);
+      r1dist[lbl]=(r1dist[lbl]||0)+1;
+    });
+    html+='<div style="font-size:10px;color:var(--text2);margin-bottom:4px;">1着スコア順位</div>';
+    html+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">';
+    MARKS.forEach(function(m){
+      var cnt=r1dist[m]||0;
+      if(!cnt)return;
+      var pct=Math.round(cnt/patternLogs.length*100);
+      html+='<div style="background:var(--surface2);border-radius:4px;padding:4px 8px;font-size:11px;">';
+      html+='<span style="color:var(--gold);font-weight:700;">'+m+'</span> '+cnt+'件('+pct+'%)</div>';
+    });
+    html+='</div>';
+
+    // 的中時のパターン
+    var hitPatternLogs=patternLogs.filter(function(l){return (l.miss||[]).includes('hit');});
+    if(hitPatternLogs.length){
+      html+='<div style="font-size:10px;color:var(--text2);margin-bottom:4px;">的中パターン</div>';
+      var patCount={};
+      hitPatternLogs.forEach(function(l){
+        var sp=l.result.split('-');
+        var key=getRankLabel(l,sp[0])+'-'+getRankLabel(l,sp[1])+'-'+getRankLabel(l,sp[2]);
+        patCount[key]=(patCount[key]||0)+1;
+      });
+      html+='<div style="font-size:11px;line-height:2;">';
+      Object.entries(patCount).sort(function(a,b){return b[1]-a[1];}).forEach(function(e){
+        html+='<span style="background:var(--surface2);border-radius:4px;padding:2px 8px;margin:2px;display:inline-block;">'+e[0]+' '+e[1]+'件</span>';
+      });
+      html+='</div>';
+    }
+
+    // 外れ時の1着パターン（取りこぼし分析）
+    var missPatternLogs=patternLogs.filter(function(l){return !(l.miss||[]).includes('hit');});
+    if(missPatternLogs.length){
+      html+='<div style="font-size:10px;color:var(--text2);margin:8px 0 4px;">外れ時1着パターン（取りこぼし）</div>';
+      var missR1={};
+      missPatternLogs.forEach(function(l){
+        var r1=l.result.split('-')[0];
+        var lbl=getRankLabel(l,r1);
+        missR1[lbl]=(missR1[lbl]||0)+1;
+      });
+      html+='<div style="font-size:11px;line-height:2;">';
+      Object.entries(missR1).sort(function(a,b){return b[1]-a[1];}).forEach(function(e){
+        html+='<span style="background:var(--surface2);border-radius:4px;padding:2px 8px;margin:2px;display:inline-block;">'+e[0]+'頭 '+e[1]+'件</span>';
+      });
+      html+='</div>';
+    }
+  }
+
   el.innerHTML=html;
 }
 function parsePayout(p){if(!p)return 0;return parseInt((p+'').replace(/[¥￥,\s]/g,''))||0;}
