@@ -222,6 +222,8 @@ textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radi
   </div>
 </div>
 
+<div id="logSummary" style="margin-top:12px;display:none;"></div>
+
 <!-- STEP4：結果入力 -->
 <div class="section-card hidden" id="sec4">
   <div class="sec-step-label">④ 結果入力</div>
@@ -1205,6 +1207,7 @@ function autoSaveLog(text){
   v2logs.unshift(v2entry);
   if(v2logs.length>300) v2logs = v2logs.slice(0,300);
   localStorage.setItem('kyotei_v2', JSON.stringify(v2logs));
+  updateLogSummary();
 }
 
 // ===== 結果入力 =====
@@ -1260,17 +1263,74 @@ function commitLog(){
   document.getElementById('status4').className = 'status '+(isHit?'ok':'err');
   document.getElementById('resultInput').value = '';
   document.getElementById('payoutInput').value = '';
+  updateLogSummary();
 }
 
 function skipLog(){
   document.getElementById('status4').textContent = 'スキップしました';
   document.getElementById('status4').className = 'status ok';
+  updateLogSummary();
+}
+
+function updateLogSummary(){
+  var el=document.getElementById('logSummary');
+  if(!el)return;
+  var v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+  // 荒れ版のログのみ
+  var areLogs=v2logs.filter(function(l){return l.shinkido==='荒';});
+  if(!areLogs.length){el.style.display='none';return;}
+  el.style.display='block';
+
+  var pending=areLogs.filter(function(l){return !l.result;});
+  var done=areLogs.filter(function(l){return l.result&&l.result!=='skip';});
+  var hits=done.filter(function(l){return (l.miss||[]).includes('hit');}).length;
+
+  var html='<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;">';
+  html+='<div style="font-size:10px;color:var(--text-sub);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px;">予想ログ</div>';
+
+  if(pending.length){
+    html+='<div style="font-size:11px;color:var(--accent);font-weight:700;margin-bottom:6px;">📋 結果未入力（'+pending.length+'件）</div>';
+    pending.slice(0,5).forEach(function(l){
+      var label=l.venue+(l.raceNum||'')+(l.date?' '+l.date.slice(5).replace('-','/'):'');
+      html+='<button onclick="openResultInputV2(\''+l.id+'\')" style="display:block;width:100%;text-align:left;padding:9px 10px;margin-bottom:4px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent-border);border-radius:4px;font-size:12px;font-weight:700;-webkit-appearance:none;font-family:\'Noto Sans JP\',sans-serif;">'+label+' → 結果を入力</button>';
+    });
+    html+='<div style="height:8px;"></div>';
+  }
+
+  if(done.length){
+    var rate=Math.round(hits/done.length*100);
+    html+='<div style="display:flex;gap:8px;margin-bottom:10px;">';
+    html+='<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:18px;font-weight:700;color:'+(rate>=30?'var(--green)':'var(--accent)')+';">'+rate+'%</div><div style="font-size:10px;color:var(--text-sub);">的中率</div><div style="font-size:10px;color:var(--text-muted);">'+hits+'/'+done.length+'</div></div>';
+    var pays=done.filter(function(l){return (l.miss||[]).includes('hit')&&l.payout;}).map(function(l){return parseInt((l.payout+'').replace(/[¥￥,\s]/g,''))||0;}).filter(function(p){return p>0;});
+    var totalPay=pays.reduce(function(s,p){return s+p;},0);
+    var maxPay=pays.length?Math.max.apply(null,pays):0;
+    html+='<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:14px;font-weight:700;color:var(--gold);">'+( maxPay?'¥'+maxPay.toLocaleString():'-')+'</div><div style="font-size:10px;color:var(--text-sub);">最高配当</div></div>';
+    html+='</div>';
+  }
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function openResultInputV2(id){
+  var v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+  var entry=v2logs.find(function(l){return String(l.id)===String(id);});
+  if(!entry)return;
+  currentEntry=entry;
+  // sec4にスクロール
+  var sec4=document.getElementById('sec4');
+  if(sec4){
+    sec4.classList.remove('hidden');
+    sec4.scrollIntoView({behavior:'smooth'});
+  }
+  document.getElementById('status4').textContent=entry.venue+(entry.raceNum||'')+'の結果を入力してください';
+  document.getElementById('status4').className='status ok';
 }
 
 // ===== 初期化 =====
 window.addEventListener('DOMContentLoaded', function(){
   loadKey();
   loadVenueRace();
+  updateLogSummary();
 });
 </script>
 </body>
