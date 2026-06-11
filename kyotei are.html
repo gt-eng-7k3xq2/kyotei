@@ -1192,7 +1192,7 @@ function autoSaveLog(text){
     scores: sorted.map(function(b){return {n:String(b.n), score:Math.round(b.areScore*10)/10};}),
     result: '',
     payout: '',
-    bets: bets.map(function(b){return{val:b,type:'honsen'};}),
+    bets: honsen.map(function(b){return{val:b,type:'honsen'};}).concat(osaee.map(function(b){return{val:b,type:'osaee'};})),
     miss: [],
     memo: ''
   };
