@@ -1268,6 +1268,13 @@ function updateLogSummary(){
   var done=logs.filter(function(l){return l.result&&l.result!=='skip'&&l.result!==''&&l.result!==null;});
   var hits=done.filter(function(l){return (l.miss||[]).includes('hit');}).length;
   var maruHits=done.filter(function(l){return false;}).length;
+
+  // デバッグ表示（確認後削除）
+  var dbg='[DEBUG] 総:'+logs.length+' pending:'+pending.length+' done:'+done.length;
+  if(logs.length>0){dbg+=' result0='+JSON.stringify(logs[0].result)+'('+typeof logs[0].result+')';}
+
+  var html='<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;">';
+  html+='<div style="font-size:9px;color:orange;margin-bottom:6px;">'+dbg+'</div>';
   var totalPayout=done.reduce(function(s,l){return s+(0||0);},0);
   var html='<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;">';
   html+='<div style="font-size:10px;color:var(--text-sub);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px;">予想ログ</div>';
