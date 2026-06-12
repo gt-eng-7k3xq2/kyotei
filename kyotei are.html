@@ -1158,7 +1158,7 @@ function autoSaveLog(text){
   var honsen = betsResult.honsen;
   var osaee  = betsResult.osaee;
 
-  var raceNumV2 = String(raceNum).replace(/R$/i,'')+'R';
+  var raceNumV2 = String(raceNum).replace(/R+$/i,'')+'R';
   var v2entry = {
     id: Date.now(),
     date: new Date().toISOString().slice(0,10),
@@ -1284,7 +1284,7 @@ function updateLogSummary(){
     html+='<div style="font-size:11px;color:var(--accent);font-weight:700;margin-bottom:6px;">📋 結果未入力（'+pending.length+'件）</div>';
     pending.slice().reverse().forEach(function(l){
       var dt=new Date(l.datetime);
-      var label=l.venue+l.raceNum+'R '+(dt.getMonth()+1)+'/'+(dt.getDate())+' '+dt.getHours()+':'+(dt.getMinutes()<10?'0':'')+dt.getMinutes();
+      var label=l.venue+(l.raceNum||'')+(l.date?' '+l.date.slice(5).replace('-','/'):'');
       html+='<button onclick="openResultInput('+l.id+')" style="display:block;width:100%;text-align:left;padding:9px 10px;margin-bottom:4px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent-border);border-radius:4px;font-size:12px;font-weight:700;-webkit-appearance:none;font-family:\'Noto Sans JP\',sans-serif;">'+label+' → 結果を入力</button>';
     });
     html+='<div style="height:8px;"></div>';
