@@ -645,15 +645,20 @@ function makeAreBets(sorted, pts){
     s+'-'+go+'-'+sa, // ○-▽-▲
   ];
 
-  var honsen, osaee;
+  // 本線6点固定: G1(4点) + G3前半(2点)
+  var honsen = g1.concat(g3.slice(0,2));
+
+  // 抑え: G3後半(2点) + G4(4点) + G2(追加分)
+  var osaeeBase = g3.slice(2,4).concat(g4); // 6点
+  var osaee;
   if(pts===12){
-    honsen = g1.concat(g3).concat(g4); osaee = [];
+    osaee = osaeeBase; // 抑え6点
   } else if(pts===14){
-    honsen = g1.concat(g3).concat(g4); osaee = g2.slice(0,2);
+    osaee = osaeeBase.concat(g2.slice(0,2)); // 抑え8点
   } else if(pts===15){
-    honsen = g1.concat(g3).concat(g4); osaee = g2.slice(0,3);
+    osaee = osaeeBase.concat(g2.slice(0,3)); // 抑え9点
   } else { // 16点
-    honsen = g1.concat(g3).concat(g4); osaee = g2;
+    osaee = osaeeBase.concat(g2); // 抑え10点
   }
   return {honsen:honsen, osaee:osaee};
 }
