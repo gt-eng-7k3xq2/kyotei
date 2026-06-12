@@ -1219,9 +1219,16 @@ function commitLog(){
     return;
   }
   if(!currentEntry){
-    document.getElementById('status4').textContent = 'ログがありません';
-    document.getElementById('status4').className = 'status err';
-    return;
+    // currentEntryがない場合、最新の未入力ログを自動取得
+    var v2logsCheck=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+    var pending=v2logsCheck.filter(function(l){return l.shinkido==='荒'&&!l.result;});
+    if(pending.length>0){
+      currentEntry=pending[0];
+    } else {
+      document.getElementById('status4').textContent='ログがありません';
+      document.getElementById('status4').className='status err';
+      return;
+    }
   }
 
   var payoutRaw = parseInt(document.getElementById('payoutInput').value)||0;
