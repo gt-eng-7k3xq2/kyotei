@@ -224,22 +224,7 @@ textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radi
 
 <div id="logSummary" style="margin-top:12px;display:none;"></div>
 
-<!-- STEP4：結果入力 -->
-<div class="section-card hidden" id="sec4">
-  <div class="sec-step-label">④ 結果入力</div>
-  <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px;">例: 3-1-2（1着-2着-3着）</div>
-  <div class="result-row">
-    <input type="text" class="result-input" id="resultInput" placeholder="X-X-X">
-    <button class="commit-btn" onclick="commitLog()">✅ 確定</button>
-    <button class="skip-btn" onclick="skipLog()">スキップ</button>
-  </div>
-  <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
-    <span style="font-size:12px;color:var(--text-sub);">配当</span>
-    <input type="number" id="payoutInput" placeholder="0" style="width:120px;padding:8px;border:1px solid var(--border);border-radius:4px;font-size:13px;background:var(--surface);">
-    <span style="font-size:12px;color:var(--text-sub);">円</span>
-  </div>
-  <div class="status" id="status4"></div>
-</div>
+
 
 <script>
 var calcData = null;
@@ -1211,146 +1196,138 @@ function autoSaveLog(text){
 }
 
 // ===== 結果入力 =====
-function commitLog(){
-  var result = document.getElementById('resultInput').value.trim();
-  if(!result.match(/^[1-6]-[1-6]-[1-6]$/)){
-    document.getElementById('status4').textContent = '例: 3-1-2 の形式で入力';
-    document.getElementById('status4').className = 'status err';
+function selectBtn(id,place,n){
+  if(!window['_rb_'+id])return;
+  window['_rb_'+id][place]=n;
+  [1,2,3,4,5,6].forEach(function(i){
+    var btn=document.getElementById('rb_'+id+'_'+place+'_'+i);
+    if(btn){btn.style.background=i===n?'var(--text)':'var(--surface)';btn.style.color=i===n?'#fff':'var(--text)';}
+  });
+}
+
+function commitLog(id){
+  var sel=window['_rb_'+id];
+  if(!sel||!sel[1]||!sel[2]||!sel[3]){
+    [1,2,3].forEach(function(place){
+      if(!sel||!sel[place]){
+        [1,2,3,4,5,6].forEach(function(n){
+          var btn=document.getElementById('rb_'+id+'_'+place+'_'+n);
+          if(btn)btn.style.border='2px solid var(--accent)';
+        });
+      }
+    });
+    showStatus('1着・2着・3着をすべて入力してください','err');
     return;
   }
-  if(!currentEntry){
-    var v2logsCheck=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
-    var pending=v2logsCheck.filter(function(l){
-      return l.shinkido==='荒' && (!l.result || l.result==='' || l.result==='undefined');
-    });
-    if(pending.length>0){
-      currentEntry=pending[0];
-    } else {
-      document.getElementById('status4').textContent='ログがありません';
-      document.getElementById('status4').className='status err';
-      return;
-    }
-  }
-
-  var payoutRaw = parseInt(document.getElementById('payoutInput').value)||0;
-  var payoutStr = payoutRaw>0?'¥'+payoutRaw.toLocaleString():'';
-
-  var v2logs = JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
-  var idx = v2logs.findIndex(function(l){return l.id===currentEntry.id;});
+  var payoutRaw=parseInt(document.getElementById('pay_'+id).value)||0;
+  var payoutStr=payoutRaw>0?'\u00a5'+payoutRaw.toLocaleString():'';
+  var combo=sel[1]+'-'+sel[2]+'-'+sel[3];
+  var v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+  var idx=v2logs.findIndex(function(l){return l.id===id;});
   if(idx>=0){
-    v2logs[idx].result = result;
-    v2logs[idx].payout = payoutStr;
-
-    // 的中・miss判定
-    var bets = v2logs[idx].bets.map(function(b){return b.val;});
-    var miss = [];
-    var r1=result.split('-')[0], r2=result.split('-')[1], r3=result.split('-')[2];
-
-    if(bets.indexOf(result)>=0){
-      miss = ['hit'];
-    } else {
-      // 1着が◎か○か
-      var maru=currentEntry.maru, shiro=currentEntry.shiro, sankaku=currentEntry.sankaku;
-      if(r1===maru||r1===shiro){
-        // 1着は◎か○→紐ズレ
-        miss.push('nichaku');
-      } else if(r2===maru||r2===shiro||r3===maru||r3===shiro){
-        // ◎○が2〜3着→着順違い
-        miss.push('ichaku');
-      } else {
-        // ◎○着外
-        miss.push('ichaku');
-      }
+    var entry=v2logs[idx];
+    entry.result=combo;
+    entry.payout=payoutStr;
+    var bets=entry.bets.map(function(b){return b.val;});
+    var miss=[];
+    if(bets.indexOf(combo)>=0){miss=['hit'];}
+    else{
+      var r1=String(sel[1]),maru=entry.maru,shiro=entry.shiro;
+      var r2=String(sel[2]),r3=String(sel[3]);
+      if(r1===maru||r1===shiro){miss=['nichaku'];}
+      else if(r2===maru||r2===shiro||r3===maru||r3===shiro){miss=['ichaku'];}
+      else{miss=['ichaku'];}
     }
-    v2logs[idx].miss = miss;
-    localStorage.setItem('kyotei_v2', JSON.stringify(v2logs));
+    entry.miss=miss;
+    localStorage.setItem('kyotei_v2',JSON.stringify(v2logs));
+    showStatus(combo+' '+(miss.indexOf('hit')>=0?'\u2705 \u7684\u4e2d':'\u274c \u5916\u308c'),'ok');
   }
-
-  var isHit = miss.indexOf('hit')>=0;
-  document.getElementById('status4').textContent = result+' '+(isHit?'✅ 的中':'❌ 外れ');
-  document.getElementById('status4').className = 'status '+(isHit?'ok':'err');
-  document.getElementById('resultInput').value = '';
-  document.getElementById('payoutInput').value = '';
+  delete window['_rb_'+id];
   updateLogSummary();
 }
 
-function skipLog(){
-  if(currentEntry){
-    var v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
-    var idx=v2logs.findIndex(function(l){return l.id===currentEntry.id;});
-    if(idx>=0){
-      v2logs[idx].result='skip';
-      v2logs[idx].miss=['miseru'];
-      localStorage.setItem('kyotei_v2',JSON.stringify(v2logs));
-    }
+function skipLog(id){
+  var v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+  var idx=v2logs.findIndex(function(l){return l.id===id;});
+  if(idx>=0){
+    v2logs[idx].result='skip';
+    v2logs[idx].miss=['miseru'];
+    localStorage.setItem('kyotei_v2',JSON.stringify(v2logs));
   }
-  document.getElementById('status4').textContent='スキップしました';
-  document.getElementById('status4').className='status ok';
+  delete window['_rb_'+id];
+  showStatus('見送りとして記録しました','ok');
   updateLogSummary();
 }
 
 function updateLogSummary(){
+  var allV2=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+  var logs=allV2.filter(function(l){return l.shinkido==='荒';});
   var el=document.getElementById('logSummary');
-  if(!el)return;
-  var v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
-  // 荒れ版のログのみ
-  var areLogs=v2logs.filter(function(l){return l.shinkido==='荒';});
-  if(!areLogs.length){el.style.display='none';return;}
+  if(!logs.length){el.style.display='none';return;}
   el.style.display='block';
-
-  var pending=areLogs.filter(function(l){return !l.result;});
-  var done=areLogs.filter(function(l){return l.result&&l.result!=='skip';});
+  var pending=logs.filter(function(l){return (!l.result||l.result==='');});
+  var done=logs.filter(function(l){return l.result&&l.result!=='skip'&&l.result!=='';});
   var hits=done.filter(function(l){return (l.miss||[]).includes('hit');}).length;
-
+  var maruHits=done.filter(function(l){return false;}).length;
+  var totalPayout=done.reduce(function(s,l){return s+(0||0);},0);
   var html='<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;">';
   html+='<div style="font-size:10px;color:var(--text-sub);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px;">予想ログ</div>';
-
   if(pending.length){
     html+='<div style="font-size:11px;color:var(--accent);font-weight:700;margin-bottom:6px;">📋 結果未入力（'+pending.length+'件）</div>';
-    pending.slice(0,5).forEach(function(l){
-      var label=l.venue+(l.raceNum||'')+(l.date?' '+l.date.slice(5).replace('-','/'):'');
-      html+='<button onclick="openResultInputV2(\''+l.id+'\')" style="display:block;width:100%;text-align:left;padding:9px 10px;margin-bottom:4px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent-border);border-radius:4px;font-size:12px;font-weight:700;-webkit-appearance:none;font-family:\'Noto Sans JP\',sans-serif;">'+label+' → 結果を入力</button>';
+    pending.slice().reverse().forEach(function(l){
+      var dt=new Date(l.datetime);
+      var label=l.venue+l.raceNum+'R '+(dt.getMonth()+1)+'/'+(dt.getDate())+' '+dt.getHours()+':'+(dt.getMinutes()<10?'0':'')+dt.getMinutes();
+      html+='<button onclick="openResultInput('+l.id+')" style="display:block;width:100%;text-align:left;padding:9px 10px;margin-bottom:4px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent-border);border-radius:4px;font-size:12px;font-weight:700;-webkit-appearance:none;font-family:\'Noto Sans JP\',sans-serif;">'+label+' → 結果を入力</button>';
     });
     html+='<div style="height:8px;"></div>';
   }
-
   if(done.length){
-    var rate=Math.round(hits/done.length*100);
     html+='<div style="display:flex;gap:8px;margin-bottom:10px;">';
-    html+='<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:18px;font-weight:700;color:'+(rate>=30?'var(--green)':'var(--accent)')+';">'+rate+'%</div><div style="font-size:10px;color:var(--text-sub);">的中率</div><div style="font-size:10px;color:var(--text-muted);">'+hits+'/'+done.length+'</div></div>';
-    var pays=done.filter(function(l){return (l.miss||[]).includes('hit')&&l.payout;}).map(function(l){return parseInt((l.payout+'').replace(/[¥￥,\s]/g,''))||0;}).filter(function(p){return p>0;});
-    var totalPay=pays.reduce(function(s,p){return s+p;},0);
-    var maxPay=pays.length?Math.max.apply(null,pays):0;
-    html+='<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:14px;font-weight:700;color:var(--gold);">'+( maxPay?'¥'+maxPay.toLocaleString():'-')+'</div><div style="font-size:10px;color:var(--text-sub);">最高配当</div></div>';
+    html+='<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:18px;font-weight:700;color:var(--accent);">'+Math.round(hits/done.length*100)+'%</div><div style="font-size:10px;color:var(--text-sub);">的中率</div><div style="font-size:10px;color:var(--text-muted);">'+hits+'/'+done.length+'</div></div>';
+    html+='<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:18px;font-weight:700;color:var(--blue);">'+Math.round(maruHits/done.length*100)+'%</div><div style="font-size:10px;color:var(--text-sub);">◎1着率</div></div>';
+    html+='<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:14px;font-weight:700;color:var(--green);">'+totalPayout.toLocaleString()+'</div><div style="font-size:10px;color:var(--text-sub);">累計払戻</div></div>';
     html+='</div>';
+    // 外れ詳細ボタン（通常・荒れまとめて）
+    var allMissLogs=done.filter(function(l){return !l.hit;});
+    if(allMissLogs.length>0){
+    }
   }
   html+='</div>';
   el.innerHTML=html;
 }
 
-function openResultInputV2(id){
-  var v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
-  var entry=v2logs.find(function(l){return String(l.id)===String(id);});
+
+function openResultInput(id){
+  var logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+  var entry=logs.find(function(l){return l.id===id;});
   if(!entry)return;
-  currentEntry=entry;
-  // sec4にスクロール
-  var sec4=document.getElementById('sec4');
-  if(sec4){
-    sec4.classList.remove('hidden');
-    sec4.scrollIntoView({behavior:'smooth'});
-  }
-  document.getElementById('status4').textContent=entry.venue+(entry.raceNum||'')+'の結果を入力してください';
-  document.getElementById('status4').className='status ok';
+  var el=document.getElementById('logSummary');
+  var html='<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;">';
+  html+='<div style="font-size:11px;font-weight:700;margin-bottom:10px;">'+entry.venue+entry.raceNum+'R の結果を入力</div>';
+  ['1着','2着','3着'].forEach(function(label,pi){
+    html+='<div style="font-size:11px;color:var(--text-sub);margin-bottom:5px;">'+label+'</div>';
+    html+='<div style="display:flex;gap:5px;margin-bottom:10px;">';
+    [1,2,3,4,5,6].forEach(function(n){
+      html+='<button onclick="selectBtn('+id+','+(pi+1)+','+n+')" id="rb_'+id+'_'+(pi+1)+'_'+n+'" style="flex:1;padding:10px 0;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;background:var(--surface);color:var(--text);-webkit-appearance:none;">'+n+'</button>';
+    });
+    html+='</div>';
+  });
+  html+='<div style="font-size:11px;color:var(--text-sub);margin-bottom:5px;">払戻（円・任意）</div>';
+  html+='<input type="number" id="pay_'+id+'" placeholder="例: 12500" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;padding:10px;outline:none;margin-bottom:10px;">';
+  html+='<button onclick="commitLog('+id+')" style="width:100%;padding:12px;background:var(--text);color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:\'Noto Sans JP\',sans-serif;">保存</button>';
+  html+='<button onclick="skipLog('+id+')" style="width:100%;margin-top:6px;padding:11px;background:var(--surface);color:var(--text-sub);border:1px solid var(--border);border-radius:4px;font-size:12px;font-weight:700;-webkit-appearance:none;">見送り</button>';
+  html+='<button onclick="updateLogSummary()" style="width:100%;margin-top:6px;padding:10px;background:var(--surface);color:var(--text-sub);border:1px solid var(--border);border-radius:4px;font-size:12px;-webkit-appearance:none;">キャンセル</button>';
+  html+='</div>';
+  el.innerHTML=html;
+  window['_rb_'+id]={1:null,2:null,3:null};
 }
+
 
 // ===== 初期化 =====
 window.addEventListener('DOMContentLoaded', function(){
   loadKey();
   loadVenueRace();
   updateLogSummary();
-  // sec4は初期非表示
-  var sec4=document.getElementById('sec4');
-  if(sec4) sec4.classList.add('hidden');
 });
 </script>
 </body>
