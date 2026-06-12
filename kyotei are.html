@@ -994,11 +994,11 @@ function showOddsResult(){
     return expanded;
   }
 
-  // 本線行から取得（圧縮形式対応）
+  // 本線・抑え行から取得（圧縮形式対応）
   outText.split('\n').forEach(function(ln){
     var t=ln.trim();
-    if(t.indexOf('本線')===0){
-      var parts=t.replace(/^本線[\s\u3000]*/,'').split('/');
+    if(t.indexOf('本線')===0||t.indexOf('抑え')===0){
+      var parts=t.replace(/^(本線|抑え)[\s\u3000]*/,'').split('/');
       parts.forEach(function(p){
         p=p.trim();
         expandBet(p).forEach(function(b){if(!seen[b]){seen[b]=true;bets.push(b);}});
@@ -1017,6 +1017,13 @@ function showOddsResult(){
       expandBet(t).forEach(function(b){if(!seen[b]){seen[b]=true;bets.push(b);}});
     }
   });
+
+  // フォールバック: calcData.betsから直接取得
+  if(bets.length===0&&calcData&&calcData.bets){
+    calcData.bets.forEach(function(b){
+      if(!seen[b]){seen[b]=true;bets.push(b);}
+    });
+  }
 
   if(bets.length===0){document.getElementById('oddsResult').innerHTML='';return;}
   var html='<div style="margin-top:14px;"><div style="font-size:10px;color:var(--text-sub);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;padding-left:6px;border-left:2px solid var(--accent);">買い目オッズ</div>';
