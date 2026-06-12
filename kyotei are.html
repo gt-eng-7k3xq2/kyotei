@@ -1154,7 +1154,9 @@ function autoSaveLog(text){
   var venue = document.getElementById('venue').value||'?';
   var raceNum = document.getElementById('raceNum').value||'?';
   var sorted = calcData.sorted;
-  var bets = calcData.bets;
+  var betsResult = calcData.betsResult || {honsen:calcData.bets||[], osaee:[]};
+  var honsen = betsResult.honsen;
+  var osaee  = betsResult.osaee;
 
   var raceNumV2 = String(raceNum).replace(/R$/i,'')+'R';
   var v2entry = {
