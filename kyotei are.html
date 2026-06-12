@@ -1186,7 +1186,7 @@ function autoSaveLog(text){
   var v2logs = JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
   var today = v2entry.date;
   v2logs = v2logs.filter(function(l){
-    return !(l.venue===v2entry.venue&&l.raceNum===v2entry.raceNum&&l.date===today&&!l.result);
+    return !(l.venue===v2entry.venue&&l.raceNum===v2entry.raceNum&&l.date===today&&(!l.result||l.result===''||l.result===null));
   });
   v2logs.unshift(v2entry);
   if(v2logs.length>300) v2logs = v2logs.slice(0,300);
@@ -1264,8 +1264,8 @@ function updateLogSummary(){
   var el=document.getElementById('logSummary');
   if(!logs.length){el.style.display='none';return;}
   el.style.display='block';
-  var pending=logs.filter(function(l){return (!l.result||l.result==='');});
-  var done=logs.filter(function(l){return l.result&&l.result!=='skip'&&l.result!=='';});
+  var pending=logs.filter(function(l){return !l.result||l.result===''||l.result===null;});
+  var done=logs.filter(function(l){return l.result&&l.result!=='skip'&&l.result!==''&&l.result!==null;});
   var hits=done.filter(function(l){return (l.miss||[]).includes('hit');}).length;
   var maruHits=done.filter(function(l){return false;}).length;
   var totalPayout=done.reduce(function(s,l){return s+(0||0);},0);
