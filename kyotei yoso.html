@@ -568,7 +568,7 @@ function parseData(raw){
       sogoScore:null,sogoRank:null});
   }
   var section='',nigeContext='';
-  var nigeRate6M=null,nigeRate1Y=null,nigeRateLocal=null,nigeRateKoki=null,localCount=0;
+  var nigeRate6M=null,nigeRateLocal=null,nigeRateKoki=null,localCount=0;
   var afterFrank=false,afterNigeRow=false;
   // コース別連対率の優先管理（当地10走以上→直近6ヶ月→今期）
   var courseRen2Local=null,courseRen2_6M=null,courseRen2Koki=null;
@@ -701,7 +701,6 @@ function parseData(raw){
         var pct=parseFloat((line.split('\t')[0]||'').replace(/%/,''));
         if(!isNaN(pct)){
           if(nigeContext==='6M'&&nigeRate6M===null)nigeRate6M=pct;
-          else if(nigeContext==='1Y'&&nigeRate1Y===null)nigeRate1Y=pct;
           else if(nigeContext==='local'&&nigeRateLocal===null)nigeRateLocal=pct;
           else if(nigeContext==='koki'&&nigeRateKoki===null)nigeRateKoki=pct;
         }
@@ -1403,8 +1402,12 @@ function buildAreBetsFinal(maru,shiro,sankaku,go,ngBoats){
 
   all.sort(function(a,b){return a.score-b.score;});
 
-  // 上位15点に絞る（母集団）
-  var top=all.slice(0,15).map(function(x){return x.bet;});
+  // 重複除去してtop15を生成
+  var seenBets={};
+  var top=[];
+  for(var ti=0;ti<all.length&&top.length<15;ti++){
+    if(!seenBets[all[ti].bet]){seenBets[all[ti].bet]=true;top.push(all[ti].bet);}
+  }
 
   // 点数に応じて本線・抑えに分割
   var honsen,osaee;
