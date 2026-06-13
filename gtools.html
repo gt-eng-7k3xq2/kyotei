@@ -402,7 +402,7 @@ function generatePost(){
   try{
   var dateVal=document.getElementById('post-date').value;
   if(!dateVal){showToast('対象日を選択してください');return;}
-  var comment=document.getElementById('post-comment').value.trim();
+  var comment='';
   var allLogs=getLogs().filter(function(l){return l.date===dateVal&&!(l.miss||[]).includes('miseru');});
   if(!allLogs.length){
     var totalLogs=getLogs();
