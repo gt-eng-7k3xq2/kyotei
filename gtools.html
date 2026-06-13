@@ -400,7 +400,11 @@ function generatePost(){
   if(!dateVal){showToast('対象日を選択してください');return;}
   var comment=document.getElementById('post-comment').value.trim();
   var allLogs=getLogs().filter(function(l){return l.date===dateVal&&!(l.miss||[]).includes('miseru');});
-  if(!allLogs.length){showToast('該当日のログがありません');return;}
+  if(!allLogs.length){
+    var totalLogs=getLogs();
+    showToast('該当日のログなし（全'+totalLogs.length+'件 最新:'+( totalLogs[0]?totalLogs[0].date:'なし')+')');
+    return;
+  }
 
   var dt=new Date(dateVal+'T00:00:00');
   var dateStr=(dt.getMonth()+1)+'/'+(dt.getDate())+'（'+DAYS[dt.getDay()]+'）';
