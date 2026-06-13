@@ -210,10 +210,10 @@ html,body{min-height:100vh;background:#04040c;}
   <div id="nippo-card-actions" style="display:none;"><button class="btn-primary" onclick="showNippoCard()">📸 スクショ用カードを表示</button></div>
 
   <!-- X投稿用 -->
-  <div class="card" style="margin-top:12px;">
+  <div class="card" style="margin-top:12px;position:relative;z-index:10;">
     <div class="card-title">𝕏 今日の結果ポスト</div>
     <div class="field"><label>対象日</label><input type="date" id="post-date"></div>
-    <button class="btn-primary" style="margin-top:8px;" onclick="generatePost()">📋 ポストを生成</button>
+    <button onclick="generatePost()" style="width:100%;background:var(--gold);color:#080810;border:none;border-radius:var(--r);font-size:15px;font-weight:800;padding:14px;margin-top:8px;-webkit-appearance:none;cursor:pointer;">📋 ポストを生成</button>
     <div id="post-result" style="margin-top:12px;display:none;">
       <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);padding:14px;white-space:pre-wrap;font-size:13px;line-height:1.8;color:var(--text1);" id="post-text"></div>
       <button onclick="copyPost()" id="post-copy-btn" style="margin-top:10px;width:100%;padding:11px;background:var(--gold);color:#000;border:none;border-radius:var(--r2);font-size:13px;font-weight:700;-webkit-appearance:none;">📋 コピー</button>
