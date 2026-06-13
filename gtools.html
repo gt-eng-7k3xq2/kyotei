@@ -437,24 +437,31 @@ function generatePost(){
   lines.push('');
   lines.push('#競艇予想 #ボートレース');
 
-  document.getElementById('post-text').textContent=lines.join('\n');
-  document.getElementById('post-result').style.display='block';
-  document.getElementById('post-copy-btn').textContent='📋 コピー';
+  var postText=document.getElementById('post-text');
+  var postResult=document.getElementById('post-result');
+  var postCopyBtn=document.getElementById('post-copy-btn');
+  if(!postText||!postResult||!postCopyBtn){showToast('表示エラー: 要素が見つかりません');return;}
+  postText.textContent=lines.join('\n');
+  postResult.style.display='block';
+  postCopyBtn.textContent='📋 コピー';
   }catch(e){showToast('エラー: '+e.message);}
 }
 
 function copyPost(){
-  var text=document.getElementById('post-text').textContent;
+  var pt=document.getElementById('post-text');
+  var cb=document.getElementById('post-copy-btn');
+  if(!pt||!cb)return;
+  var text=pt.textContent;
   if(navigator.clipboard){
     navigator.clipboard.writeText(text).then(function(){
-      document.getElementById('post-copy-btn').textContent='✅ コピーしました';
-      setTimeout(function(){document.getElementById('post-copy-btn').textContent='📋 コピー';},2000);
+      cb.textContent='✅ コピーしました';
+      setTimeout(function(){cb.textContent='📋 コピー';},2000);
     });
   } else {
     var el=document.createElement('textarea');el.value=text;
     document.body.appendChild(el);el.select();document.execCommand('copy');document.body.removeChild(el);
-    document.getElementById('post-copy-btn').textContent='✅ コピーしました';
-    setTimeout(function(){document.getElementById('post-copy-btn').textContent='📋 コピー';},2000);
+    cb.textContent='✅ コピーしました';
+    setTimeout(function(){cb.textContent='📋 コピー';},2000);
   }
 }
 
