@@ -288,7 +288,13 @@ function switchPage(p){
   document.getElementById('page-'+p).classList.add('active');
   const pages=['input','analysis','logs','nippo'];
   document.querySelectorAll('#tool-1 .nav-item')[pages.indexOf(p)].classList.add('active');
-  if(p==='analysis')renderAnalysis();if(p==='logs')renderLogs();
+  if(p==='analysis')renderAnalysis();
+  if(p==='logs')renderLogs();
+  if(p==='nippo'){
+    var today=new Date().toISOString().split('T')[0];
+    var nd=document.getElementById('nippo-date');if(nd&&!nd.value)nd.value=today;
+    var pd=document.getElementById('post-date');if(pd)pd.value=today;
+  }
 }
 function getLogs(){try{return JSON.parse(localStorage.getItem('kyotei_v2')||'[]');}catch{return[];}}
 function saveLogs(logs){localStorage.setItem('kyotei_v2',JSON.stringify(logs));}
@@ -396,6 +402,7 @@ function selectOsaee(el){document.querySelectorAll('#osaee-selector .unit-btn').
 var DAYS=['日','月','火','水','木','金','土'];
 
 function generatePost(){
+  try{
   var dateVal=document.getElementById('post-date').value;
   if(!dateVal){showToast('対象日を選択してください');return;}
   var comment=document.getElementById('post-comment').value.trim();
@@ -436,6 +443,7 @@ function generatePost(){
   document.getElementById('post-text').textContent=lines.join('\n');
   document.getElementById('post-result').style.display='block';
   document.getElementById('post-copy-btn').textContent='📋 コピー';
+  }catch(e){showToast('エラー: '+e.message);}
 }
 
 function copyPost(){
