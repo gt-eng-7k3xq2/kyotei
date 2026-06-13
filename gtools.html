@@ -213,7 +213,6 @@ html,body{min-height:100vh;background:#04040c;}
   <div class="card" style="margin-top:12px;">
     <div class="card-title">𝕏 今日の結果ポスト</div>
     <div class="field"><label>対象日</label><input type="date" id="post-date"></div>
-    <div class="field"><label>一言コメント（任意）</label><input type="text" id="post-comment" placeholder="例: 逃げ率高めのレースが当たった日でした" style="width:100%;padding:9px;border:1px solid var(--border2);border-radius:var(--r2);background:var(--surface2);color:var(--text1);font-size:13px;outline:none;"></div>
     <button class="btn-primary" style="margin-top:8px;" onclick="generatePost()">📋 ポストを生成</button>
     <div id="post-result" style="margin-top:12px;display:none;">
       <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);padding:14px;white-space:pre-wrap;font-size:13px;line-height:1.8;color:var(--text1);" id="post-text"></div>
@@ -415,21 +414,18 @@ function generatePost(){
   var maxPay=pays.length?Math.max.apply(null,pays):0;
 
   var lines=[];
-  lines.push(dateStr+' お疲れ様でした⛵');
+  lines.push(dateStr+' お疲れ様でした🚤');
   lines.push('');
   if(hitCount>0){
     hits.forEach(function(l){
       var p=parsePayout(l.payout);
-      lines.push('✅ '+l.venue+(l.raceNum||'')+(p>0?'　¥'+p.toLocaleString():''));
+      lines.push('🎯 '+l.venue+(l.raceNum||'')+(p>0?'　¥'+p.toLocaleString():''));
     });
   } else {
     lines.push('本日は的中なし…また明日💪');
   }
   lines.push('');
-  lines.push(hitCount+'/'+total+'件的中（'+rate+'%）');
-  if(maxPay>=10000) lines.push('🎯 最高配当 ¥'+maxPay.toLocaleString());
-  if(totalPay>0&&hitCount>1) lines.push('合計払戻 ¥'+totalPay.toLocaleString());
-  if(comment){lines.push('');lines.push(comment);}
+  lines.push(hitCount+'/'+total+'件的中　'+rate+'%');
   lines.push('');
   lines.push('#競艇予想 #ボートレース');
 
