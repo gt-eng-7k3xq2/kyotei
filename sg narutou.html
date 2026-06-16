@@ -128,7 +128,16 @@
       <div class="card-title">📊 JSスコア計算結果</div>
       <div id="score-display"></div>
       <div id="mode-result" style="margin-top:8px;"></div>
+      <hr class="divider">
+      <label style="margin-bottom:8px;">モード選択</label>
+      <div style="display:flex;gap:8px;">
+        <button class="alloc-btn active" id="mode-btn-normal" onclick="setMode('normal')" style="flex:1;padding:10px;">🔒 通常</button>
+        <button class="alloc-btn" id="mode-btn-are" onclick="setMode('are')" style="flex:1;padding:10px;">⚡ 荒れ</button>
+        <button class="alloc-btn" id="mode-btn-skip" onclick="setMode('skip')" style="flex:1;padding:10px;">⏭ SKIP</button>
+      </div>
+      <button class="btn btn-gold" onclick="applyMode()" style="margin-top:8px;">買い目を生成</button>
     </div>
+    <div id="bet-section" style="display:none;">
     <div class="card">
       <div class="card-title">🤖 AIランキング</div>
       <div id="ai-raw" class="ai-output"></div>
@@ -162,6 +171,7 @@
         <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="saveResult('skip')">⏭ SKIP</button>
       </div>
     </div>
+    </div><!-- /bet-section -->
   </div>
 </div>
 
@@ -235,13 +245,70 @@ const SETTINGS_KEY='sg_narutou_settings';
 const GEMINI_KEY='kyotei_gemini_key';
 let selectedBetCount=12;
 let allocMode='equal';
+let selectedMode='normal'; // ユーザー手動選択
 let currentCalcData=null;
+let currentParsedData=null; // パース済みデータ保持
+let currentAreScores=null; // スコア保持
 
 function getLogs(){try{return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');}catch{return[];}}
 function saveLogs(l){localStorage.setItem(STORE_KEY,JSON.stringify(l));}
 function getSettings(){try{return JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{"maxrace":3}');}catch{return{maxrace:3};}}
 function saveSettingsData(s){localStorage.setItem(SETTINGS_KEY,JSON.stringify(s));}
 function getApiKey(){return localStorage.getItem(GEMINI_KEY)||'';}
+
+// ============================================================
+// モード手動選択
+// ============================================================
+function setMode(mode){
+  selectedMode=mode;
+  ['normal','are','skip'].forEach(m=>{
+    const el=document.getElementById('mode-btn-'+m);
+    if(el) el.classList.toggle('active',m===mode);
+  });
+}
+
+function applyMode(){
+  if(!currentParsedData||!currentAreScores){showToast('先に予想実行してください');return;}
+  if(selectedMode==='skip'){showToast('スキップ設定です');return;}
+  generateBets(currentParsedData, currentAreScores, selectedMode);
+}
+
+function generateBets(d, areScores, mode){
+  const racenum=document.getElementById('inp-racenum').value||'?';
+  const honme=document.getElementById('inp-honme').value;
+  const shikin=parseInt(document.getElementById('inp-shikin').value)||3000;
+  const oddsMap=extractOddsMap(document.getElementById('inp-data').value);
+  const ranking=parseRanking(document.getElementById('ai-raw').textContent||'');
+  if(!ranking.length){showToast('AIランキングがありません');return;}
+
+  const betsRaw=mode==='are'?buildBetsAre(ranking,selectedBetCount):buildBetsNormal(ranking);
+  const nigeRate=d.boats[0].atchiNige>0?d.boats[0].atchiNige:d.boats[0].nigerate6m;
+  const{areIndex}=calcAreIndex(d);
+
+  // バッジ更新
+  const modeLabel=mode==='are'?'⚡ 荒れ':'🔒 通常';
+  const modeCls=mode==='are'?'mode-are':'mode-normal';
+  document.getElementById('race-info-strip').innerHTML=`
+    <span class="mode-badge ${modeCls}" style="font-size:11px;padding:3px 10px;">${modeLabel}</span>
+    <span class="info-chip">荒れ指数 <span>${areIndex}点</span></span>
+    <span class="info-chip">逃げ率 <span>${nigeRate.toFixed(1)}%</span></span>
+    <span class="info-chip">${racenum}R / ${honme}本目</span>
+    <span class="info-chip">買い目 <span>${betsRaw.length}点</span></span>`;
+
+  // テーブル描画
+  const tbody=document.getElementById('bet-tbody');
+  tbody.innerHTML='';
+  for(const b of betsRaw){
+    const autoOdds=oddsMap[b.val]||0;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><span class="bet-val">${b.val}</span></td><td><span class="bet-type">${b.type}</span></td><td><input class="odds-inp" type="number" value="${autoOdds||''}" placeholder="倍率" step="0.1" min="0" oninput="recalcAlloc()"></td><td><select class="conf-sel" onchange="recalcAlloc()"><option value="3">高</option><option value="2" selected>中</option><option value="1">低</option></select></td><td class="amt-cell">—</td><td class="ret-cell">—</td>`;
+    tbody.appendChild(tr);
+  }
+
+  document.getElementById('bet-section').style.display='block';
+  currentCalcData={racenum,honme,nigeRate,areIndex,mode,betcount:betsRaw.length,shikin,ranking,betsRaw};
+  recalcAlloc();
+}
 
 function switchTab(name){
   ['yoso','harai','tsudoi','log'].forEach((n,i)=>document.querySelectorAll('.tab')[i].classList.toggle('active',n===name));
@@ -758,6 +825,8 @@ async function runYoso(){
 
     if(mode==='skip'){
       document.getElementById('ai-raw').textContent='スキップ推奨レースです（荒れ指数4〜7点）';
+      document.getElementById('bet-section').style.display='none';
+      setMode('skip');
       return;
     }
 
@@ -767,34 +836,16 @@ async function runYoso(){
     const ranking=parseRanking(aiText);
     if(!ranking.length){document.getElementById('ai-raw').textContent=aiText+'\n\n⚠️ランキング解析失敗';return;}
 
-    // 5. オッズ抽出
-    const oddsMap=extractOddsMap(data);
+    // パース済みデータ・スコアを保持（モード選択後に使用）
+    currentParsedData=d;
+    currentAreScores=areScores;
 
-    // 6. 買い目生成
-    const betsRaw=mode==='are'?buildBetsAre(ranking,selectedBetCount):buildBetsNormal(ranking);
+    // JSスコアを参考にデフォルトモードを提案（ユーザーが変更可能）
+    const suggestedMode=mode; // calcAreIndexの参考値
+    setMode(suggestedMode);
 
-    // レース情報バッジ
-    const modeLabel2=mode==='are'?'⚡ 荒れ':'🔒 通常';
-    const modeCls2=mode==='are'?'color:var(--red)':'color:var(--green)';
-    document.getElementById('race-info-strip').innerHTML=`
-      <span class="mode-badge ${mode==='are'?'mode-are':'mode-normal'}" style="font-size:11px;padding:3px 10px;">${modeLabel2}</span>
-      <span class="info-chip">荒れ指数 <span>${areIndex}点</span></span>
-      <span class="info-chip">逃げ率 <span>${nigeRate.toFixed(1)}%</span></span>
-      <span class="info-chip">${racenum}R / ${honme}本目</span>
-      <span class="info-chip">買い目 <span>${betsRaw.length}点</span></span>`;
-
-    // 買い目テーブル描画
-    const tbody=document.getElementById('bet-tbody');
-    tbody.innerHTML='';
-    for(const b of betsRaw){
-      const autoOdds=oddsMap[b.val]||0;
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td><span class="bet-val">${b.val}</span></td><td><span class="bet-type">${b.type}</span></td><td><input class="odds-inp" type="number" value="${autoOdds||''}" placeholder="倍率" step="0.1" min="0" oninput="recalcAlloc()"></td><td><select class="conf-sel" onchange="recalcAlloc()"><option value="3">高</option><option value="2" selected>中</option><option value="1">低</option></select></td><td class="amt-cell">—</td><td class="ret-cell">—</td>`;
-      tbody.appendChild(tr);
-    }
-
-    currentCalcData={racenum,honme,nigeRate,areIndex,mode,betcount:betsRaw.length,shikin,ranking,betsRaw};
-    recalcAlloc();
+    // bet-sectionは非表示のまま（ユーザーがモード選択後に生成）
+    document.getElementById('bet-section').style.display='none';
 
   }catch(e){
     document.getElementById('ai-raw').textContent='エラー: '+e.message;
@@ -805,7 +856,11 @@ function clearYoso(){
   ['inp-data','inp-chakuju','inp-payout-reg'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('inp-racenum').value='';
   document.getElementById('yoso-result').style.display='none';
+  document.getElementById('bet-section').style.display='none';
   currentCalcData=null;
+  currentParsedData=null;
+  currentAreScores=null;
+  setMode('normal');
 }
 
 // ============================================================
