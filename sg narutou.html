@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>⚡SG鳴門 集い専用エンジン</title>
+<style>
+  :root {
+    --bg:#0a0a0f; --surface:#13131c; --surface2:#1c1c2e; --border:#2a2a40;
+    --gold:#c9a84c; --gold2:#f0d080; --red:#e05050; --blue:#4a9eff;
+    --green:#4caf7d; --text:#e8e8f0; --muted:#7070a0;
+    --font:-apple-system,'Hiragino Sans',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;padding-bottom:40px;}
+  .header{background:linear-gradient(135deg,#1a1a2e,#0f0f1a);border-bottom:1px solid var(--gold);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;}
+  .header-title{font-size:15px;font-weight:700;color:var(--gold);letter-spacing:.05em;}
+  .header-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+  .key-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:11px;padding:6px 10px;border-radius:6px;-webkit-appearance:none;}
+  .tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);}
+  .tab{flex:1;padding:11px 4px;text-align:center;font-size:12px;color:var(--muted);background:none;border:none;-webkit-appearance:none;border-bottom:2px solid transparent;}
+  .tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+  .page{display:none;padding:16px;}
+  .page.active{display:block;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;}
+  .card-title{font-size:12px;color:var(--gold);font-weight:700;margin-bottom:10px;letter-spacing:.08em;}
+  label{font-size:12px;color:var(--muted);display:block;margin-bottom:5px;}
+  input[type=text],input[type=number],textarea,select{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:14px;padding:10px 12px;border-radius:8px;-webkit-appearance:none;font-family:var(--font);margin-bottom:10px;}
+  textarea{height:110px;resize:none;font-size:12px;}
+  select{height:42px;}
+  .btn{width:100%;padding:13px;border-radius:10px;font-size:15px;font-weight:700;border:none;-webkit-appearance:none;margin-bottom:8px;letter-spacing:.05em;}
+  .btn-gold{background:linear-gradient(135deg,#c9a84c,#f0d080);color:#0a0a0f;}
+  .btn-blue{background:linear-gradient(135deg,#2a6acc,#4a9eff);color:#fff;}
+  .btn-ghost{background:var(--surface2);border:1px solid var(--border);color:var(--text);}
+  .btn-sm{padding:8px 14px;font-size:13px;border-radius:8px;border:none;-webkit-appearance:none;font-weight:600;margin-bottom:0;}
+  .btn:disabled{opacity:.4;}
+  .mode-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:.04em;}
+  .mode-normal{background:#1a3a1a;color:var(--green);border:1px solid var(--green);}
+  .mode-are{background:#3a1a1a;color:var(--red);border:1px solid var(--red);}
+  .mode-skip{background:var(--surface2);color:var(--muted);border:1px solid var(--border);}
+  .info-strip{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+  .info-chip{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:3px 10px;font-size:11px;color:var(--muted);}
+  .info-chip span{color:var(--text);font-weight:700;}
+  .bet-table{width:100%;border-collapse:collapse;margin-bottom:8px;}
+  .bet-table th{font-size:11px;color:var(--muted);padding:4px 6px;text-align:left;border-bottom:1px solid var(--border);}
+  .bet-table td{padding:8px 6px;font-size:13px;border-bottom:1px solid var(--border);}
+  .bet-table tr:last-child td{border-bottom:none;}
+  .bet-val{font-weight:700;font-variant-numeric:tabular-nums;}
+  .bet-type{font-size:10px;color:var(--muted);}
+  .bet-conf-sel{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:12px;padding:4px 8px;border-radius:6px;-webkit-appearance:none;margin-bottom:0;width:auto;}
+  .odds-inp{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;padding:5px 8px;border-radius:6px;width:72px;margin-bottom:0;text-align:right;}
+  .bet-amount-cell{font-weight:700;color:var(--gold);text-align:right;}
+  .bet-ret-cell{font-size:12px;color:var(--green);text-align:right;}
+  .alloc-mode-row{display:flex;gap:8px;margin-bottom:10px;}
+  .alloc-btn{flex:1;padding:8px;border-radius:8px;font-size:12px;font-weight:700;border:1px solid var(--border);background:var(--surface2);color:var(--muted);-webkit-appearance:none;}
+  .alloc-btn.active{background:var(--surface);border-color:var(--gold);color:var(--gold);}
+  .summary-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;}
+  .summary-label{font-size:12px;color:var(--muted);}
+  .summary-val{font-size:15px;font-weight:700;}
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+  .stat-item{background:var(--surface2);border-radius:8px;padding:10px 12px;text-align:center;}
+  .stat-val{font-size:20px;font-weight:700;}
+  .stat-label{font-size:10px;color:var(--muted);margin-top:2px;}
+  .green{color:var(--green)!important;} .red{color:var(--red)!important;} .gold{color:var(--gold)!important;}
+  .rate-bar-wrap{background:var(--surface2);border-radius:6px;height:8px;overflow:hidden;margin-top:6px;}
+  .rate-bar{height:100%;border-radius:6px;transition:width .5s;background:linear-gradient(90deg,var(--green),var(--gold));}
+  .log-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;}
+  .log-left{flex:1;}
+  .log-race{font-size:13px;font-weight:700;}
+  .log-bets{font-size:11px;color:var(--muted);margin-top:3px;}
+  .log-right{text-align:right;}
+  .log-payout{font-size:15px;font-weight:700;color:var(--gold);}
+  .log-badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;margin-top:4px;display:inline-block;}
+  .badge-hit{background:#1a3a1a;color:var(--green);}
+  .badge-miss{background:#3a1a1a;color:var(--red);}
+  .badge-skip{background:var(--surface2);color:var(--muted);}
+  .ai-output{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;line-height:1.7;white-space:pre-wrap;color:var(--text);margin-bottom:10px;min-height:50px;}
+  .loading{color:var(--muted);text-align:center;padding:16px;}
+  .dot-anim::after{content:'';animation:dots 1.2s infinite;}
+  @keyframes dots{0%{content:'.'}33%{content:'..'}66%{content:'...'}100%{content:'.'}}
+  .divider{border:none;border-top:1px solid var(--border);margin:12px 0;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--gold);color:#000;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:700;opacity:0;transition:opacity .3s;z-index:999;pointer-events:none;}
+  .toast.show{opacity:1;}
+  .modal-wrap{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:100;padding:20px;align-items:center;justify-content:center;}
+  .modal-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;width:100%;max-width:360px;}
+  .modal-title{font-size:14px;font-weight:700;color:var(--gold);margin-bottom:12px;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">⚡ SG鳴門 集い専用</div>
+    <div class="header-sub">第36回 グランドチャンピオン 6/23〜28</div>
+  </div>
+  <button class="key-btn" onclick="openKeyModal()">APIキー</button>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('yoso')">予想</button>
+  <button class="tab" onclick="switchTab('harai')">払戻</button>
+  <button class="tab" onclick="switchTab('tsudoi')">集い</button>
+  <button class="tab" onclick="switchTab('log')">ログ</button>
+</div>
+
+<!-- ===== 予想タブ ===== -->
+<div id="page-yoso" class="page active">
+
+  <div class="card">
+    <div class="card-title">📋 レース情報</div>
+    <div class="row2">
+      <div>
+        <label>レース番号</label>
+        <input type="number" id="inp-racenum" placeholder="6" min="1" max="12">
+      </div>
+      <div>
+        <label>本日の投入本目</label>
+        <select id="inp-honme">
+          <option value="1">1本目</option>
+          <option value="2">2本目</option>
+          <option value="3">3本目</option>
+        </select>
+      </div>
+    </div>
+    <div class="row2">
+      <div>
+        <label>逃げ率 (%)</label>
+        <input type="number" id="inp-nigerate" placeholder="52.3" step="0.1" oninput="onParamChange()">
+      </div>
+      <div>
+        <label>荒れ指数</label>
+        <input type="number" id="inp-arescore" placeholder="9" min="0" max="20" oninput="onParamChange()">
+      </div>
+    </div>
+    <div id="mode-display"><span class="mode-badge mode-skip">— 入力待ち</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📊 競艇日和データ</div>
+    <textarea id="inp-data" placeholder="競艇日和から6艇分のデータを貼り付け&#10;（逃げ率・ST・得点率・決まり手等）"></textarea>
+    <div class="row2">
+      <div>
+        <label>買い目点数</label>
+        <select id="inp-betcount">
+          <option value="4">4点（通常）</option>
+          <option value="12" selected>12点（荒れ）</option>
+          <option value="14">14点（荒れ）</option>
+          <option value="15">15点（荒れ）</option>
+          <option value="16">16点（荒れ）</option>
+        </select>
+      </div>
+      <div>
+        <label>資金 (円)</label>
+        <input type="number" id="inp-shikin" value="3000" step="100">
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-gold" onclick="runYoso()">⚡ 予想実行</button>
+  <button class="btn btn-ghost" onclick="clearYoso()">クリア</button>
+
+  <!-- 結果エリア -->
+  <div id="yoso-result" style="display:none;">
+
+    <div class="card">
+      <div class="card-title">🤖 AI評価ランキング</div>
+      <div id="ai-raw" class="ai-output"></div>
+    </div>
+
+    <div class="card" id="bet-card">
+      <!-- レース情報バッジ -->
+      <div class="info-strip" id="race-info-strip"></div>
+      <div class="card-title">🎯 買い目・資金配分</div>
+
+      <!-- 配分モード切替 -->
+      <div class="alloc-mode-row">
+        <button class="alloc-btn active" id="alloc-equal" onclick="setAllocMode('equal')">均等回収</button>
+        <button class="alloc-btn" id="alloc-conf" onclick="setAllocMode('conf')">自信度別</button>
+      </div>
+
+      <table class="bet-table" id="bet-table">
+        <thead>
+          <tr>
+            <th>買い目</th>
+            <th>種別</th>
+            <th>オッズ</th>
+            <th>自信度</th>
+            <th style="text-align:right;">金額</th>
+            <th style="text-align:right;">回収</th>
+          </tr>
+        </thead>
+        <tbody id="bet-tbody"></tbody>
+      </table>
+
+      <hr class="divider">
+      <div class="summary-row">
+        <span class="summary-label">合計投資</span>
+        <span class="summary-val gold" id="sum-invest">¥0</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">均等回収時（1点的中）</span>
+        <span class="summary-val green" id="sum-return">—</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">回収率（均等的中時）</span>
+        <span class="summary-val" id="sum-rate">—</span>
+      </div>
+
+      <hr class="divider">
+      <p style="font-size:11px;color:var(--muted);margin-bottom:8px;">※オッズを入力すると金額・回収が自動更新されます</p>
+      <button class="btn btn-blue btn-sm" style="width:auto;padding:8px 20px;" onclick="recalcAlloc()">再計算</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">💾 結果登録</div>
+      <label>着順（1-2-3 形式）</label>
+      <input type="text" id="inp-chakuju" placeholder="例: 3-1-5">
+      <label>払戻金額 (円)</label>
+      <input type="number" id="inp-payout-reg" placeholder="例: 15200">
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-gold btn-sm" style="flex:1;" onclick="saveResult('hit')">✅ 的中</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="saveResult('miss')">❌ 外れ</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="saveResult('skip')">⏭ SKIP</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 払戻タブ ===== -->
+<div id="page-harai" class="page">
+  <div class="card">
+    <div class="card-title">💴 払戻登録</div>
+    <label>対象レース</label>
+    <select id="harai-sel" style="margin-bottom:10px;"></select>
+    <label>払戻金額 (円)</label>
+    <input type="number" id="harai-amount" placeholder="例: 18500">
+    <button class="btn btn-gold" onclick="saveHarai()">登録</button>
+  </div>
+  <div class="card">
+    <div class="card-title">📋 BMペースト（boatrace.jp）</div>
+    <textarea id="harai-paste" placeholder="払戻ページからコピーしたテキストを貼付け"></textarea>
+    <button class="btn btn-blue" onclick="parsePaste()">3連単を自動検出</button>
+  </div>
+</div>
+
+<!-- ===== 集い管理タブ ===== -->
+<div id="page-tsudoi" class="page">
+  <div class="card">
+    <div class="card-title">🏆 集い成績</div>
+    <div class="stat-grid">
+      <div class="stat-item"><div class="stat-val gold" id="st-kaisu">0/0</div><div class="stat-label">投入 / 上限(日)</div></div>
+      <div class="stat-item"><div class="stat-val" id="st-teki">0件</div><div class="stat-label">的中</div></div>
+      <div class="stat-item"><div class="stat-val" id="st-invest">¥0</div><div class="stat-label">総投資</div></div>
+      <div class="stat-item"><div class="stat-val gold" id="st-return">¥0</div><div class="stat-label">総回収</div></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <span style="font-size:13px;font-weight:700;">回収率</span>
+      <span style="font-size:22px;font-weight:700;" id="st-rate">—</span>
+    </div>
+    <div class="rate-bar-wrap"><div class="rate-bar" id="rate-bar" style="width:0%"></div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📅 日別成績</div>
+    <div id="daily-list"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">⚙️ 設定</div>
+    <label>1日上限レース数</label>
+    <select id="set-maxrace"><option value="3" selected>3レース（集いルール）</option><option value="2">2レース</option><option value="1">1レース</option></select>
+    <button class="btn btn-ghost" onclick="saveSettings()">保存</button>
+    <hr class="divider">
+    <button class="btn btn-ghost" style="color:var(--red);border-color:var(--red);" onclick="resetAll()">⚠️ データリセット</button>
+  </div>
+</div>
+
+<!-- ===== ログタブ ===== -->
+<div id="page-log" class="page">
+  <div id="log-list"></div>
+  <p id="log-empty" style="text-align:center;color:var(--muted);padding:40px;font-size:13px;">ログなし</p>
+</div>
+
+<!-- APIキーモーダル -->
+<div class="modal-wrap" id="key-modal" style="display:flex;display:none;">
+  <div class="modal-box">
+    <div class="modal-title">Gemini APIキー</div>
+    <input type="text" id="modal-key-inp" placeholder="AIzaSy...">
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-gold btn-sm" style="flex:1;" onclick="saveKey()">保存</button>
+      <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="closeKeyModal()">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// 定数・ストア
+// ============================================================
+const STORE_KEY = 'sg_narutou_v1';
+const SETTINGS_KEY = 'sg_narutou_settings';
+const GEMINI_KEY = 'kyotei_gemini_key';
+
+function getLogs(){ try{ return JSON.parse(localStorage.getItem(STORE_KEY)||'[]'); }catch{ return []; } }
+function saveLogs(l){ localStorage.setItem(STORE_KEY, JSON.stringify(l)); }
+function getSettings(){ try{ return JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{"maxrace":3}'); }catch{ return {maxrace:3}; } }
+function saveSettingsData(s){ localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
+function getApiKey(){ return localStorage.getItem(GEMINI_KEY)||''; }
+
+// ============================================================
+// タブ
+// ============================================================
+function switchTab(name){
+  const names=['yoso','harai','tsudoi','log'];
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',names[i]===name));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  if(name==='tsudoi') renderTsudoi();
+  if(name==='log') renderLog();
+  if(name==='harai') renderHaraiSel();
+}
+
+// ============================================================
+// モード判定
+// ============================================================
+function calcMode(){
+  const nr = parseFloat(document.getElementById('inp-nigerate').value);
+  const as = parseInt(document.getElementById('inp-arescore').value);
+  const el = document.getElementById('mode-display');
+  const bc = document.getElementById('inp-betcount');
+  if(isNaN(nr)||isNaN(as)){
+    el.innerHTML='<span class="mode-badge mode-skip">— 入力待ち</span>'; return null;
+  }
+  if(nr>=60){
+    el.innerHTML='<span class="mode-badge mode-normal">🔒 通常モード</span>';
+    bc.value='4'; return 'normal';
+  }
+  if(nr<55 && as>=8 && as<=11){
+    el.innerHTML='<span class="mode-badge mode-are">⚡ 荒れモード</span>';
+    if(bc.value==='4') bc.value='12'; return 'are';
+  }
+  if(as>=4 && as<=7){
+    el.innerHTML='<span class="mode-badge mode-skip">⏭ スキップ推奨</span>'; return 'skip';
+  }
+  el.innerHTML='<span class="mode-badge mode-skip">— 条件外</span>'; return null;
+}
+
+function onParamChange(){ calcMode(); }
+
+// ============================================================
+// プロンプト
+// ============================================================
+function buildPromptNormal(data){
+  return `あなたは競艇予想の専門家です。SGグランドチャンピオン（鳴門）のレースデータを分析し、総合評価ランキングを出力してください。
+
+【レースデータ】
+${data}
+
+【分析観点】
+- SGトップ選手集結。機力差・スタート力・コース適性を重視
+- 鳴門は1コース1着率48%の難水面。インが格上でも油断禁物
+- 逃げ率60%以上 → インを◎固定、差し込む展開を2着候補で補完
+- 今節得点率上位2艇は必ず2着候補に含める
+- 6位艇は1着候補から除外
+
+【出力形式】（この6行のみ。説明不要）
+1位 X号艇 ◎
+2位 X号艇 ○
+3位 X号艇 ▲
+4位 X号艇 △
+5位 X号艇 ▽
+6位 X号艇 ×`;
+}
+
+function buildPromptAre(data, nigerate){
+  return `あなたは競艇予想の専門家です。SGグランドチャンピオン（鳴門）の荒れレースを分析してください。
+
+【レースデータ】
+${data}
+
+【条件】逃げ率${nigerate}%・荒れ指数高（8〜11点）
+【水面】鳴門はうねりが出やすく外コース有利になりやすい
+
+【スコアリング】
+- 攻撃力（差し率＋捲り率＋捲り差し率×0.4）: max 15pt
+- 展示機力ランク×3: max 15pt
+- 周回機力ランク×3: max 15pt
+- 直前ST（F艇除外）: max 15pt
+- 今節得点率: max 15pt
+- 1号艇ペナルティ（逃げ率<50%）: -15pt
+- F艇ペナルティ: -15pt
+
+【出力形式】（この6行のみ。説明不要）
+1位 X号艇 ◎
+2位 X号艇 ○
+3位 X号艇 ▲
+4位 X号艇 △
+5位 X号艇 ▽
+6位 X号艇 ×`;
+}
+
+// ============================================================
+// Gemini呼び出し
+// ============================================================
+async function callGemini(prompt){
+  const key = getApiKey();
+  if(!key) throw new Error('APIキーが未設定です');
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
+  const body = {
+    contents:[{parts:[{text:prompt}]}],
+    generationConfig:{temperature:0.15, maxOutputTokens:256, thinkingConfig:{thinkingBudget:0}}
+  };
+  const res = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!res.ok) throw new Error('API Error: '+res.status);
+  const json = await res.json();
+  return json.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+// ============================================================
+// AIテキストパース → ランキング配列
+// ============================================================
+function parseRanking(text){
+  const result=[];
+  for(const line of text.split('\n')){
+    const m = line.match(/(\d)位\s*(\d)号艇\s*([◎○▲△▽×])/);
+    if(m) result.push({rank:parseInt(m[1]), boat:parseInt(m[2]), mark:m[3]});
+  }
+  return result.sort((a,b)=>a.rank-b.rank);
+}
+
+// ============================================================
+// 買い目生成（JS固定・AI介入なし）
+// ============================================================
+// 通常モード: ◎軸 4点
+function buildBetsNormal(ranking){
+  if(ranking.length<4) return [];
+  const fst=ranking[0].boat;
+  const sec=[ranking[1].boat, ranking[2].boat];
+  const trd=[ranking[1].boat, ranking[2].boat, ranking[3].boat];
+  const bets=[], seen=new Set();
+  for(const s of sec){
+    for(const t of trd){
+      if(t===fst||t===s) continue;
+      const key=`${fst}-${s}-${t}`;
+      if(!seen.has(key)){seen.add(key); bets.push({val:key, type:'本線'});}
+    }
+  }
+  return bets.slice(0,4);
+}
+
+// 荒れモード: buildAreBetsFinal方式
+// ◎=r[0] ○=r[1] ▲=r[2] △=r[3] ▽=r[4]
+function buildBetsAre(ranking, targetPts){
+  if(ranking.length<5) return [];
+  const [r1,r2,r3,r4,r5]=ranking;
+  const a=r1.boat, b=r2.boat, c=r3.boat, d=r4.boat, e=r5.boat;
+
+  // 15点プール定義（引き継ぎノート準拠）
+  const pool=[
+    // 本線G1 (4点)
+    {val:`${a}-${b}-${c}`,type:'本線G1'},
+    {val:`${a}-${b}-${d}`,type:'本線G1'},
+    {val:`${b}-${a}-${c}`,type:'本線G1'},
+    {val:`${b}-${a}-${d}`,type:'本線G1'},
+    // 本線G3前半 (2点)
+    {val:`${c}-${d}-${a}`,type:'本線G3'},
+    {val:`${c}-${d}-${b}`,type:'本線G3'},
+    // 抑えG3後半 (2点)
+    {val:`${d}-${c}-${a}`,type:'抑えG3'},
+    {val:`${d}-${c}-${b}`,type:'抑えG3'},
+    // 抑えG4 (4点)
+    {val:`${c}-${a}-${d}`,type:'抑えG4'},
+    {val:`${c}-${b}-${d}`,type:'抑えG4'},
+    {val:`${d}-${a}-${c}`,type:'抑えG4'},
+    {val:`${d}-${b}-${c}`,type:'抑えG4'},
+    // 抑えG2 (3点)
+    {val:`${b}-${e}-${a}`,type:'抑えG2'},
+    {val:`${b}-${c}-${a}`,type:'抑えG2'},
+    {val:`${b}-${e}-${c}`,type:'抑えG2'},
+  ];
+
+  // 点数別スライス設定（ノート準拠: 4/6/8/12/14/15 → 対応）
+  // 12点=本6+抑6 / 14点=本6+抑8 / 15点=本6+抑9 / 16点=本6+抑10
+  const pts = targetPts || 12;
+  const seen=new Set();
+  const bets=[];
+  for(const b2 of pool){
+    if(bets.length>=pts) break;
+    if(!seen.has(b2.val)){seen.add(b2.val); bets.push(b2);}
+  }
+  return bets;
+}
+
+// ============================================================
+// 資金配分（100円単位）
+// ============================================================
+let allocMode = 'equal'; // 'equal' | 'conf'
+
+function setAllocMode(mode){
+  allocMode = mode;
+  document.getElementById('alloc-equal').classList.toggle('active', mode==='equal');
+  document.getElementById('alloc-conf').classList.toggle('active', mode==='conf');
+  recalcAlloc();
+}
+
+// 均等回収: 各買い目の回収額が同じになるよう逆算（回収額 = 総投資÷点数 × 倍率補正）
+// 均等回収狙いなら低オッズに多く張る → amount_i = C / odds_i（正規化して総額に合わせる）
+// 自信度別: 高=3, 中=2, 低=1 の重み
+function recalcAlloc(){
+  const shikin = parseInt(document.getElementById('inp-shikin').value) || 3000;
+  const rows = document.querySelectorAll('#bet-tbody tr');
+  if(!rows.length) return;
+
+  const items=[];
+  rows.forEach(row=>{
+    const oddsInp = row.querySelector('.odds-inp');
+    const confSel = row.querySelector('.bet-conf-sel');
+    const odds = parseFloat(oddsInp?.value)||0;
+    const conf = confSel ? parseInt(confSel.value)||1 : 1;
+    items.push({odds, conf});
+  });
+
+  let weights=[];
+  if(allocMode==='equal'){
+    // 均等回収: w_i = 1/odds_i（オッズなしは均等割）
+    const anyOdds = items.some(it=>it.odds>0);
+    if(anyOdds){
+      weights = items.map(it=> it.odds>0 ? 1/it.odds : 0);
+      // オッズ未入力は均等の平均値で補完
+      const avgW = weights.filter(w=>w>0).reduce((s,w)=>s+w,0) / weights.filter(w=>w>0).length || 1;
+      weights = weights.map(w=> w>0?w:avgW);
+    } else {
+      weights = items.map(()=>1);
+    }
+  } else {
+    // 自信度別
+    weights = items.map(it=>it.conf);
+  }
+
+  const totalW = weights.reduce((s,w)=>s+w,0);
+  // 100円単位で配分
+  let amounts = weights.map(w=> Math.floor(w/totalW*shikin/100)*100);
+  // 端数を先頭に追加
+  const allocated = amounts.reduce((s,a)=>s+a,0);
+  const rem = shikin - allocated;
+  if(amounts.length>0) amounts[0]+=rem;
+
+  // 表示更新
+  rows.forEach((row,i)=>{
+    const amtCell = row.querySelector('.bet-amount-cell');
+    const retCell = row.querySelector('.bet-ret-cell');
+    const oddsInp = row.querySelector('.odds-inp');
+    const odds = parseFloat(oddsInp?.value)||0;
+    const amt = amounts[i]||0;
+    if(amtCell) amtCell.textContent = '¥'+amt.toLocaleString();
+    if(retCell){
+      if(odds>0){
+        const ret = Math.floor(amt*odds/100)*100;
+        retCell.textContent = '¥'+ret.toLocaleString();
+      } else {
+        retCell.textContent = '—';
+      }
+    }
+  });
+
+  // サマリー更新
+  const totalInvest = amounts.reduce((s,a)=>s+a,0);
+  document.getElementById('sum-invest').textContent = '¥'+totalInvest.toLocaleString();
+
+  // 均等回収時の期待回収（オッズ入力済み平均）
+  const oddsVals = items.map(it=>it.odds).filter(o=>o>0);
+  if(oddsVals.length && allocMode==='equal'){
+    // 均等回収なら理論上どの買い目的中でも同じ回収額になるはず→先頭で計算
+    const o0 = parseFloat(document.querySelector('.odds-inp')?.value)||0;
+    if(o0>0){
+      const ret0 = Math.floor(amounts[0]*o0/100)*100;
+      document.getElementById('sum-return').textContent = '¥'+ret0.toLocaleString()+'（目安）';
+      const rate = totalInvest>0 ? Math.round(ret0/totalInvest*100) : 0;
+      const rateEl = document.getElementById('sum-rate');
+      rateEl.textContent = rate+'%';
+      rateEl.className = 'summary-val '+(rate>=100?'green':rate>=50?'gold':'red');
+    }
+  } else {
+    document.getElementById('sum-return').textContent = '—';
+    document.getElementById('sum-rate').textContent = '—';
+  }
+}
+
+// ============================================================
+// 予想実行
+// ============================================================
+let currentCalcData = null;
+
+async function runYoso(){
+  if(!getApiKey()){ showToast('APIキーを設定してください'); openKeyModal(); return; }
+  const data = document.getElementById('inp-data').value.trim();
+  if(!data){ showToast('データを入力してください'); return; }
+  const nigerate = parseFloat(document.getElementById('inp-nigerate').value);
+  const arescore = parseInt(document.getElementById('inp-arescore').value);
+  if(isNaN(nigerate)||isNaN(arescore)){ showToast('逃げ率・荒れ指数を入力してください'); return; }
+
+  const mode = calcMode();
+  if(mode==='skip'||mode===null){ showToast('スキップ推奨レースです'); return; }
+
+  const betcount = parseInt(document.getElementById('inp-betcount').value)||12;
+  const shikin = parseInt(document.getElementById('inp-shikin').value)||3000;
+  const racenum = document.getElementById('inp-racenum').value||'?';
+  const honme = document.getElementById('inp-honme').value;
+
+  document.getElementById('yoso-result').style.display='block';
+  const rawEl = document.getElementById('ai-raw');
+  rawEl.innerHTML='<span class="loading dot-anim">AI分析中</span>';
+  document.getElementById('bet-tbody').innerHTML='';
+
+  try{
+    const prompt = mode==='are' ? buildPromptAre(data,nigerate) : buildPromptNormal(data);
+    const aiText = await callGemini(prompt);
+    rawEl.textContent = aiText;
+
+    const ranking = parseRanking(aiText);
+    if(!ranking.length){ rawEl.textContent = aiText+'\n\n⚠️ランキングの解析に失敗しました。AI出力を確認してください。'; return; }
+
+    const betsRaw = mode==='are' ? buildBetsAre(ranking, betcount) : buildBetsNormal(ranking);
+
+    // レース情報バッジ
+    const stripEl = document.getElementById('race-info-strip');
+    const modeLabel = mode==='are' ? '⚡荒れ版' : '🔒通常版';
+    const modeCls = mode==='are' ? 'color:var(--red)' : 'color:var(--green)';
+    stripEl.innerHTML=`
+      <span class="info-chip"><span style="${modeCls}">${modeLabel}</span></span>
+      <span class="info-chip">荒れ指数 <span>${arescore}点</span></span>
+      <span class="info-chip">逃げ率 <span>${nigerate}%</span></span>
+      <span class="info-chip">${racenum}R / ${honme}本目</span>
+      <span class="info-chip">買い目 <span>${betsRaw.length}点</span></span>
+    `;
+
+    // テーブル描画
+    const tbody = document.getElementById('bet-tbody');
+    tbody.innerHTML='';
+    for(const b of betsRaw){
+      const tr = document.createElement('tr');
+      tr.innerHTML=`
+        <td><span class="bet-val">${b.val}</span></td>
+        <td><span class="bet-type">${b.type}</span></td>
+        <td><input class="odds-inp" type="number" placeholder="倍率" step="0.1" min="0" oninput="recalcAlloc()"></td>
+        <td>
+          <select class="bet-conf-sel" onchange="recalcAlloc()">
+            <option value="3">高</option>
+            <option value="2" selected>中</option>
+            <option value="1">低</option>
+          </select>
+        </td>
+        <td class="bet-amount-cell">—</td>
+        <td class="bet-ret-cell">—</td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    currentCalcData = {racenum, honme, nigerate, arescore, mode, betcount, shikin, ranking, betsRaw};
+    recalcAlloc();
+
+  } catch(e){
+    rawEl.textContent = 'エラー: '+e.message;
+  }
+}
+
+function clearYoso(){
+  document.getElementById('inp-data').value='';
+  document.getElementById('inp-racenum').value='';
+  document.getElementById('inp-nigerate').value='';
+  document.getElementById('inp-arescore').value='';
+  document.getElementById('inp-chakuju').value='';
+  document.getElementById('inp-payout-reg').value='';
+  document.getElementById('yoso-result').style.display='none';
+  currentCalcData=null;
+  calcMode();
+}
+
+// ============================================================
+// 結果登録
+// ============================================================
+function saveResult(resultType){
+  if(!currentCalcData){ showToast('予想を実行してください'); return; }
+  const chakuju = document.getElementById('inp-chakuju').value.trim();
+  const payout = parseInt(document.getElementById('inp-payout-reg').value)||0;
+
+  // 現在の配分金額を収集
+  const rows = document.querySelectorAll('#bet-tbody tr');
+  const betsWithAmt = currentCalcData.betsRaw.map((b,i)=>{
+    const amtCell = rows[i]?.querySelector('.bet-amount-cell');
+    const amt = parseInt((amtCell?.textContent||'0').replace(/[¥,]/g,''))||0;
+    const oddsInp = rows[i]?.querySelector('.odds-inp');
+    const odds = parseFloat(oddsInp?.value)||0;
+    return {...b, amount:amt, odds};
+  });
+  const totalInvest = betsWithAmt.reduce((s,b)=>s+b.amount,0);
+
+  const today=new Date();
+  const dateStr=`${today.getFullYear()}/${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}`;
+
+  const logs=getLogs();
+  logs.push({
+    id:Date.now(), date:dateStr,
+    racenum:currentCalcData.racenum,
+    honme:currentCalcData.honme,
+    mode:currentCalcData.mode,
+    nigerate:currentCalcData.nigerate,
+    arescore:currentCalcData.arescore,
+    betcount:currentCalcData.betcount,
+    bets:betsWithAmt,
+    invest:totalInvest||currentCalcData.shikin,
+    result:resultType,
+    chakuju, payout:resultType==='hit'?payout:0,
+  });
+  if(logs.length>100) logs.splice(0,logs.length-100);
+  saveLogs(logs);
+  showToast(resultType==='hit'?'✅ 的中登録！':resultType==='skip'?'⏭ スキップ登録':'❌ 外れ登録');
+  clearYoso();
+}
+
+// ============================================================
+// 払戻タブ
+// ============================================================
+function renderHaraiSel(){
+  const logs=getLogs();
+  const sel=document.getElementById('harai-sel');
+  sel.innerHTML='<option value="">— 選択 —</option>';
+  for(const l of logs){
+    const opt=document.createElement('option');
+    opt.value=l.id;
+    opt.textContent=`${l.date} ${l.racenum}R [${l.result}] (${l.mode==='are'?'荒れ':'通常'})`;
+    sel.appendChild(opt);
+  }
+}
+
+function saveHarai(){
+  const id=parseInt(document.getElementById('harai-sel').value);
+  const amount=parseInt(document.getElementById('harai-amount').value);
+  if(!id||isNaN(amount)){ showToast('選択と金額を入力してください'); return; }
+  const logs=getLogs();
+  const idx=logs.findIndex(l=>l.id===id);
+  if(idx<0){ showToast('ログが見つかりません'); return; }
+  logs[idx].payout=amount; logs[idx].result='hit';
+  saveLogs(logs);
+  showToast('払戻を登録しました');
+  renderHaraiSel();
+}
+
+function parsePaste(){
+  const text=document.getElementById('harai-paste').value;
+  const m=text.match(/3連単[^\d]*(\d[\d,]+)円/);
+  if(m){
+    document.getElementById('harai-amount').value=m[1].replace(/,/g,'');
+    showToast('¥'+m[1]+' を検出しました');
+  } else {
+    showToast('払戻金額が検出できませんでした');
+  }
+}
+
+// ============================================================
+// 集い管理
+// ============================================================
+function renderTsudoi(){
+  const logs=getLogs();
+  const hitLogs=logs.filter(l=>l.result==='hit');
+  const invLogs=logs.filter(l=>l.result!=='skip');
+  const totalInvest=invLogs.reduce((s,l)=>s+(l.invest||0),0);
+  const totalReturn=hitLogs.reduce((s,l)=>s+(l.payout||0),0);
+  const rate=totalInvest>0?Math.round(totalReturn/totalInvest*100):0;
+  const s=getSettings();
+
+  document.getElementById('st-kaisu').textContent=`${invLogs.length}/${s.maxrace||3}`;
+  document.getElementById('st-teki').textContent=`${hitLogs.length}件`;
+  document.getElementById('st-invest').textContent='¥'+totalInvest.toLocaleString();
+  document.getElementById('st-return').textContent='¥'+totalReturn.toLocaleString();
+  const rEl=document.getElementById('st-rate');
+  rEl.textContent=totalInvest>0?rate+'%':'—';
+  rEl.className='stat-val '+(rate>=100?'green':rate>=50?'gold':'red');
+  const bar=document.getElementById('rate-bar');
+  bar.style.width=Math.min(rate,100)+'%';
+  if(rate>=100) bar.style.background='linear-gradient(90deg,var(--green),var(--gold2))';
+
+  // 日別
+  const byDate={};
+  for(const l of logs){
+    if(!byDate[l.date]) byDate[l.date]={invest:0,ret:0,hit:0,total:0};
+    const d=byDate[l.date];
+    if(l.result!=='skip'){d.invest+=l.invest||0; d.total++;}
+    if(l.result==='hit') d.ret+=l.payout||0, d.hit++;
+  }
+  const dailyEl=document.getElementById('daily-list');
+  const dates=Object.keys(byDate).sort().reverse();
+  if(!dates.length){dailyEl.innerHTML='<p style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">データなし</p>';return;}
+  dailyEl.innerHTML=dates.map(dt=>{
+    const d=byDate[dt];
+    const r=d.invest>0?Math.round(d.ret/d.invest*100):0;
+    return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">
+      <span>${dt}</span>
+      <span style="color:var(--muted);">${d.hit}/${d.total}件</span>
+      <span style="color:${r>=100?'var(--green)':'var(--muted)'};">${r}%</span>
+      <span style="color:var(--gold);">¥${d.ret.toLocaleString()}</span>
+    </div>`;
+  }).join('');
+}
+
+function saveSettings(){
+  const maxrace=parseInt(document.getElementById('set-maxrace').value)||3;
+  saveSettingsData({maxrace});
+  showToast('設定保存しました');
+}
+
+function resetAll(){
+  if(!confirm('全データをリセットしますか？')) return;
+  localStorage.removeItem(STORE_KEY);
+  renderTsudoi();
+  showToast('リセットしました');
+}
+
+// ============================================================
+// ログ一覧
+// ============================================================
+function renderLog(){
+  const logs=getLogs().slice().reverse();
+  const el=document.getElementById('log-list');
+  const empty=document.getElementById('log-empty');
+  if(!logs.length){el.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  el.innerHTML=logs.map(l=>{
+    const bets=(l.bets||[]).map(b=>b.val).join(' ');
+    const bc=l.result==='hit'?'badge-hit':l.result==='skip'?'badge-skip':'badge-miss';
+    const bt=l.result==='hit'?'的中':l.result==='skip'?'SKIP':'外れ';
+    const mLabel=l.mode==='are'?'⚡荒れ':'🔒通常';
+    return `<div class="log-item">
+      <div class="log-left">
+        <div class="log-race">${l.date} ${l.racenum}R <span style="font-size:10px;color:var(--muted);">${mLabel} 荒れ${l.arescore||'?'}点 逃${l.nigerate||'?'}%</span></div>
+        <div class="log-bets">${bets}</div>
+      </div>
+      <div class="log-right">
+        ${l.result==='hit'?`<div class="log-payout">¥${(l.payout||0).toLocaleString()}</div>`:''}
+        <div class="log-badge ${bc}">${bt}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// APIキー
+// ============================================================
+function openKeyModal(){ document.getElementById('modal-key-inp').value=getApiKey(); document.getElementById('key-modal').style.display='flex'; }
+function closeKeyModal(){ document.getElementById('key-modal').style.display='none'; }
+function saveKey(){ const k=document.getElementById('modal-key-inp').value.trim(); if(k){localStorage.setItem(GEMINI_KEY,k);showToast('APIキー保存しました');} closeKeyModal(); }
+
+// ============================================================
+// トースト
+// ============================================================
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); }
+
+// 初期化
+(function(){ const s=getSettings(); document.getElementById('set-maxrace').value=s.maxrace||3; })();
+</script>
+</body>
+</html>
