@@ -311,24 +311,47 @@ function extractOddsMap(text){
   const oddsSection=text.match(/=== オッズ ===([\s\S]*?)(?:===|$)/);
   if(!oddsSection) return map;
   const rawLines=oddsSection[1].split('\n').map(l=>l.replace(/\t/g,' ').trim()).filter(l=>l);
-  let f=0;
+  let f=0,secOrder=[],blockLines=[];
+  const flushBlock=()=>{
+    for(const bl of blockLines){
+      const t=bl.split(/\s+/).filter(x=>x&&/^[\d.]+$/.test(x));
+      if(t.length===secOrder.length*2){
+        for(let col=0;col<secOrder.length;col++){
+          const trd=parseInt(t[col*2]),odds=parseFloat(t[col*2+1]);
+          if(trd>=1&&trd<=6&&trd!==f&&trd!==secOrder[col]&&odds>0){
+            const key=`${f}-${secOrder[col]}-${trd}`;
+            if(!map[key]) map[key]=odds;
+          }
+        }
+      }
+    }
+    blockLines=[];
+  };
   for(const line of rawLines){
     const hm=line.match(/^([1-6])\s+[^\d]/);
-    if(hm){f=parseInt(hm[1]);continue;}
+    if(hm){flushBlock();f=parseInt(hm[1]);secOrder=[];continue;}
     if(!f||/合成|2単/.test(line)) continue;
     const tokens=line.split(/\s+/).filter(t=>t&&/^[\d.]+$/.test(t));
-    if(tokens.length<3) continue;
-    for(let i=0;i+2<tokens.length;i+=3){
-      const s=parseInt(tokens[i]),r=parseInt(tokens[i+1]),o=parseFloat(tokens[i+2]);
-      if(s>=1&&s<=6&&s!==f&&r>=1&&r<=6&&r!==f&&r!==s&&o>1&&(o!==Math.floor(o)||o>=7)){
-        const key=`${f}-${s}-${r}`;
-        if(!map[key]) map[key]=o;
+    if(!tokens.length) continue;
+    if(!secOrder.length){
+      // 行1: (2着,3着,オッズ)の3つ組
+      for(let i=0;i+2<tokens.length;i+=3){
+        const s=parseInt(tokens[i]),r=parseInt(tokens[i+1]),o=parseFloat(tokens[i+2]);
+        if(s>=1&&s<=6&&s!==f&&r>=1&&r<=6&&r!==f&&r!==s&&o>0){
+          if(!secOrder.includes(s)) secOrder.push(s);
+          const key=`${f}-${s}-${r}`;
+          if(!map[key]) map[key]=o;
+        }
       }
-
+    } else {
+      // 行2以降: (3着,オッズ)ペア×cols
+      blockLines.push(line);
     }
   }
+  flushBlock();
   return map;
 }
+
 
 
 // ============================================================
