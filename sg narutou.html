@@ -258,7 +258,7 @@ function setBetCount(n,btn){selectedBetCount=n;document.querySelectorAll('.bc-bt
 // ============================================================
 function parseData(text){
   const d={boats:[]};
-  for(let i=1;i<=6;i++) d.boats.push({no:i,nigerate6m:0,nigerate1y:0,atchiNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sg1chakuRate:0,sg1chakuCount:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,tenji:0,syukai:0,syukaiFoot:0,directST:0,isF:false});
+  for(let i=1;i<=6;i++) d.boats.push({no:i,nigerate6m:0,nigerate1y:0,atchiNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sg1chakuRate:0,sg1chakuCount:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,syukai:0,syukaiFoot:0,directST:0,isExhibitF:false,isF:false});
 
   // 逃げ率（直近6ヶ月・当地） - 枠別勝率セクション
   const nigeSection=text.match(/直近 6ヶ月\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)/);
@@ -302,16 +302,31 @@ function parseData(text){
     for(let i=0;i<6;i++) d.boats[i].motor2ren=parseFloat(motorSection[i+1])||0;
   }
 
-  // 今節得点率
-  const sessonSection=text.match(/得点率\s+[\d位]+\s+[\d位]+\s+[\d位]+\s+[\d位]+\s+[\d位]+\s+[\d位]+\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/);
+  // 今節得点率（行頭マッチ）
+  const sessonSection=text.match(/^得点率[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)/m);
   if(sessonSection){
     for(let i=0;i<6;i++) d.boats[i].sessonPt=parseFloat(sessonSection[i+1])||0;
   }
 
-  // 今節平均ST
-  const sessonStSection=text.match(/平均ST\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+ST順位/);
+  // 今節平均ST（今節成績セクション内）
+  const sessonStSection=text.match(/今節成績[\s\S]*?平均ST[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)/m);
   if(sessonStSection){
     for(let i=0;i<6;i++) d.boats[i].sessonAvgST=parseFloat(sessonStSection[i+1])||0;
+
+  // SG/G1平均ST（基本情報セクション内）
+  const sgStSection=text.match(/基本情報[\s\S]*?SG\/G1[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)/m);
+  if(sgStSection){
+    for(let i=0;i<6;i++) d.boats[i].sgAvgST=parseFloat(sgStSection[i+1])||0;
+  }
+
+  // 当地平均ST（基本情報 > 当地行、数値のみ）
+  const atchiStSection=text.match(/基本情報[\s\S]*?\n当地[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)/m);
+  if(atchiStSection){
+    for(let i=0;i<6;i++){
+      const v=atchiStSection[i+1];
+      d.boats[i].atchiAvgST=(v&&v!=='-')?parseFloat(v)||0:0;
+    }
+  }
   }
 
   // 展示タイム・周回タイム（今節最新）
@@ -323,12 +338,12 @@ function parseData(text){
     }
   }
 
-  // 直前ST・Fフラグ
+  // 直前ST・展示Fフラグ（展示でFっただけ＝STスコアなし、ペナルティなし）
   const stSection=text.match(/ST\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)/);
   if(stSection){
     for(let i=0;i<6;i++){
       const stStr=stSection[i+1];
-      d.boats[i].isF=stStr.startsWith('F');
+      d.boats[i].isExhibitF=stStr.startsWith('F'); // 展示Fのみ
       d.boats[i].directST=parseFloat(stStr.replace('F',''))||0.20;
     }
   }
@@ -340,11 +355,11 @@ function parseData(text){
     for(let i=0;i<6;i++) d.boats[i].sessonRaces=hayamiSection[i+1]==='-'?0:parseInt(hayamiSection[i+1])||0;
   }
 
-  // F休み（未消化F）
+  // F休み（未消化F＝ペナルティ対象）
   const fRestSection=text.match(/F休み\s+([\-\d\/～]+)\s+([\-\d\/～]+)\s+([\-\d\/～]+)\s+([\-\d\/～]+)\s+([\-\d\/～]+)\s+([\-\d\/～]+)/);
   if(fRestSection){
     for(let i=0;i<6;i++){
-      if(fRestSection[i+1]!=='-') d.boats[i].isF=true;
+      d.boats[i].isF=(fRestSection[i+1]!=='-');
     }
   }
 
@@ -352,51 +367,78 @@ function parseData(text){
 }
 
 // ============================================================
-// 荒れスコア計算（kyotei_are.htmlと同じロジック）
+// 荒れスコア計算（kyotei_are.html完全準拠）
 // ============================================================
 function calcAreScore(d){
-  const scores=d.boats.map(b=>{
+  const boats=d.boats;
+
+  // 展示/周回ランク（小さい=速い=rank0=best）
+  const exOrder=[...boats].filter(b=>b.tenji>0).sort((a,b)=>a.tenji-b.tenji);
+  const lapOrder=[...boats].filter(b=>b.syukai>0).sort((a,b)=>a.syukai-b.syukai);
+  boats.forEach(b=>{
+    b.exRank=exOrder.findIndex(x=>x.no===b.no);
+    b.lapRank=lapOrder.findIndex(x=>x.no===b.no);
+  });
+
+  // 合成ST計算（節間平均ST × 0.7 ＋ コース別平均ST × 0.3）
+  // 今節平均STあり → 節間主軸 / なし（初日等）→ コース別のみ
+  // コース別優先順: SG/G1 → 当地 → フォールバック0.18
+  boats.forEach(b=>{
+    const courseST=b.sgAvgST||b.atchiAvgST||0.18;
+    b.compositeST=b.sessonAvgST>0
+      ? b.sessonAvgST*0.7+courseST*0.3
+      : courseST;
+  });
+  const stVals=boats.map(b=>b.compositeST).filter(v=>v>0);
+  const stMin=stVals.length?Math.min(...stVals):0.10;
+  const stMax=stVals.length?Math.max(...stVals):0.25;
+
+  // 今節得点率正規化
+  const tokuMax=Math.max(...boats.map(b=>b.sessonPt))||1;
+
+  // モーター2連対率正規化
+  const motorMax=Math.max(...boats.map(b=>b.motor2ren))||1;
+
+  // 逃げ率（1号艇）
+  const nigeRate1=d.boats[0].atchiNige>0?d.boats[0].atchiNige:d.boats[0].nigerate6m;
+
+  const scores=boats.map(b=>{
     let s=0;
-    // 攻撃力（差し率＋捲り率＋捲り差し率×0.4）max15pt
+
+    // ① 攻撃力（差し+捲り+捲り差し）×0.4（cap無し）
     const atk=(b.sashi6m+b.makuri6m+b.makurisashi6m*0.4);
-    s+=Math.min(15,atk/100*15*3);
+    s+=atk*0.4;
 
-    // 展示機力ランク×3 max15pt（タイム短いほど良い→降順ランク）
-    // 周回機力ランク×3 max15pt
-    // ※ランクはscores計算後に付与するので後で加算
+    // ② 展示機力ランク ×3 max15pt（rank0=15pt rank5=0pt）
+    if(b.exRank>=0) s+=(5-b.exRank)*3;
 
-    // 直前ST max15pt（F艇除外）
-    if(!b.isF&&b.directST>0){
-      // ST小さいほど良い。0.10が最速→15pt、0.25以上→0pt
-      const stPt=Math.max(0,Math.min(15,(0.25-b.directST)/0.15*15));
-      s+=stPt;
-    }
+    // ③ 周回機力ランク ×3 max15pt
+    if(b.lapRank>=0) s+=(5-b.lapRank)*3;
 
-    // 今節得点率 max15pt（A=7+→15pt,B=5〜6→8pt,C=4以下→0pt）
-    if(b.sessonPt>=7) s+=15;
-    else if(b.sessonPt>=5) s+=8;
+    // ④ 合成ST max15pt（節間×0.7＋コース別×0.3、相対化）
+    const stPt=(stMax>stMin)?(stMax-b.compositeST)/(stMax-stMin)*15:0;
+    s+=stPt;
 
-    // 1号艇ペナルティ（逃げ率<50%）-15pt
-    if(b.no===1&&b.nigerate6m<50) s-=15;
+    // ⑤ 今節得点率 max15pt（相対化）
+    s+=(b.sessonPt||0)/tokuMax*15;
 
-    // Fペナルティ -15pt
+    // ⑥ モーター2連対率 max10pt（相対化）
+    if(motorMax>0) s+=(b.motor2ren||0)/motorMax*10;
+
+    // ⑦ 1号艇ペナルティ（逃げ率<50%）-15pt
+    if(b.no===1&&nigeRate1<50) s-=15;
+
+    // ⑧ 未消化Fペナルティ -15pt（F休み持ち艇のみ）
     if(b.isF) s-=15;
 
-    return{no:b.no, raw:s, tenji:b.tenji, syukai:b.syukai};
-  });
-
-  // 展示機力ランク（小さいほど良い→降順で1位=6点）
-  const tenjiSorted=[...scores].filter(x=>x.tenji>0).sort((a,b)=>a.tenji-b.tenji);
-  scores.forEach(x=>{
-    const rank=tenjiSorted.findIndex(t=>t.no===x.no);
-    if(rank>=0) x.raw+=Math.max(0,(tenjiSorted.length-rank))*3;
-  });
-
-  // 周回機力ランク（小さいほど良い）
-  const syukaiSorted=[...scores].filter(x=>x.syukai>0).sort((a,b)=>a.syukai-b.syukai);
-  scores.forEach(x=>{
-    const rank=syukaiSorted.findIndex(t=>t.no===x.no);
-    if(rank>=0) x.raw+=Math.max(0,(syukaiSorted.length-rank))*3;
+    return{no:b.no, raw:Math.max(0,s), tenji:b.tenji, syukai:b.syukai,
+      _atk:atk*0.4, _ex:(b.exRank>=0?(5-b.exRank)*3:0),
+      _lap:(b.lapRank>=0?(5-b.lapRank)*3:0),
+      _st:stPt,
+      _toku:(b.sessonPt||0)/tokuMax*15,
+      _motor:(b.motor2ren||0)/motorMax*10,
+      _pen1:(b.no===1&&nigeRate1<50?-15:0),
+      _penF:(b.isF?-15:0)};
   });
 
   return scores.sort((a,b)=>b.raw-a.raw);
@@ -701,9 +743,14 @@ async function runYoso(){
     const{areIndex,nigeRate}=calcAreIndex(d);
     const mode=judgeMode(areIndex,nigeRate);
 
-    // スコア表示
+    // スコア表示（デバッグ情報含む）
     const scoreEl=document.getElementById('score-display');
     scoreEl.innerHTML='<div class="score-grid">'+areScores.map(s=>`<div class="score-cell"><div class="boat-no">${s.no}号艇</div><div class="score-val">${s.raw.toFixed(0)}</div><div class="score-label">pt</div></div>`).join('')+'</div>';
+    // パース値デバッグ表示
+    // スコア内訳デバッグ表示
+    const debugLines=areScores.map(s=>`${s.no}号: 攻${s._atk.toFixed(1)} 展示${s._ex} 周回${s._lap} ST${s._st.toFixed(1)} 得点${s._toku.toFixed(1)} モーター${s._motor.toFixed(1)} 逃ペナ${s._pen1} Fペナ${s._penF} = ${s.raw.toFixed(1)}pt`).join('\n');
+    const parseLines=d.boats.map(b=>`${b.no}号: 得点${b.sessonPt} 直前ST${b.directST}${b.isExhibitF?'(展示F)':''} F休${b.isF?'✓':'-'} 展示${b.tenji} 周回${b.syukai} 差${b.sashi6m}% 捲${b.makuri6m}% Motor${b.motor2ren}%`).join('\n');
+    scoreEl.innerHTML+=`<details style="margin-top:8px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">📋 スコア内訳</summary><pre style="font-size:10px;color:var(--muted);margin-top:6px;overflow-x:auto;">${debugLines}\n\n【パース値】\n${parseLines}</pre></details>`;
     const modeEl=document.getElementById('mode-result');
     const modeCls=mode==='are'?'mode-are':mode==='skip'?'mode-skip':'mode-normal';
     const modeLabel=mode==='are'?'⚡ 荒れモード':mode==='skip'?'⏭ スキップ':'🔒 通常モード';
