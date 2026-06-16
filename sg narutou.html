@@ -306,26 +306,25 @@ function setBetCount(n,btn){
 
 // ============================================================
 // オッズ自動抽出
-// ============================================================
 function extractOddsMap(text){
   const map={};
-  const oddsSection = text.match(/=== オッズ ===([\s\S]*?)(?:===|$)/);
+  const oddsSection=text.match(/=== オッズ ===([\s\S]*?)(?:===|$)/);
   if(!oddsSection) return map;
-  const raw = oddsSection[1];
-  const rawLines = raw.split('\n').map(l=>l.replace(/\t/g,' ').trim()).filter(l=>l);
-  let currentFirst=0;
+  const rawLines=oddsSection[1].split('\n').map(l=>l.replace(/\t/g,' ').trim()).filter(l=>l);
+  let f=0;
   for(const line of rawLines){
-    const headerM = line.match(/^([1-6])\s+[\u3000-\u9FFFa-zA-Z\uFF00-\uFFEF]/);
-    if(headerM){ currentFirst=parseInt(headerM[1]); continue; }
-    if(!currentFirst) continue;
-    const tokens = line.split(/\s+/).filter(t=>/^[\d.]+$/.test(t));
+    const hm=line.match(/^([1-6])\s+[^\d]/);
+    if(hm){f=parseInt(hm[1]);continue;}
+    if(!f||/合成|2単/.test(line)) continue;
+    const tokens=line.split(/\s+/).filter(t=>t&&/^[\d.]+$/.test(t));
     if(tokens.length<3) continue;
     for(let i=0;i+2<tokens.length;i+=3){
-      const sec=parseInt(tokens[i]),trd=parseInt(tokens[i+1]),odds=parseFloat(tokens[i+2]);
-      if(sec>=1&&sec<=6&&trd>=1&&trd<=6&&sec!==trd&&currentFirst!==sec&&currentFirst!==trd&&odds>0&&odds<10000){
-        const key=`${currentFirst}-${sec}-${trd}`;
-        if(!map[key]) map[key]=odds;
+      const s=parseInt(tokens[i]),r=parseInt(tokens[i+1]),o=parseFloat(tokens[i+2]);
+      if(s>=1&&s<=6&&s!==f&&r>=1&&r<=6&&r!==f&&r!==s&&o>1&&(o!==Math.floor(o)||o>=7)){
+        const key=`${f}-${s}-${r}`;
+        if(!map[key]) map[key]=o;
       }
+
     }
   }
   return map;
@@ -460,15 +459,21 @@ function buildBetsAre(ranking,targetPts){
   if(ranking.length<5) return [];
   const [r1,r2,r3,r4,r5]=ranking;
   const a=r1.boat,b=r2.boat,c=r3.boat,d=r4.boat,e=r5.boat;
+  // 引き継ぎノート準拠: ◎=a ○=b ▲=c △=d ▽=e
+  // 本線G1(4点): ◎-○-▲ / ◎-○-▽ / ○-◎-▲ / ○-◎-▽
+  // 本線G3(2点): ▲-△-◎ / ▲-△-○
+  // 抑えG3(2点): △-▲-◎ / △-▲-○
+  // 抑えG4(4点): ▲-◎-△ / ▲-○-△ / △-◎-▲ / △-○-▲
+  // 抑えG2(4点): ○-▽-◎ / ○-▲-◎ / ○-▲-▽ / ○-▽-▲
   const pool=[
-    {val:`${a}-${b}-${c}`,type:'本線G1'},{val:`${a}-${b}-${d}`,type:'本線G1'},
-    {val:`${b}-${a}-${c}`,type:'本線G1'},{val:`${b}-${a}-${d}`,type:'本線G1'},
+    {val:`${a}-${b}-${c}`,type:'本線G1'},{val:`${a}-${b}-${e}`,type:'本線G1'},
+    {val:`${b}-${a}-${c}`,type:'本線G1'},{val:`${b}-${a}-${e}`,type:'本線G1'},
     {val:`${c}-${d}-${a}`,type:'本線G3'},{val:`${c}-${d}-${b}`,type:'本線G3'},
     {val:`${d}-${c}-${a}`,type:'抑えG3'},{val:`${d}-${c}-${b}`,type:'抑えG3'},
     {val:`${c}-${a}-${d}`,type:'抑えG4'},{val:`${c}-${b}-${d}`,type:'抑えG4'},
     {val:`${d}-${a}-${c}`,type:'抑えG4'},{val:`${d}-${b}-${c}`,type:'抑えG4'},
     {val:`${b}-${e}-${a}`,type:'抑えG2'},{val:`${b}-${c}-${a}`,type:'抑えG2'},
-    {val:`${b}-${e}-${c}`,type:'抑えG2'},
+    {val:`${b}-${c}-${e}`,type:'抑えG2'},{val:`${b}-${e}-${c}`,type:'抑えG2'},
   ];
   const seen=new Set(),bets=[];
   for(const b2 of pool){
