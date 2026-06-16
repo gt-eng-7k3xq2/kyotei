@@ -45,9 +45,9 @@
   .bet-table th{font-size:10px;color:var(--muted);padding:5px 4px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;}
   .bet-table td{padding:8px 4px;border-bottom:1px solid var(--border);}
   .bet-table tr:last-child td{border-bottom:none;}
-  .bet-val{font-weight:700;font-variant-numeric:tabular-nums;font-size:14px;}
-  .bet-type{font-size:10px;color:var(--muted);}
-  .odds-inp{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;padding:5px 6px;border-radius:6px;width:64px;margin-bottom:0;text-align:right;}
+  .bet-val{font-weight:700;font-variant-numeric:tabular-nums;font-size:14px;white-space:nowrap;}
+  .bet-type{font-size:10px;color:var(--muted);white-space:nowrap;}
+  .odds-inp{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;padding:5px 6px;border-radius:6px;width:62px;margin-bottom:0;text-align:right;}
   .conf-sel{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:12px;padding:4px 6px;border-radius:6px;-webkit-appearance:none;width:46px;margin-bottom:0;text-align:center;}
   .amt-cell{font-weight:700;color:var(--gold);text-align:right;white-space:nowrap;}
   .ret-cell{font-size:12px;text-align:right;white-space:nowrap;}
@@ -307,52 +307,30 @@ function setBetCount(n,btn){
 // ============================================================
 // オッズ自動抽出
 // ============================================================
-// テキストから各買い目のオッズを抽出してMapで返す
-// 形式: "2 3 7.5" → {key:"1-2-3", odds:7.5} 等
 function extractOddsMap(text){
   const map={};
-  // "1号艇軸" ブロックを検出: "1\t中嶋..." 以降
-  // パターン: 着 2着 オッズ の行を探す
-  // 実際フォーマット: "2	3	7.5	3	2	16.3	4	2	22.8	5	2	45.4	6	2	105.4"
-  // → 1着=1固定, 残りを(2着,3着,オッズ)の組でパース
-
-  // オッズセクション全体を抽出
   const oddsSection = text.match(/=== オッズ ===([\s\S]*?)(?:===|$)/);
   if(!oddsSection) return map;
-  const lines = oddsSection[1].split('\n').map(l=>l.trim()).filter(l=>l);
-
+  const raw = oddsSection[1];
+  const rawLines = raw.split('\n').map(l=>l.replace(/\t/g,' ').trim()).filter(l=>l);
   let currentFirst=0;
-  for(const line of lines){
-    // "1\t中嶋..." のような艇番＋名前行
-    const boatHeader = line.match(/^(\d)\t/);
-    if(boatHeader){
-      currentFirst=parseInt(boatHeader[1]);
-      continue;
-    }
-    // 艇番名前行（タブなし）: "1\s中嶋健一郎" パターン
-    const boatHeader2 = line.match(/^(\d)\s+[^\d]/);
-    if(boatHeader2 && !line.match(/^\d+\s+\d/)){
-      currentFirst=parseInt(boatHeader2[1]);
-      continue;
-    }
+  for(const line of rawLines){
+    const headerM = line.match(/^([1-6])\s+[\u3000-\u9FFFa-zA-Z\uFF00-\uFFEF]/);
+    if(headerM){ currentFirst=parseInt(headerM[1]); continue; }
     if(!currentFirst) continue;
-    // オッズ行: "2	3	7.5	3	2	16.3..." または "2 3 7.5 3 2 16.3..."
-    const nums = line.match(/(\d+)\s+(\d+)\s+([\d.]+)/g);
-    if(nums){
-      for(const m of nums){
-        const parts = m.match(/(\d+)\s+(\d+)\s+([\d.]+)/);
-        if(parts){
-          const sec=parseInt(parts[1]), trd=parseInt(parts[2]), odds=parseFloat(parts[3]);
-          if(sec>=1&&sec<=6&&trd>=1&&trd<=6&&sec!==trd&&odds>0){
-            const key=`${currentFirst}-${sec}-${trd}`;
-            if(!map[key]) map[key]=odds;
-          }
-        }
+    const tokens = line.split(/\s+/).filter(t=>/^[\d.]+$/.test(t));
+    if(tokens.length<3) continue;
+    for(let i=0;i+2<tokens.length;i+=3){
+      const sec=parseInt(tokens[i]),trd=parseInt(tokens[i+1]),odds=parseFloat(tokens[i+2]);
+      if(sec>=1&&sec<=6&&trd>=1&&trd<=6&&sec!==trd&&currentFirst!==sec&&currentFirst!==trd&&odds>0&&odds<10000){
+        const key=`${currentFirst}-${sec}-${trd}`;
+        if(!map[key]) map[key]=odds;
       }
     }
   }
   return map;
 }
+
 
 // ============================================================
 // プロンプト（荒れ指数+モード+ランキングを1回で）
@@ -366,30 +344,50 @@ ${data}
 【鳴門水面特性】
 - 1コース1着率約48%（難水面・うねりが出やすい）
 - SGはトップ選手集結でイン逃げ率が下がりやすい
-- 外コース有利になりやすい
+- ただしSGは1コースにA1トップ選手が入るため、実力で逃げ切るケースも多い
 
-【荒れ指数の計算方法】（0〜20点）
-以下の観点でスコアを算出してください：
-1. 1号艇の逃げ率（直近6ヶ月）: 50%未満=+5pt / 50〜65%=+2pt / 65%超=0pt
-2. 外コース（4〜6号艇）の攻撃力（差し・捲り合計率の平均）: 高=+4pt / 中=+2pt / 低=0pt
-3. モーター格差（2連対率の差が大きい）: 大=+3pt / 中=+1pt / 小=0pt
-4. STのばらつき（各艇の平均STの標準偏差）: 大=+3pt / 中=+1pt / 小=0pt
-5. F持ちや事故率の高い艇の有無: あり=+2pt / なし=0pt
-6. 鳴門ボーナス（SGかつ難水面）: +3pt固定
+【荒れ指数の計算方法】（ベーススコア → 1コース実力補正 → 最終スコア）
 
-【モード判定基準】
-- 荒れ指数0〜7点: 通常モード
-- 荒れ指数8〜11点 かつ 逃げ率50%未満: 荒れモード
-- 荒れ指数4〜7点: スキップ推奨
-- 荒れ指数12点以上: 通常モード（高リスク注意）
+■ ステップ1: ベーススコア算出（0〜17pt）
+1. 1号艇の逃げ率（直近6ヶ月）: 50%未満=+5pt / 50〜65%=+3pt / 65%超=+1pt
+2. 外コース（4〜6号艇）の攻撃力（差し・捲り・捲り差し合計率の平均）: 高=+4pt / 中=+2pt / 低=0pt
+3. モーター格差（全艇2連対率の最大-最小が20%超）: 大=+3pt / 中=+1pt / 小=0pt
+4. F持ち・高事故率艇の有無: あり=+2pt / なし=0pt
+5. 鳴門SGボーナス: +3pt固定
+
+■ ステップ2: 1コース実力補正（マイナス補正）
+SGの1コースは格上選手が入る。以下の優先順位で実力を判断してマイナス補正する。
+
+【今節3走以上の場合】今節得点率で判断
+- 今節得点率7点以上: -4pt
+- 今節得点率5〜6点: -2pt
+- 今節得点率4点以下: 補正なし
+
+【今節2走以下（初日・2日目等）の場合】SG/G1実績＋直近成績で判断
+- SG/G1での1着率50%以上 かつ 直近6ヶ月勝率7.5以上: -4pt
+- SG/G1での1着率40%以上 または 直近6ヶ月勝率7.0以上: -2pt
+- それ以外: 補正なし
+
+加えて以下も補正:
+- 1号艇のモーター2連対率40%以上: -2pt
+- 1号艇の当地成績が良好（当地1着率60%以上）: -1pt
+
+■ ステップ3: 最終荒れ指数 = ベーススコア + 補正値（マイナス込み）
+
+【モード判定】
+- 最終荒れ指数0〜7点: 通常モード
+- 最終荒れ指数8〜11点 かつ 逃げ率55%未満: 荒れモード
+- 最終荒れ指数4〜7点: スキップ推奨
+- 最終荒れ指数12点以上: 通常モード（高リスク注意）
 
 【総合評価ランキング基準】
-- 今節得点率・平均ST・モーター2連対率・展示タイム・コース適性を総合評価
-- 6位艇は1着候補から弱く評価
-- F持ち艇は大幅減点
+- SG/G1実績・今節成績・機力（モーター2連対率）・展示タイム・ST・コース適性を総合評価
+- 今節走数が少ない場合はキャリア実績（SG/G1成績・直近6ヶ月）を重視
 - 今節得点率1位・2位は2着候補として重視
+- F持ち艇は大幅減点
+- 6号艇は1着評価をやや下げる
 
-【出力形式】（必ずこの形式のみ・余計な説明不要）
+【出力形式】（必ずこの形式のみ・説明不要）
 荒れ指数: [数字]
 逃げ率: [数字]%
 モード: [通常/荒れ/スキップ]
