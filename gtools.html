@@ -430,19 +430,38 @@ function generatePost(){
   var totalPay=pays.reduce(function(s,p){return s+p;},0);
   var maxPay=pays.length?Math.max.apply(null,pays):0;
 
+  // 明日への一言（ランダム）
+  var tomorrowMsgs=[
+    '明日も波に乗っていこう🌊',
+    '明日こそ万舟をものにする💎',
+    '一発逆転、明日に期待🔥',
+    '明日も淡々と、着実に🎯',
+    'データは正直。明日も信じて貫く📊',
+    '今日の反省を明日の糧に💪',
+    '明日の荒れレース、見逃さない⚡',
+    'コツコツが積み重なる。明日もやっていこう🚤',
+    '明日は大きいのが来る予感✨',
+    '負けても次がある。明日も全力で🏁',
+  ];
+  var tomorrowMsg=tomorrowMsgs[Math.floor(Math.random()*tomorrowMsgs.length)];
+
   var lines=[];
   lines.push(dateStr+' お疲れ様でした🚤');
   lines.push('');
   if(hitCount>0){
     hits.forEach(function(l){
       var p=parsePayout(l.payout);
-      lines.push('🎯 '+l.venue+(l.raceNum||'')+(p>0?'　¥'+p.toLocaleString():''));
+      // 60倍以上は🔥で目立たせる
+      var fireStr=p>=6000?'🔥':'';
+      lines.push('🎯 '+l.venue+(l.raceNum||'')+(p>0?('　'+fireStr+'¥'+p.toLocaleString()+fireStr):''));
     });
   } else {
     lines.push('本日は的中なし…また明日💪');
   }
   lines.push('');
-  lines.push(hitCount+'/'+total+'件的中　'+rate+'%');
+  lines.push('🎯 '+total+'R中 '+hitCount+'的中（'+rate+'%）');
+  lines.push('');
+  lines.push(tomorrowMsg);
   lines.push('');
   lines.push('#競艇予想 #ボートレース');
 
