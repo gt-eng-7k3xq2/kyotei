@@ -219,6 +219,18 @@ html,body{min-height:100vh;background:#04040c;}
       <button onclick="copyPost()" id="post-copy-btn" style="margin-top:10px;width:100%;padding:11px;background:var(--gold);color:#000;border:none;border-radius:var(--r2);font-size:13px;font-weight:700;-webkit-appearance:none;">📋 コピー</button>
     </div>
   </div>
+
+  <!-- 週次ポスト -->
+  <div class="card" style="margin-top:12px;position:relative;z-index:10;">
+    <div class="card-title">𝕏 週次結果ポスト（毎週日曜）</div>
+    <div class="field"><label>週開始日（月曜）</label><input type="date" id="weekly-start"></div>
+    <div class="field"><label>週終了日（日曜）</label><input type="date" id="weekly-end"></div>
+    <button onclick="generateWeeklyPost()" style="width:100%;background:var(--gold);color:#080810;border:none;border-radius:var(--r);font-size:15px;font-weight:800;padding:14px;margin-top:8px;-webkit-appearance:none;cursor:pointer;">📋 週次ポストを生成</button>
+    <div id="weekly-post-result" style="margin-top:12px;display:none;">
+      <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);padding:14px;white-space:pre-wrap;font-size:13px;line-height:1.8;color:var(--text1);" id="weekly-post-text"></div>
+      <button onclick="copyWeeklyPost()" style="margin-top:10px;width:100%;padding:11px;background:var(--gold);color:#000;border:none;border-radius:var(--r2);font-size:13px;font-weight:700;-webkit-appearance:none;">📋 コピー</button>
+    </div>
+  </div>
 </div>
 
 <div id="nippo-overlay">
@@ -475,7 +487,91 @@ function generatePost(){
   }catch(e){showToast('エラー: '+e.message);}
 }
 
+function generateWeeklyPost(){
+  try{
+    var startVal=document.getElementById('weekly-start').value;
+    var endVal=document.getElementById('weekly-end').value;
+    if(!startVal||!endVal){showToast('開始日と終了日を入力してください');return;}
+
+    var startDate=new Date(startVal);
+    var endDate=new Date(endVal);
+    // 終了日は23:59:59まで含める
+    endDate.setHours(23,59,59,999);
+
+    var v2logs=getV2Logs();
+    // 期間内のログを抽出
+    var allLogs=v2logs.filter(function(l){
+      if(!l.date) return false;
+      var d=new Date(l.date);
+      return d>=startDate && d<=endDate;
+    });
+
+    var hits=allLogs.filter(function(l){return (l.miss||[]).includes('hit');});
+    var total=allLogs.length;
+    var hitCount=hits.length;
+    var rate=total?Math.round(hitCount/total*100):0;
+
+    // 配当パース（数値で扱う）
+    var hitsWithPay=hits.map(function(l){
+      return{venue:l.venue,raceNum:l.raceNum,pay:parsePayout(l.payout)};
+    }).filter(function(l){return l.pay>0;});
+
+    // 配当の高い順に上位5件
+    var top5=hitsWithPay.slice().sort(function(a,b){return b.pay-a.pay;}).slice(0,5);
+
+    // 週の表示文字列 例: 6/16〜6/22
+    function fmtDateMD(d){return (d.getMonth()+1)+'/'+(d.getDate());}
+    var weekStr=fmtDateMD(startDate)+'〜'+fmtDateMD(endDate);
+
+    var lines=[];
+    lines.push(weekStr+' 週次結果🚤');
+    lines.push('');
+
+    if(top5.length>0){
+      // 総配当も計算（全的中分）
+      var totalPay=hitsWithPay.reduce(function(s,l){return s+l.pay;},0);
+      // 上位5件を配当高い順に表示
+      top5.forEach(function(l){
+        var fireStr=l.pay>=6000?'🔥':'';
+        lines.push('🎯 '+l.venue+(l.raceNum||'')+'　'+fireStr+'¥'+l.pay.toLocaleString()+fireStr);
+      });
+      if(hitsWithPay.length>5){
+        lines.push('　…他 '+(hitsWithPay.length-5)+'件的中');
+      }
+    } else {
+      lines.push('今週は的中なし…来週こそ💪');
+    }
+
+    lines.push('');
+    lines.push('📊 '+total+'R中 '+hitCount+'的中（'+rate+'%）');
+    lines.push('');
+    lines.push('#競艇予想 #ボートレース');
+
+    var postText=document.getElementById('weekly-post-text');
+    var postResult=document.getElementById('weekly-post-result');
+    if(!postText||!postResult){showToast('表示エラー');return;}
+    postText.textContent=lines.join('\n');
+    postResult.style.display='block';
+  }catch(e){showToast('エラー: '+e.message);}
+}
+
+function copyWeeklyPost(){
+  var pt=document.getElementById('weekly-post-text');
+  if(!pt||!pt.textContent){showToast('先にポストを生成してください');return;}
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(pt.textContent).then(function(){showToast('📋 コピーしました');});
+  }else{
+    var ta=document.createElement('textarea');
+    ta.value=pt.textContent;
+    document.body.appendChild(ta);ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('📋 コピーしました');
+  }
+}
+
 function copyPost(){
+  var pt=document.getElementById('post-text');
   var pt=document.getElementById('post-text');
   var cb=document.getElementById('post-copy-btn');
   if(!pt||!cb)return;
