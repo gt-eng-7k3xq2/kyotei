@@ -171,6 +171,15 @@
         <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="saveResult('skip')">⏭ SKIP</button>
       </div>
     </div>
+
+    <div class="card">
+      <div class="card-title">𝕏 X投稿サマリー</div>
+      <div id="x-summary-preview" class="ai-output" style="min-height:80px;font-size:11px;"></div>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="copyXSummary(false)">𝕏 サマリーのみ</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--gold);border-color:var(--gold);" onclick="copyXSummary(true)">𝕏 賭け金込み</button>
+      </div>
+    </div>
     </div><!-- /bet-section -->
   </div>
 </div>
@@ -308,6 +317,7 @@ function generateBets(d, areScores, mode){
   document.getElementById('bet-section').style.display='block';
   currentCalcData={racenum,honme,nigeRate,areIndex,mode,betcount:betsRaw.length,shikin,ranking,betsRaw};
   recalcAlloc();
+  updateXPreview();
 }
 
 function switchTab(name){
@@ -325,7 +335,7 @@ function setBetCount(n,btn){selectedBetCount=n;document.querySelectorAll('.bc-bt
 // ============================================================
 function parseData(text){
   const d={boats:[]};
-  for(let i=1;i<=6;i++) d.boats.push({no:i,nigerate6m:0,nigerate1y:0,atchiNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sg1chakuRate:0,sg1chakuCount:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,syukai:0,syukaiFoot:0,directST:0,isExhibitF:false,isF:false});
+  for(let i=1;i<=6;i++) d.boats.push({no:i,nigerate6m:0,nigerate1y:0,atchiNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sg1chakuRate:0,sg1chakuCount:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,avgTenji:0,syukai:0,syukaiFoot:0,avgSyukaiFoot:0,directST:0,isExhibitF:false,isF:false});
 
   // 逃げ率（直近6ヶ月・当地） - 枠別勝率セクション
   const nigeSection=text.match(/直近 6ヶ月\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)/);
@@ -396,13 +406,25 @@ function parseData(text){
   }
   }
 
-  // 展示タイム・周回タイム（今節最新）
-  const tenjiSection=text.match(/展示\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\n周回\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/);
+  // 直前展示タイム
+  const tenjiSection=text.match(/(?:^|\n)展示\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/m);
   if(tenjiSection){
-    for(let i=0;i<6;i++){
-      d.boats[i].tenji=parseFloat(tenjiSection[i+1])||0;
-      d.boats[i].syukai=parseFloat(tenjiSection[i+7])||0;
-    }
+    for(let i=0;i<6;i++) d.boats[i].tenji=parseFloat(tenjiSection[i+1])||0;
+  }
+  // 今節平均展示タイム（直前なければ補完）
+  const avgTenjiSection=text.match(/^平均展示\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/m);
+  if(avgTenjiSection){
+    for(let i=0;i<6;i++) d.boats[i].avgTenji=parseFloat(avgTenjiSection[i+1])||0;
+  }
+  // 直前周り足（大きいほど良い）
+  const syukaiFootSection=text.match(/(?:^|\n)周り足\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/m);
+  if(syukaiFootSection){
+    for(let i=0;i<6;i++) d.boats[i].syukaiFoot=parseFloat(syukaiFootSection[i+1])||0;
+  }
+  // 今節平均周り足（直前なければ補完）
+  const avgSyukaiFootSection=text.match(/^(?:平均周足|平均周り足)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/m);
+  if(avgSyukaiFootSection){
+    for(let i=0;i<6;i++) d.boats[i].avgSyukaiFoot=parseFloat(avgSyukaiFootSection[i+1])||0;
   }
 
   // 直前ST・展示Fフラグ（展示でFっただけ＝STスコアなし、ペナルティなし）
@@ -439,9 +461,11 @@ function parseData(text){
 function calcAreScore(d){
   const boats=d.boats;
 
-  // 展示/周回ランク（小さい=速い=rank0=best）
-  const exOrder=[...boats].filter(b=>b.tenji>0).sort((a,b)=>a.tenji-b.tenji);
-  const lapOrder=[...boats].filter(b=>b.syukai>0).sort((a,b)=>a.syukai-b.syukai);
+  // 展示ランク（タイム小さいほど良い）: 直前||平均展示
+  const exVals=boats.map(b=>b.tenji||b.avgTenji||99);
+  const exOrder=[...boats].sort((a,b)=>(a.tenji||a.avgTenji||99)-(b.tenji||b.avgTenji||99));
+  // 周回足ランク（スコア大きいほど良い）: 直前||平均周足
+  const lapOrder=[...boats].sort((a,b)=>(b.syukaiFoot||b.avgSyukaiFoot||0)-(a.syukaiFoot||a.avgSyukaiFoot||0));
   boats.forEach(b=>{
     b.exRank=exOrder.findIndex(x=>x.no===b.no);
     b.lapRank=lapOrder.findIndex(x=>x.no===b.no);
@@ -861,6 +885,135 @@ function clearYoso(){
   currentParsedData=null;
   currentAreScores=null;
   setMode('normal');
+}
+
+// ============================================================
+// Xサマリー生成
+// ============================================================
+// 買い目を圧縮: 同じ1着-2着でまとめ、さらに同じ1着-3着もまとめる
+// 例: 4-1-6/4-1-2 → 4-1-62
+//     6-4-5/6-1-5 → 6-41-5
+function compressBetsSG(bets){
+  const vals=bets.map(b=>b.val);
+
+  // Step1: 1着-2着でグループ化（3着をまとめる）
+  const g12={};
+  for(const v of vals){
+    const p=v.split('-');
+    if(p.length!==3) continue;
+    const key=p[0]+'-'+p[1];
+    if(!g12[key]) g12[key]=[];
+    if(!g12[key].includes(p[2])) g12[key].push(p[2]);
+  }
+
+  // Step2: 展開して1着-3着でグループ化（2着をまとめる）
+  // まず1着-2着圧縮を作る
+  const pass1=Object.entries(g12).map(([key,thirds])=>({
+    str:key+'-'+thirds.join(''),
+    first:key.split('-')[0],
+    second:key.split('-')[1],
+    thirds
+  }));
+
+  // 同じ1着で3着が同じものを2着でまとめる
+  const g13={};
+  for(const v of vals){
+    const p=v.split('-');
+    if(p.length!==3) continue;
+    const key=p[0]+'-'+p[2];
+    if(!g13[key]) g13[key]=[];
+    if(!g13[key].includes(p[1])) g13[key].push(p[1]);
+  }
+
+  // どちらの圧縮が短いか比較して短い方を採用
+  // 方針: まず1着-2着でグループ化、結果を文字数比較
+  // 3着・2着を番号若い順にソート
+  const result1=Object.entries(g12).map(([key,thirds])=>key+'-'+thirds.slice().sort((a,b)=>parseInt(a)-parseInt(b)).join('')).join('/');
+
+  // 1着-3着グループ化（2着を番号若い順）
+  const result2=Object.entries(g13).map(([key,seconds])=>{
+    const p=key.split('-');
+    return p[0]+'-'+seconds.slice().sort((a,b)=>parseInt(a)-parseInt(b)).join('')+'-'+p[1];
+  }).join('/');
+
+  return result1.length<=result2.length?result1:result2;
+}
+
+function buildXSummary(withAmount){
+  if(!currentCalcData) return '';
+  const racenum=currentCalcData.racenum||'?';
+  const ranking=currentCalcData.ranking||[];
+  const betsRaw=currentCalcData.betsRaw||[];
+
+  // 評価順: ◎>○>▲>△>▽>× を号艇番号で表示
+  // 例: 4>1>6>5>3>2
+  const hyokaOrder=ranking.map(r=>r.boat).join('>');
+
+  // ◎艇の選手名（苗字）はAI出力から取れないのでシンプルに号艇で
+  const maruBoat=ranking[0]?.boat;
+  const circled=['❶','❷','❸','❹','❺','❻'];
+  const maruStr=maruBoat?circled[maruBoat-1]:'◎';
+
+  // 本線/抑えに分類
+  const honsen=betsRaw.filter(b=>b.type.includes('G1')||b.type==='本線');
+  const osaee=betsRaw.filter(b=>!b.type.includes('G1')&&b.type!=='本線');
+
+  // 賭け金込みの場合は各買い目に金額追加
+  const getRealBets=(arr)=>{
+    if(!withAmount) return arr;
+    const rows=document.querySelectorAll('#bet-tbody tr');
+    return arr.map(b=>{
+      const rowIdx=betsRaw.indexOf(b);
+      const amtCell=rows[rowIdx]?.querySelector('.amt-cell');
+      const amt=parseInt((amtCell?.textContent||'0').replace(/[¥,]/g,''))||0;
+      return{...b,amount:amt};
+    });
+  };
+
+  const fmtBets=(arr)=>{
+    if(withAmount){
+      // 金額込みは1点ずつ列挙
+      return getRealBets(arr).map(b=>`${b.val}(¥${(b.amount||0).toLocaleString()})`).join('/');
+    }
+    // 圧縮表示
+    return compressBetsSG(arr);
+  };
+
+  const lines=[
+    `鳴門${racenum}R`,
+    ``,
+    `${maruStr}の軸で勝負。`,
+    `${hyokaOrder}`,
+    ``,
+    `本線　${fmtBets(honsen)}`,
+  ];
+  if(osaee.length) lines.push(`抑え　${fmtBets(osaee)}`);
+  lines.push(``, `G.`);
+
+  return lines.join('\n');
+}
+
+function updateXPreview(){
+  const el=document.getElementById('x-summary-preview');
+  if(!el) return;
+  el.textContent=buildXSummary(false);
+}
+
+function copyXSummary(withAmount){
+  const text=buildXSummary(withAmount);
+  if(!text){showToast('買い目を生成してください');return;}
+  navigator.clipboard.writeText(text).then(()=>{
+    showToast(withAmount?'𝕏 賭け金込みコピー！':'𝕏 サマリーコピー！');
+  }).catch(()=>{
+    // フォールバック
+    const ta=document.createElement('textarea');
+    ta.value=text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast(withAmount?'𝕏 賭け金込みコピー！':'𝕏 サマリーコピー！');
+  });
 }
 
 // ============================================================
