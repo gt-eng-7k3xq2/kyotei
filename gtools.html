@@ -510,15 +510,18 @@ function generateWeeklyPost(){
     endDate.setHours(23,59,59,999);
 
     var v2logs=getLogs();
-    // 期間内のログを抽出
+    // 日付を正規化（YYYY/MM/DD → YYYY-MM-DD）して文字列比較
+    function normDate(s){return (s||'').replace(/\//g,'-');}
+    var startStr=normDate(startVal);
+    var endStr=normDate(endVal);
     var allLogs=v2logs.filter(function(l){
       if(!l.date) return false;
-      var d=new Date(l.date);
-      return d>=startDate && d<=endDate;
+      var nd=normDate(l.date);
+      return nd>=startStr && nd<=endStr;
     });
 
     var hits=allLogs.filter(function(l){return (l.miss||[]).includes('hit');});
-    var total=allLogs.length;
+    var total=allLogs.filter(function(l){return !(l.miss||[]).includes('miseru');}).length;
     var hitCount=hits.length;
     var rate=total?Math.round(hitCount/total*100):0;
 
@@ -531,8 +534,8 @@ function generateWeeklyPost(){
     var top5=hitsWithPay.slice().sort(function(a,b){return b.pay-a.pay;}).slice(0,5);
 
     // 週の表示文字列 例: 6/16〜6/22
-    function fmtDateMD(d){return (d.getMonth()+1)+'/'+(d.getDate());}
-    var weekStr=fmtDateMD(startDate)+'〜'+fmtDateMD(endDate);
+    var sp=startStr.split('-'),ep=endStr.split('-');
+    var weekStr=parseInt(sp[1])+'/'+parseInt(sp[2])+'〜'+parseInt(ep[1])+'/'+parseInt(ep[2]);
 
     var lines=[];
     lines.push(weekStr+' 週次結果🚤');
@@ -592,14 +595,20 @@ function generateMonthlyPost(){
     var endDate=new Date(year,month,0,23,59,59,999); // 月末日
 
     var v2logs=getLogs();
+    // 日付を正規化して文字列比較
+    function normDateM(s){return (s||'').replace(/\//g,'-');}
+    var yStr=String(year),mStr=String(month).padStart(2,'0');
+    var startStr2=yStr+'-'+mStr+'-01';
+    var lastDay=new Date(year,month,0).getDate();
+    var endStr2=yStr+'-'+mStr+'-'+String(lastDay).padStart(2,'0');
     var allLogs=v2logs.filter(function(l){
       if(!l.date) return false;
-      var d=new Date(l.date);
-      return d>=startDate && d<=endDate;
+      var nd=normDateM(l.date);
+      return nd>=startStr2 && nd<=endStr2;
     });
 
     var hits=allLogs.filter(function(l){return (l.miss||[]).includes('hit');});
-    var total=allLogs.length;
+    var total=allLogs.filter(function(l){return !(l.miss||[]).includes('miseru');}).length;
     var hitCount=hits.length;
     var rate=total?Math.round(hitCount/total*100):0;
 
