@@ -509,7 +509,7 @@ function generateWeeklyPost(){
     // 終了日は23:59:59まで含める
     endDate.setHours(23,59,59,999);
 
-    var v2logs=getV2Logs();
+    var v2logs=getLogs();
     // 期間内のログを抽出
     var allLogs=v2logs.filter(function(l){
       if(!l.date) return false;
@@ -591,7 +591,7 @@ function generateMonthlyPost(){
     var startDate=new Date(year,month-1,1);
     var endDate=new Date(year,month,0,23,59,59,999); // 月末日
 
-    var v2logs=getV2Logs();
+    var v2logs=getLogs();
     var allLogs=v2logs.filter(function(l){
       if(!l.date) return false;
       var d=new Date(l.date);
