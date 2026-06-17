@@ -231,6 +231,17 @@ html,body{min-height:100vh;background:#04040c;}
       <button onclick="copyWeeklyPost()" style="margin-top:10px;width:100%;padding:11px;background:var(--gold);color:#000;border:none;border-radius:var(--r2);font-size:13px;font-weight:700;-webkit-appearance:none;">📋 コピー</button>
     </div>
   </div>
+
+  <!-- 月次ポスト -->
+  <div class="card" style="margin-top:12px;position:relative;z-index:10;">
+    <div class="card-title">𝕏 月次結果ポスト（毎月末）</div>
+    <div class="field"><label>対象月</label><input type="month" id="monthly-month"></div>
+    <button onclick="generateMonthlyPost()" style="width:100%;background:var(--gold);color:#080810;border:none;border-radius:var(--r);font-size:15px;font-weight:800;padding:14px;margin-top:8px;-webkit-appearance:none;cursor:pointer;">📋 月次ポストを生成</button>
+    <div id="monthly-post-result" style="margin-top:12px;display:none;">
+      <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);padding:14px;white-space:pre-wrap;font-size:13px;line-height:1.8;color:var(--text1);" id="monthly-post-text"></div>
+      <button onclick="copyMonthlyPost()" style="margin-top:10px;width:100%;padding:11px;background:var(--gold);color:#000;border:none;border-radius:var(--r2);font-size:13px;font-weight:700;-webkit-appearance:none;">📋 コピー</button>
+    </div>
+  </div>
 </div>
 
 <div id="nippo-overlay">
@@ -570,6 +581,84 @@ function copyWeeklyPost(){
   }
 }
 
+function generateMonthlyPost(){
+  try{
+    var monthVal=document.getElementById('monthly-month').value;
+    if(!monthVal){showToast('対象月を選択してください');return;}
+
+    var year=parseInt(monthVal.split('-')[0]);
+    var month=parseInt(monthVal.split('-')[1]);
+    var startDate=new Date(year,month-1,1);
+    var endDate=new Date(year,month,0,23,59,59,999); // 月末日
+
+    var v2logs=getV2Logs();
+    var allLogs=v2logs.filter(function(l){
+      if(!l.date) return false;
+      var d=new Date(l.date);
+      return d>=startDate && d<=endDate;
+    });
+
+    var hits=allLogs.filter(function(l){return (l.miss||[]).includes('hit');});
+    var total=allLogs.length;
+    var hitCount=hits.length;
+    var rate=total?Math.round(hitCount/total*100):0;
+
+    var hitsWithPay=hits.map(function(l){
+      return{venue:l.venue,raceNum:l.raceNum,pay:parsePayout(l.payout)};
+    }).filter(function(l){return l.pay>0;});
+
+    // 配当高い順に上位5件
+    var top5=hitsWithPay.slice().sort(function(a,b){return b.pay-a.pay;}).slice(0,5);
+
+    // 総回収額
+    var totalPay=hitsWithPay.reduce(function(s,l){return s+l.pay;},0);
+
+    var monthStr=month+'月';
+    var lines=[];
+    lines.push(year+'年'+monthStr+'　月次結果🚤');
+    lines.push('');
+
+    if(top5.length>0){
+      top5.forEach(function(l){
+        var fireStr=l.pay>=6000?'🔥':'';
+        lines.push('🎯 '+l.venue+(l.raceNum||'')+'　'+fireStr+'¥'+l.pay.toLocaleString()+fireStr);
+      });
+      if(hitsWithPay.length>5){
+        lines.push('　…他 '+(hitsWithPay.length-5)+'件的中');
+      }
+    } else {
+      lines.push('今月は的中なし…来月こそ💪');
+    }
+
+    lines.push('');
+    lines.push('📊 '+total+'R中 '+hitCount+'的中（'+rate+'%）');
+    // 総回収は表示しない
+    lines.push('');
+    lines.push('#競艇予想 #ボートレース');
+
+    var postText=document.getElementById('monthly-post-text');
+    var postResult=document.getElementById('monthly-post-result');
+    if(!postText||!postResult){showToast('表示エラー');return;}
+    postText.textContent=lines.join('\n');
+    postResult.style.display='block';
+  }catch(e){showToast('エラー: '+e.message);}
+}
+
+function copyMonthlyPost(){
+  var pt=document.getElementById('monthly-post-text');
+  if(!pt||!pt.textContent){showToast('先にポストを生成してください');return;}
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(pt.textContent).then(function(){showToast('📋 コピーしました');});
+  }else{
+    var ta=document.createElement('textarea');
+    ta.value=pt.textContent;
+    document.body.appendChild(ta);ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('📋 コピーしました');
+  }
+}
+
 function copyPost(){
   var pt=document.getElementById('post-text');
   var pt=document.getElementById('post-text');
@@ -706,6 +795,27 @@ function toggleMiss(el,ctx){
   else{document.querySelectorAll(`#${gridId} .miss-btn[data-val="hit"],#${gridId} .miss-btn[data-val="miseru"]`).forEach(b=>b.classList.remove('selected'));}
   el.classList.toggle('selected');
 }
+
+// ===== 日付自動設定 =====
+(function(){
+  try{
+    var today=new Date();
+    // 週次: 先週月〜日
+    var dow=today.getDay();
+    var diffMon=dow===0?6:dow-1;
+    var lastMon=new Date(today); lastMon.setDate(today.getDate()-diffMon-7);
+    var lastSun=new Date(lastMon); lastSun.setDate(lastMon.getDate()+6);
+    function toYMD(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+    var wsEl=document.getElementById('weekly-start');
+    var weEl=document.getElementById('weekly-end');
+    if(wsEl) wsEl.value=toYMD(lastMon);
+    if(weEl) weEl.value=toYMD(lastSun);
+    // 月次: 先月
+    var lastMonth=new Date(today.getFullYear(),today.getMonth()-1,1);
+    var mmEl=document.getElementById('monthly-month');
+    if(mmEl) mmEl.value=lastMonth.getFullYear()+'-'+String(lastMonth.getMonth()+1).padStart(2,'0');
+  }catch(e){}
+})();
 
 // ===== URLパラメータから配当を受け取ってkyotei_v2に反映 =====
 function applyPayFromUrl(){
