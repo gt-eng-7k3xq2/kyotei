@@ -540,6 +540,18 @@ function calcAreScore(boats, nigeRate){
 
     b.areScore = Math.max(0, s);
     b.attackRate = attack;
+
+    // スコア内訳を保存（分析用）
+    b.scoreDetail = {
+      attack:  Math.round(attack * 0.4 * 10) / 10,
+      exRank:  Math.round((5 - b.exRank) * 3 * 10) / 10,
+      lapRank: Math.round((5 - b.lapRank) * 3 * 10) / 10,
+      st:      (!b.stF && b.st!==null && stMax>stMin) ? Math.round((stMax - b.st) / (stMax - stMin) * 15 * 10) / 10 : 0,
+      tokuten: Math.round((b.tokuten||0) / tokuMax * 15 * 10) / 10,
+      cRen2:   Math.round((b.courseRen2||0) / cRen2Max * 10 * 10) / 10,
+      motor:   motorMax>0 ? Math.round((b.motor2ren||0) / motorMax * 10 * 10) / 10 : 0,
+      pen:     (b.nyuse===1 && nigeRate!==null && nigeRate<50 ? -15 : 0) + (b.stF ? -15 : 0),
+    };
   });
 
   // ランク付け
@@ -1187,12 +1199,17 @@ function autoSaveLog(text){
     yonkaku: String(sorted[3]?sorted[3].n:''),
     go:      String(sorted[4]?sorted[4].n:''),
     sixth:   String(sorted[5]?sorted[5].n:''),
-    scores: sorted.map(function(b){return {n:String(b.n), score:Math.round(b.areScore*10)/10};}),
+    scores: sorted.map(function(b){return {
+      n:     String(b.n),
+      score: Math.round(b.areScore*10)/10,
+      detail: b.scoreDetail || null,
+    };}),
     result: '',
     payout: '',
     bets: honsen.map(function(b){return{val:b,type:'honsen'};}).concat(osaee.map(function(b){return{val:b,type:'osaee'};})),
     miss: [],
-    memo: ''
+    memo: '',
+    nigeRateSrc: calcData.parsed.nigeRateSrc || '',
   };
 
   currentEntry = v2entry;
@@ -1245,13 +1262,33 @@ function commitLog(id){
     entry.payout=payoutStr;
     var bets=entry.bets.map(function(b){return b.val;});
     var miss=[];
-    if(bets.indexOf(combo)>=0){miss=['hit'];}
-    else{
-      var r1=String(sel[1]),maru=entry.maru,shiro=entry.shiro;
-      var r2=String(sel[2]),r3=String(sel[3]);
-      if(r1===maru||r1===shiro){miss=['nichaku'];}
-      else if(r2===maru||r2===shiro||r3===maru||r3===shiro){miss=['ichaku'];}
-      else{miss=['ichaku'];}
+    var r1=String(sel[1]),r2=String(sel[2]),r3=String(sel[3]);
+    var maru=entry.maru,shiro=entry.shiro,sankaku=entry.sankaku,yonkaku=entry.yonkaku,goStr=entry.go;
+    if(bets.indexOf(combo)>=0){
+      miss=['hit'];
+    } else {
+      // lossType自動判定
+      var allPrints=[maru,shiro,sankaku,yonkaku,goStr].filter(Boolean);
+      var maruIn=[r1,r2,r3].includes(maru); // ◎が3着以内に来たか
+      var shiroIn=[r1,r2,r3].includes(shiro); // ○が3着以内に来たか
+
+      if(!maruIn && !shiroIn){
+        // ◎○共に圏外 → 軸ミス
+        miss=['ichaku','軸ミス'];
+      } else if(r1===maru||r1===shiro){
+        // ◎か○が1着 → 紐ズレ（3着候補が外れ）
+        miss=['nichaku','紐ズレ'];
+      } else if(maruIn||shiroIn){
+        // ◎○は来てるが1着でない → 1着外れ
+        // イン負け判定: 逃げ率65%以上 かつ 1号艇が1着
+        if(r1==='1' && entry.nigeRate>=65){
+          miss=['ichaku','イン負け'];
+        } else {
+          miss=['ichaku','軸外れ'];
+        }
+      } else {
+        miss=['ichaku'];
+      }
     }
     entry.miss=miss;
     localStorage.setItem('kyotei_v2',JSON.stringify(v2logs));
