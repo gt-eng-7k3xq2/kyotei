@@ -1212,6 +1212,7 @@ function autoSaveLog(text){
 
 // ===== 結果入力 =====
 function selectBtn(id,place,n){
+  id=parseInt(id)||id;
   if(!window['_rb_'+id])return;
   window['_rb_'+id][place]=n;
   [1,2,3,4,5,6].forEach(function(i){
@@ -1221,6 +1222,7 @@ function selectBtn(id,place,n){
 }
 
 function commitLog(id){
+  id=parseInt(id)||id;
   var sel=window['_rb_'+id];
   if(!sel||!sel[1]||!sel[2]||!sel[3]){
     [1,2,3].forEach(function(place){
@@ -1262,6 +1264,7 @@ function commitLog(id){
 }
 
 function skipLog(id){
+  id=parseInt(id)||id;
   var v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
   var idx=v2logs.findIndex(function(l){return l.id===id;});
   if(idx>=0){
@@ -1320,6 +1323,7 @@ function updateLogSummary(){
 
 
 function openResultInput(id){
+  id=parseInt(id)||id;
   var logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
   var entry=logs.find(function(l){return l.id===id;});
   if(!entry)return;
