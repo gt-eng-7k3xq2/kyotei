@@ -230,7 +230,7 @@ textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radi
 
 <script>
 var calcData = null;
-var currentPts = 12; // 12点固定
+var currentPts = 13; // 13点固定
 
 function setPts(pts){
   currentPts = pts;
@@ -614,13 +614,14 @@ function makeAreBets(sorted, pts, nigeRate){
   var s  = String(sorted[1].n); // ○
   var sa = String(sorted[2].n); // ▲
   var yo = String(sorted[3].n); // △
+  var go = sorted[4] ? String(sorted[4].n) : ''; // ▽
 
-  var use1 = (nigeRate < 65) && (m !== '1') && (s !== '1') && (sa !== '1') && (yo !== '1'); // 1号艇を2着に入れるか
+  var use1 = (nigeRate < 65) && (m !== '1') && (s !== '1') && (sa !== '1') && (yo !== '1');
 
   var honsen, osaee;
 
   if(use1){
-    // 逃げ率65%未満: 1号艇2着を含む構成
+    // 逃げ率65%未満: 1号艇2着を含む構成（13点）
     honsen = [
       m+'-'+s+'-1',   // ◎-○-1
       m+'-'+s+'-'+sa, // ◎-○-▲
@@ -628,6 +629,7 @@ function makeAreBets(sorted, pts, nigeRate){
       m+'-1-'+sa,     // ◎-1-▲
       m+'-'+sa+'-'+s, // ◎-▲-○
       m+'-'+sa+'-1',  // ◎-▲-1
+      m+'-'+s+'-'+go, // ◎-○-▽
     ];
     osaee = [
       s+'-'+m+'-1',   // ○-◎-1
@@ -638,7 +640,7 @@ function makeAreBets(sorted, pts, nigeRate){
       yo+'-'+s+'-'+m, // △-○-◎
     ];
   } else {
-    // 逃げ率65%以上: ◎○▲△のみ
+    // 逃げ率65%以上: ◎○▲△▽のみ（13点）
     honsen = [
       m+'-'+s+'-'+sa,  // ◎-○-▲
       m+'-'+s+'-'+yo,  // ◎-○-△
@@ -646,6 +648,7 @@ function makeAreBets(sorted, pts, nigeRate){
       m+'-'+sa+'-'+yo, // ◎-▲-△
       m+'-'+yo+'-'+s,  // ◎-△-○
       m+'-'+yo+'-'+sa, // ◎-△-▲
+      m+'-'+s+'-'+go,  // ◎-○-▽
     ];
     osaee = [
       s+'-'+m+'-'+sa,  // ○-◎-▲
