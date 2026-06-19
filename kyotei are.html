@@ -327,7 +327,7 @@ function parseData(raw){
   var courseRen3Local=null,courseRen3_6M=null,courseRen3Koki=null;
   var courseLocalCount=0;
   var inWaku2Ren=false,inWaku3Ren=false;
-  var inKeimari=false,keimariContext='',inKeimari6M=false;
+  var inKeimari=false,keimariContext='',inKeimari6M=false,keimariNextIs6M=false,keimariType='';
 
   function v6(line){
     var cols=line.split('\t'),out=[];
@@ -446,12 +446,25 @@ function parseData(raw){
       }
 
       // 決まり手（差し率・捲り率・捲り差し率）直近6ヶ月のみ使用
+      // データ構造: 「決まり手」行→「直近6ヶ月」行でフラグON
+      // 「差され\t差し」行でkeimariType='sashi'→次行の数値を取得、以降同様
       if(inKeimari6M){
-        if(label==='差し'){var dmv=v6(line);for(var j=0;j<6;j++)if(dmv[j]!==null)boats[j].sashiRate=dmv[j];inKeimari6M=false;}
-        else if(label==='捲り'){var mkv=v6(line);for(var j=0;j<6;j++)if(mkv[j]!==null)boats[j].makuriRate=mkv[j];inKeimari6M=false;}
-        else if(label==='捲り差し'){var mksv=v6(line);for(var j=0;j<6;j++)if(mksv[j]!==null)boats[j].makuriSashiRate=mksv[j];inKeimari6M=false;}
+        if(label.includes('差し')&&!label.includes('捲り')){keimariType='sashi';}
+        else if(label.includes('捲り')&&!label.includes('差し')){keimariType='makuri';}
+        else if(label.includes('捲り')&&label.includes('差し')){keimariType='makuriSashi';}
+        else if(keimariType){
+          // 数値行
+          var kv=v6(line);
+          if(keimariType==='sashi'){for(var j=0;j<6;j++)if(kv[j]!==null)boats[j].sashiRate=kv[j];}
+          else if(keimariType==='makuri'){for(var j=0;j<6;j++)if(kv[j]!==null)boats[j].makuriRate=kv[j];}
+          else if(keimariType==='makuriSashi'){for(var j=0;j<6;j++)if(kv[j]!==null)boats[j].makuriSashiRate=kv[j];}
+          keimariType='';
+        }
+        // 直近1年など次のセクションに入ったらフラグOFF
+        if(line.includes('直近1年')||line.includes('直近 1年')||line.includes('直近3ヶ月')){inKeimari6M=false;keimariType='';}
       }
-      if((line.includes('直近6ヶ月')||line.includes('直近 6ヶ月'))&&(line.includes('逃げ')||line.includes('差し')||line.includes('捲り'))){inKeimari6M=true;}
+      if(label==='決まり手'){inKeimari6M=false;keimariNextIs6M=true;keimariType='';}
+      if(keimariNextIs6M&&(line.includes('直近6ヶ月')||line.includes('直近 6ヶ月'))){inKeimari6M=true;keimariNextIs6M=false;}
     }
 
     // モーター2連対率
