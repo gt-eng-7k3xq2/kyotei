@@ -918,8 +918,8 @@ async function doGenerate(){
     var betsResultG = calcData.betsResult || {honsen:calcData.bets, osaee:[]};
     var honsenG = betsResultG.honsen;
     var osaeeG  = betsResultG.osaee;
-    var honsenStr = compressBets(honsenG) || honsenG.join('/');
-    var osaeeStr  = osaeeG.length ? (compressBets(osaeeG) || osaeeG.join('/')) : '';
+    var honsenStr = compressBets(honsenG) || honsenG.join(' / ');
+    var osaeeStr  = osaeeG.length ? (compressBets(osaeeG) || osaeeG.join(' / ')) : '';
     text = text.replace('HONSEN_PLACEHOLDER', honsenStr);
     if(osaeeStr) text = text.replace('OSAEE_PLACEHOLDER', osaeeStr);
 
@@ -946,8 +946,8 @@ async function doGenerate(){
         commentLine = xl; break;
       }
       // 買い目を ' / ' 区切りに変換
-      var honsenForX = honsenStr.replace(/\//g, ' / ');
-      var osaeeForX  = osaeeStr.replace(/\//g, ' / ');
+      var honsenForX = honsenStr;
+      var osaeeForX  = osaeeStr;
 
       var newX = '【Xサマリー】\n'+venue+raceNum+'R\n';
       if(commentLine) newX += '\n'+commentLine+'\n';
@@ -1149,8 +1149,8 @@ function regenerateBets(){
   var betsResult=makeAreBets(calcData.sorted, currentPts, calcData.nigeRate||0);
   var honsen=betsResult.honsen;
   var osaee=betsResult.osaee;
-  var honsenStr=compressBets(honsen)||honsen.join('/');
-  var osaeeStr=osaee.length?(compressBets(osaee)||osaee.join('/')):'';
+  var honsenStr=compressBets(honsen)||honsen.join(' / ');
+  var osaeeStr=osaee.length?(compressBets(osaee)||osaee.join(' / ')):''
   var hyokaOrder=buildHyokaOrder(calcData.sorted);
   var text=document.getElementById('outText').textContent;
   var xIdxC=text.indexOf('【Xサマリー】');
