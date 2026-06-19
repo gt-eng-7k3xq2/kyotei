@@ -579,31 +579,90 @@ function formatBetBlock(betsResult, pts){
 /* ===== 買い目圧縮 ===== */
 function compressBets(betsArr){
   var valid=betsArr.filter(function(b){return /^[1-6]-[1-6]-[1-6]$/.test(b);});
-  if(!valid.length)return '';
-  var used=[];
+  if(!valid.length) return '';
+  var used={};
   var parts=[];
-  function isUsed(i){return used.indexOf(i)>=0;}
-  function markUsed(arr){arr.forEach(function(i){if(used.indexOf(i)<0)used.push(i);});}
-  var byFirstSecond={};
-  valid.forEach(function(b,i){if(isUsed(i))return;var key=b[0]+'-'+b[2];if(!byFirstSecond[key])byFirstSecond[key]=[];byFirstSecond[key].push(i);});
-  Object.keys(byFirstSecond).forEach(function(key){
-    var indices=byFirstSecond[key].filter(function(i){return !isUsed(i);});
-    if(indices.length>=2){var thirds=indices.map(function(i){return valid[i][4];}).sort();parts.push(key+'-'+thirds.join(''));markUsed(indices);}
+
+  // ステップ1: 1着固定で2着候補⊂3着候補（真部分集合）→ X-AB-ABC
+  var by1={};
+  valid.forEach(function(b){
+    if(!by1[b[0]]) by1[b[0]]=[];
+    by1[b[0]].push(b);
   });
-  var bySecondThird={};
-  valid.forEach(function(b,i){if(isUsed(i))return;var key=b[2]+'-'+b[4];if(!bySecondThird[key])bySecondThird[key]=[];bySecondThird[key].push(i);});
-  Object.keys(bySecondThird).forEach(function(key){
-    var indices=bySecondThird[key];var unused=indices.filter(function(i){return !isUsed(i);});
-    if(unused.length>=2){var firsts=unused.map(function(i){return valid[i][0];}).sort();parts.push(firsts.join('')+'-'+key);markUsed(unused);}
+  Object.keys(by1).sort().forEach(function(first){
+    var group=by1[first];
+    if(group.length<2) return;
+    var secSet={},thiSet={};
+    group.forEach(function(b){secSet[b[2]]=1;thiSet[b[4]]=1;});
+    var seconds=Object.keys(secSet).sort();
+    var thirds=Object.keys(thiSet).sort();
+    if(seconds.join('')===thirds.join('')) return;
+    if(!seconds.every(function(s){return thirds.indexOf(s)>=0;})) return;
+    var expected=[];
+    seconds.forEach(function(s){
+      thirds.forEach(function(t){
+        if(s!==t&&s!==first&&t!==first) expected.push(first+'-'+s+'-'+t);
+      });
+    });
+    var groupSet={};
+    group.forEach(function(b){groupSet[b]=1;});
+    if(expected.length===group.length&&expected.every(function(e){return groupSet[e];})){
+      parts.push(first+'-'+seconds.join('')+'-'+thirds.join(''));
+      group.forEach(function(b){used[b]=true;});
+    }
   });
-  var byFirstThird={};
-  valid.forEach(function(b,i){if(isUsed(i))return;var key=b[0]+'-'+b[4];if(!byFirstThird[key])byFirstThird[key]=[];byFirstThird[key].push(i);});
-  Object.keys(byFirstThird).forEach(function(key){
-    var indices=byFirstThird[key];var unused=indices.filter(function(i){return !isUsed(i);});
-    if(unused.length>=2){var parts2=key.split('-');var seconds=unused.map(function(i){return valid[i][2];}).sort();parts.push(parts2[0]+'-'+seconds.join('')+'-'+parts2[1]);markUsed(unused);}
+
+  // ステップ2: 2着・3着が同じ → XY-Z-W
+  var by23={};
+  valid.forEach(function(b){
+    if(used[b]) return;
+    var key=b[2]+'-'+b[4];
+    if(!by23[key]) by23[key]=[];
+    by23[key].push(b);
   });
-  valid.forEach(function(b,i){if(!isUsed(i))parts.push(b);});
-  return parts.join('/');
+  Object.keys(by23).sort().forEach(function(key){
+    var group=by23[key].filter(function(b){return !used[b];});
+    if(group.length>=2){
+      parts.push(group.map(function(b){return b[0];}).sort().join('')+'-'+key);
+      group.forEach(function(b){used[b]=true;});
+    }
+  });
+
+  // ステップ3: 1着・2着が同じ → X-Y-ZW
+  var by12={};
+  valid.forEach(function(b){
+    if(used[b]) return;
+    var key=b[0]+'-'+b[2];
+    if(!by12[key]) by12[key]=[];
+    by12[key].push(b);
+  });
+  Object.keys(by12).sort().forEach(function(key){
+    var group=by12[key].filter(function(b){return !used[b];});
+    if(group.length>=2){
+      parts.push(key+'-'+group.map(function(b){return b[4];}).sort().join(''));
+      group.forEach(function(b){used[b]=true;});
+    }
+  });
+
+  // ステップ4: 1着・3着が同じ → X-YZ-W
+  var by13={};
+  valid.forEach(function(b){
+    if(used[b]) return;
+    var key=b[0]+'-'+b[4];
+    if(!by13[key]) by13[key]=[];
+    by13[key].push(b);
+  });
+  Object.keys(by13).sort().forEach(function(key){
+    var group=by13[key].filter(function(b){return !used[b];});
+    if(group.length>=2){
+      var sp=key.split('-');
+      parts.push(sp[0]+'-'+group.map(function(b){return b[2];}).sort().join('')+'-'+sp[1]);
+      group.forEach(function(b){used[b]=true;});
+    }
+  });
+
+  valid.forEach(function(b){if(!used[b])parts.push(b);});
+  return parts.join(' / ');
 }
 
 /* ===== 評価順文字列生成 ===== */
@@ -628,7 +687,7 @@ function makeAreBets(sorted, pts, nigeRate){
   var yo = String(sorted[3].n); // △
   var go = sorted[4] ? String(sorted[4].n) : ''; // ▽
 
-  var use1 = (nigeRate < 65) && (m !== '1') && (s !== '1') && (sa !== '1') && (yo !== '1');
+  var use1 = (nigeRate < 65) && (m !== '1') && (s !== '1') && (sa !== '1') && (yo !== '1') && (go !== '1');
 
   var honsen, osaee;
 
@@ -672,6 +731,10 @@ function makeAreBets(sorted, pts, nigeRate){
     ];
   }
 
+  // 重複除去
+  var seen={};
+  honsen=honsen.filter(function(b){if(seen[b])return false;seen[b]=1;return true;});
+  osaee=osaee.filter(function(b){if(seen[b])return false;seen[b]=1;return true;});
   return {honsen:honsen, osaee:osaee};
 }
 
@@ -804,8 +867,14 @@ function buildPrompt(){
     var marks2 = ['◎','○','▲','△','▽','×'];
     p += marks2[i]+b.n+' 苗字(短評)\n';
   });
+  // ◎号艇の丸数字を生成
+  var maruNum = sorted[0]?sorted[0].n:1;
+  var maruCircle = ['','❶','❷','❸','❹','❺','❻'][maruNum]||('❶');
+  var shiroNum = sorted[1]?sorted[1].n:2;
+  var shiroCircle = ['','❶','❷','❸','❹','❺','❻'][shiroNum]||('❷');
+
   p += '\n【Xサマリー】\n'+venue+raceNum+'R\n';
-  p += '一言コメントを以下の出力例から最も当てはまるものを選び、丸数字と苗字を実際のデータに当てはめて1行のみ出力せよ。説明・テンプレ名・矢印は一切出力禁止。【出力例】荒れ展開、❶苗字の捲りで高配当。／❶苗字頭で波乱を狙う。／❷苗字の差しに期待。／穴狙い❶苗字から。／❶苗字か❷苗字、3着に波乱。\n';
+  p += '一言コメントを以下の出力例から最も当てはまるものを選び、丸数字と苗字を実際のデータに当てはめて1行のみ出力せよ。説明・テンプレ名・矢印は一切出力禁止。◎は'+maruCircle+'（'+maruNum+'号艇）、○は'+shiroCircle+'（'+shiroNum+'号艇）を使うこと。【出力例】荒れ展開、'+maruCircle+'苗字から波乱想定。／'+maruCircle+'苗字頭で波乱を狙う。／'+maruCircle+'苗字の差しに期待。／穴狙い'+maruCircle+'苗字から。／'+maruCircle+'苗字か'+shiroCircle+'苗字、3着に波乱。\n';
   p += 'HYOKA_ORDER\n';
   p += '本線　HONSEN_PLACEHOLDER\n';
   if(osaee.length) p += '抑え　OSAEE_PLACEHOLDER\n';
@@ -876,11 +945,15 @@ async function doGenerate(){
         if(xl.startsWith('【')) break;
         commentLine = xl; break;
       }
+      // 買い目を ' / ' 区切りに変換
+      var honsenForX = honsenStr.replace(/\//g, ' / ');
+      var osaeeForX  = osaeeStr.replace(/\//g, ' / ');
+
       var newX = '【Xサマリー】\n'+venue+raceNum+'R\n';
-      if(commentLine) newX += commentLine+'\n\n';
+      if(commentLine) newX += '\n'+commentLine+'\n';
       newX += hyokaOrder+'\n';
-      newX += '本線\u3000'+honsenStr+'\n';
-      if(osaeeStr) newX += '抑え\u3000'+osaeeStr+'\n';
+      newX += '\n本線\u3000'+honsenForX+'\n';
+      if(osaeeForX) newX += '抑え\u3000'+osaeeForX+'\n';
       newX += '\nG.';
       text = text.slice(0, xIdx) + newX;
     }
@@ -920,9 +993,8 @@ function copyOut(){
 }
 
 function formatXSummary(raw){
-  var lines=raw.trim().split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length>0;});
-  if(lines.length===0)return '';
-  return lines[0]+'\n\n'+lines.slice(1).join('\n');
+  // 既にnewXで正しいフォーマットで保存されてるのでそのまま返す
+  return raw.replace(/^\n+/,'').replace(/\n+$/,'');
 }
 
 function copyXOnly(){
