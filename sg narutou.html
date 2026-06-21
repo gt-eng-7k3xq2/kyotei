@@ -110,11 +110,13 @@
     <div class="row2">
       <div><label>資金 (円)</label><input type="number" id="inp-shikin" value="3000" step="100"></div>
       <div>
-        <label>買い目点数（荒れ時）</label>
+        <label>買い目点数</label>
         <div class="betcount-row">
+          <button class="bc-btn" onclick="setBetCount(4,this)">4</button>
+          <button class="bc-btn" onclick="setBetCount(6,this)">6</button>
+          <button class="bc-btn" onclick="setBetCount(8,this)">8</button>
           <button class="bc-btn active" onclick="setBetCount(12,this)">12</button>
-          <button class="bc-btn" onclick="setBetCount(14,this)">14</button>
-          <button class="bc-btn" onclick="setBetCount(15,this)">15</button>
+          <button class="bc-btn" onclick="setBetCount(13,this)">13</button>
           <button class="bc-btn" onclick="setBetCount(16,this)">16</button>
         </div>
       </div>
@@ -290,7 +292,7 @@ function generateBets(d, areScores, mode){
   const ranking=parseRanking(document.getElementById('ai-raw').textContent||'');
   if(!ranking.length){showToast('AIランキングがありません');return;}
 
-  const betsRaw=mode==='are'?buildBetsAre(ranking,selectedBetCount):buildBetsNormal(ranking);
+  const betsRaw=mode==='are'?buildBetsAre(ranking,selectedBetCount):buildBetsNormal(ranking,selectedBetCount);
   const nigeRate=d.boats[0].atchiNige>0?d.boats[0].atchiNige:d.boats[0].nigerate6m;
   const{areIndex}=calcAreIndex(d);
 
@@ -782,18 +784,33 @@ function parseRanking(text){
 // ============================================================
 // 買い目生成（JS固定）
 // ============================================================
-function buildBetsNormal(ranking){
+function buildBetsNormal(ranking,pts){
   if(ranking.length<4) return [];
+  const p=pts||4;
   const fst=ranking[0].boat;
   const sec=[ranking[1].boat,ranking[2].boat];
-  const trd=[ranking[1].boat,ranking[2].boat,ranking[3].boat];
-  const bets=[],seen=new Set();
+  const trd=[ranking[1].boat,ranking[2].boat,ranking[3].boat,ranking[4]?ranking[4].boat:null].filter(Boolean);
+  const pool=[],seen=new Set();
+  // 本線: 1着固定
   for(const s of sec) for(const t of trd){
     if(t===fst||t===s) continue;
     const key=`${fst}-${s}-${t}`;
-    if(!seen.has(key)){seen.add(key);bets.push({val:key,type:'本線'});}
+    if(!seen.has(key)){seen.add(key);pool.push({val:key,type:'本線'});}
   }
-  return bets.slice(0,4);
+  // 点数が足りない場合: ○頭の抑えを追加
+  if(p>pool.length && ranking.length>=3){
+    const b=ranking[1].boat,c=ranking[2].boat;
+    const d=ranking[3]?ranking[3].boat:null;
+    const extras=[
+      `${b}-${fst}-${c}`,`${b}-${c}-${fst}`,
+      d?`${fst}-${d}-${sec[0]}`:null,d?`${fst}-${d}-${sec[1]}`:null,
+      d?`${b}-${fst}-${d}`:null,d?`${b}-${d}-${fst}`:null,
+    ].filter(Boolean);
+    for(const k of extras){
+      if(!seen.has(k)){seen.add(k);pool.push({val:k,type:'抑え'});}
+    }
+  }
+  return pool.slice(0,p);
 }
 
 function buildBetsAre(ranking,pts){
