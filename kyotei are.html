@@ -449,9 +449,10 @@ function parseData(raw){
       // データ構造: 「決まり手」行→「直近6ヶ月」行でフラグON
       // 「差され\t差し」行でkeimariType='sashi'→次行の数値を取得、以降同様
       if(inKeimari6M){
-        if(label.includes('差し')&&!label.includes('捲り')){keimariType='sashi';}
-        else if(label.includes('捲り')&&!label.includes('差し')){keimariType='makuri';}
-        else if(label.includes('捲り')&&label.includes('差し')){keimariType='makuriSashi';}
+        var fullLabel=line.split('\t').join('');
+        if(fullLabel.includes('差し')&&!fullLabel.includes('捲り')){keimariType='sashi';}
+        else if(fullLabel.includes('捲り')&&!fullLabel.includes('差し')){keimariType='makuri';}
+        else if(fullLabel.includes('捲り')&&fullLabel.includes('差し')){keimariType='makuriSashi';}
         else if(keimariType){
           // 数値行
           var kv=v6(line);
