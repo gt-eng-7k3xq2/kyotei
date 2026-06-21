@@ -348,15 +348,42 @@ function parseData(text){
     [1,3,5].forEach((idx,i)=>{d.boats[i].atchiNige=parseFloat(atchiSection[idx])||0;});
   }
 
-  // 決まり手（直近6ヶ月）
-  const kimariSection=text.match(/決まり手[\s\S]*?直近6ヶ月[\s\S]*?差し\n([\d.]+)%\s*([\d.]+)%\s*([\d.]+)%\s*([\d.]+)%\s*([\d.]+)%\s*([\d.]+)%[\s\S]*?捲り\n([\d.]+)%\s*([\d.]+)%\s*([\d.]+)%\s*([\d.]+)%\s*([\d.]+)%\s*([\d.]+)%[\s\S]*?捲り差し\n([\d.]+)%\s*([\d.]+)%\s*([\d.]+)%\s*([\d.]+)%\s*([\d.]+)%\s*([\d.]+)%/);
-  if(kimariSection){
-    for(let i=0;i<6;i++){
-      d.boats[i].sashi6m=parseFloat(kimariSection[i+1])||0;
-      d.boats[i].makuri6m=parseFloat(kimariSection[i+7])||0;
-      d.boats[i].makurisashi6m=parseFloat(kimariSection[i+13])||0;
+  // 決まり手（直近6ヶ月）- 2ステップパーサー（kyotei_are.html準拠）
+  (function(){
+    var lines2=text.split('\n');
+    var inK6M=false,nextIs6M=false,kType='';
+    function kv6(line){
+      var cols=line.split('\t'),out=[];
+      for(var ci=0;ci<cols.length&&out.length<6;ci++){
+        var v=(cols[ci]||'').trim().replace(/%/,'');
+        var n=parseFloat(v);
+        out.push(isNaN(n)?null:n);
+      }
+      while(out.length<6)out.push(null);
+      return out;
     }
-  }
+    for(var li=0;li<lines2.length;li++){
+      var ln=lines2[li].trim();
+      var lb=(ln.split('\t')[0]||'').trim().replace(/\s+/g,'');
+      if(lb==='決まり手'){inK6M=false;nextIs6M=true;kType='';continue;}
+      if(nextIs6M&&(ln.includes('直近6ヶ月')||ln.includes('直近 6ヶ月'))){inK6M=true;nextIs6M=false;continue;}
+      if(!inK6M)continue;
+      if(ln.includes('直近1年')||ln.includes('直近 1年')||ln.includes('直近3ヶ月')){inK6M=false;kType='';continue;}
+      if(lb.includes('差し')&&!lb.includes('捲り')){kType='sashi';continue;}
+      if(lb.includes('捲り')&&!lb.includes('差し')){kType='makuri';continue;}
+      if(lb.includes('捲り')&&lb.includes('差し')){kType='makuriSashi';continue;}
+      if(kType){
+        var kvals=kv6(ln);
+        for(var j=0;j<6;j++){
+          if(kvals[j]===null)continue;
+          if(kType==='sashi')d.boats[j].sashi6m=kvals[j];
+          else if(kType==='makuri')d.boats[j].makuri6m=kvals[j];
+          else if(kType==='makuriSashi')d.boats[j].makurisashi6m=kvals[j];
+        }
+        kType='';
+      }
+    }
+  })();
 
   // SG/G1 1着率
   const sgSection=text.match(/SG\/G1\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)/);
