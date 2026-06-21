@@ -451,6 +451,11 @@ function parseData(text){
   if(syukaiFootSection){
     for(let i=0;i<6;i++) d.boats[i].syukaiFoot=parseFloat(syukaiFootSection[i+1])||0;
   }
+  // 周回タイム（表示用）
+  const syukaiTimeSection=text.match(/(?:^|\n)周回\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/m);
+  if(syukaiTimeSection){
+    for(let i=0;i<6;i++) d.boats[i].syukai=parseFloat(syukaiTimeSection[i+1])||0;
+  }
   // 今節平均周り足（直前なければ補完）
   const avgSyukaiFootSection=text.match(/^(?:平均周足|平均周り足)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/m);
   if(avgSyukaiFootSection){
@@ -546,11 +551,16 @@ function calcAreScore(d){
     // ⑥ モーター2連対率 max10pt（相対化）
     if(motorMax>0) s+=(b.motor2ren||0)/motorMax*10;
 
-    // ⑦ 1号艇ペナルティ（逃げ率<50%）-15pt
-    if(b.no===1&&nigeRate1<50) s-=15;
+    // ⑦ 1号艇評価（逃げ率に応じてボーナス/ペナルティ）
+    if(b.no===1){
+      if(nigeRate1>=70) s+=10;       // 逃げ率70%以上 → 大きくボーナス
+      else if(nigeRate1>=60) s+=5;   // 60%以上 → ボーナス
+      else if(nigeRate1>=50) s+=0;   // 50%以上 → 現状維持
+      else s-=10;                     // 50%未満 → ペナルティ（-15→-10に緩和）
+    }
 
-    // ⑧ 未消化Fペナルティ -15pt（F休み持ち艇のみ）
-    if(b.isF) s-=15;
+    // ⑧ 未消化Fペナルティ -10pt（F休み持ち艇のみ、-15→-10に緩和）
+    if(b.isF) s-=10;
 
     return{no:b.no, raw:Math.max(0,s), tenji:b.tenji, syukai:b.syukai,
       _atk:atk*0.4, _ex:(b.exRank>=0?(5-b.exRank)*3:0),
