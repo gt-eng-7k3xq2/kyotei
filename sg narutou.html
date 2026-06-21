@@ -371,9 +371,10 @@ function parseData(text){
       if(nextIs6M&&(ln.includes('直近6ヶ月')||ln.includes('直近 6ヶ月'))){inK6M=true;nextIs6M=false;continue;}
       if(!inK6M)continue;
       if(ln.includes('直近1年')||ln.includes('直近 1年')||ln.includes('直近3ヶ月')){inK6M=false;kType='';continue;}
-      if(lb.includes('差し')&&!lb.includes('捲り')){kType='sashi';continue;}
-      if(lb.includes('捲り')&&!lb.includes('差し')){kType='makuri';continue;}
-      if(lb.includes('捲り')&&lb.includes('差し')){kType='makuriSashi';continue;}
+      var fullLb=ln.split('\t').join('');
+      if(fullLb.includes('差し')&&!fullLb.includes('捲り')){kType='sashi';continue;}
+      if(fullLb.includes('捲り')&&!fullLb.includes('差し')){kType='makuri';continue;}
+      if(fullLb.includes('捲り')&&fullLb.includes('差し')){kType='makuriSashi';continue;}
       if(kType){
         var kvals=kv6(ln);
         for(var j=0;j<6;j++){
