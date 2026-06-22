@@ -465,10 +465,15 @@ function parseData(text){
   if(syukaiFootSection){
     for(let i=0;i<6;i++) d.boats[i].syukaiFoot=parseFloat(syukaiFootSection[i+1])||0;
   }
-  // 周回タイム（表示用）
+  // 周回タイム（直前・ランク計算にも使用）
   const syukaiTimeSection=text.match(/(?:^|\n)周回\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/m);
   if(syukaiTimeSection){
     for(let i=0;i<6;i++) d.boats[i].syukai=parseFloat(syukaiTimeSection[i+1])||0;
+  }
+  // 平均周回タイム（直前なければ補完）
+  const avgSyukaiSection=text.match(/^(?:平均周回|平均周り回)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/m);
+  if(avgSyukaiSection){
+    for(let i=0;i<6;i++) d.boats[i].avgSyukai=parseFloat(avgSyukaiSection[i+1])||0;
   }
   // 今節平均周り足（直前なければ補完）
   const avgSyukaiFootSection=text.match(/^(?:平均周足|平均周り足)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/m);
@@ -513,11 +518,13 @@ function calcAreScore(d){
   // 展示ランク（タイム小さいほど良い）: 直前||平均展示
   const exVals=boats.map(b=>b.tenji||b.avgTenji||99);
   const exOrder=[...boats].sort((a,b)=>(a.tenji||a.avgTenji||99)-(b.tenji||b.avgTenji||99));
-  // 周回足ランク（スコア大きいほど良い）: 直前||平均周足
-  const lapOrder=[...boats].sort((a,b)=>(b.syukaiFoot||b.avgSyukaiFoot||0)-(a.syukaiFoot||a.avgSyukaiFoot||0));
+  // 周回タイムランク（タイム小さいほど良い）: 直前||平均周回
+  const lapOrder=[...boats].sort((a,b)=>(a.syukai||a.avgSyukai||99)-(b.syukai||b.avgSyukai||99));
   boats.forEach(b=>{
     b.exRank=exOrder.findIndex(x=>x.no===b.no);
     b.lapRank=lapOrder.findIndex(x=>x.no===b.no);
+    // フォールバック: syukaiが0の場合はavgSyukaiを補完
+    if(!b.syukai&&b.avgSyukai) b.syukai=b.avgSyukai;
   });
 
   // 合成ST計算（節間平均ST × 0.7 ＋ コース別平均ST × 0.3）
