@@ -1066,48 +1066,25 @@ function clearYoso(){
 //     6-4-5/6-1-5 → 6-41-5
 function compressBetsSG(bets){
   const vals=bets.map(b=>b.val);
+  if(!vals.length) return '';
 
-  // Step1: 1着-2着でグループ化（3着をまとめる）
-  const g12={};
+  // 1着でグループ化し、2着・3着をそれぞれunionで圧縮
+  // 例: 2-1-3/2-3-1 → 2-13-13
+  const g1={};
+  const g1order=[];
   for(const v of vals){
     const p=v.split('-');
     if(p.length!==3) continue;
-    const key=p[0]+'-'+p[1];
-    if(!g12[key]) g12[key]=[];
-    if(!g12[key].includes(p[2])) g12[key].push(p[2]);
+    if(!g1[p[0]]){g1[p[0]]={sec:[],trd:[]};g1order.push(p[0]);}
+    if(!g1[p[0]].sec.includes(p[1])) g1[p[0]].sec.push(p[1]);
+    if(!g1[p[0]].trd.includes(p[2])) g1[p[0]].trd.push(p[2]);
   }
-
-  // Step2: 展開して1着-3着でグループ化（2着をまとめる）
-  // まず1着-2着圧縮を作る
-  const pass1=Object.entries(g12).map(([key,thirds])=>({
-    str:key+'-'+thirds.join(''),
-    first:key.split('-')[0],
-    second:key.split('-')[1],
-    thirds
-  }));
-
-  // 同じ1着で3着が同じものを2着でまとめる
-  const g13={};
-  for(const v of vals){
-    const p=v.split('-');
-    if(p.length!==3) continue;
-    const key=p[0]+'-'+p[2];
-    if(!g13[key]) g13[key]=[];
-    if(!g13[key].includes(p[1])) g13[key].push(p[1]);
-  }
-
-  // どちらの圧縮が短いか比較して短い方を採用
-  // 方針: まず1着-2着でグループ化、結果を文字数比較
-  // 3着・2着を番号若い順にソート
-  const result1=Object.entries(g12).map(([key,thirds])=>key+'-'+thirds.slice().sort((a,b)=>parseInt(a)-parseInt(b)).join('')).join('/');
-
-  // 1着-3着グループ化（2着を番号若い順）
-  const result2=Object.entries(g13).map(([key,seconds])=>{
-    const p=key.split('-');
-    return p[0]+'-'+seconds.slice().sort((a,b)=>parseInt(a)-parseInt(b)).join('')+'-'+p[1];
+  const result=g1order.map(first=>{
+    const sec=g1[first].sec.slice().sort((a,b)=>parseInt(a)-parseInt(b)).join('');
+    const trd=g1[first].trd.slice().sort((a,b)=>parseInt(a)-parseInt(b)).join('');
+    return first+'-'+sec+'-'+trd;
   }).join('/');
-
-  return result1.length<=result2.length?result1:result2;
+  return result;
 }
 
 function buildXSummary(withAmount){
@@ -1143,8 +1120,20 @@ function buildXSummary(withAmount){
 
   const fmtBets=(arr)=>{
     if(withAmount){
-      // 金額込みは1点ずつ列挙
-      return getRealBets(arr).map(b=>`${b.val}(¥${(b.amount||0).toLocaleString()})`).join('/');
+      // 金額が同じものをまとめて圧縮表示
+      const withAmt=getRealBets(arr);
+      // 金額ごとにグループ化
+      const amtGroups={};
+      for(const b of withAmt){
+        const key=b.amount||0;
+        if(!amtGroups[key]) amtGroups[key]=[];
+        amtGroups[key].push(b.val);
+      }
+      // 金額降順でグループを並べる
+      return Object.entries(amtGroups)
+        .sort((a,b)=>parseInt(b[0])-parseInt(a[0]))
+        .map(([amt,vals])=>compressBetsSG(vals.map(v=>({val:v})))+`　¥${parseInt(amt).toLocaleString()}`)
+        .join('\n　　　');
     }
     // 圧縮表示
     return compressBetsSG(arr);
