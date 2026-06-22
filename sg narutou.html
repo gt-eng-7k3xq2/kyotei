@@ -344,11 +344,25 @@ function parseData(text){
   if(nigeSection){
     [1,3,5,7,9,11].forEach((idx,i)=>{d.boats[i].nigerate6m=parseFloat(nigeSection[idx])||0;});
   }
-  // 当地逃げ率
-  const atchiSection=text.match(/当地\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)/);
-  if(atchiSection){
-    [1,3,5].forEach((idx,i)=>{d.boats[i].atchiNige=parseFloat(atchiSection[idx])||0;});
-  }
+  // 当地逃げ率（行ベース・6艇分）
+  (function(){
+    var lines3=text.split('\n');
+    var inAre=false;
+    for(var li=0;li<lines3.length;li++){
+      var ln=lines3[li];
+      if(ln.includes('1着率')&&!inAre){inAre=true;continue;}
+      if(!inAre)continue;
+      if(ln.includes('当地')){
+        var vals=[];
+        var re=/([\d.]+)%/g,m2;
+        while((m2=re.exec(ln))!==null) vals.push(parseFloat(m2[1]));
+        for(var j=0;j<Math.min(vals.length,6);j++) d.boats[j].atchiNige=vals[j];
+        break;
+      }
+      if(ln.includes('直近')&&inAre&&ln.includes('%')) continue;
+      if(ln.includes('2連対率')) break;
+    }
+  })();
 
   // 決まり手（直近6ヶ月）- 2ステップパーサー（kyotei_are.html準拠）
   (function(){
@@ -551,12 +565,13 @@ function calcAreScore(d){
     // ⑥ モーター2連対率 max10pt（相対化）
     if(motorMax>0) s+=(b.motor2ren||0)/motorMax*10;
 
-    // ⑦ 1号艇評価（逃げ率に応じてボーナス/ペナルティ）
+    // ⑦ 1号艇評価（当地・SG逃げ率に応じてボーナス/ペナルティ）
     if(b.no===1){
-      if(nigeRate1>=70) s+=10;       // 逃げ率70%以上 → 大きくボーナス
-      else if(nigeRate1>=60) s+=5;   // 60%以上 → ボーナス
-      else if(nigeRate1>=50) s+=0;   // 50%以上 → 現状維持
-      else s-=10;                     // 50%未満 → ペナルティ（-15→-10に緩和）
+      if(nigeRate1>=75) s+=15;       // 逃げ率75%以上 → 大ボーナス
+      else if(nigeRate1>=65) s+=10;  // 65%以上 → ボーナス
+      else if(nigeRate1>=55) s+=5;   // 55%以上 → 小ボーナス
+      else if(nigeRate1>=45) s+=0;   // 45%以上 → 現状維持
+      else s-=10;                     // 45%未満 → ペナルティ
     }
 
     // ⑧ 未消化Fペナルティ -10pt（F休み持ち艇のみ、-15→-10に緩和）
