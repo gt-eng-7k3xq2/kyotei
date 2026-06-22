@@ -924,7 +924,9 @@ function setAllocMode(mode){
 // 予想実行
 // ============================================================
 async function runYoso(){
-  if(!getApiKey()){showToast('APIキーを設定してください');openKeyModal();return;}
+  // Gemini不使用のためAPIキー不要
+  const _unused=true;
+  if(false&&!getApiKey()){showToast('APIキーを設定してください');openKeyModal();return;}
   const data=document.getElementById('inp-data').value.trim();
   if(!data){showToast('データを入力してください');return;}
   const racenum=document.getElementById('inp-racenum').value||'?';
@@ -966,19 +968,19 @@ async function runYoso(){
       return;
     }
 
-    // 4. AIランキング（ランキングのみ）
-    const aiText=await callGemini(buildPrompt(data,areScores,mode));
-    document.getElementById('ai-raw').textContent=aiText;
-    const ranking=parseRanking(aiText);
-    if(!ranking.length){document.getElementById('ai-raw').textContent=aiText+'\n\n⚠️ランキング解析失敗';return;}
+    // 4. JSスコアによる機械的ランキング生成（Gemini不使用）
+    const marks=['◎','○','▲','△','▽','×'];
+    const ranking=areScores.map((s,i)=>({rank:i+1,boat:parseInt(s.no),mark:marks[i]||'×'}));
+
+    // ランキングテキスト表示
+    const rankText=ranking.map(r=>`${r.rank}位 ${r.boat}号艇 ${r.mark}`).join('\n');
+    document.getElementById('ai-raw').textContent=rankText;
 
     // パース済みデータ・スコアを保持（モード選択後に使用）
     currentParsedData=d;
     currentAreScores=areScores;
 
-    // JSスコアを参考にデフォルトモードを提案（ユーザーが変更可能）
-    const suggestedMode=mode; // calcAreIndexの参考値
-    setMode(suggestedMode);
+    setMode(mode);
 
     // bet-sectionは非表示のまま（ユーザーがモード選択後に生成）
     document.getElementById('bet-section').style.display='none';
