@@ -282,23 +282,7 @@
 
   <div class="card">
     <div class="card-title">📋 BMペースト</div>
-    <textarea id="harai-paste" placeholder="boatrace.jpの払戻ページからコピーしたテキストを貼付け"></textarea>
-    <button class="btn btn-ghost" onclick="parsePaste()">3連単を自動検出</button>
-  </div>
-</div>
 
-
-  <div id="logSummary" style="margin-bottom:12px;"></div>
-  <div id="logAnalysis" style="margin-bottom:8px;"></div>
-  <div id="log-list"></div>
-  <p id="log-empty" style="text-align:center;color:var(--muted);padding:40px;font-size:13px;">ログなし</p>
-</div>
-
-    <div id="modal-race-label" style="font-size:12px;color:var(--muted);margin-bottom:12px;"></div>
-    <div id="modal-body"></div>
-    <button onclick="closeResultModal()" class="btn btn-ghost" style="margin-top:8px;">キャンセル</button>
-  </div>
-</div>
 
 
 <div class="toast" id="toast"></div>
@@ -1838,6 +1822,10 @@ function renderEvalCard(xText, venue, racenum){
   if(ctr) container.appendChild(ctr);
   if(cbl) container.appendChild(cbl);
 
+  // バッジサイズをinlineで固定（html2canvas/Safari対応）
+  var slotW=Math.floor((container.offsetWidth||320)/6);
+  var badgeSz=Math.min(slotW-8, 52);
+
   rankData.forEach(function(d,idx){
     if(idx>0){
       var arrow=document.createElement('div');
@@ -1849,6 +1837,9 @@ function renderEvalCard(xText, venue, racenum){
     slot.className='eval-slot';
     var badge=document.createElement('div');
     badge.className='eval-badge';
+    badge.style.width=badgeSz+'px';
+    badge.style.height=badgeSz+'px';
+    badge.style.fontSize=Math.floor(badgeSz*0.65)+'px';
     var col=BOAT_COLORS[d.boat]||BOAT_COLORS[1];
     badge.style.background=col.bg;
     badge.style.color=col.text;
@@ -1867,167 +1858,44 @@ function renderEvalCard(xText, venue, racenum){
 }
 
 function saveEvalCard(){
+  var card=document.getElementById('evalCard');
+  if(!card)return;
   var btn=document.querySelector('.eval-save-btn');
-  function resetBtn(){if(btn){btn.textContent='📥 評価カードを保存・共有';btn.disabled=false;}}
-  if(btn){btn.textContent='生成中...';btn.disabled=true;}
-  try{
-    var COLORS={1:{bg:'#a8a8a8',text:'#000'},2:{bg:'#3a3a3a',text:'#fff'},3:{bg:'#c42222',text:'#fff'},4:{bg:'#1e52cc',text:'#fff'},5:{bg:'#cc9a00',text:'#000'},6:{bg:'#168432',text:'#fff'}};
-    var STARS={'◎':5,'○':4,'▲':3,'△':2,'▽':1,'×':1};
-    var marks=['◎','○','▲','△','▽','×'];
-    if(!currentAreScores||!currentAreScores.length){showToast('予想を実行してください');resetBtn();return;}
-    var rankData=currentAreScores.map(function(s,i){return{boat:parseInt(s.no),mark:marks[i]||'×'};});
-
-    var DPR=3;
-    var W=564, H=248;
-    var canvas=document.createElement('canvas');
-    canvas.width=W*DPR; canvas.height=H*DPR;
-    var ctx=canvas.getContext('2d');
-    ctx.scale(DPR,DPR);
-
-    // ── 背景（黒固定）
-    ctx.fillStyle='#0c0c0c';
-    _rrect(ctx,0,0,W,H,10); ctx.fill();
-
-    // ── タイトル
-    var venue=(document.getElementById('inp-venue')||{}).value||'';
-    var racenum=(document.getElementById('inp-racenum')||{}).value||'';
-    var titleText='G.の総合評価🚤'+(venue&&racenum?'　'+venue+racenum+'R':'');
-    ctx.save();
-    ctx.font='italic bold 24px serif';
-    ctx.fillStyle='#e8c96a';
-    ctx.textAlign='center';
-    ctx.shadowColor='rgba(200,153,60,0.55)';
-    ctx.shadowBlur=20;
-    ctx.fillText(titleText, W/2, 36);
-    ctx.restore();
-
-    // ── ブラシライン
-    var gb=ctx.createLinearGradient(W*0.22,0,W*0.78,0);
-    gb.addColorStop(0,'transparent');
-    gb.addColorStop(0.2,'rgba(255,220,80,0.3)');
-    gb.addColorStop(0.5,'rgba(255,220,80,0.6)');
-    gb.addColorStop(0.8,'rgba(255,220,80,0.3)');
-    gb.addColorStop(1,'transparent');
-    ctx.fillStyle=gb;
-    ctx.beginPath(); ctx.ellipse(W/2,46,W*0.27,5,0,0,Math.PI*2); ctx.fill();
-
-    // ── ボートエリア
-    var BAX=12, BAY=58, BAW=W-24, BAH=155;
-    ctx.fillStyle='#141414';
-    ctx.strokeStyle='#2e2e2e';
-    ctx.lineWidth=1;
-    ctx.beginPath(); _rrect(ctx,BAX,BAY,BAW,BAH,8); ctx.fill(); ctx.stroke();
-
-    // ── コーナー装飾
-    var cS=14, cP=7;
-    ctx.strokeStyle='#c9a84c'; ctx.lineWidth=2;
-    // TR
-    ctx.beginPath();
-    ctx.moveTo(BAX+BAW-cP-cS, BAY+cP);
-    ctx.lineTo(BAX+BAW-cP,    BAY+cP);
-    ctx.lineTo(BAX+BAW-cP,    BAY+cP+cS);
-    ctx.stroke();
-    // BL
-    ctx.beginPath();
-    ctx.moveTo(BAX+cP+cS, BAY+BAH-cP);
-    ctx.lineTo(BAX+cP,    BAY+BAH-cP);
-    ctx.lineTo(BAX+cP,    BAY+BAH-cP-cS);
-    ctx.stroke();
-
-    // ── 各スロット
-    var N=rankData.length;
-    var slotW=BAW/N;
-    var BADGE=82;           // バッジ一辺
-    var BADGE_R=10;
-    var BADGE_CY=BAY+18+BADGE/2;   // バッジ中心Y
-    var STAR_Y=BADGE_CY+BADGE/2+16; // 星Y（バッジ下端+16）
-    var STAR_SZ=11;
-
-    rankData.forEach(function(d,i){
-      var cx=BAX+slotW*i+slotW/2;
-      var bx=cx-BADGE/2;
-      var by=BADGE_CY-BADGE/2;
-
-      // 矢印
-      if(i>0){
-        ctx.fillStyle='#4a4a4a';
-        ctx.font='bold 12px sans-serif';
-        ctx.textAlign='center';
-        ctx.textBaseline='middle';
-        ctx.fillText('›', cx-slotW/2, BADGE_CY);
-        ctx.textBaseline='alphabetic';
-      }
-
-      // バッジ
-      var col=COLORS[d.boat]||COLORS[1];
-      ctx.fillStyle=col.bg;
-      ctx.beginPath(); _rrect(ctx,bx,by,BADGE,BADGE,BADGE_R); ctx.fill();
-
-      // 号数
-      ctx.fillStyle=col.text;
-      ctx.font='bold 48px sans-serif';
-      ctx.textAlign='center';
-      ctx.textBaseline='middle';
-      ctx.fillText(String(d.boat), cx, BADGE_CY+2);
-      ctx.textBaseline='alphabetic';
-
-      // 星（バッジ直下・5つ・バッジ幅内に収める）
-      var sc=STARS[d.mark]||1;
-      var totalW=STAR_SZ*5+2*4;
-      var sx=cx-totalW/2;
-      for(var s=0;s<5;s++){
-        ctx.fillStyle=s<sc?'#c9a84c':'#2a2a2a';
-        ctx.font=STAR_SZ+'px sans-serif';
-        ctx.textAlign='left';
-        ctx.textBaseline='alphabetic';
-        ctx.fillText('★', sx+s*(STAR_SZ+2), STAR_Y);
-      }
-    });
-
-    // ── ゴールドライン（下部2本）
-    [H-22, H-16].forEach(function(gy){
-      var gl=ctx.createLinearGradient(0,0,W,0);
-      gl.addColorStop(0,'transparent'); gl.addColorStop(0.1,'#8a6010');
-      gl.addColorStop(0.3,'#c9a84c');  gl.addColorStop(0.5,'#ffe580');
-      gl.addColorStop(0.7,'#c9a84c');  gl.addColorStop(0.9,'#8a6010');
-      gl.addColorStop(1,'transparent');
-      ctx.fillStyle=gl; ctx.fillRect(0,gy,W,1.5);
-    });
-    // ゴールドドット
-    var gd=ctx.createRadialGradient(W/2,H-22,0,W/2,H-22,5);
-    gd.addColorStop(0,'#ffe580'); gd.addColorStop(0.55,'#c9a84c'); gd.addColorStop(1,'transparent');
-    ctx.fillStyle=gd; ctx.beginPath(); ctx.arc(W/2,H-22,5,0,Math.PI*2); ctx.fill();
-
-    // ── 共有 or 表示
+  btn.textContent='生成中...';
+  btn.disabled=true;
+  html2canvas(card,{
+    scale:3,
+    useCORS:true,
+    backgroundColor:'#0a0a0a',
+    logging:false,
+    allowTaint:true
+  }).then(function(canvas){
     canvas.toBlob(function(blob){
-      if(!blob){showToast('画像生成失敗');resetBtn();return;}
       var file=new File([blob],'G_評価カード.png',{type:'image/png'});
       if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-        navigator.share({files:[file],title:'G.の総合評価'})
-          .then(function(){if(btn){btn.textContent='✅ 共有しました';setTimeout(resetBtn,2500);}})
-          .catch(function(){_showEvalImg(canvas);resetBtn();});
+        navigator.share({files:[file],title:'G.の総合評価'}).then(function(){
+          btn.textContent='✅ 共有しました';
+          setTimeout(function(){btn.textContent='📥 評価カードを保存・共有';btn.disabled=false;},2000);
+        }).catch(function(){
+          btn.textContent='📥 評価カードを保存・共有';
+          btn.disabled=false;
+        });
       } else {
-        _showEvalImg(canvas); resetBtn();
+        var url=URL.createObjectURL(blob);
+        var link=document.createElement('a');
+        link.download='G_評価カード.png';
+        link.href=url;
+        link.click();
+        setTimeout(function(){URL.revokeObjectURL(url);},1000);
+        btn.textContent='✅ 保存しました';
+        setTimeout(function(){btn.textContent='📥 評価カードを保存・共有';btn.disabled=false;},2000);
       }
     },'image/png');
-  }catch(e){showToast('生成エラー: '+e.message);resetBtn();}
-}
-
-function _rrect(ctx,x,y,w,h,r){
-  ctx.beginPath();
-  ctx.moveTo(x+r,y);
-  ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r);
-  ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
-  ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
-  ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r);
-  ctx.closePath();
-}
-
-function _showEvalImg(canvas){
-  var dataUrl=canvas.toDataURL('image/png');
-  var wrap=document.getElementById('evalImgWrap');
-  var img=document.getElementById('evalImg');
-  if(wrap&&img){img.src=dataUrl;wrap.style.display='block';wrap.scrollIntoView({behavior:'smooth',block:'nearest'});}
+  }).catch(function(){
+    btn.textContent='📥 評価カードを保存・共有';
+    btn.disabled=false;
+    showToast('生成失敗。スクリーンショットで保存してください。');
+  });
 }
 
 // ============================================================
