@@ -148,7 +148,6 @@
 <div class="tabs">
   <button class="tab active" onclick="switchTab('yoso')">予想</button>
   <button class="tab" onclick="switchTab('harai')">払戻</button>
-  <button class="tab" onclick="switchTab('tsudoi')">集い</button>
   <button class="tab" onclick="switchTab('log')">ログ</button>
 </div>
 
@@ -169,7 +168,6 @@
         </select>
       </div>
       <div><label>レース番号</label><input type="number" id="inp-racenum" placeholder="6" min="1" max="12"></div>
-      <div><label>本日の投入本目</label><select id="inp-honme"><option value="1">1本目</option><option value="2">2本目</option><option value="3">3本目</option></select></div>
     </div>
   </div>
   <div class="card">
@@ -305,10 +303,6 @@
   </div>
 </div>
 
-<!-- 集いタブ -->
-<div id="page-tsudoi" class="page">
-  <div class="card">
-    <div class="card-title">🏆 集い成績</div>
     <div class="stat-grid">
       <div class="stat-item"><div class="stat-val gold" id="st-kaisu">0/3</div><div class="stat-label">本日投入 / 上限</div></div>
       <div class="stat-item"><div class="stat-val" id="st-teki">0件</div><div class="stat-label">的中</div></div>
@@ -398,7 +392,7 @@ function applyMode(){
 
 function generateBets(d, areScores, mode){
   const racenum=document.getElementById('inp-racenum').value||'?';
-  const honme=document.getElementById('inp-honme').value;
+  const honme='1';
   const shikin=parseInt(document.getElementById('inp-shikin').value)||3000;
   const oddsMap=extractOddsMap(document.getElementById('inp-data').value);
   const ranking=parseRanking(document.getElementById('ai-raw').textContent||'');
@@ -415,7 +409,7 @@ function generateBets(d, areScores, mode){
     <span class="mode-badge ${modeCls}" style="font-size:11px;padding:3px 10px;">${modeLabel}</span>
     <span class="info-chip">荒れ指数 <span>${areIndex}点</span></span>
     <span class="info-chip">逃げ率 <span>${nigeRate.toFixed(1)}%</span></span>
-    <span class="info-chip">${racenum}R / ${honme}本目</span>
+    <span class="info-chip">${racenum}R</span>
     <span class="info-chip">買い目 <span>${betsRaw.length}点</span></span>`;
 
   // テーブル描画
@@ -447,10 +441,9 @@ function generateBets(d, areScores, mode){
 }
 
 function switchTab(name){
-  ['yoso','harai','tsudoi','log'].forEach((n,i)=>document.querySelectorAll('.tab')[i].classList.toggle('active',n===name));
+  ['yoso','harai','log'].forEach((n,i)=>document.querySelectorAll('.tab')[i].classList.toggle('active',n===name));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
-  if(name==='tsudoi') renderTsudoi();
   if(name==='log') renderLog();
   if(name==='harai') renderHaraiSel();
 }
@@ -1024,7 +1017,7 @@ async function runYoso(){
   const data=document.getElementById('inp-data').value.trim();
   if(!data){showToast('データを入力してください');return;}
   const racenum=document.getElementById('inp-racenum').value||'?';
-  const honme=document.getElementById('inp-honme').value;
+  const honme='1';
   const shikin=parseInt(document.getElementById('inp-shikin').value)||3000;
 
   document.getElementById('yoso-result').style.display='block';
@@ -1096,24 +1089,25 @@ function clearYoso(){
 // ============================================================
 // Xサマリー生成
 // ============================================================
-// 買い目を圧縮: 同じ1着-2着でまとめ、さらに同じ1着-3着もまとめる
-// 例: 4-1-6/4-1-2 → 4-1-62
-//     6-4-5/6-1-5 → 6-41-5
+// 買い目を圧縮: 1着固定で2着・3着それぞれ集約
+// 例: 1-2-4/1-4-2 → 1-24-24
+//     4-2-1/4-2-3/4-1-2/4-3-1 → 4-123-123
 function compressBetsSG(bets){
   const vals=bets.map(b=>b.val);
   if(!vals.length) return '';
-
-  // 1着-2着固定で3着をまとめる（正確な圧縮）
-  // 例: 1-2-3/1-2-4 → 1-2-34
-  const g12={}, g12order=[];
+  const g1={}, order1=[];
   for(const v of vals){
     const p=v.split('-');
     if(p.length!==3) continue;
-    const key=p[0]+'-'+p[1];
-    if(!g12[key]){g12[key]=[];g12order.push(key);}
-    if(!g12[key].includes(p[2])) g12[key].push(p[2]);
+    if(!g1[p[0]]){g1[p[0]]={s:[],t:[]};order1.push(p[0]);}
+    if(!g1[p[0]].s.includes(p[1])) g1[p[0]].s.push(p[1]);
+    if(!g1[p[0]].t.includes(p[2])) g1[p[0]].t.push(p[2]);
   }
-  return g12order.map(k=>k+'-'+g12[k].slice().sort((a,b)=>parseInt(a)-parseInt(b)).join('')).join('/');
+  return order1.map(f=>{
+    const sStr=g1[f].s.slice().sort((a,b)=>parseInt(a)-parseInt(b)).join('');
+    const tStr=g1[f].t.slice().sort((a,b)=>parseInt(a)-parseInt(b)).join('');
+    return f+'-'+sStr+'-'+tStr;
+  }).join('/');
 }
 
 function buildXSummary(withAmount){
