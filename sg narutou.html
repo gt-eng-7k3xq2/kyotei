@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>⚡SG鳴門 集い専用エンジン</title>
+<title>⚡G. 予想エンジン</title>
 <style>
   :root{--bg:#0a0a0f;--surface:#13131c;--surface2:#1c1c2e;--border:#2a2a40;--gold:#c9a84c;--gold2:#f0d080;--red:#e05050;--blue:#4a9eff;--green:#4caf7d;--text:#e8e8f0;--muted:#7070a0;--font:-apple-system,'Hiragino Sans',sans-serif;}
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
@@ -81,12 +81,70 @@
   .modal-wrap{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:100;padding:20px;align-items:center;justify-content:center;}
   .modal-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;width:100%;max-width:360px;}
   .modal-title{font-size:14px;font-weight:700;color:var(--gold);margin-bottom:12px;}
+
+/* === 通常エンジン移植CSS === */
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:14px;border-bottom:2px solid var(--text);}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-icon{width:34px;height:34px;background:var(--text);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900;color:#fff;font-family:'Noto Serif JP',serif;}
+.logo-text{font-size:16px;font-weight:700;color:var(--text);font-family:'Noto Serif JP',serif;}
+.logo-sub{font-size:10px;color:var(--text-muted);margin-top:1px;}
+.ver{font-size:10px;color:var(--text-sub);background:var(--surface);border:1px solid var(--border);padding:3px 9px;border-radius:2px;}
+.mode-row{display:flex;gap:6px;margin-bottom:10px;}
+.mode-btn{flex:1;padding:11px;border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;cursor:pointer;font-family:'Noto Sans JP',sans-serif;}
+.mode-btn.active{background:var(--text);color:#fff;border:2px solid var(--text);}
+.mode-btn.inactive{background:var(--surface);color:var(--text-sub);border:1px solid var(--border);}
+.pts-row{display:flex;gap:6px;margin-bottom:10px;}
+.pts-btn{flex:1;padding:8px 4px;border-radius:4px;font-size:12px;font-weight:700;-webkit-appearance:none;cursor:pointer;font-family:'Noto Sans JP',sans-serif;text-align:center;}
+.pts-btn.active{background:var(--accent);color:#fff;border:2px solid var(--accent);}
+.pts-btn.inactive{background:var(--surface);color:var(--text-sub);border:1px solid var(--border);}
+.api-row{display:flex;gap:8px;}
+.api-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;padding:10px;outline:none;font-family:monospace;}
+.api-input.saved{border-color:#a0d0b0;color:var(--green);}
+.api-save{background:var(--text);color:#fff;border:none;padding:10px 14px;border-radius:4px;font-size:12px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;}
+.calc-result{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;margin-top:12px;display:none;}
+.calc-result.show{display:block;}
+.loading{text-align:center;padding:24px 0;display:none;}
+.loading.show{display:block;}
+.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 8px;}
+.loading-txt{font-size:11px;color:var(--text-muted);}
+.out-wrap{display:none;margin-top:14px;}
+.out-wrap.show{display:block;}
+.out-hdr{font-size:10px;color:var(--text-sub);letter-spacing:1.5px;font-weight:700;margin-bottom:8px;text-transform:uppercase;}
+.out-text{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:14px;font-size:12px;color:var(--text);line-height:2.0;white-space:pre-wrap;word-break:break-word;}
+.copy-btn{width:100%;margin-top:8px;padding:11px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;}
+.copy-btn.ok{background:var(--green-light);color:var(--green);border-color:#a0d8b0;}
+.section-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;margin-bottom:12px;}
+.section-card.hidden{display:none;}
+.sec-step-label{font-size:10px;color:var(--text-sub);letter-spacing:1.5px;font-weight:700;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px;text-transform:uppercase;}
+.step-next-btn{width:100%;padding:13px;background:var(--text);color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:700;-webkit-appearance:none;margin-top:12px;font-family:'Noto Serif JP',serif;letter-spacing:1px;cursor:pointer;touch-action:manipulation;}
+.mark-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;position:relative;z-index:100;isolation:isolate;}
+.eval-card-wrap{margin-top:14px;display:none;}
+.eval-card-wrap.show{display:block;}
+.eval-card-hdr{font-size:10px;color:var(--text-sub);letter-spacing:1.5px;font-weight:700;margin-bottom:8px;text-transform:uppercase;}
+.eval-card{position:relative;border-radius:10px;overflow:hidden;padding:16px 14px 18px;background:#0c0c0c;}
+.eval-card-title{text-align:center;font-family:'Noto Serif JP',serif;font-style:italic;font-weight:900;font-size:clamp(20px,5vw,32px);letter-spacing:.04em;color:#e8c96a;text-shadow:0 0 20px rgba(200,153,60,0.3),0 2px 4px rgba(0,0,0,1);margin-bottom:5px;line-height:1.1;}
+.eval-brush{display:block;height:9px;margin:0 auto 12px;width:52%;background:linear-gradient(90deg,transparent 0%,rgba(180,140,30,.45) 20%,rgba(255,220,80,.65) 50%,rgba(180,140,30,.45) 80%,transparent 100%);border-radius:50%;filter:blur(2.5px);}
+.eval-boats{background:#141414;border:1px solid #2e2e2e;border-radius:8px;padding:14px 8px 12px;position:relative;display:flex;align-items:flex-start;justify-content:space-between;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 4px 24px rgba(0,0,0,.9);}
+.eval-corner-tr{position:absolute;top:5px;right:5px;width:16px;height:16px;border-top:2px solid #c9a84c;border-right:2px solid #c9a84c;}
+.eval-corner-bl{position:absolute;bottom:5px;left:5px;width:16px;height:16px;border-bottom:2px solid #c9a84c;border-left:2px solid #c9a84c;}
+.eval-gold-lines{position:relative;margin-top:10px;display:flex;flex-direction:column;gap:3px;padding:0 0 2px;}
+.eval-gold-dot{position:absolute;width:9px;height:9px;left:50%;transform:translateX(-50%);top:0;background:radial-gradient(circle,#ffe580 0%,#c9a84c 55%,transparent 100%);border-radius:50%;}
+.eval-gold-line{height:1.4px;background:linear-gradient(90deg,transparent 0%,#8a6010 12%,#c9a84c 32%,#ffe580 50%,#c9a84c 68%,#8a6010 88%,transparent 100%);}
+.eval-hint{margin-top:9px;color:#4a4a4a;font-size:.65rem;text-align:center;}
+.eval-save-btn{width:100%;margin-top:8px;padding:11px;background:linear-gradient(135deg,#7a5800,#c9a84c,#ffe580,#c9a84c,#7a5800);color:#000;border:none;border-radius:6px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:'Noto Sans JP',sans-serif;cursor:pointer;letter-spacing:.05em;}
+.eval-slot{display:flex;flex-direction:column;align-items:center;gap:6px;width:13%;}
+.eval-badge{width:100%;aspect-ratio:1;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:clamp(22px,7vw,40px);font-weight:900;font-family:'Anton',sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.7);}
+.eval-arrow{color:#4a4a4a;font-size:14px;font-weight:700;align-self:center;margin-bottom:22px;flex-shrink:0;}
+.eval-stars{display:flex;gap:1px;justify-content:center;flex-wrap:nowrap;width:100%;}
+.eval-star-on{color:#c9a84c;font-size:clamp(8px,2.3vw,13px);line-height:1;}
+.eval-star-off{color:#2a2a2a;font-size:clamp(8px,2.3vw,13px);line-height:1;}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 <div class="header">
   <div><div class="header-title">⚡ SG鳴門 集い専用</div><div class="header-sub">第36回 グランドチャンピオン 6/23〜28</div></div>
-  <button class="key-btn" onclick="openKeyModal()">APIキー</button>
+ 
 </div>
 <div class="tabs">
   <button class="tab active" onclick="switchTab('yoso')">予想</button>
@@ -100,6 +158,17 @@
   <div class="card">
     <div class="card-title">📋 レース情報</div>
     <div class="row2">
+      <div>
+        <label>場所</label>
+        <select id="inp-venue" onchange="saveVenueRace()" style="width:100%;padding:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;font-size:14px;">
+          <option value="">場所を選択</option>
+          <option>桐生</option><option>戸田</option><option>江戸川</option><option>平和島</option><option>多摩川</option>
+          <option>浜名湖</option><option>蒲郡</option><option>常滑</option><option>津</option><option>三国</option>
+          <option>びわこ</option><option>住之江</option><option>尼崎</option><option>鳴門</option><option>丸亀</option>
+          <option>児島</option><option>宮島</option><option>徳山</option><option>下関</option><option>若松</option>
+          <option>芦屋</option><option>福岡</option><option>唐津</option><option>大村</option>
+        </select>
+      </div>
       <div><label>レース番号</label><input type="number" id="inp-racenum" placeholder="6" min="1" max="12"></div>
       <div><label>本日の投入本目</label><select id="inp-honme"><option value="1">1本目</option><option value="2">2本目</option><option value="3">3本目</option></select></div>
     </div>
@@ -183,6 +252,32 @@
       </div>
     </div>
     </div><!-- /bet-section -->
+
+    <!-- 評価カード -->
+    <div class="eval-card-wrap" id="evalCardWrap">
+    <div class="div"></div>
+    <div class="eval-card-hdr">評価カード</div>
+    <div class="eval-card" id="evalCard">
+      <div class="eval-card-title" id="evalCardTitle">G.の総合評価🚤</div>
+      <span class="eval-brush"></span>
+      <div class="eval-boats" id="evalBoats">
+        <div class="eval-corner-tr"></div>
+        <div class="eval-corner-bl"></div>
+      </div>
+      <div class="eval-gold-lines">
+        <div class="eval-gold-line"></div>
+        <div class="eval-gold-line"></div>
+        <div class="eval-gold-dot"></div>
+      </div>
+    </div>
+    <button class="eval-save-btn" onclick="saveEvalCard()">📥 評価カードを保存・共有</button>
+    <p class="eval-hint">または📱<span>スクリーンショット</span>でも保存できます</p>
+  </div>
+
+    <!-- ログサマリー -->
+    <div id="logSummary" style="margin-top:12px;padding:0 0 20px;"></div>
+    <div id="logAnalysis" style="margin-top:4px;"></div>
+
   </div>
 </div>
 
@@ -320,6 +415,18 @@ function generateBets(d, areScores, mode){
   currentCalcData={racenum,honme,nigeRate,areIndex,mode,betcount:betsRaw.length,shikin,ranking,betsRaw};
   recalcAlloc();
   updateXPreview();
+
+  // 評価カード生成
+  var venue = document.getElementById('inp-venue') ? document.getElementById('inp-venue').value : '';
+  var racenum2 = document.getElementById('inp-racenum') ? document.getElementById('inp-racenum').value : '';
+  var xText = document.getElementById('x-summary-preview') ? document.getElementById('x-summary-preview').value : '';
+  if(typeof renderEvalCard === 'function') renderEvalCard(xText, venue, racenum2);
+
+  // ログ自動保存（SG専用）
+  sgAutoSaveLog(xText, venue, racenum2);
+
+  // ログサマリー更新
+  if(typeof updateLogSummary === 'function') updateLogSummary();
 }
 
 function switchTab(name){
@@ -832,8 +939,14 @@ function buildBetsNormal(ranking,pts){
     const key=`${fst}-${s}-${t}`;
     if(!seen.has(key)){seen.add(key);pool.push({val:key,type:'本線'});}
   }
-  // 抑え: ○頭・▲頭
-  const extras=[
+  // 抑え: ◎が1号艇（逃げレース）は折り返し不要、○頭・▲頭のみ
+  const isNige=(fst===1);
+  const extras=isNige?[
+    // 逃げレース: 1着固定の追加買い目のみ
+    r4?`${fst}-${r4}-${r2}`:null,r4?`${fst}-${r4}-${r3}`:null,
+    r5?`${fst}-${r2}-${r5}`:null,r5?`${fst}-${r3}-${r5}`:null,
+  ].filter(Boolean):[
+    // 非逃げ: ○頭・▲頭の折り返しあり
     `${r2}-${fst}-${r3}`,`${r2}-${r3}-${fst}`,
     `${r3}-${fst}-${r2}`,`${r3}-${r2}-${fst}`,
     r4?`${fst}-${r4}-${r2}`:null,r4?`${fst}-${r4}-${r3}`:null,
@@ -984,6 +1097,7 @@ function setAllocMode(mode){
 // 予想実行
 // ============================================================
 async function runYoso(){
+  saveVenueRace();
   const data=document.getElementById('inp-data').value.trim();
   if(!data){showToast('データを入力してください');return;}
   const racenum=document.getElementById('inp-racenum').value||'?';
@@ -1269,6 +1383,1229 @@ function closeKeyModal(){document.getElementById('key-modal').style.display='non
 function saveKey(){const k=document.getElementById('modal-key-inp').value.trim();if(k){localStorage.setItem(GEMINI_KEY,k);showToast('APIキー保存しました');}closeKeyModal();}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
 (function(){const s=getSettings();document.getElementById('set-maxrace').value=s.maxrace||3;})();
+
+// ===== 通常エンジン移植関数群 =====
+
+// autoSaveLog用のID橋渡し（鳴門エンジンのIDに対応）
+var _sgVenueProxy = {
+  get value(){ var el=document.getElementById('inp-venue'); return el?el.value:''; }
+};
+var _sgRaceNumProxy = {
+  get value(){ var el=document.getElementById('inp-racenum'); return el?el.value:''; }
+};
+
+// autoSaveLog用のcalcData橋渡し
+var calcData = null; // 通常エンジンとの互換性
+
+
+
+// saveVenueRace / loadVenueRace（場所・レース番号の保存）
+function saveVenueRace(){
+  var v=document.getElementById('inp-venue');
+  var r=document.getElementById('inp-racenum');
+  if(v) localStorage.setItem('sg_venue', v.value);
+  if(r) localStorage.setItem('sg_racenum', r.value);
+}
+function loadVenueRace(){
+  var v=localStorage.getItem('sg_venue');
+  var r=localStorage.getItem('sg_racenum');
+  var vEl=document.getElementById('inp-venue');
+  var rEl=document.getElementById('inp-racenum');
+  if(v&&vEl) vEl.value=v;
+  if(r&&rEl) rEl.value=r;
+}
+
+// autoSaveLog用 calcData互換オブジェクト生成
+function buildCalcDataForLog(xText, venue, raceNum){
+  // 通常エンジンのcalcData形式に合わせる
+  return {
+    venue: venue || '',
+    raceNum: raceNum || '',
+    outText: xText || '',
+    pts: selectedBetCount || 8,
+    mode: 'sg',
+  };
+}
+
+// === autoSaveLog ===
+function autoSaveLog(text){
+  if(!calcData)return;
+  var venue=document.getElementById('venue').value||'?';
+  var raceNum=document.getElementById('raceNum').value||'?';
+  // 同日同レースが既存なら上書き（重複防止）
+  var existingLogs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
+  var today=new Date().toISOString().slice(0,10);
+  var dupIdx=existingLogs.findIndex(function(l){
+    return l.venue===venue&&l.raceNum===raceNum&&l.datetime&&l.datetime.slice(0,10)===today&&!l.result;
+  });
+  if(dupIdx>=0){existingLogs.splice(dupIdx,1);}
+  var aiRanking=[];
+  for(var r=1;r<=6;r++){
+    var m=text.match(new RegExp(r+'位[\\s　]*(\\d)号艇'));
+    if(m)aiRanking.push({rank:r,n:parseInt(m[1])});
+  }
+  // 買い目取得：Xサマリーから展開済みで取得（圧縮表記対応）
+  var honsen=[],osaee=[];
+  var xIdx=text.indexOf('【Xサマリー】');
+  var searchText=xIdx>=0?text.slice(xIdx):text;
+  var honsenM=searchText.match(/本線[\s　]+([\S]+)/);
+  var osaeM=searchText.match(/抑え[\s　]+([\S]+)/);
+  function expandBetsLog(str){
+    if(!str)return[];
+    var result=[];
+    str.split('/').forEach(function(seg){
+      seg=seg.trim();if(!seg)return;
+      if(/^[1-6]-[1-6]-[1-6]$/.test(seg)){result.push(seg);return;}
+      var parts=seg.split('-');
+      if(parts.length===3){
+        var s1=parts[0].split('').filter(function(c){return/[1-6]/.test(c);});
+        var s2=parts[1].split('').filter(function(c){return/[1-6]/.test(c);});
+        var s3=parts[2].split('').filter(function(c){return/[1-6]/.test(c);});
+        s1.forEach(function(a){s2.forEach(function(b){s3.forEach(function(c){
+          if(a!==b&&b!==c&&a!==c)result.push(a+'-'+b+'-'+c);
+        });});});
+      }
+    });
+    return result;
+  }
+  honsen=honsenM?expandBetsLog(honsenM[1]):[];
+  osaee=osaeM?expandBetsLog(osaeM[1]):[];
+  // window._lastGenMetaからmaru/shiro/sankaku/pts取得
+  var meta=window._lastGenMeta||{};
+  var boats=calcData.parsed.boats.map(function(b){
+    return{n:b.n,name:b.name,tokuten:b.tokuten,avgST:b.avgST||b.stKoki,kiryokuRank:b.kiryokuRank,sogoRank:b.sogoRank,sogoScore:b.sogoScore?Math.round(b.sogoScore*10)/10:null};
+  });
+  var entry={
+    id:Date.now(),
+    datetime:new Date().toISOString(),
+    venue:venue,
+    raceNum:raceNum,
+    shinkido:calcData.normalResult?calcData.normalResult.shinkido:null,
+    nigeRate:calcData.parsed.nigeRate,
+    areScore:calcData.areResult?calcData.areResult.score:null,
+    pts:meta.pts||currentPts,
+    maru:meta.maru||null,
+    shiro:meta.shiro||null,
+    sankaku:meta.sankaku||null,
+    boats:boats,
+    aiRanking:aiRanking,
+    bets:{honsen:honsen,osaee:osaee},
+    result:null,hit:null,maruResult:null,shiroResult:null,sankakuResult:null
+  };
+  entry.savedAt=Date.now();
+  var logs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
+  logs.push(entry);
+  if(logs.length>200)logs=logs.slice(-200);
+  localStorage.setItem('kyotei_logs',JSON.stringify(logs));
+
+  // ===== kyotei_v2にも書き込む =====
+  writeToV2(entry,honsen,osaee);
+
+  updateLogSummary();
+}
+
+// === expandBetsLog ===
+function expandBetsLog(str){
+    if(!str)return[];
+    var result=[];
+    str.split('/').forEach(function(seg){
+      seg=seg.trim();if(!seg)return;
+      if(/^[1-6]-[1-6]-[1-6]$/.test(seg)){result.push(seg);return;}
+      var parts=seg.split('-');
+      if(parts.length===3){
+        var s1=parts[0].split('').filter(function(c){return/[1-6]/.test(c);});
+        var s2=parts[1].split('').filter(function(c){return/[1-6]/.test(c);});
+        var s3=parts[2].split('').filter(function(c){return/[1-6]/.test(c);});
+        s1.forEach(function(a){s2.forEach(function(b){s3.forEach(function(c){
+          if(a!==b&&b!==c&&a!==c)result.push(a+'-'+b+'-'+c);
+        });});});
+      }
+    });
+    return result;
+  }
+
+// === updateV2Result ===
+function updateV2Result(kyoteiLogId,sel,payout,hitResult,logs){
+  try{
+    var v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+    var idx=v2logs.findIndex(function(l){return l.id===kyoteiLogId;});
+    if(idx<0)return; // 対応するエントリがなければ何もしない
+
+    var l=v2logs[idx];
+    var combo=sel[1]+'-'+sel[2]+'-'+sel[3];
+    l.result=combo;
+    l.payout=payout>0?'¥'+payout.toLocaleString():'';
+
+    // miss分類を自動判定
+    var miss=[];
+    if(hitResult){
+      miss=['hit'];
+    } else {
+      // ◎の着順を確認
+      var kyoteiLog=logs.find(function(k){return k.id===kyoteiLogId;});
+      var maruN=l.maru;
+      var maruPos=null;
+      if(maruN){
+        if(String(sel[1])===String(maruN))maruPos=1;
+        else if(String(sel[2])===String(maruN))maruPos=2;
+        else if(String(sel[3])===String(maruN))maruPos=3;
+      }
+      // 買い目と結果の照合
+      var allBets=(l.bets||[]).map(function(b){return b.val;});
+      var inBets=allBets.indexOf(combo)>=0;
+      if(maruPos===null){
+        miss=['ichaku']; // ◎着外
+      } else if(maruPos===1&&!inBets){
+        miss=['nichaku']; // ◎1着だが紐ズレ（2着または3着が合わない）
+      } else if(maruPos===2||maruPos===3){
+        miss=['ichaku']; // ◎が2着以下
+      } else {
+        miss=['tensu']; // その他（点数外れ等）
+      }
+    }
+    l.miss=miss;
+    localStorage.setItem('kyotei_v2',JSON.stringify(v2logs));
+  }catch(e){console.error('updateV2Result error:',e);}
+}
+
+// === writeToV2 ===
+function writeToV2(entry,honsen,osaee){
+  try{
+    // betsをG.html形式（{val,type}の配列）に変換
+    var betsV2=[];
+    honsen.forEach(function(b){betsV2.push({val:b,type:'honsen'});});
+    osaee.forEach(function(b){betsV2.push({val:b,type:'osaee'});});
+    var raceNumV2=String(entry.raceNum).replace(/R$/i,'')+'R';
+    var v2entry={
+      id:entry.id,
+      date:entry.datetime.slice(0,10),
+      venue:entry.venue,
+      raceNum:raceNumV2,
+      ver:'v2.0',
+      shinkido:entry.shinkido,
+      nigeRate:entry.nigeRate,
+      areScore:entry.areScore,
+      pts:entry.pts,
+      maru:entry.maru,
+      shiro:entry.shiro,
+      sankaku:entry.sankaku,
+      result:'',
+      payout:'',
+      bets:betsV2,
+      miss:[],
+      memo:''
+    };
+    var v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+    // 同日同レースの重複排除
+    var today=v2entry.date;
+    v2logs=v2logs.filter(function(l){
+      return !(l.venue===v2entry.venue&&l.raceNum===v2entry.raceNum&&l.date===today&&!l.result);
+    });
+    v2logs.unshift(v2entry);
+    if(v2logs.length>300)v2logs=v2logs.slice(0,300);
+    localStorage.setItem('kyotei_v2',JSON.stringify(v2logs));
+  }catch(e){console.error('writeToV2 error:',e);}
+}
+
+// === openResultInput ===
+function openResultInput(id){
+  var logs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
+  var entry=null;
+  for(var i=0;i<logs.length;i++){if(logs[i].id===id){entry=logs[i];break;}}
+  if(!entry)return;
+  var el=document.getElementById('logSummary');
+  var html='<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;">';
+  html+='<div style="font-size:11px;font-weight:700;margin-bottom:10px;">'+entry.venue+entry.raceNum+'R の結果を入力</div>';
+  ['1着','2着','3着'].forEach(function(label,pi){
+    html+='<div style="font-size:11px;color:var(--text-sub);margin-bottom:5px;">'+label+'</div>';
+    html+='<div style="display:flex;gap:5px;margin-bottom:10px;">';
+    [1,2,3,4,5,6].forEach(function(n){
+      html+='<button onclick="selectBtn('+id+','+(pi+1)+','+n+')" id="rb_'+id+'_'+(pi+1)+'_'+n+'" style="flex:1;padding:10px 0;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;background:var(--surface);color:var(--text);-webkit-appearance:none;">'+n+'</button>';
+    });
+    html+='</div>';
+  });
+  html+='<div style="font-size:11px;color:var(--text-sub);margin-bottom:5px;">払戻（円・任意）</div>';
+  html+='<input type="number" id="pay_'+id+'" placeholder="例: 12500" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;padding:10px;outline:none;margin-bottom:10px;">';
+  html+='<button onclick="commitLog('+id+')" style="width:100%;padding:12px;background:var(--text);color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:\'Noto Sans JP\',sans-serif;">保存</button>';
+  html+='<button onclick="skipLog('+id+')" style="width:100%;margin-top:6px;padding:11px;background:var(--surface);color:var(--text-sub);border:1px solid var(--border);border-radius:4px;font-size:12px;font-weight:700;-webkit-appearance:none;">見送り</button>';
+  html+='<button onclick="updateLogSummary()" style="width:100%;margin-top:6px;padding:10px;background:var(--surface);color:var(--text-sub);border:1px solid var(--border);border-radius:4px;font-size:12px;-webkit-appearance:none;">キャンセル</button>';
+  html+='</div>';
+  el.innerHTML=html;
+  window['_rb_'+id]={1:null,2:null,3:null};
+}
+
+// === selectBtn ===
+function selectBtn(id,place,n){
+  if(!window['_rb_'+id])return;
+  window['_rb_'+id][place]=n;
+  [1,2,3,4,5,6].forEach(function(i){
+    var btn=document.getElementById('rb_'+id+'_'+place+'_'+i);
+    if(btn){btn.style.background=i===n?'var(--text)':'var(--surface)';btn.style.color=i===n?'#fff':'var(--text)';}
+  });
+}
+
+// === commitLog ===
+function commitLog(id){
+  var sel=window['_rb_'+id];
+  if(!sel||!sel[1]||!sel[2]||!sel[3]){
+    // 未入力の着順をハイライト
+    [1,2,3].forEach(function(place){
+      if(!sel||!sel[place]){
+        [1,2,3,4,5,6].forEach(function(n){
+          var btn=document.getElementById('rb_'+id+'_'+place+'_'+n);
+          if(btn)btn.style.border='2px solid var(--accent)';
+        });
+      }
+    });
+    showToast('1着・2着・3着をすべて入力してください');
+    return;
+  }
+  var payout=parseInt(document.getElementById('pay_'+id).value)||0;
+  var logs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
+  var hitResult=false;
+  for(var i=0;i<logs.length;i++){
+    if(logs[i].id===id){
+      var l=logs[i];
+      l.result={first:sel[1],second:sel[2],third:sel[3],payout:payout};
+      var combo=sel[1]+'-'+sel[2]+'-'+sel[3];
+      var allBets=l.bets.honsen.concat(l.bets.osaee);
+      l.hit=allBets.indexOf(combo)>=0;
+      hitResult=l.hit;
+      l.aiRanking.forEach(function(ar){
+        var pos=ar.n===sel[1]?1:ar.n===sel[2]?2:ar.n===sel[3]?3:null;
+        if(ar.rank===1)l.maruResult=pos;
+        if(ar.rank===2)l.shiroResult=pos;
+        if(ar.rank===3)l.sankakuResult=pos;
+      });
+      break;
+    }
+  }
+  localStorage.setItem('kyotei_logs',JSON.stringify(logs));
+  delete window['_rb_'+id];
+  var combo2=sel[1]+'-'+sel[2]+'-'+sel[3];
+  showStatus(combo2+' '+(hitResult?'✅ 的中':'❌ 外れ'),'ok');
+
+  // ===== kyotei_v2も更新 =====
+  updateV2Result(id,sel,payout,hitResult,logs);
+
+  updateLogSummary();
+}
+
+// === skipLog ===
+function skipLog(id){
+  var logs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
+  for(var i=0;i<logs.length;i++){
+    if(logs[i].id===id){logs[i].result='skip';logs[i].hit=false;break;}
+  }
+  localStorage.setItem('kyotei_logs',JSON.stringify(logs));
+  // kyotei_v2にも見送りを反映
+  try{
+    var v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+    var idx=v2logs.findIndex(function(l){return l.id===id;});
+    if(idx>=0){v2logs[idx].miss=['miseru'];localStorage.setItem('kyotei_v2',JSON.stringify(v2logs));}
+  }catch(e){}
+  delete window['_rb_'+id];
+  showStatus('見送りとして記録しました','ok');
+  updateLogSummary();
+}
+
+// === resetLog ===
+function resetLog(){
+  if(!confirm('ログを全件削除します。この操作は元に戻せません。よろしいですか？'))return;
+  if(!confirm('本当に削除しますか？'))return;
+  localStorage.removeItem('kyotei_logs');
+  document.getElementById('logAnalysis').style.display='none';
+  updateLogSummary();
+  showStatus('ログをリセットしました','ok');
+}
+
+// === updateLogSummary ===
+function updateLogSummary(){
+  var logs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
+  var el=document.getElementById('logSummary');
+  if(!logs.length){el.style.display='none';return;}
+  el.style.display='block';
+  var pending=logs.filter(function(l){return l.result===null;});
+  var done=logs.filter(function(l){return l.result!==null&&l.result!=='skip';});
+  var hits=done.filter(function(l){return l.hit;}).length;
+  var maruHits=done.filter(function(l){return l.maruResult===1;}).length;
+  var totalPayout=done.reduce(function(s,l){return s+(l.result.payout||0);},0);
+  var html='<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;">';
+  html+='<div style="font-size:10px;color:var(--text-sub);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px;">予想ログ</div>';
+  if(pending.length){
+    html+='<div style="font-size:11px;color:var(--accent);font-weight:700;margin-bottom:6px;">📋 結果未入力（'+pending.length+'件）</div>';
+    pending.slice().reverse().forEach(function(l){
+      var dt=new Date(l.datetime);
+      var label=l.venue+l.raceNum+'R '+(dt.getMonth()+1)+'/'+(dt.getDate())+' '+dt.getHours()+':'+(dt.getMinutes()<10?'0':'')+dt.getMinutes();
+      html+='<button onclick="openResultInput('+l.id+')" style="display:block;width:100%;text-align:left;padding:9px 10px;margin-bottom:4px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent-border);border-radius:4px;font-size:12px;font-weight:700;-webkit-appearance:none;font-family:\'Noto Sans JP\',sans-serif;">'+label+' → 結果を入力</button>';
+    });
+    html+='<div style="height:8px;"></div>';
+  }
+  if(done.length){
+    html+='<div style="display:flex;gap:8px;margin-bottom:10px;">';
+    html+='<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:18px;font-weight:700;color:var(--accent);">'+Math.round(hits/done.length*100)+'%</div><div style="font-size:10px;color:var(--text-sub);">的中率</div><div style="font-size:10px;color:var(--text-muted);">'+hits+'/'+done.length+'</div></div>';
+    html+='<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:18px;font-weight:700;color:var(--blue);">'+Math.round(maruHits/done.length*100)+'%</div><div style="font-size:10px;color:var(--text-sub);">◎1着率</div></div>';
+    html+='<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:14px;font-weight:700;color:var(--green);">'+totalPayout.toLocaleString()+'</div><div style="font-size:10px;color:var(--text-sub);">累計払戻</div></div>';
+    html+='</div>';
+    // 外れ詳細ボタン（通常・荒れまとめて）
+    var allMissLogs=done.filter(function(l){return !l.hit;});
+    if(allMissLogs.length>0){
+      html+='<button onclick="showMissDetail()" style="width:100%;padding:11px;background:rgba(224,85,102,0.08);color:var(--accent);border:1px solid rgba(224,85,102,0.3);border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:\'Noto Sans JP\',sans-serif;margin-bottom:6px;">📊 外れ詳細（'+allMissLogs.length+'件）</button>';
+    }
+    html+='<button onclick="showHitAnalysis()" style="width:100%;padding:11px;background:rgba(68,196,122,0.08);color:var(--green);border:1px solid rgba(68,196,122,0.3);border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:\'Noto Sans JP\',sans-serif;margin-bottom:6px;'+(done.length<5?'opacity:0.5;':'')+'">🎯 当たり分析'+(done.length<5?' ('+done.length+'/5件)':'')+'</button>';
+    html+='<button onclick="analyzeLog()" style="width:100%;padding:11px;background:var(--blue-light);color:var(--blue);border:1px solid #c0d8f0;border-radius:4px;font-size:13px;font-weight:700;-webkit-appearance:none;font-family:\'Noto Sans JP\',sans-serif;'+(done.length<10?'opacity:0.5;':'')+'">🔍 AIに改善提案させる'+(done.length<10?' ('+done.length+'/10件)':'')+'</button>';
+    html+='<button onclick="resetLog()" style="width:100%;margin-top:6px;padding:10px;background:var(--surface);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;font-size:11px;font-weight:700;-webkit-appearance:none;font-family:\'Noto Sans JP\',sans-serif;">🗑 ログをリセット</button>';
+  }
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+// === showHitAnalysis ===
+function showHitAnalysis(){
+  // kyotei_v2から全データ取得
+  var v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+  // 見送り除外・結果入力済みのみ
+  var done=v2logs.filter(function(l){
+    return l.result&&l.result!==''&&l.miss&&l.miss.length>0&&l.miss.indexOf('miseru')<0;
+  });
+  if(done.length<5){showStatus('データが不足しています（5件以上必要）','err');return;}
+
+  var hits=done.filter(function(l){return l.miss.indexOf('hit')>=0;});
+  var misses=done.filter(function(l){return l.miss.indexOf('hit')<0;});
+  var hitRate=done.length>0?Math.round(hits.length/done.length*100):0;
+
+  // ヘルパー
+  function pct(h,t){return t>0?Math.round(h/t*100):0;}
+  function avg(arr){return arr.length>0?Math.round(arr.reduce(function(s,v){return s+v;},0)/arr.length):0;}
+  function parsePay(p){return parseInt((p||'').replace(/[¥￥,]/g,''))||0;}
+
+  // ① 信頼度別
+  var shinkidoData={A:{hit:0,total:0},B:{hit:0,total:0},C:{hit:0,total:0}};
+  done.forEach(function(l){
+    var s=l.shinkido;
+    if(!s||!shinkidoData[s])return;
+    shinkidoData[s].total++;
+    if(l.miss.indexOf('hit')>=0)shinkidoData[s].hit++;
+  });
+
+  // ② 逃げ率帯別
+  var nigeBands=[
+    {label:'〜49%',min:0,max:49,hit:0,total:0},
+    {label:'50〜64%',min:50,max:64,hit:0,total:0},
+    {label:'65%〜',min:65,max:999,hit:0,total:0},
+    {label:'不明',min:-1,max:-1,hit:0,total:0}
+  ];
+  done.forEach(function(l){
+    var nr=l.nigeRate;
+    var isHit=l.miss.indexOf('hit')>=0;
+    if(nr===null||nr===undefined){nigeBands[3].total++;if(isHit)nigeBands[3].hit++;return;}
+    for(var i=0;i<3;i++){
+      if(nr>=nigeBands[i].min&&nr<=nigeBands[i].max){nigeBands[i].total++;if(isHit)nigeBands[i].hit++;return;}
+    }
+  });
+
+  // ③ 荒れ指数帯別
+  var areBands=[
+    {label:'0〜3点',min:0,max:3,hit:0,total:0},
+    {label:'4〜7点',min:4,max:7,hit:0,total:0},
+    {label:'8〜11点',min:8,max:11,hit:0,total:0},
+    {label:'12点〜',min:12,max:999,hit:0,total:0}
+  ];
+  done.forEach(function(l){
+    var sc=l.areScore;
+    if(sc===null||sc===undefined)return;
+    for(var i=0;i<areBands.length;i++){
+      if(sc>=areBands[i].min&&sc<=areBands[i].max){areBands[i].total++;if(l.miss.indexOf('hit')>=0)areBands[i].hit++;return;}
+    }
+  });
+
+  // ④ 点数別
+  var ptsBands={4:{hit:0,total:0},6:{hit:0,total:0},8:{hit:0,total:0},12:{hit:0,total:0},14:{hit:0,total:0},15:{hit:0,total:0}};
+  done.forEach(function(l){
+    var p=l.pts;
+    if(!p||!ptsBands[p])return;
+    ptsBands[p].total++;
+    if(l.miss.indexOf('hit')>=0)ptsBands[p].hit++;
+  });
+
+  // ⑤ 本線/抑え別的中
+  var honsenHit=0,osaeeHit=0,totalHit=hits.length;
+  hits.forEach(function(l){
+    if(!l.bets||!l.result)return;
+    var matched=l.bets.find(function(b){return b.val===l.result;});
+    if(!matched)return;
+    if(matched.type==='honsen')honsenHit++;
+    else osaeeHit++;
+  });
+
+  // ⑥ 的中時の平均・最高配当
+  var hitPayouts=hits.map(function(l){return parsePay(l.payout);}).filter(function(v){return v>0;});
+  var avgPay=hitPayouts.length>0?Math.round(hitPayouts.reduce(function(s,v){return s+v;},0)/hitPayouts.length):0;
+  var maxPay=hitPayouts.length>0?Math.max.apply(null,hitPayouts):0;
+
+  // ⑦ 的中/外れ時の◎sogoScore比較
+  function getMaruScore(l){
+    if(!l.boats||!l.maru)return null;
+    var b=l.boats.find(function(b){return String(b.n)===String(l.maru);});
+    return b?b.sogoScore:null;
+  }
+  var hitScores=hits.map(getMaruScore).filter(function(v){return v!==null;});
+  var missScores=misses.map(getMaruScore).filter(function(v){return v!==null;});
+  var avgHitScore=hitScores.length>0?Math.round(hitScores.reduce(function(s,v){return s+v;},0)/hitScores.length*10)/10:null;
+  var avgMissScore=missScores.length>0?Math.round(missScores.reduce(function(s,v){return s+v;},0)/missScores.length*10)/10:null;
+
+  // ⑧ 的中/外れ時の平均逃げ率
+  var hitNige=hits.map(function(l){return l.nigeRate;}).filter(function(v){return v!==null&&v!==undefined;});
+  var missNige=misses.map(function(l){return l.nigeRate;}).filter(function(v){return v!==null&&v!==undefined;});
+  var avgHitNige=hitNige.length>0?Math.round(hitNige.reduce(function(s,v){return s+v;},0)/hitNige.length):null;
+  var avgMissNige=missNige.length>0?Math.round(missNige.reduce(function(s,v){return s+v;},0)/missNige.length):null;
+
+  // ===== HTML生成 =====
+  function barRow(label,hitN,totalN,color){
+    var p=pct(hitN,totalN);
+    var barColor=color||'var(--green)';
+    return '<div style="margin-bottom:10px;">'
+      +'<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;">'
+      +'<span style="color:var(--text);">'+label+'</span>'
+      +'<span style="color:'+barColor+';font-weight:700;">'+hitN+'/'+totalN+'件 ('+p+'%)</span>'
+      +'</div>'
+      +'<div style="height:5px;background:var(--bg);border-radius:3px;">'
+      +'<div style="height:5px;width:'+p+'%;background:'+barColor+';border-radius:3px;transition:width 0.4s;"></div>'
+      +'</div></div>';
+  }
+
+  function section(title,content){
+    return '<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);">'
+      +'<div style="font-size:10px;font-weight:700;color:var(--text-sub);letter-spacing:1.5px;margin-bottom:10px;">'+title+'</div>'
+      +content
+      +'</div>';
+  }
+
+  var html='<div id="hitAnalysisWrap" style="margin-top:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;">';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px;">';
+  html+='<div style="font-size:10px;font-weight:700;color:var(--green);letter-spacing:1.5px;">🎯 当たり分析</div>';
+  html+='<div style="display:flex;gap:6px;align-items:center;">';
+  html+='<div style="font-size:10px;color:var(--text-sub);">'+done.length+'件 / 的中'+hits.length+'件 ('+hitRate+'%)</div>';
+  html+='<button id="copyHitBtn" onclick="copyHitAnalysis()" style="padding:5px 12px;background:var(--text);color:#fff;border:none;border-radius:4px;font-size:11px;font-weight:700;-webkit-appearance:none;cursor:pointer;">📋 コピー</button>';
+  html+='</div>';
+  html+='</div>';
+
+  // ① 信頼度別
+  var sHtml='';
+  ['A','B','C'].forEach(function(s){
+    var d=shinkidoData[s];
+    if(d.total===0)return;
+    var color=s==='A'?'var(--blue)':s==='B'?'var(--green)':'var(--accent)';
+    sHtml+=barRow('信頼度'+s,d.hit,d.total,color);
+  });
+  if(sHtml)html+=section('① 信頼度別',sHtml);
+
+  // ② 逃げ率帯別
+  var nHtml='';
+  nigeBands.forEach(function(b){if(b.total>0)nHtml+=barRow(b.label,b.hit,b.total);});
+  if(nHtml)html+=section('② 逃げ率帯別',nHtml);
+
+  // ③ 荒れ指数帯別
+  var aHtml='';
+  areBands.forEach(function(b){if(b.total>0)aHtml+=barRow(b.label,b.hit,b.total);});
+  if(aHtml)html+=section('③ 荒れ指数帯別',aHtml);
+
+  // ④ 点数別
+  var pHtml='';
+  [4,6,8,12,14,15].forEach(function(p){
+    var d=ptsBands[p];
+    if(d.total>0)pHtml+=barRow(p+'点',d.hit,d.total);
+  });
+  if(pHtml)html+=section('④ 点数別',pHtml);
+
+  // ⑤ 本線/抑え別
+  if(totalHit>0){
+    var bHtml=barRow('本線的中',honsenHit,totalHit,'var(--gold)');
+    bHtml+=barRow('抑え的中',osaeeHit,totalHit,'var(--blue)');
+    html+=section('⑤ 本線/抑え別的中',bHtml);
+  }
+
+  // ⑥ 的中時の配当
+  if(hitPayouts.length>0){
+    html+=section('⑥ 的中配当',
+      '<div style="display:flex;gap:8px;">'
+      +'<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;">'
+      +'<div style="font-size:16px;font-weight:700;color:var(--green);">¥'+avgPay.toLocaleString()+'</div>'
+      +'<div style="font-size:10px;color:var(--text-sub);">平均配当</div></div>'
+      +'<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;">'
+      +'<div style="font-size:16px;font-weight:700;color:var(--gold);">¥'+maxPay.toLocaleString()+'</div>'
+      +'<div style="font-size:10px;color:var(--text-sub);">最高配当</div></div>'
+      +'</div>'
+    );
+  }
+
+  // ⑦ 的中/外れの◎sogoScore比較
+  if(avgHitScore!==null||avgMissScore!==null){
+    var cHtml='<div style="display:flex;gap:8px;">';
+    if(avgHitScore!==null)cHtml+='<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:16px;font-weight:700;color:var(--green);">'+avgHitScore+'pt</div><div style="font-size:10px;color:var(--text-sub);">的中時◎スコア</div></div>';
+    if(avgMissScore!==null)cHtml+='<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:16px;font-weight:700;color:var(--accent);">'+avgMissScore+'pt</div><div style="font-size:10px;color:var(--text-sub);">外れ時◎スコア</div></div>';
+    cHtml+='</div>';
+    html+=section('⑦ ◎スコア比較（的中vs外れ）',cHtml);
+  }
+
+  // ⑧ 平均逃げ率比較
+  if(avgHitNige!==null||avgMissNige!==null){
+    var nCHtml='<div style="display:flex;gap:8px;">';
+    if(avgHitNige!==null)nCHtml+='<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:16px;font-weight:700;color:var(--green);">'+avgHitNige+'%</div><div style="font-size:10px;color:var(--text-sub);">的中時逃げ率</div></div>';
+    if(avgMissNige!==null)nCHtml+='<div style="flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:4px;"><div style="font-size:16px;font-weight:700;color:var(--accent);">'+avgMissNige+'%</div><div style="font-size:10px;color:var(--text-sub);">外れ時逃げ率</div></div>';
+    nCHtml+='</div>';
+    html+=section('⑧ 逃げ率比較（的中vs外れ）',nCHtml);
+  }
+
+  html+='</div>';
+
+  var analysisEl=document.getElementById('logAnalysis');
+  analysisEl.style.display='block';
+  analysisEl.innerHTML=html;
+  analysisEl.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// === showMissDetail ===
+function showMissDetail(){
+  var logs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
+  var missLogs=logs.filter(function(l){return l.result&&l.result!=='skip'&&!l.hit;});
+  if(!missLogs.length){alert('外れデータなし');return;}
+  var el=document.getElementById('logSummary');
+  var html='<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;">';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:6px;"><div style="font-size:10px;color:var(--accent);font-weight:700;letter-spacing:1.5px;">外れ詳細（'+missLogs.length+'件）</div><button onclick="copyMissDetail()" id="copyMissBtn" style="padding:5px 12px;background:var(--text);color:#fff;border:none;border-radius:4px;font-size:11px;font-weight:700;-webkit-appearance:none;cursor:pointer;">📋 コピー</button></div>';
+  var zuré=0,maruOut=0,maruOrd=0;
+  missLogs.forEach(function(l){
+    var r=l.result,maru=l.aiRanking?l.aiRanking.find(function(a){return a.rank===1;}):null;
+    if(!maru)return;
+    var came=r.first==maru.n||r.second==maru.n||r.third==maru.n;
+    if(!came)maruOut++;else if(l.maruResult===1)zuré++;else maruOrd++;
+  });
+  // 信頼度別・モード別集計
+  var shinkidoStat={A:{total:0,hit:0,miss:0},B:{total:0,hit:0,miss:0},C:{total:0,hit:0,miss:0}};
+  var modeStat={normal:{total:0,hit:0},are:{total:0,hit:0}};
+  var allLogs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
+  var doneLogs=allLogs.filter(function(l){return l.result&&l.result!=='skip';});
+  doneLogs.forEach(function(l){
+    if(l.mode==='normal'&&l.shinkido&&shinkidoStat[l.shinkido]){
+      shinkidoStat[l.shinkido].total++;
+      if(l.hit)shinkidoStat[l.shinkido].hit++;
+      else shinkidoStat[l.shinkido].miss++;
+    }
+    if(modeStat[l.mode]){modeStat[l.mode].total++;if(l.hit)modeStat[l.mode].hit++;}
+  });
+
+  html+='<div style="display:flex;gap:8px;margin-bottom:8px;">';
+  html+='<div style="flex:1;text-align:center;padding:8px;background:var(--bg);border-radius:4px;"><div style="font-size:16px;font-weight:700;color:var(--accent);">'+maruOut+'</div><div style="font-size:10px;color:var(--text-sub);">◎着外</div></div>';
+  html+='<div style="flex:1;text-align:center;padding:8px;background:var(--bg);border-radius:4px;"><div style="font-size:16px;font-weight:700;color:var(--blue);">'+zuré+'</div><div style="font-size:10px;color:var(--text-sub);">紐ズレ</div></div>';
+  html+='<div style="flex:1;text-align:center;padding:8px;background:var(--bg);border-radius:4px;"><div style="font-size:16px;font-weight:700;color:var(--text-sub);">'+maruOrd+'</div><div style="font-size:10px;color:var(--text-sub);">◎着順違い</div></div>';
+  html+='</div>';
+
+  // 信頼度別集計
+  html+='<div style="background:var(--bg);border-radius:4px;padding:10px;margin-bottom:8px;">';
+  html+='<div style="font-size:10px;color:var(--text-sub);font-weight:700;margin-bottom:6px;">信頼度別（通常モード）</div>';
+  html+='<div style="display:flex;gap:8px;">';
+  ['A','B','C'].forEach(function(s){
+    var st=shinkidoStat[s];
+    var rate=st.total>0?Math.round(st.hit/st.total*100):0;
+    var color=rate>=30?'var(--green)':rate>=20?'var(--blue)':'var(--accent)';
+    html+='<div style="flex:1;text-align:center;padding:6px;background:var(--surface);border-radius:4px;">';
+    html+='<div style="font-size:13px;font-weight:700;color:'+color+';">'+st.hit+'/'+st.total+'</div>';
+    html+='<div style="font-size:9px;color:var(--text-muted);">信頼度'+s+'（'+rate+'%）</div>';
+    html+='</div>';
+  });
+  html+='</div></div>';
+
+  // モード別集計
+  html+='<div style="background:var(--bg);border-radius:4px;padding:10px;margin-bottom:12px;">';
+  html+='<div style="font-size:10px;color:var(--text-sub);font-weight:700;margin-bottom:6px;">モード別</div>';
+  html+='<div style="display:flex;gap:8px;">';
+  [{key:'normal',label:'通常'},{key:'are',label:'荒れ'}].forEach(function(m){
+    var st=modeStat[m.key];
+    var rate=st.total>0?Math.round(st.hit/st.total*100):0;
+    var color=rate>=25?'var(--green)':'var(--accent)';
+    html+='<div style="flex:1;text-align:center;padding:6px;background:var(--surface);border-radius:4px;">';
+    html+='<div style="font-size:13px;font-weight:700;color:'+color+';">'+st.hit+'/'+st.total+'</div>';
+    html+='<div style="font-size:9px;color:var(--text-muted);">'+m.label+'（'+rate+'%）</div>';
+    html+='</div>';
+  });
+  html+='</div></div>';
+  missLogs.forEach(function(l){
+    var r=l.result;
+    var rankMap={};(l.aiRanking||[]).forEach(function(a){rankMap[a.n]=a.rank;});
+    var maru=l.aiRanking?l.aiRanking.find(function(a){return a.rank===1;}):null;
+    var shiro=l.aiRanking?l.aiRanking.find(function(a){return a.rank===2;}):null;
+    var maruN=maru?maru.n:'?',shiroN=shiro?shiro.n:'?';
+    var maruCame=r.first==maruN||r.second==maruN||r.third==maruN;
+    var missType=!maruCame?'◎着外':l.maruResult===1?'紐ズレ':'◎着順違い';
+    var typeColor=missType==='◎着外'?'var(--red)':missType==='紐ズレ'?'var(--accent)':'var(--text-sub)';
+    var allBets=l.bets?((l.bets.honsen||[]).concat(l.bets.osaee||[])):[];
+    var combo=r.first+'-'+r.second+'-'+r.third;
+    var inBet=allBets.length>0&&allBets.indexOf(combo)>=0;
+    var modeLabel=l.mode==='are'?'荒':'通';
+    html+='<div style="background:var(--bg);border-radius:4px;padding:10px;margin-bottom:6px;">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">';
+    html+='<span style="font-size:13px;font-weight:700;">'+l.venue+l.raceNum+'R <span style="font-size:10px;color:var(--text-sub);">['+modeLabel+']</span></span>';
+    html+='<span style="font-size:11px;font-weight:700;color:'+typeColor+';">'+missType+'</span>';
+    html+='</div>';
+    if(l.mode==='normal'){
+      html+='<div style="font-size:10px;color:var(--text-sub);margin-bottom:3px;">信頼度'+l.shinkido+' 逃げ'+(l.nigeRate||'?')+'% 荒れ'+(l.areScore||0)+'点</div>';
+    } else {
+      html+='<div style="font-size:10px;color:var(--text-sub);margin-bottom:3px;">荒れ'+(l.areScore||0)+'点 逃げ'+(l.nigeRate||'?')+'% ◎'+maruN+'○'+shiroN+'</div>';
+    }
+    html+='<div style="font-size:12px;margin-bottom:3px;">結果: <b>'+r.first+'</b>('+(rankMap[r.first]||'?')+'位)-<b>'+r.second+'</b>('+(rankMap[r.second]||'?')+'位)-<b>'+r.third+'</b>('+(rankMap[r.third]||'?')+'位)</div>';
+    html+='<div style="font-size:11px;color:var(--text-sub);margin-bottom:3px;">◎'+maruN+'→'+(l.maruResult?l.maruResult+'着':'着外')+(l.shiroResult?' ○→'+l.shiroResult+'着':'')+'</div>';
+    var honsen=l.bets?l.bets.honsen||[]:[];
+    var osaee=l.bets?l.bets.osaee||[]:[];
+    if(honsen.length||osaee.length){
+      html+='<div style="font-size:10px;color:'+(inBet?'var(--green)':'var(--red)')+';margin-bottom:2px;">買い目に'+(inBet?'✅ 入ってた':'❌ 入ってない')+'</div>';
+      var betLine='本線: '+honsen.map(function(b){return b===combo?'['+b+']':b;}).join('/');
+      if(osaee.length)betLine+=' 抑え: '+osaee.map(function(b){return b===combo?'['+b+']':b;}).join('/');
+      html+='<div style="font-size:9px;color:var(--text-muted);margin-top:2px;word-break:break-all;">'+betLine+'</div>';
+    } else {
+      html+='<div style="font-size:10px;color:var(--text-muted);">買い目データなし（新実装前のログ）</div>';
+    }
+    html+='</div>';
+  });
+  html+='<button onclick="updateLogSummary()" style="width:100%;padding:10px;background:var(--surface);color:var(--text-sub);border:1px solid var(--border);border-radius:4px;font-size:12px;-webkit-appearance:none;">← 戻る</button>';
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+// === analyzeLog ===
+function analyzeLog(){
+  var logs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
+  var done=logs.filter(function(l){return l.result!==null&&l.result!=='skip';});
+  if(done.length<10){alert('10件以上記録してから分析できます');return;}
+  var key=getKey();
+  if(!key){alert('APIキーを設定してください');return;}
+
+  // 集計サマリー
+  var total=done.length;
+  var hits=done.filter(function(l){return l.hit;}).length;
+  var maruHits=done.filter(function(l){return l.maruResult===1;}).length;
+  var shiroHits=done.filter(function(l){return l.shiroResult===1;}).length;
+  var missTypes={ichaku:0,nichaku:0,sankaku:0,tensu:0};
+  var maruDist={1:0,2:0,3:0,out:0};
+  var shiroDist={1:0,2:0,3:0,out:0};
+  var normalHits=0,normalTotal=0,areHits=0,areTotal=0;
+  var shinkidoStats={A:{hit:0,total:0},B:{hit:0,total:0},C:{hit:0,total:0}};
+
+  done.forEach(function(l){
+    (l.miss||[]).forEach(function(m){if(missTypes[m]!==undefined)missTypes[m]++;});
+    if(l.maruResult===1)maruDist[1]++;
+    else if(l.maruResult===2)maruDist[2]++;
+    else if(l.maruResult===3)maruDist[3]++;
+    else maruDist.out++;
+    if(l.shiroResult===1)shiroDist[1]++;
+    else if(l.shiroResult===2)shiroDist[2]++;
+    else if(l.shiroResult===3)shiroDist[3]++;
+    else shiroDist.out++;
+    if(l.mode==='normal'){normalTotal++;if(l.hit)normalHits++;}
+    if(l.mode==='are'){areTotal++;if(l.hit)areHits++;}
+    if(l.shinkido&&shinkidoStats[l.shinkido]){shinkidoStats[l.shinkido].total++;if(l.hit)shinkidoStats[l.shinkido].hit++;}
+  });
+
+  // 個別ログ（全情報）
+  var logLines=done.map(function(l,i){
+    var r=l.result;
+    var combo=r.first+'-'+r.second+'-'+r.third;
+    // AI評価順位
+    var ai=l.aiRanking.map(function(a){return a.rank+':'+a.n;}).join('/');
+    // 買い目
+    var bets=l.bets?(l.bets.honsen||[]).concat(l.bets.osaee||[]):[];
+    var betStr=bets.join('/');
+    // 外れ分類
+    var missStr=(l.miss||[]).join(',');
+    // メタ情報
+    var meta=[];
+    if(l.shinkido)meta.push('信頼度'+l.shinkido);
+    if(l.nigeRate!=null)meta.push('逃げ'+l.nigeRate+'%');
+    if(l.areScore!=null)meta.push('荒れ'+l.areScore+'pt');
+    if(l.mode==='are'&&l.arePts)meta.push(l.arePts+'点買');
+    var outcome=(l.hit?'的中':'外れ');
+    var maruStr=l.maruResult?'◎'+l.maruResult+'着':'◎着外';
+    var shiroStr=l.shiroResult?'○'+l.shiroResult+'着':'○着外';
+    // 実際の2着・3着艇のsogoRank・sogoScoreを取得
+    var boatMap={};
+    (l.boats||[]).forEach(function(b){boatMap[b.n]={rank:b.sogoRank,score:b.sogoScore,kt:b.tokuten,st:b.avgST,kr:b.kiryokuRank};});
+    var r2info=boatMap[r.second]?r.second+'号('+boatMap[r.second].rank+'位/'+boatMap[r.second].score+'pt/得'+boatMap[r.second].kt+'/ST'+boatMap[r.second].st+'/機'+boatMap[r.second].kr+')':r.second+'号(?位)';
+    var r3info=boatMap[r.third]?r.third+'号('+boatMap[r.third].rank+'位/'+boatMap[r.third].score+'pt/得'+boatMap[r.third].kt+'/ST'+boatMap[r.third].st+'/機'+boatMap[r.third].kr+')':r.third+'号(?位)';
+    var r1info=boatMap[r.first]?r.first+'号('+boatMap[r.first].rank+'位/'+boatMap[r.first].score+'pt)':r.first+'号(?位)';
+    return (i+1)+'.'+l.venue+l.raceNum+'R['+l.mode+']['+(meta.join('/'))+'] AI:'+ai+' 結果:1着'+r1info+' 2着'+r2info+' 3着'+r3info+' '+outcome+' '+maruStr+' '+shiroStr+(missStr?' 分類:'+missStr:'')+(r.payout?' 払'+r.payout:'');
+  }).join('\n');
+
+  // 集計行
+  var statLines=[
+    '=集計=',
+    '総数:'+total+' 的中:'+hits+'('+Math.round(hits/total*100)+'%)',
+    '◎1着:'+maruHits+'('+Math.round(maruHits/total*100)+'%) ◎分布:1着'+maruDist[1]+'/2着'+maruDist[2]+'/3着'+maruDist[3]+'/着外'+maruDist.out,
+    '○1着:'+shiroHits+'('+Math.round(shiroHits/total*100)+'%) ○分布:1着'+shiroDist[1]+'/2着'+shiroDist[2]+'/3着'+shiroDist[3]+'/着外'+shiroDist.out,
+    '通常:'+normalHits+'/'+normalTotal+' 荒れ:'+areHits+'/'+areTotal,
+    '信頼度A:'+shinkidoStats.A.hit+'/'+shinkidoStats.A.total+' B:'+shinkidoStats.B.hit+'/'+shinkidoStats.B.total+' C:'+shinkidoStats.C.hit+'/'+shinkidoStats.C.total,
+    '外れ分類 1着:'+missTypes.ichaku+'/2着:'+missTypes.nichaku+'/3着:'+missTypes.sankaku+'/点数:'+missTypes.tensu
+  ].join('\n');
+
+  // 外れパターン集計（買い目依存なし・maruResult/shiroResultベース）
+  var missLogs=done.filter(function(l){return !l.hit;});
+  var maruOut=missLogs.filter(function(l){return !l.maruResult;}).length;
+  var maruHit1=missLogs.filter(function(l){return l.maruResult===1;}).length; // 紐ズレ
+  var maruHit2=missLogs.filter(function(l){return l.maruResult===2;}).length;
+  var maruHit3=missLogs.filter(function(l){return l.maruResult===3;}).length;
+
+  // 通常外れ詳細テキスト
+  var normalMissDetail=done.filter(function(l){return l.mode==='normal'&&!l.hit;}).map(function(l){
+    var r=l.result;
+    var rankMap={};(l.aiRanking||[]).forEach(function(a){rankMap[a.n]=a.rank;});
+    var maru=l.aiRanking?l.aiRanking.find(function(a){return a.rank===1;}):null;
+    var maruN=maru?maru.n:'?';
+    var maruCame=r.first==maruN||r.second==maruN||r.third==maruN;
+    var missType=!maruCame?'◎着外':l.maruResult===1?'紐ズレ':'◎着順違い';
+    // 各艇のsogoScore情報
+    var bm={};(l.boats||[]).forEach(function(b){bm[b.n]=b;});
+    function binfo(n){var b=bm[n];return b?n+'号('+b.sogoRank+'位/'+b.sogoScore+'pt/機'+b.kiryokuRank+')':n+'号(?)';}
+    return l.venue+l.raceNum+'R['+missType+']['+l.shinkido+'/逃'+l.nigeRate+'%/荒'+l.areScore+'pt] 結果:'+binfo(r.first)+'-'+binfo(r.second)+'-'+binfo(r.third)+' ◎'+maruN+'→'+(l.maruResult?l.maruResult+'着':'着外')+(l.shiroResult?' ○→'+l.shiroResult+'着':'');
+  }).join('\n');
+
+  // 荒れ外れ詳細テキスト
+  var areMissDetail=done.filter(function(l){return l.mode==='are'&&!l.hit;}).map(function(l){
+    var r=l.result;
+    var maru=l.aiRanking?l.aiRanking.find(function(a){return a.rank===1;}):null;
+    var shiro=l.aiRanking?l.aiRanking.find(function(a){return a.rank===2;}):null;
+    var maruN=maru?maru.n:'?',shiroN=shiro?shiro.n:'?';
+    var bm2={};(l.boats||[]).forEach(function(b){bm2[b.n]=b;});
+    function binfo2(n){var b=bm2[n];return b?n+'号('+b.sogoRank+'位/'+b.sogoScore+'pt/機'+b.kiryokuRank+')':n+'号(?)';}
+    return l.venue+l.raceNum+'R[荒'+l.areScore+'pt/逃'+l.nigeRate+'%] ◎'+maruN+'('+binfo2(maruN)+')○'+shiroN+'('+binfo2(shiroN)+') 結果:'+binfo2(r.first)+'-'+binfo2(r.second)+'-'+binfo2(r.third)+' ◎→'+(l.maruResult?l.maruResult+'着':'着外')+' ○→'+(l.shiroResult?l.shiroResult+'着':'着外');
+  }).join('\n');
+
+  var summary=statLines+'\n外れ内訳:紐ズレ'+maruHit1+'件/◎2着'+maruHit2+'件/◎3着'+maruHit3+'件/◎着外'+maruOut+'件'+'\n\n=通常外れ詳細=\n'+normalMissDetail+'\n\n=荒れ外れ詳細=\n'+areMissDetail+'\n\n=個別ログ=\n'+logLines;
+
+  var prompt='競艇予想システムのログ分析。以下フォーマットのみ出力。説明・前置き不要。切れないよう簡潔に。各レースの各艇データ（sogoRank/sogoScore/機力）も含まれるので、実際に2着3着に来た艇のスコア傾向も分析せよ。\n\n'+summary+'\n\n【出力フォーマット】\n【◎1着率】XX%(X/X) ○1着率XX%\n【外れ内訳】紐ズレX件/◎2着X件/◎3着X件/◎着外X件\n【通常外れ傾向】1〜2行\n【荒れ外れ傾向】1〜2行\n【信頼度別】A:X/X B:X/X C:X/X→1行\n【買い目改善】1〜2行\n【スコア改善案】\n・指標:±X点/根拠1行\n【最優先対応】1行';
+  document.getElementById('logAnalysis').style.display='block';
+  document.getElementById('logAnalysis').innerHTML='<div style="margin-top:10px;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:6px;text-align:center;"><div class="spinner" style="margin:0 auto 8px;"></div><div style="font-size:11px;color:var(--text-muted);">分析中...</div></div>';
+  fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:4000,thinkingConfig:{thinkingBudget:0}}})
+  }).then(function(res){return res.json();}).then(function(json){
+    var t=json.candidates&&json.candidates[0]&&json.candidates[0].content&&json.candidates[0].content.parts[0].text;
+    if(!t){t='分析失敗: '+(json.error&&json.error.message||JSON.stringify(json).slice(0,100));}
+    window._lastAnalysis=t;
+    document.getElementById('logAnalysis').innerHTML='<div style="margin-top:10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:6px;"><div style="font-size:10px;color:var(--text-sub);font-weight:700;letter-spacing:1.5px;">AI改善提案</div><button onclick="copyAnalysis()" id="copyAnalysisBtn" style="padding:5px 12px;background:var(--text);color:#fff;border:none;border-radius:4px;font-size:11px;font-weight:700;-webkit-appearance:none;cursor:pointer;">📋 コピー</button></div><div style="font-size:12px;color:var(--text);line-height:2.0;white-space:pre-wrap;">'+t+'</div></div>';
+  }).catch(function(e){document.getElementById('logAnalysis').innerHTML='<div style="color:var(--accent);padding:10px;">エラー: '+e.message+'</div>';});
+}
+
+// === pct ===
+function pct(h,t){return t>0?Math.round(h/t*100):0;}
+
+// === avg ===
+function avg(arr){return arr.length>0?Math.round(arr.reduce(function(s,v){return s+v;},0)/arr.length):0;}
+
+// === parsePay ===
+function parsePay(p){return parseInt((p||'').replace(/[¥￥,]/g,''))||0;}
+
+// === getMaruScore ===
+function getMaruScore(l){
+    if(!l.boats||!l.maru)return null;
+    var b=l.boats.find(function(b){return String(b.n)===String(l.maru);});
+    return b?b.sogoScore:null;
+  }
+
+// === barRow ===
+function barRow(label,hitN,totalN,color){
+    var p=pct(hitN,totalN);
+    var barColor=color||'var(--green)';
+    return '<div style="margin-bottom:10px;">'
+      +'<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;">'
+      +'<span style="color:var(--text);">'+label+'</span>'
+      +'<span style="color:'+barColor+';font-weight:700;">'+hitN+'/'+totalN+'件 ('+p+'%)</span>'
+      +'</div>'
+      +'<div style="height:5px;background:var(--bg);border-radius:3px;">'
+      +'<div style="height:5px;width:'+p+'%;background:'+barColor+';border-radius:3px;transition:width 0.4s;"></div>'
+      +'</div></div>';
+  }
+
+// === section ===
+function section(title,content){
+    return '<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);">'
+      +'<div style="font-size:10px;font-weight:700;color:var(--text-sub);letter-spacing:1.5px;margin-bottom:10px;">'+title+'</div>'
+      +content
+      +'</div>';
+  }
+
+// === copyHitAnalysis ===
+function copyHitAnalysis(){
+  var el=document.getElementById('hitAnalysisWrap');
+  if(!el)return;
+  // テキストとして抽出
+  var text=el.innerText||el.textContent;
+  var btn=document.getElementById('copyHitBtn');
+  navigator.clipboard.writeText(text).then(function(){
+    if(btn){btn.textContent='✅ コピー完了';setTimeout(function(){btn.textContent='📋 コピー';},2000);}
+  }).catch(function(){
+    // fallback
+    var ta=document.createElement('textarea');
+    ta.value=text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    if(btn){btn.textContent='✅ コピー完了';setTimeout(function(){btn.textContent='📋 コピー';},2000);}
+  });
+}
+
+// === copyMissDetail ===
+function copyMissDetail(){
+  var logs=JSON.parse(localStorage.getItem('kyotei_logs')||'[]');
+  var missLogs=logs.filter(function(l){return l.result&&l.result!=='skip'&&!l.hit;});
+  if(!missLogs.length)return;
+  var lines=[];
+  var zuré=0,maruOut=0,maruOrd=0;
+  missLogs.forEach(function(l){
+    var r=l.result,maru=l.aiRanking?l.aiRanking.find(function(a){return a.rank===1;}):null;
+    if(!maru)return;
+    var came=r.first==maru.n||r.second==maru.n||r.third==maru.n;
+    if(!came)maruOut++;else if(l.maruResult===1)zuré++;else maruOrd++;
+  });
+  lines.push('外れ詳細（'+missLogs.length+'件）');
+  lines.push('◎着外:'+maruOut+'件 紐ズレ:'+zuré+'件 ◎着順違い:'+maruOrd+'件');
+  lines.push('');
+  missLogs.forEach(function(l){
+    var r=l.result;
+    var rankMap={};(l.aiRanking||[]).forEach(function(a){rankMap[a.n]=a.rank;});
+    var maru=l.aiRanking?l.aiRanking.find(function(a){return a.rank===1;}):null;
+    var shiro=l.aiRanking?l.aiRanking.find(function(a){return a.rank===2;}):null;
+    var maruN=maru?maru.n:'?',shiroN=shiro?shiro.n:'?';
+    var maruCame=r.first==maruN||r.second==maruN||r.third==maruN;
+    var missType=!maruCame?'◎着外':l.maruResult===1?'紐ズレ':'◎着順違い';
+    var modeLabel=l.mode==='are'?'荒':'通';
+    var allBets=l.bets?((l.bets.honsen||[]).concat(l.bets.osaee||[])):[];
+    var combo=r.first+'-'+r.second+'-'+r.third;
+    var inBet=allBets.length>0&&allBets.indexOf(combo)>=0;
+    var meta=l.mode==='normal'?'信頼度'+l.shinkido+' 逃げ'+(l.nigeRate||'?')+'% 荒れ'+(l.areScore||0)+'点':'荒れ'+(l.areScore||0)+'点 逃げ'+(l.nigeRate||'?')+'% ◎'+maruN+'○'+shiroN;
+    lines.push(l.venue+l.raceNum+'R['+modeLabel+']['+missType+'] '+meta);
+    lines.push('結果:'+r.first+'('+(rankMap[r.first]||'?')+'位)-'+r.second+'('+(rankMap[r.second]||'?')+'位)-'+r.third+'('+(rankMap[r.third]||'?')+'位) ◎→'+(l.maruResult?l.maruResult+'着':'着外')+(l.shiroResult?' ○→'+l.shiroResult+'着':''));
+    var h2=l.bets?l.bets.honsen||[]:[];
+    var o2=l.bets?l.bets.osaee||[]:[];
+    if(h2.length||o2.length){
+      var combo3=r.first+'-'+r.second+'-'+r.third;
+      lines.push('買い目'+(allBets.indexOf(combo3)>=0?'✅':'❌')+' 本線:'+h2.join('/')+(o2.length?' 抑え:'+o2.join('/'):''));
+    }
+    lines.push('');
+  });
+  var text=lines.join('\n');
+  var btn=document.getElementById('copyMissBtn');
+  navigator.clipboard.writeText(text).then(function(){
+    btn.textContent='✅ コピー完了';
+    setTimeout(function(){btn.textContent='📋 コピー';},2000);
+  });
+}
+
+// === copyAnalysis ===
+function copyAnalysis(){
+  var t=window._lastAnalysis||'';
+  if(!t)return;
+  var btn=document.getElementById('copyAnalysisBtn');
+  navigator.clipboard.writeText(t).then(function(){
+    btn.textContent='✅ コピー完了';
+    setTimeout(function(){btn.textContent='📋 コピー';},2000);
+  });
+}
+
+// === renderEvalCard ===
+function renderEvalCard(text,venue,raceNum){
+  // 総合評価から順位・印を取得（スペース種類を問わず柔軟にマッチ）
+  var rankData=[];
+  text.split('\n').forEach(function(line){
+    var m=line.match(/([1-6])位[\s\u3000]*([1-6])号艇[\s\u3000]*(◎|○|▲|△|▽|×)/);
+    if(m)rankData.push({rank:parseInt(m[1]),boat:parseInt(m[2]),mark:m[3]});
+  });
+  // パース結果が6未満ならcalcDataのsogoRankで補完
+  if(rankData.length<6&&window.calcData&&calcData.parsed&&calcData.parsed.boats){
+    var MARK_ORDER_F=['◎','○','▲','△','▽','×'];
+    var sogoSorted=calcData.parsed.boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
+    var parsedBoats=rankData.map(function(d){return d.boat;});
+    sogoSorted.forEach(function(b,i){
+      if(parsedBoats.indexOf(b.n)<0){
+        rankData.push({rank:i+1,boat:b.n,mark:MARK_ORDER_F[Math.min(i,5)]});
+      }
+    });
+    var seen={};
+    rankData=rankData.filter(function(d){if(seen[d.boat])return false;seen[d.boat]=true;return true;});
+    rankData.sort(function(a,b){return a.rank-b.rank;});
+    rankData.forEach(function(d,i){d.rank=i+1;});
+  }
+  if(!rankData.length)return;
+  rankData.sort(function(a,b){return a.rank-b.rank;});
+
+  // タイトル
+  var title='G.の総合評価🚤';
+  if(venue&&venue!=='?'&&raceNum&&raceNum!=='?')title='G.の総合評価🚤　'+venue+raceNum+'R';
+  document.getElementById('evalCardTitle').textContent=title;
+
+  // 艇バッジ生成
+  var container=document.getElementById('evalBoats');
+  var ctr=container.querySelector('.eval-corner-tr');
+  var cbl=container.querySelector('.eval-corner-bl');
+  container.innerHTML='';
+  container.appendChild(ctr);
+  container.appendChild(cbl);
+
+  rankData.forEach(function(d,idx){
+    if(idx>0){
+      var arrow=document.createElement('div');
+      arrow.className='eval-arrow';
+      arrow.textContent='›';
+      container.appendChild(arrow);
+    }
+    var slot=document.createElement('div');
+    slot.className='eval-slot';
+    var badge=document.createElement('div');
+    badge.className='eval-badge';
+    var c=BOAT_COLORS[d.boat]||BOAT_COLORS[1];
+    badge.style.background=c.bg;
+    badge.style.color=c.text;
+    badge.textContent=d.boat;
+    var stars=document.createElement('div');
+    stars.className='eval-stars';
+    var starCount=MARK_TO_STARS[d.mark]||1;
+    var starsHtml='';
+    for(var i=0;i<5;i++)starsHtml+='<span class="'+(starCount>i?'eval-star-on':'eval-star-off')+'">★</span>';
+    stars.innerHTML=starsHtml;
+    slot.appendChild(badge);
+    slot.appendChild(stars);
+    container.appendChild(slot);
+  });
+
+  document.getElementById('evalCardWrap').classList.add('show');
+}
+
+// === saveEvalCard ===
+function saveEvalCard(){
+  var card=document.getElementById('evalCard');
+  if(!card)return;
+  var btn=document.querySelector('.eval-save-btn');
+  btn.textContent='生成中...';
+  btn.disabled=true;
+  html2canvas(card,{
+    scale:3,
+    useCORS:true,
+    backgroundColor:'#0a0a0a',
+    logging:false,
+    allowTaint:true
+  }).then(function(canvas){
+    canvas.toBlob(function(blob){
+      var file=new File([blob],'GARON_評価カード.png',{type:'image/png'});
+      // Web Share API（iOS Safari対応・カメラロールに保存可能）
+      if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+        navigator.share({files:[file],title:'G.の総合評価'}).then(function(){
+          btn.textContent='✅ 共有しました';
+          setTimeout(function(){btn.textContent='📥 評価カードを保存・共有';btn.disabled=false;},2000);
+        }).catch(function(){
+          btn.textContent='📥 評価カードを保存・共有';
+          btn.disabled=false;
+        });
+      } else {
+        // フォールバック：通常ダウンロード
+        var url=URL.createObjectURL(blob);
+        var link=document.createElement('a');
+        link.download='GARON_評価カード.png';
+        link.href=url;
+        link.click();
+        setTimeout(function(){URL.revokeObjectURL(url);},1000);
+        btn.textContent='✅ 保存しました';
+        setTimeout(function(){btn.textContent='📥 評価カードを保存・共有';btn.disabled=false;},2000);
+      }
+    },'image/png');
+  }).catch(function(){
+    btn.textContent='📥 評価カードを保存・共有';
+    btn.disabled=false;
+    showStatus('生成失敗。スクショをお試しください。','err');
+  });
+}
+
+// === parseOdds ===
+function parseOdds(raw){
+  var lines=raw.split('\n').map(function(l){return l.replace(/\t/g,' ').trim();}).filter(function(l){return l.length>0;});
+  var boats={};var playerRe=/^([1-6])\s+([　-\u9fff\u30a0-\u30ff]+)/;var blocks=[];var cur=null;
+  for(var i=0;i<lines.length;i++){var line=lines[i];var pm=line.match(playerRe);if(pm){cur={boatNo:parseInt(pm[1]),name:pm[2],dataLines:[]};blocks.push(cur);continue;}if(cur&&!line.startsWith('合成')&&!line.startsWith('2単'))cur.dataLines.push(line);}
+  for(var bi=0;bi<blocks.length;bi++){
+    var block=blocks[bi];var boatNo=block.boatNo,name=block.name,dataLines=block.dataLines;
+    boats[boatNo]={name:name,odds:{}};if(dataLines.length<1)continue;
+    var tokenLines=dataLines.map(function(l){return l.split(/\s+/).filter(function(t){return /^\d+(\.\d+)?$/.test(t);}).map(Number);});
+    var row0=tokenLines[0];if(!row0||row0.length<3)continue;
+    var secondBoats=[];
+    for(var j=0;j+2<row0.length;j+=3){var s=Math.round(row0[j]),t=Math.round(row0[j+1]),v=row0[j+2];if(s>=1&&s<=6&&t>=1&&t<=6&&v>0){secondBoats.push(s);boats[boatNo].odds[boatNo+'-'+s+'-'+t]=v;}}
+    for(var row=1;row<tokenLines.length;row++){var toks=tokenLines[row];for(var col=0;col<secondBoats.length;col++){var jj=col*2;if(jj+1>=toks.length)continue;var tt=Math.round(toks[jj]),vv=toks[jj+1];if(tt>=1&&tt<=6&&vv>0)boats[boatNo].odds[boatNo+'-'+secondBoats[col]+'-'+tt]=vv;}}
+  }
+  return boats;
+}
+
+// === calcGoseiOdds ===
+function calcGoseiOdds(betsArr,oddsData){
+  var sum=0;
+  betsArr.forEach(function(bet){var parts=bet.match(/^(\d)-(\d)-(\d)$/);if(!parts)return;var first=parseInt(parts[1]);var bd=oddsData[first];if(!bd)return;var o=bd.odds[bet];if(o&&o>0)sum+=1/o;});
+  return sum===0?null:(1/sum).toFixed(1);
+}
+
+// === showOddsResult ===
+function showOddsResult(){
+  var raw=document.getElementById('raceData').value;
+  var oddsIdx=raw.indexOf('=== オッズ ===');
+  if(oddsIdx<0){document.getElementById('oddsResult').innerHTML='';return;}
+  var oddsRaw=raw.slice(oddsIdx);
+  var oddsData=parseOdds(oddsRaw);
+  var outText=document.getElementById('outText').textContent;
+  var bets=[],seen={};
+  var lines=outText.split('\n');
+  var inBetSection=false;
+  lines.forEach(function(ln){
+    var t=ln.trim();
+    if(t.indexOf('【最終買い目】')>=0||t.indexOf('【買い目】')>=0){inBetSection=true;return;}
+    if(inBetSection&&t.startsWith('【')&&t.indexOf('買い目')<0){inBetSection=false;}
+    if(inBetSection&&/^\d-\d-\d$/.test(t)&&!seen[t]){seen[t]=true;bets.push(t);}
+  });
+  if(bets.length===0){document.getElementById('oddsResult').innerHTML='';return;}
+  var html='<div style="margin-top:14px;"><div style="font-size:10px;color:var(--text-sub);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;padding-left:6px;border-left:2px solid var(--accent);">買い目オッズ</div>';
+  html+='<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr><th style="text-align:left;padding:5px 6px;background:var(--bg);color:var(--text-sub);font-size:10px;border-bottom:1px solid var(--border);">買い目</th><th style="text-align:right;padding:5px 6px;background:var(--bg);color:var(--text-sub);font-size:10px;border-bottom:1px solid var(--border);">オッズ</th></tr></thead><tbody>';
+  var validBets=[];
+  bets.forEach(function(bet){
+    var parts=bet.match(/^(\d)-(\d)-(\d)$/);if(!parts)return;
+    var first=parseInt(parts[1]);var bd=oddsData[first];var o=bd?bd.odds[bet]:null;
+    var oStr=o?o.toFixed(1)+'倍':'—';
+    var color=o?(o>=100?'color:var(--accent)':o>=30?'color:var(--text)':'color:var(--green)'):'color:var(--text-muted)';
+    html+='<tr><td style="padding:5px 6px;border-bottom:1px solid var(--border);font-weight:700;">'+bet+'</td><td style="text-align:right;padding:5px 6px;border-bottom:1px solid var(--border);'+color+'">'+oStr+'</td></tr>';
+    if(o)validBets.push(bet);
+  });
+  html+='</tbody></table>';
+  var gosei=calcGoseiOdds(validBets,oddsData);
+  if(gosei){html+='<div style="margin-top:10px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:4px;"><span style="font-size:10px;color:var(--text-sub);">合成オッズ</span><span style="font-size:22px;font-weight:700;color:var(--accent);margin-left:10px;">'+gosei+'倍</span><span style="font-size:10px;color:var(--text-muted);margin-left:8px;">('+validBets.length+'点)</span></div>';}
+  html+='</div>';
+  document.getElementById('oddsResult').innerHTML=html;
+}
+
+// === copyXOnly ===
+function copyXOnly(){
+  var text=document.getElementById('outText').textContent;
+  var xIdx=text.indexOf('【Xサマリー】');
+  if(xIdx<0){showStatus('Xサマリーが見つかりません','err');return;}
+  var xEnd=text.indexOf('\n【',xIdx+1);
+  var xRaw=xEnd>=0?text.slice(xIdx+7,xEnd):text.slice(xIdx+7);
+  var out=formatXSummary(xRaw);
+  var btn=document.getElementById('copyXOnlyBtn');
+  navigator.clipboard.writeText(out).then(function(){
+    btn.textContent='✅ コピー完了';
+    setTimeout(function(){btn.textContent='𝕏 Xサマリーのみコピー';},2000);
+  });
+}
+
+// === copyXAndSogo ===
+function copyXAndSogo(){
+  var text=document.getElementById('outText').textContent;
+  var sogoIdx=text.indexOf('【総合評価】');
+  var sogoEnd=text.indexOf('\n【',sogoIdx+1);
+  var sogoRaw=sogoIdx>=0?(sogoEnd>=0?text.slice(sogoIdx,sogoEnd):text.slice(sogoIdx)):'';
+  var xIdx=text.indexOf('【Xサマリー】');
+  var xEnd=text.indexOf('\n【',xIdx+1);
+  var xRaw=xIdx>=0?(xEnd>=0?text.slice(xIdx+7,xEnd):text.slice(xIdx+7)):'';
+  var out='';
+  if(sogoRaw)out+=sogoRaw.trim();
+  if(xRaw)out+=(out?'\n\n':'')+'【Xサマリー】\n'+formatXSummary(xRaw);
+  if(!out)out=text;
+  var btn=document.getElementById('copyXSogoBtn');
+  navigator.clipboard.writeText(out).then(function(){
+    btn.textContent='✅ コピー完了';
+    setTimeout(function(){btn.textContent='𝕏 総合評価＋サマリーをコピー';},2000);
+  });
+}
+
+// === copyOut ===
+function copyOut(){
+  var text=document.getElementById('outText').textContent;
+  var btn=document.getElementById('copyBtn');
+  if(navigator.clipboard){navigator.clipboard.writeText(text).then(function(){btn.textContent='✅ コピー完了';btn.classList.add('ok');setTimeout(function(){btn.textContent='📋 全文コピー';btn.classList.remove('ok');},2000);});}
+}
+
+// === formatXSummary ===
+function formatXSummary(raw){
+  // 1行目（場所・R）の下だけ空行、残りは詰める
+  var lines=raw.trim().split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length>0;});
+  if(lines.length===0)return '';
+  return lines[0]+'\n\n'+lines.slice(1).join('\n');
+}
+
+// === showEditMarkUI ===
+function showEditMarkUI(maruN, shiroN, sankakuN){
+  var boats=['1','2','3','4','5','6'];
+  ['editMaru','editShiro','editSankaku'].forEach(function(id){
+    var sel=document.getElementById(id);
+    sel.innerHTML=boats.map(function(n){return '<option value="'+n+'">'+n+'号</option>';}).join('');
+  });
+  document.getElementById('editMaru').value=maruN;
+  document.getElementById('editShiro').value=shiroN;
+  document.getElementById('editSankaku').value=sankakuN;
+  document.getElementById('editMarkWrap').style.display='block';
+}
+
+// === regenerateBets ===
+function regenerateBets(){
+  if(!calcData)return;
+  var maruCA=document.getElementById('editMaru').value;
+  var shiroCA=document.getElementById('editShiro').value;
+  var sankakuCA=document.getElementById('editSankaku').value;
+  var venue=document.getElementById('venue').value||'?';
+  var raceNum=document.getElementById('raceNum').value||'?';
+  var sogoSortedC=calcData.parsed.boats.slice().sort(function(a,b){return (a.sogoRank||99)-(b.sogoRank||99);});
+  var goCA=String(sogoSortedC[4]?sogoSortedC[4].n:'5');
+  var usedCA=[maruCA,shiroCA,sankakuCA];
+  if(usedCA.indexOf(goCA)>=0){
+    var goAltCA=sogoSortedC.filter(function(b){return usedCA.indexOf(String(b.n))<0;});
+    goCA=String(goAltCA[goAltCA.length>1?1:0]?goAltCA[goAltCA.length>1?1:0].n:goCA);
+  }
+  var betsC=buildAreBetsFinal(maruCA,shiroCA,sankakuCA,goCA,[]);
+  var honsenC=betsC.honsen;
+  var osaeeC=betsC.osaee;
+  var honsenStrC=compressBets(honsenC)||honsenC.join('/');
+  var osaeeStrC=compressBets(osaeeC)||osaeeC.join('/');
+  // テキストを更新
+  var text=document.getElementById('outText').textContent;
+  // 既存の【最終買い目】を置き換え
+  var betBlockC='【最終買い目】'+(honsenC.length+osaeeC.length)+'点\n本線\n'+honsenC.join('\n')+'\n抑え\n'+osaeeC.join('\n')+'\n';
+  text=text.replace(/【最終買い目】[\s\S]*?(?=【|$)/g,'');
+  var inIdxC=text.indexOf('【イン信頼度】');
+  if(inIdxC>=0){text=text.slice(0,inIdxC)+betBlockC+'\n'+text.slice(inIdxC);}
+  else{text=betBlockC+'\n'+text;}
+  // Xサマリー再構築
+  var xIdxC=text.indexOf('【Xサマリー】');
+  var commentC='';
+  if(xIdxC>=0){
+    var beforeC=text.slice(0,xIdxC),afterC=text.slice(xIdxC);
+    var xLinesC=afterC.split('\n');
+    for(var xci=1;xci<xLinesC.length;xci++){
+      var xlc=xLinesC[xci].trim();
+      if(!xlc||xlc===venue+raceNum+'R'||xlc.indexOf('本線')===0||xlc.indexOf('抑え')===0||xlc==='G.'||/^[\d><=]+$/.test(xlc))continue;
+      commentC=xlc;break;
+    }
+    var hyokaC=buildHyokaOrder(calcData.parsed.boats);
+    var newXC='【Xサマリー】\n'+venue+raceNum+'R\n'+(commentC?commentC+'\n\n':'')+hyokaC+'\n本線\u3000'+honsenStrC+(osaeeC.length?'\n抑え\u3000'+osaeeStrC:'')+'\n\nG.';
+    text=beforeC+newXC;
+  }
+  document.getElementById('outText').textContent=text;
+  showOddsResult();
+  showStatus('買い目を再生成しました','ok');
+}
+
+// === binfo ===
+function binfo(n){var b=bm[n];return b?n+'号('+b.sogoRank+'位/'+b.sogoScore+'pt/機'+b.kiryokuRank+')':n+'号(?)';}
+
+// === binfo2 ===
+function binfo2(n){var b=bm2[n];return b?n+'号('+b.sogoRank+'位/'+b.sogoScore+'pt/機'+b.kiryokuRank+')':n+'号(?)';}
+
+// === showToast ===
+function showToast(msg){showStatus(msg,'err');}
+
+
+
+// 初期化
+window.addEventListener('DOMContentLoaded',function(){loadVenueRace();updateLogSummary();});
 </script>
 </body>
 </html>
