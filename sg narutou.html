@@ -490,10 +490,19 @@ function parseData(text){
     for(let i=0;i<6;i++) d.boats[i].motor2ren=parseFloat(motorSection[i+1])||0;
   }
 
-  // 今節得点率（行頭マッチ）
-  const sessonSection=text.match(/^得点率[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)/m);
+  // 今節得点率（行頭マッチ）- 「-」は賞除外（失格扱い）
+  const sessonSection=text.match(/^得点率[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)/m);
   if(sessonSection){
-    for(let i=0;i<6;i++) d.boats[i].sessonPt=parseFloat(sessonSection[i+1])||0;
+    for(let i=0;i<6;i++){
+      const v=(sessonSection[i+1]||'').trim();
+      if(v==='-'||v===''){
+        d.boats[i].sessonPt=0;
+        d.boats[i].isJogai=true; // 賞除外フラグ
+      } else {
+        d.boats[i].sessonPt=parseFloat(v)||0;
+        d.boats[i].isJogai=false;
+      }
+    }
   }
 
   // 今節平均ST（今節成績セクション内）
@@ -651,7 +660,10 @@ function calcAreScore(d){
     // ⑧ 未消化Fペナルティ -10pt（F休み持ち艇のみ、-15→-10に緩和）
     if(b.isF) s-=10;
 
-    return{no:b.no, raw:Math.max(0,s), tenji:b.tenji, syukai:b.syukai,
+    // ⑨ 賞除外艇は強制最下位（-999pt）
+    if(b.isJogai) s=-999;
+
+    return{no:b.no, raw:s, tenji:b.tenji, syukai:b.syukai,
       _atk:atk*0.4, _ex:(b.exRank>=0?(5-b.exRank)*3:0),
       _lap:(b.lapRank>=0?(5-b.lapRank)*3:0),
       _st:stPt,
@@ -697,6 +709,11 @@ function calcAreIndex(d){
 
   // 4. F持ち艇
   if(d.boats.some(b=>b.isF)) score+=2;
+
+  // 4.5 賞除外艇（実質5艇戦→展開不確実性UP）
+  const jogaiCount=d.boats.filter(b=>b.isJogai).length;
+  if(jogaiCount>=1) score+=3; // 1艇除外で+3（5艇戦）
+  if(jogaiCount>=2) score+=2; // 2艇以上でさらに+2
 
   // 5. 鳴門SGボーナス
   score+=3;
@@ -790,53 +807,69 @@ function parseRanking(text){
 // 買い目生成（JS固定）
 // ============================================================
 function buildBetsNormal(ranking, pts, parsedData){
-  // v1.2プロンプト準拠: 8点固定（本線4点 + 抑え4点）
-  // 本線4点: ◎頭 / 2着1位候補（○▲）/ 3着（○▲△から軸・2着除く）
-  //   → ◎-○-▲, ◎-○-△, ◎-▲-○, ◎-▲-△
-  // 抑え4点: ◎頭 / 2着2位候補（今節得点率1位・2位、◎○▲除外）/ 3着（○▲から）
-  //   → ◎-得1-○, ◎-得1-▲, ◎-得2-○, ◎-得2-▲
+  // 通常エンジン(kyotei_yoso.html)完全準拠
+  // ranking: [{boat,mark}, ...] ◎○▲△▽×順
+  // 信頼度B相当: ◎頭 OR ○頭の1着、3着は△まで（▽×除外）
+  // スコア = 1着rank×10 + 2着rank×10 + 3着rank（小さいほど良い）
+  // 8点: 上位4点=本線、次4点=抑え
+
   if(ranking.length<4) return [];
-  const fst=ranking[0].boat; // ◎
-  const r2 =ranking[1].boat; // ○
-  const r3 =ranking[2].boat; // ▲
-  const r4 =ranking[3].boat; // △
-  const r5 =ranking[4]?ranking[4].boat:null; // ▽
+  const maru    = String(ranking[0].boat); // ◎ rank1
+  const shiro   = String(ranking[1].boat); // ○ rank2
+  const sankaku = String(ranking[2].boat); // ▲ rank3
+  const yonkaku = String(ranking[3].boat); // △ rank4
+  const go      = ranking[4]?String(ranking[4].boat):null; // ▽ rank5
+  const sixth   = ranking[5]?String(ranking[5].boat):null; // × rank6
 
-  // 2着2位候補: 今節得点率上位2艇（◎○▲を除いた残り）
-  let ni2=[];
-  if(parsedData&&parsedData.boats){
-    ni2=[...parsedData.boats]
-      .filter(b=>b.no!==fst&&b.no!==r2&&b.no!==r3)
-      .sort((a,b)=>b.sessonPt-a.sessonPt)
-      .slice(0,2).map(b=>b.no);
-  }
-  // フォールバック: △▽
-  if(ni2.length<2){
-    const fb=[r4,r5].filter(v=>v!=null&&!ni2.includes(v));
-    ni2=[...ni2,...fb].slice(0,2);
-  }
+  const rankMap = {};
+  rankMap[maru]=1; rankMap[shiro]=2; rankMap[sankaku]=3; rankMap[yonkaku]=4;
+  if(go)    rankMap[go]=5;
+  if(sixth) rankMap[sixth]=6;
 
-  const seen=new Set(), bets=[];
-  const add=(val,type)=>{if(!seen.has(val)){seen.add(val);bets.push({val,type});}};
+  // 賞除外艇を除いた艇リスト
+  const activeBoats = ranking
+    .filter(r => {
+      const s = currentAreScores&&currentAreScores.find(sc=>sc.no===r.boat);
+      return !(s&&s.raw<=-999);
+    })
+    .map(r=>String(r.boat));
 
-  // ── 本線4点: ◎-○-▲, ◎-○-△, ◎-▲-○, ◎-▲-△ ──
-  const honsenPairs=[
-    [r2,r3],[r2,r4],
-    [r3,r2],[r3,r4],
-  ];
-  for(const[s,t] of honsenPairs){
-    if(t!=null&&t!==fst&&t!==s) add(`${fst}-${s}-${t}`,'本線');
-  }
-
-  // ── 抑え4点: ◎-得1-○, ◎-得1-▲, ◎-得2-○, ◎-得2-▲ ──
-  for(const s of ni2){
-    for(const t of [r2,r3]){
-      if(t!==fst&&t!==s) add(`${fst}-${s}-${t}`,'抑え');
+  const all = [];
+  for(const a of activeBoats){
+    for(const b of activeBoats){
+      if(b===a) continue;
+      for(const c of activeBoats){
+        if(c===a||c===b) continue;
+        // 1着制約: ◎頭 OR ○頭のみ
+        if(a!==maru && a!==shiro) continue;
+        // 3着制約: △(rank4)まで（▽×除外）
+        if((rankMap[c]||99)>=5) continue;
+        const score=(rankMap[a]||9)*10+(rankMap[b]||9)*10+(rankMap[c]||9);
+        all.push({val:`${a}-${b}-${c}`, score});
+      }
     }
   }
+  all.sort((a,b)=>a.score-b.score);
 
-  // ptsが8未満（6点等）の場合は本線優先でスライス
-  return bets.slice(0, pts||8);
+  // 重複除去してtop取得
+  const seen=new Set(), top=[];
+  for(const item of all){
+    if(top.length>=15) break;
+    if(!seen.has(item.val)){seen.add(item.val);top.push(item.val);}
+  }
+
+  // 点数に応じて本線・抑え分割
+  let honsenCount, osaeeCount;
+  if(pts<=4){       honsenCount=4;  osaeeCount=0; }
+  else if(pts<=6){  honsenCount=6;  osaeeCount=0; }
+  else if(pts<=8){  honsenCount=4;  osaeeCount=4; }
+  else if(pts<=12){ honsenCount=6;  osaeeCount=6; }
+  else {            honsenCount=6;  osaeeCount=9; }
+
+  const bets=[];
+  top.slice(0, honsenCount).forEach(v=>bets.push({val:v, type:'本線'}));
+  top.slice(honsenCount, honsenCount+osaeeCount).forEach(v=>bets.push({val:v, type:'抑え'}));
+  return bets.slice(0, pts);
 }
 
 function buildBetsAre(ranking, pts, nigeRate){
@@ -1002,11 +1035,13 @@ async function runYoso(){
 
     // スコア表示（デバッグ情報含む）
     const scoreEl=document.getElementById('score-display');
-    scoreEl.innerHTML='<div class="score-grid">'+areScores.map(s=>`<div class="score-cell"><div class="boat-no">${s.no}号艇</div><div class="score-val">${s.raw.toFixed(0)}</div><div class="score-label">pt</div></div>`).join('')+'</div>';
-    // パース値デバッグ表示
+    scoreEl.innerHTML='<div class="score-grid">'+areScores.map(s=>{
+      const isJg=s.raw<=-999;
+      return`<div class="score-cell"><div class="boat-no">${s.no}号艇</div><div class="score-val" style="${isJg?'color:var(--muted);font-size:11px;':''}"> ${isJg?'除外':s.raw.toFixed(0)}</div><div class="score-label">${isJg?'賞除外':'pt'}</div></div>`;
+    }).join('')+'</div>';
     // スコア内訳デバッグ表示
-    const debugLines=areScores.map(s=>`${s.no}号: 攻${s._atk.toFixed(1)} 展示${s._ex} 周回${s._lap} ST${s._st.toFixed(1)} 得点${s._toku.toFixed(1)} モーター${s._motor.toFixed(1)} 逃ペナ${s._pen1} Fペナ${s._penF} = ${s.raw.toFixed(1)}pt`).join('\n');
-    const parseLines=d.boats.map(b=>`${b.no}号: 得点${b.sessonPt} 直前ST${b.directST}${b.isExhibitF?'(展示F)':''} F休${b.isF?'✓':'-'} 展示${b.tenji} 周回${b.syukai} 差${b.sashi6m}% 捲${b.makuri6m}% Motor${b.motor2ren}%`).join('\n');
+    const debugLines=areScores.map(s=>s.raw<=-999?`${s.no}号: 【賞除外】`:`${s.no}号: 攻${s._atk.toFixed(1)} 展示${s._ex} 周回${s._lap} ST${s._st.toFixed(1)} 得点${s._toku.toFixed(1)} モーター${s._motor.toFixed(1)} 逃ペナ${s._pen1} Fペナ${s._penF} = ${s.raw.toFixed(1)}pt`).join('\n');
+    const parseLines=d.boats.map(b=>`${b.no}号: 得点${b.isJogai?'除外':b.sessonPt} 直前ST${b.directST}${b.isExhibitF?'(展示F)':''} F休${b.isF?'✓':'-'} 展示${b.tenji} 周回${b.syukai} 差${b.sashi6m}% 捲${b.makuri6m}% Motor${b.motor2ren}%`).join('\n');
     scoreEl.innerHTML+=`<details style="margin-top:8px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">📋 スコア内訳</summary><pre style="font-size:10px;color:var(--muted);margin-top:6px;overflow-x:auto;">${debugLines}\n\n【パース値】\n${parseLines}</pre></details>`;
     const modeEl=document.getElementById('mode-result');
     const modeCls=mode==='are'?'mode-are':mode==='skip'?'mode-skip':'mode-normal';
