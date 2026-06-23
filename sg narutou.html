@@ -279,10 +279,6 @@
   </div>
 </div>
 
-    <label>対象レース</label><select id="harai-sel" style="margin-bottom:10px;"></select>
-    <label>払戻金額 (円)</label><input type="number" id="harai-amount" placeholder="例: 18500">
-    <button class="btn btn-gold" onclick="saveHarai()">登録</button>
-  </div>
   <div class="card">
     <div class="card-title">📋 BMペースト</div>
     <textarea id="harai-paste" placeholder="boatrace.jpの払戻ページからコピーしたテキストを貼付け"></textarea>
@@ -380,6 +376,16 @@ function generateBets(d, areScores, mode){
   currentCalcData={racenum,honme,nigeRate,areIndex,mode,betcount:betsRaw.length,shikin,ranking,betsRaw};
   recalcAlloc();
   updateXPreview();
+
+  // 予想保存ボタンを動的追加（重複防止）
+  var existSaveBtn=document.getElementById('save-result-btn-wrap');
+  if(!existSaveBtn){
+    var saveWrap=document.createElement('div');
+    saveWrap.id='save-result-btn-wrap';
+    saveWrap.style.cssText='margin-top:8px;';
+    saveWrap.innerHTML='<button onclick="saveResult(\'pending\')" style="width:100%;padding:14px;background:var(--gold);color:#000;border:none;border-radius:8px;font-size:14px;font-weight:700;-webkit-appearance:none;letter-spacing:.05em;">💾 この予想を保存する</button>';
+    document.getElementById('bet-section').appendChild(saveWrap);
+  }
 
   // 評価カード生成
   var venue = document.getElementById('inp-venue') ? document.getElementById('inp-venue').value : '';
@@ -1080,10 +1086,12 @@ async function runYoso(){
 }
 
 function clearYoso(){
-  ['inp-data','inp-chakuju','inp-payout-reg'].forEach(id=>document.getElementById(id).value='');
+  ['inp-data','inp-chakuju','inp-payout-reg'].forEach(id=>{var el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('inp-racenum').value='';
   document.getElementById('yoso-result').style.display='none';
   document.getElementById('bet-section').style.display='none';
+  var sbw=document.getElementById('save-result-btn-wrap');
+  if(sbw) sbw.remove();
   currentCalcData=null;
   currentParsedData=null;
   currentAreScores=null;
@@ -1356,7 +1364,7 @@ function openResultModal(id){
     (entry.venue||'鳴門')+' '+entry.racenum+'R　'+entry.date+'　'+(entry.mode==='are'?'⚡荒れ':'🔒通常');
   _renderModalBody();
   const modal=document.getElementById('result-modal');
-  modal.style.display='flex';
+  modal.style.visibility='visible';
 }
 
 function _renderModalBody(){
@@ -1446,7 +1454,7 @@ function commitResult(type){
 }
 
 function closeResultModal(){
-  document.getElementById('result-modal').style.display='none';
+  document.getElementById('result-modal').style.visibility='hidden';
   _resultInputId=null;
 }
 
@@ -1595,10 +1603,10 @@ function updateLogSummary(){
       </div>
     </div>`;
     if(done.length>=5){
-      html+=`<button onclick="switchTab('log');showHitAnalysis();" style="width:100%;padding:10px;background:rgba(76,175,125,.08);color:var(--green);border:1px solid rgba(76,175,125,.3);border-radius:6px;font-size:12px;font-weight:700;-webkit-appearance:none;margin-bottom:6px;">🎯 当たり分析</button>`;
+      html+=`<button onclick="showHitAnalysis()" style="width:100%;padding:10px;background:rgba(76,175,125,.08);color:var(--green);border:1px solid rgba(76,175,125,.3);border-radius:6px;font-size:12px;font-weight:700;-webkit-appearance:none;margin-bottom:6px;">🎯 当たり分析</button>`;
     }
     if(done.length-hits.length>0){
-      html+=`<button onclick="switchTab('log');showMissDetail();" style="width:100%;padding:10px;background:rgba(224,80,80,.08);color:var(--red);border:1px solid rgba(224,80,80,.3);border-radius:6px;font-size:12px;font-weight:700;-webkit-appearance:none;">📊 外れ詳細（${done.length-hits.length}件）</button>`;
+      html+=`<button onclick="showMissDetail()" style="width:100%;padding:10px;background:rgba(224,80,80,.08);color:var(--red);border:1px solid rgba(224,80,80,.3);border-radius:6px;font-size:12px;font-weight:700;-webkit-appearance:none;">📊 外れ詳細（${done.length-hits.length}件）</button>`;
     }
   }
   html+='</div>';
@@ -1816,50 +1824,138 @@ function renderEvalCard(xText, venue, racenum){
 }
 
 function saveEvalCard(){
-  var card=document.getElementById('evalCard');
-  if(!card){showToast('カードが見つかりません');return;}
-  if(typeof html2canvas!=='function'){showToast('スクリーンショットで保存してください');return;}
   var btn=document.querySelector('.eval-save-btn');
   function resetBtn(){if(btn){btn.textContent='📥 評価カードを保存・共有';btn.disabled=false;}}
   if(btn){btn.textContent='生成中...';btn.disabled=true;}
 
-  // CSSカスタムプロパティをSafari向けにインライン展開
-  function inlineStyles(el){
-    var cs=window.getComputedStyle(el);
-    var inlineProps=['background','background-color','color','font-size','font-weight',
-      'font-family','font-style','border-radius','padding','margin','display',
-      'width','height','border','border-top','border-right','border-bottom','border-left',
-      'box-shadow','text-align','letter-spacing','line-height','text-shadow',
-      'position','top','right','bottom','left','overflow','flex-direction',
-      'align-items','justify-content','gap','flex','filter'];
-    inlineProps.forEach(function(p){
-      try{var v=cs.getPropertyValue(p);if(v)el.style[p]=v;}catch(e){}
+  // Canvas APIで直接描画（html2canvas不使用）
+  try{
+    var COLORS={1:{bg:'#a8a8a8',text:'#000'},2:{bg:'#3a3a3a',text:'#fff'},3:{bg:'#c42222',text:'#fff'},4:{bg:'#1e52cc',text:'#fff'},5:{bg:'#cc9a00',text:'#000'},6:{bg:'#168432',text:'#fff'}};
+    var STARS={'◎':5,'○':4,'▲':3,'△':2,'▽':1,'×':1};
+    var marks=['◎','○','▲','△','▽','×'];
+
+    // ランキングデータ取得
+    if(!currentAreScores||!currentAreScores.length){showToast('予想を実行してください');resetBtn();return;}
+    var rankData=currentAreScores.map(function(s,i){
+      return{boat:parseInt(s.no),mark:marks[i]||'×'};
     });
-    Array.from(el.children).forEach(function(child){inlineStyles(child);});
-  }
 
-  // カードをcloneしてインライン化
-  var clone=card.cloneNode(true);
-  clone.style.position='fixed';
-  clone.style.top='-9999px';
-  clone.style.left='-9999px';
-  clone.style.background='#0c0c0c';
-  clone.style.borderRadius='10px';
-  clone.style.padding='16px 14px 18px';
-  clone.style.width=card.offsetWidth+'px';
-  document.body.appendChild(clone);
-  inlineStyles(clone);
+    var DPR=3;
+    var W=390,H=260;
+    var canvas=document.createElement('canvas');
+    canvas.width=W*DPR; canvas.height=H*DPR;
+    var ctx=canvas.getContext('2d');
+    ctx.scale(DPR,DPR);
 
-  html2canvas(clone,{
-    scale:3,
-    useCORS:false,
-    allowTaint:false,
-    backgroundColor:'#0c0c0c',
-    logging:false,
-    foreignObjectRendering:false,
-    removeContainer:true
-  }).then(function(canvas){
-    document.body.removeChild(clone);
+    // 背景
+    ctx.fillStyle='#0c0c0c';
+    ctx.beginPath();
+    _roundRect(ctx,0,0,W,H,10);
+    ctx.fill();
+
+    // タイトル
+    var venue=document.getElementById('inp-venue')?document.getElementById('inp-venue').value||'':'' ;
+    var racenum=document.getElementById('inp-racenum')?document.getElementById('inp-racenum').value||'':'';
+    var titleText='G.の総合評価🚤'+(venue&&racenum?'　'+venue+racenum+'R':'');
+    ctx.save();
+    ctx.font='italic 900 22px serif';
+    ctx.fillStyle='#e8c96a';
+    ctx.textAlign='center';
+    ctx.shadowColor='rgba(200,153,60,0.4)';
+    ctx.shadowBlur=16;
+    ctx.fillText(titleText,W/2,38);
+    ctx.restore();
+
+    // ブラシライン
+    var gBrush=ctx.createLinearGradient(W*0.24,0,W*0.76,0);
+    gBrush.addColorStop(0,'transparent');
+    gBrush.addColorStop(0.2,'rgba(255,220,80,0.4)');
+    gBrush.addColorStop(0.5,'rgba(255,220,80,0.65)');
+    gBrush.addColorStop(0.8,'rgba(255,220,80,0.4)');
+    gBrush.addColorStop(1,'transparent');
+    ctx.fillStyle=gBrush;
+    ctx.beginPath(); ctx.ellipse(W/2,50,W*0.26,4.5,0,0,Math.PI*2); ctx.fill();
+
+    // ボートエリア背景
+    ctx.fillStyle='#141414';
+    ctx.strokeStyle='#2e2e2e';
+    ctx.lineWidth=1;
+    ctx.beginPath(); _roundRect(ctx,12,62,W-24,138,8); ctx.fill(); ctx.stroke();
+
+    // コーナー装飾
+    var cSize=14,cMarg=17;
+    ctx.strokeStyle='#c9a84c'; ctx.lineWidth=2;
+    // TR
+    ctx.beginPath();ctx.moveTo(W-cMarg-cSize,cMarg);ctx.lineTo(W-cMarg,cMarg);ctx.lineTo(W-cMarg,cMarg+cSize);ctx.stroke();
+    // BL
+    ctx.beginPath();ctx.moveTo(cMarg+cSize,H-cMarg-38);ctx.lineTo(cMarg,H-cMarg-38);ctx.lineTo(cMarg,H-cMarg-38-cSize);ctx.stroke();
+
+    // 各ボートスロット
+    var slotW=(W-24)/6;
+    var arrowColor='#4a4a4a';
+    rankData.forEach(function(d,i){
+      var cx=12+slotW*i+slotW/2;
+      var badgeR=26;
+      var badgeY=105;
+
+      // 矢印
+      if(i>0){
+        ctx.fillStyle=arrowColor;
+        ctx.font='bold 14px sans-serif';
+        ctx.textAlign='center';
+        ctx.fillText('›',cx-slotW/2,badgeY+4);
+      }
+
+      // バッジ背景
+      var col=COLORS[d.boat]||COLORS[1];
+      ctx.fillStyle=col.bg;
+      ctx.beginPath(); _roundRect(ctx,cx-badgeR,badgeY-badgeR,badgeR*2,badgeR*2,10); ctx.fill();
+
+      // 号数テキスト
+      ctx.fillStyle=col.text;
+      ctx.font='bold 30px sans-serif';
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.fillText(String(d.boat),cx,badgeY+1);
+      ctx.textBaseline='alphabetic';
+
+      // 星
+      var starCount=STARS[d.mark]||1;
+      var starSize=11;
+      var starY=badgeY+badgeR+14;
+      var totalStarW=starSize*5+2*4;
+      var sx=cx-totalStarW/2;
+      for(var s=0;s<5;s++){
+        ctx.fillStyle=s<starCount?'#c9a84c':'#2a2a2a';
+        ctx.font=(starSize)+'px sans-serif';
+        ctx.textAlign='left';
+        ctx.fillText('★',sx+s*(starSize+2),starY);
+      }
+    });
+
+    // ゴールドライン
+    var gyBase=H-32;
+    [gyBase,gyBase+5].forEach(function(gy){
+      var gLine=ctx.createLinearGradient(0,0,W,0);
+      gLine.addColorStop(0,'transparent');
+      gLine.addColorStop(0.12,'#8a6010');
+      gLine.addColorStop(0.32,'#c9a84c');
+      gLine.addColorStop(0.5,'#ffe580');
+      gLine.addColorStop(0.68,'#c9a84c');
+      gLine.addColorStop(0.88,'#8a6010');
+      gLine.addColorStop(1,'transparent');
+      ctx.fillStyle=gLine;
+      ctx.fillRect(0,gy,W,1.4);
+    });
+    // ゴールドドット
+    var gdot=ctx.createRadialGradient(W/2,gyBase,0,W/2,gyBase,5);
+    gdot.addColorStop(0,'#ffe580');
+    gdot.addColorStop(0.55,'#c9a84c');
+    gdot.addColorStop(1,'transparent');
+    ctx.fillStyle=gdot;
+    ctx.beginPath(); ctx.arc(W/2,gyBase,5,0,Math.PI*2); ctx.fill();
+
+    // 画像として共有 or 表示
     canvas.toBlob(function(blob){
       if(!blob){showToast('画像生成失敗');resetBtn();return;}
       var file=new File([blob],'G_評価カード.png',{type:'image/png'});
@@ -1872,11 +1968,20 @@ function saveEvalCard(){
         resetBtn();
       }
     },'image/png');
-  }).catch(function(e){
-    try{document.body.removeChild(clone);}catch(ee){}
-    showToast('生成失敗: '+e.message);
+
+  }catch(e){
+    showToast('生成エラー: '+e.message);
     resetBtn();
-  });
+  }
+}
+
+function _roundRect(ctx,x,y,w,h,r){
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);
+  ctx.closePath();
 }
 
 function _showEvalImg(canvas){
@@ -1921,5 +2026,15 @@ window.addEventListener('DOMContentLoaded',function(){
 });
 
 </script>
+
+<!-- 結果入力モーダル -->
+<div id="result-modal" style="display:flex;visibility:hidden;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:200;padding:16px;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;max-width:380px;width:100%;padding:20px;">
+    <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:6px;">🏁 結果入力</div>
+    <div id="modal-race-label" style="font-size:11px;color:var(--muted);margin-bottom:12px;"></div>
+    <div id="modal-body"></div>
+    <button onclick="closeResultModal()" style="width:100%;margin-top:8px;padding:10px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:6px;font-size:12px;-webkit-appearance:none;">キャンセル</button>
+  </div>
+</div>
 </body>
 </html>
