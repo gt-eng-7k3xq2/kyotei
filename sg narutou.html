@@ -1827,21 +1827,16 @@ function saveEvalCard(){
   var btn=document.querySelector('.eval-save-btn');
   function resetBtn(){if(btn){btn.textContent='📥 評価カードを保存・共有';btn.disabled=false;}}
   if(btn){btn.textContent='生成中...';btn.disabled=true;}
-
-  // Canvas APIで直接描画（html2canvas不使用）
   try{
     var COLORS={1:{bg:'#a8a8a8',text:'#000'},2:{bg:'#3a3a3a',text:'#fff'},3:{bg:'#c42222',text:'#fff'},4:{bg:'#1e52cc',text:'#fff'},5:{bg:'#cc9a00',text:'#000'},6:{bg:'#168432',text:'#fff'}};
     var STARS={'◎':5,'○':4,'▲':3,'△':2,'▽':1,'×':1};
     var marks=['◎','○','▲','△','▽','×'];
-
-    // ランキングデータ取得
     if(!currentAreScores||!currentAreScores.length){showToast('予想を実行してください');resetBtn();return;}
-    var rankData=currentAreScores.map(function(s,i){
-      return{boat:parseInt(s.no),mark:marks[i]||'×'};
-    });
+    var rankData=currentAreScores.map(function(s,i){return{boat:parseInt(s.no),mark:marks[i]||'×'};});
 
+    // 既存エンジンと同じサイズ感
     var DPR=3;
-    var W=390,H=260;
+    var W=520, H=220;
     var canvas=document.createElement('canvas');
     canvas.width=W*DPR; canvas.height=H*DPR;
     var ctx=canvas.getContext('2d');
@@ -1849,113 +1844,120 @@ function saveEvalCard(){
 
     // 背景
     ctx.fillStyle='#0c0c0c';
-    ctx.beginPath();
-    _roundRect(ctx,0,0,W,H,10);
-    ctx.fill();
+    _rrect(ctx,0,0,W,H,10); ctx.fill();
 
     // タイトル
-    var venue=document.getElementById('inp-venue')?document.getElementById('inp-venue').value||'':'' ;
+    var venue=document.getElementById('inp-venue')?document.getElementById('inp-venue').value||'':'';
     var racenum=document.getElementById('inp-racenum')?document.getElementById('inp-racenum').value||'':'';
     var titleText='G.の総合評価🚤'+(venue&&racenum?'　'+venue+racenum+'R':'');
     ctx.save();
-    ctx.font='italic 900 22px serif';
+    ctx.font='italic bold 26px serif';
     ctx.fillStyle='#e8c96a';
     ctx.textAlign='center';
-    ctx.shadowColor='rgba(200,153,60,0.4)';
-    ctx.shadowBlur=16;
-    ctx.fillText(titleText,W/2,38);
+    ctx.shadowColor='rgba(200,153,60,0.5)';
+    ctx.shadowBlur=18;
+    ctx.fillText(titleText,W/2,40);
     ctx.restore();
 
-    // ブラシライン
-    var gBrush=ctx.createLinearGradient(W*0.24,0,W*0.76,0);
-    gBrush.addColorStop(0,'transparent');
-    gBrush.addColorStop(0.2,'rgba(255,220,80,0.4)');
-    gBrush.addColorStop(0.5,'rgba(255,220,80,0.65)');
-    gBrush.addColorStop(0.8,'rgba(255,220,80,0.4)');
-    gBrush.addColorStop(1,'transparent');
-    ctx.fillStyle=gBrush;
-    ctx.beginPath(); ctx.ellipse(W/2,50,W*0.26,4.5,0,0,Math.PI*2); ctx.fill();
+    // ブラシライン（タイトル下）
+    var gb=ctx.createLinearGradient(W*0.22,0,W*0.78,0);
+    gb.addColorStop(0,'transparent');
+    gb.addColorStop(0.2,'rgba(255,220,80,0.35)');
+    gb.addColorStop(0.5,'rgba(255,220,80,0.6)');
+    gb.addColorStop(0.8,'rgba(255,220,80,0.35)');
+    gb.addColorStop(1,'transparent');
+    ctx.fillStyle=gb;
+    ctx.beginPath(); ctx.ellipse(W/2,52,W*0.28,5,0,0,Math.PI*2); ctx.fill();
 
     // ボートエリア背景
+    var boatAreaX=12, boatAreaY=64, boatAreaW=W-24, boatAreaH=130;
     ctx.fillStyle='#141414';
     ctx.strokeStyle='#2e2e2e';
     ctx.lineWidth=1;
-    ctx.beginPath(); _roundRect(ctx,12,62,W-24,138,8); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); _rrect(ctx,boatAreaX,boatAreaY,boatAreaW,boatAreaH,8); ctx.fill(); ctx.stroke();
 
-    // コーナー装飾
-    var cSize=14,cMarg=17;
+    // コーナーTR
+    var cS=16, cM=6;
     ctx.strokeStyle='#c9a84c'; ctx.lineWidth=2;
-    // TR
-    ctx.beginPath();ctx.moveTo(W-cMarg-cSize,cMarg);ctx.lineTo(W-cMarg,cMarg);ctx.lineTo(W-cMarg,cMarg+cSize);ctx.stroke();
-    // BL
-    ctx.beginPath();ctx.moveTo(cMarg+cSize,H-cMarg-38);ctx.lineTo(cMarg,H-cMarg-38);ctx.lineTo(cMarg,H-cMarg-38-cSize);ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(W-cM-cS, boatAreaY+cM);
+    ctx.lineTo(W-cM,    boatAreaY+cM);
+    ctx.lineTo(W-cM,    boatAreaY+cM+cS);
+    ctx.stroke();
+    // コーナーBL
+    ctx.beginPath();
+    ctx.moveTo(boatAreaX+cM+cS, boatAreaY+boatAreaH-cM);
+    ctx.lineTo(boatAreaX+cM,    boatAreaY+boatAreaH-cM);
+    ctx.lineTo(boatAreaX+cM,    boatAreaY+boatAreaH-cM-cS);
+    ctx.stroke();
 
-    // 各ボートスロット
-    var slotW=(W-24)/6;
-    var arrowColor='#4a4a4a';
+    // 各スロット描画
+    var N=rankData.length;
+    var slotW=boatAreaW/N;
+    var badgeSize=62; // バッジ一辺（正方形）
+    var badgeR=10;
+    var badgePadTop=12;
+    var badgeCY=boatAreaY+badgePadTop+badgeSize/2;
+    var starY=boatAreaY+badgePadTop+badgeSize+14;
+    var starSize=13;
+
     rankData.forEach(function(d,i){
-      var cx=12+slotW*i+slotW/2;
-      var badgeR=26;
-      var badgeY=105;
+      var cx=boatAreaX+slotW*i+slotW/2;
+      var bx=cx-badgeSize/2;
+      var by=badgeCY-badgeSize/2;
 
       // 矢印
       if(i>0){
-        ctx.fillStyle=arrowColor;
-        ctx.font='bold 14px sans-serif';
+        ctx.fillStyle='#4a4a4a';
+        ctx.font='bold 13px sans-serif';
         ctx.textAlign='center';
-        ctx.fillText('›',cx-slotW/2,badgeY+4);
+        ctx.textBaseline='middle';
+        ctx.fillText('›', cx-slotW/2, badgeCY);
+        ctx.textBaseline='alphabetic';
       }
 
-      // バッジ背景
+      // バッジ（正方形・角丸）
       var col=COLORS[d.boat]||COLORS[1];
       ctx.fillStyle=col.bg;
-      ctx.beginPath(); _roundRect(ctx,cx-badgeR,badgeY-badgeR,badgeR*2,badgeR*2,10); ctx.fill();
+      ctx.beginPath(); _rrect(ctx,bx,by,badgeSize,badgeSize,badgeR); ctx.fill();
 
-      // 号数テキスト
+      // 号数
       ctx.fillStyle=col.text;
-      ctx.font='bold 30px sans-serif';
+      ctx.font='bold 38px sans-serif';
       ctx.textAlign='center';
       ctx.textBaseline='middle';
-      ctx.fillText(String(d.boat),cx,badgeY+1);
+      ctx.fillText(String(d.boat), cx, badgeCY+1);
       ctx.textBaseline='alphabetic';
 
-      // 星
-      var starCount=STARS[d.mark]||1;
-      var starSize=11;
-      var starY=badgeY+badgeR+14;
-      var totalStarW=starSize*5+2*4;
-      var sx=cx-totalStarW/2;
+      // 星（バッジ直下・5つ）
+      var sc=STARS[d.mark]||1;
+      var totalW=starSize*5+2*4;
+      var sx=cx-totalW/2;
       for(var s=0;s<5;s++){
-        ctx.fillStyle=s<starCount?'#c9a84c':'#2a2a2a';
-        ctx.font=(starSize)+'px sans-serif';
+        ctx.fillStyle=s<sc?'#c9a84c':'#2a2a2a';
+        ctx.font=starSize+'px sans-serif';
         ctx.textAlign='left';
-        ctx.fillText('★',sx+s*(starSize+2),starY);
+        ctx.textBaseline='alphabetic';
+        ctx.fillText('★', sx+s*(starSize+2), starY);
       }
     });
 
-    // ゴールドライン
-    var gyBase=H-32;
-    [gyBase,gyBase+5].forEach(function(gy){
-      var gLine=ctx.createLinearGradient(0,0,W,0);
-      gLine.addColorStop(0,'transparent');
-      gLine.addColorStop(0.12,'#8a6010');
-      gLine.addColorStop(0.32,'#c9a84c');
-      gLine.addColorStop(0.5,'#ffe580');
-      gLine.addColorStop(0.68,'#c9a84c');
-      gLine.addColorStop(0.88,'#8a6010');
-      gLine.addColorStop(1,'transparent');
-      ctx.fillStyle=gLine;
-      ctx.fillRect(0,gy,W,1.4);
+    // ゴールドライン（下部）
+    var gy1=H-22, gy2=H-17;
+    [gy1,gy2].forEach(function(gy){
+      var gl=ctx.createLinearGradient(0,0,W,0);
+      gl.addColorStop(0,'transparent'); gl.addColorStop(0.12,'#8a6010');
+      gl.addColorStop(0.32,'#c9a84c'); gl.addColorStop(0.5,'#ffe580');
+      gl.addColorStop(0.68,'#c9a84c'); gl.addColorStop(0.88,'#8a6010');
+      gl.addColorStop(1,'transparent');
+      ctx.fillStyle=gl; ctx.fillRect(0,gy,W,1.5);
     });
     // ゴールドドット
-    var gdot=ctx.createRadialGradient(W/2,gyBase,0,W/2,gyBase,5);
-    gdot.addColorStop(0,'#ffe580');
-    gdot.addColorStop(0.55,'#c9a84c');
-    gdot.addColorStop(1,'transparent');
-    ctx.fillStyle=gdot;
-    ctx.beginPath(); ctx.arc(W/2,gyBase,5,0,Math.PI*2); ctx.fill();
+    var gd=ctx.createRadialGradient(W/2,gy1,0,W/2,gy1,5);
+    gd.addColorStop(0,'#ffe580'); gd.addColorStop(0.55,'#c9a84c'); gd.addColorStop(1,'transparent');
+    ctx.fillStyle=gd; ctx.beginPath(); ctx.arc(W/2,gy1,5,0,Math.PI*2); ctx.fill();
 
-    // 画像として共有 or 表示
+    // 共有 or 表示
     canvas.toBlob(function(blob){
       if(!blob){showToast('画像生成失敗');resetBtn();return;}
       var file=new File([blob],'G_評価カード.png',{type:'image/png'});
@@ -1964,23 +1966,19 @@ function saveEvalCard(){
           .then(function(){if(btn){btn.textContent='✅ 共有しました';setTimeout(resetBtn,2500);}})
           .catch(function(){_showEvalImg(canvas);resetBtn();});
       } else {
-        _showEvalImg(canvas);
-        resetBtn();
+        _showEvalImg(canvas); resetBtn();
       }
     },'image/png');
-
-  }catch(e){
-    showToast('生成エラー: '+e.message);
-    resetBtn();
-  }
+  }catch(e){showToast('生成エラー: '+e.message);resetBtn();}
 }
 
-function _roundRect(ctx,x,y,w,h,r){
+function _rrect(ctx,x,y,w,h,r){
+  ctx.beginPath();
   ctx.moveTo(x+r,y);
-  ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);
-  ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
-  ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);
-  ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);
+  ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r);
   ctx.closePath();
 }
 
@@ -1988,11 +1986,7 @@ function _showEvalImg(canvas){
   var dataUrl=canvas.toDataURL('image/png');
   var wrap=document.getElementById('evalImgWrap');
   var img=document.getElementById('evalImg');
-  if(wrap&&img){
-    img.src=dataUrl;
-    wrap.style.display='block';
-    wrap.scrollIntoView({behavior:'smooth',block:'nearest'});
-  }
+  if(wrap&&img){img.src=dataUrl;wrap.style.display='block';wrap.scrollIntoView({behavior:'smooth',block:'nearest'});}
 }
 
 // sgAutoSaveLog（writeToV2のラッパー）
