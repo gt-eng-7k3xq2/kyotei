@@ -1284,11 +1284,19 @@ function updateXPreview(){
 }
 
 function copyXSummary(withAmount){
-  const el=document.getElementById('x-summary-preview');
-  // textareaの内容をそのままコピー（手動編集済みの場合も対応）
-  const text=el?el.value:buildXSummary(withAmount);
+  // withAmount=trueの場合は賭け金込みで再生成、falseはtextarea内容（手動編集対応）
+  const text=withAmount?buildXSummary(true):(document.getElementById('x-summary-preview')?.value||buildXSummary(false));
   if(!text){showToast('買い目を生成してください');return;}
   navigator.clipboard.writeText(text).then(()=>{
+    showToast(withAmount?'𝕏 賭け金込みコピー':'𝕏 サマリーコピー');
+  }).catch(()=>{
+    // clipboard APIが使えない場合のフォールバック
+    const ta=document.createElement('textarea');
+    ta.value=text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
     showToast(withAmount?'𝕏 賭け金込みコピー':'𝕏 サマリーコピー');
   });
 }
