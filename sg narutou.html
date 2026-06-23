@@ -489,18 +489,23 @@ function parseData(text){
     for(let i=0;i<6;i++) d.boats[i].motor2ren=parseFloat(motorSection[i+1])||0;
   }
 
-  // 今節得点率（行頭マッチ）- 「-」は賞除外（失格扱い）
+  // 今節得点率（「-」は未走=0点・除外ではない）
   const sessonSection=text.match(/^得点率[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)/m);
   if(sessonSection){
     for(let i=0;i<6;i++){
       const v=(sessonSection[i+1]||'').trim();
-      if(v==='-'||v===''){
-        d.boats[i].sessonPt=0;
-        d.boats[i].isJogai=true; // 賞除外フラグ
-      } else {
-        d.boats[i].sessonPt=parseFloat(v)||0;
-        d.boats[i].isJogai=false;
-      }
+      d.boats[i].sessonPt=(v==='-'||v==='')?0:parseFloat(v)||0;
+      d.boats[i].isJogai=false; // デフォルトは除外なし
+    }
+  }
+
+  // 賞除外判定：減点行に99がある艇のみ
+  const gentenSection=text.match(/^減点[\t ]([^\n]+)/m);
+  if(gentenSection){
+    const cols=gentenSection[1].split(/[\t ]+/);
+    for(let i=0;i<6;i++){
+      const v=(cols[i]||'').trim();
+      if(v==='99') d.boats[i].isJogai=true;
     }
   }
 
