@@ -350,7 +350,7 @@ function generateBets(d, areScores, mode){
 
   const nigeRate=d.boats[0].atchiNige>0?d.boats[0].atchiNige:d.boats[0].nigerate6m;
   const{areIndex}=calcAreIndex(d);
-  const betsRaw=mode==='are'?buildBetsAre(ranking,selectedBetCount,nigeRate):buildBetsNormal(ranking,selectedBetCount);
+  const betsRaw=mode==='are'?buildBetsAre(ranking,selectedBetCount,nigeRate):buildBetsNormal(ranking,selectedBetCount,currentParsedData);
 
   // バッジ更新
   const modeLabel=mode==='are'?'⚡ 荒れ':'🔒 通常';
@@ -789,39 +789,54 @@ function parseRanking(text){
 // ============================================================
 // 買い目生成（JS固定）
 // ============================================================
-function buildBetsNormal(ranking,pts){
+function buildBetsNormal(ranking, pts, parsedData){
+  // v1.2プロンプト準拠: 8点固定（本線4点 + 抑え4点）
+  // 本線4点: ◎頭 / 2着1位候補（○▲）/ 3着（○▲△から軸・2着除く）
+  //   → ◎-○-▲, ◎-○-△, ◎-▲-○, ◎-▲-△
+  // 抑え4点: ◎頭 / 2着2位候補（今節得点率1位・2位、◎○▲除外）/ 3着（○▲から）
+  //   → ◎-得1-○, ◎-得1-▲, ◎-得2-○, ◎-得2-▲
   if(ranking.length<4) return [];
-  const p=pts||8;
-  const fst=ranking[0].boat;
-  const r2=ranking[1].boat,r3=ranking[2].boat,r4=ranking[3].boat;
-  const r5=ranking[4]?ranking[4].boat:null;
-  const pool=[],seen=new Set();
+  const fst=ranking[0].boat; // ◎
+  const r2 =ranking[1].boat; // ○
+  const r3 =ranking[2].boat; // ▲
+  const r4 =ranking[3].boat; // △
+  const r5 =ranking[4]?ranking[4].boat:null; // ▽
 
-  // 本線: 1着固定（◎頭）
-  const sec2=[r2,r3];
-  const trd3=[r2,r3,r4].filter(Boolean);
-  for(const s of sec2) for(const t of trd3){
-    if(t===fst||t===s) continue;
-    const key=`${fst}-${s}-${t}`;
-    if(!seen.has(key)){seen.add(key);pool.push({val:key,type:'本線'});}
+  // 2着2位候補: 今節得点率上位2艇（◎○▲を除いた残り）
+  let ni2=[];
+  if(parsedData&&parsedData.boats){
+    ni2=[...parsedData.boats]
+      .filter(b=>b.no!==fst&&b.no!==r2&&b.no!==r3)
+      .sort((a,b)=>b.sessonPt-a.sessonPt)
+      .slice(0,2).map(b=>b.no);
   }
-  // 抑え: ◎が1号艇（逃げレース）は折り返し不要、○頭・▲頭のみ
-  const isNige=(fst===1);
-  const extras=isNige?[
-    // 逃げレース: 1着固定の追加買い目のみ
-    r4?`${fst}-${r4}-${r2}`:null,r4?`${fst}-${r4}-${r3}`:null,
-    r5?`${fst}-${r2}-${r5}`:null,r5?`${fst}-${r3}-${r5}`:null,
-  ].filter(Boolean):[
-    // 非逃げ: ○頭・▲頭の折り返しあり
-    `${r2}-${fst}-${r3}`,`${r2}-${r3}-${fst}`,
-    `${r3}-${fst}-${r2}`,`${r3}-${r2}-${fst}`,
-    r4?`${fst}-${r4}-${r2}`:null,r4?`${fst}-${r4}-${r3}`:null,
-    r5?`${fst}-${r2}-${r5}`:null,r5?`${fst}-${r3}-${r5}`:null,
-  ].filter(Boolean);
-  for(const k of extras){
-    if(!seen.has(k)){seen.add(k);pool.push({val:k,type:'抑え'});}
+  // フォールバック: △▽
+  if(ni2.length<2){
+    const fb=[r4,r5].filter(v=>v!=null&&!ni2.includes(v));
+    ni2=[...ni2,...fb].slice(0,2);
   }
-  return pool.slice(0,p);
+
+  const seen=new Set(), bets=[];
+  const add=(val,type)=>{if(!seen.has(val)){seen.add(val);bets.push({val,type});}};
+
+  // ── 本線4点: ◎-○-▲, ◎-○-△, ◎-▲-○, ◎-▲-△ ──
+  const honsenPairs=[
+    [r2,r3],[r2,r4],
+    [r3,r2],[r3,r4],
+  ];
+  for(const[s,t] of honsenPairs){
+    if(t!=null&&t!==fst&&t!==s) add(`${fst}-${s}-${t}`,'本線');
+  }
+
+  // ── 抑え4点: ◎-得1-○, ◎-得1-▲, ◎-得2-○, ◎-得2-▲ ──
+  for(const s of ni2){
+    for(const t of [r2,r3]){
+      if(t!==fst&&t!==s) add(`${fst}-${s}-${t}`,'抑え');
+    }
+  }
+
+  // ptsが8未満（6点等）の場合は本線優先でスライス
+  return bets.slice(0, pts||8);
 }
 
 function buildBetsAre(ranking, pts, nigeRate){
@@ -1043,21 +1058,38 @@ function clearYoso(){
 // 例: 1-2-4/1-4-2 → 1-24-24
 //     4-2-1/4-2-3/4-1-2/4-3-1 → 4-123-123
 function compressBetsSG(bets){
-  const vals=bets.map(b=>b.val);
+  const vals=bets.map(b=>typeof b==='string'?b:b.val);
   if(!vals.length) return '';
-  const g1={}, order1=[];
+  // Step1: 1着-2着固定で3着をグループ化
+  const g12={},order12=[];
   for(const v of vals){
-    const p=v.split('-');
-    if(p.length!==3) continue;
-    if(!g1[p[0]]){g1[p[0]]={s:[],t:[]};order1.push(p[0]);}
-    if(!g1[p[0]].s.includes(p[1])) g1[p[0]].s.push(p[1]);
-    if(!g1[p[0]].t.includes(p[2])) g1[p[0]].t.push(p[2]);
+    const p=v.split('-');if(p.length!==3)continue;
+    const key=p[0]+'-'+p[1];
+    if(!g12[key]){g12[key]=[];order12.push(key);}
+    if(!g12[key].includes(p[2]))g12[key].push(p[2]);
   }
-  return order1.map(f=>{
-    const sStr=g1[f].s.slice().sort((a,b)=>parseInt(a)-parseInt(b)).join('');
-    const tStr=g1[f].t.slice().sort((a,b)=>parseInt(a)-parseInt(b)).join('');
-    return f+'-'+sStr+'-'+tStr;
-  }).join('/');
+  // Step2: 1着でまとめて対称チェック（2着セット==3着セットなら f-SS-TT）
+  const g1={},order1=[];
+  for(const key of order12){
+    const[f,s]=key.split('-');
+    if(!g1[f]){g1[f]={sl:[],tm:{}};order1.push(f);}
+    g1[f].sl.push(s);
+    g1[f].tm[s]=g12[key].slice().sort((a,b)=>parseInt(a)-parseInt(b));
+  }
+  const res=[];
+  for(const f of order1){
+    const{sl,tm}=g1[f];
+    const allS=sl.slice().sort((a,b)=>parseInt(a)-parseInt(b));
+    const allT=[...new Set(sl.flatMap(s=>tm[s]))].sort((a,b)=>parseInt(a)-parseInt(b));
+    const sSet=new Set(allS),tSet=new Set(allT);
+    const symmetric=sSet.size===tSet.size&&[...sSet].every(x=>tSet.has(x));
+    if(symmetric){
+      res.push(f+'-'+allS.join('')+'-'+allT.join(''));
+    }else{
+      for(const s of sl) res.push(f+'-'+s+'-'+tm[s].join(''));
+    }
+  }
+  return res.join('/');
 }
 
 function buildXSummary(withAmount){
@@ -1745,32 +1777,45 @@ function renderEvalCard(xText, venue, racenum){
 
 function saveEvalCard(){
   var card=document.getElementById('evalCard');
-  if(!card) return;
+  if(!card){showToast('カードが見つかりません');return;}
+  if(typeof html2canvas!=='function'){showToast('スクリーンショットで保存してください');return;}
   var btn=document.querySelector('.eval-save-btn');
-  if(!btn) return;
-  btn.textContent='生成中...';
-  btn.disabled=true;
-  html2canvas(card,{scale:3,useCORS:true,backgroundColor:'#0a0a0a',logging:false,allowTaint:true}).then(function(canvas){
+  function resetBtn(){if(btn){btn.textContent='📥 評価カードを保存・共有';btn.disabled=false;}}
+  if(btn){btn.textContent='生成中...';btn.disabled=true;}
+  // Safari向け: scale:2・allowTaint:false・foreignObjectRendering:false
+  html2canvas(card,{
+    scale:2,
+    useCORS:false,
+    allowTaint:false,
+    backgroundColor:'#0c0c0c',
+    logging:false,
+    foreignObjectRendering:false,
+    removeContainer:true
+  }).then(function(canvas){
+    var dataUrl=canvas.toDataURL('image/png');
     canvas.toBlob(function(blob){
+      if(!blob){showToast('画像生成失敗');resetBtn();return;}
       var file=new File([blob],'G_評価カード.png',{type:'image/png'});
+      // iOS Safari: Web Share API（ファイル共有）
       if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-        navigator.share({files:[file],title:'G.の総合評価'}).then(function(){
-          btn.textContent='✅ 共有しました';
-          setTimeout(function(){btn.textContent='📥 評価カードを保存・共有';btn.disabled=false;},2000);
-        }).catch(function(){btn.textContent='📥 評価カードを保存・共有';btn.disabled=false;});
+        navigator.share({files:[file],title:'G.の総合評価'})
+          .then(function(){if(btn){btn.textContent='✅ 共有完了';setTimeout(resetBtn,2000);}})
+          .catch(function(){
+            // share失敗時は新タブ（長押しで保存）
+            var w=window.open('','_blank');
+            if(w){w.document.write('<html><body style="margin:0;background:#000;"><img src="'+dataUrl+'" style="max-width:100%;display:block;"><p style="color:#fff;font-family:sans-serif;text-align:center;padding:8px;">長押しして保存してください</p></body></html>');}
+            resetBtn();
+          });
       } else {
-        var url=URL.createObjectURL(blob);
-        var a=document.createElement('a');
-        a.download='G_評価カード.png';a.href=url;a.click();
-        setTimeout(function(){URL.revokeObjectURL(url);},1000);
-        btn.textContent='✅ 保存しました';
-        setTimeout(function(){btn.textContent='📥 評価カードを保存・共有';btn.disabled=false;},2000);
+        // 新タブで開く（長押し保存）
+        var w=window.open('','_blank');
+        if(w){w.document.write('<html><body style="margin:0;background:#000;"><img src="'+dataUrl+'" style="max-width:100%;display:block;"><p style="color:#fff;font-family:sans-serif;text-align:center;padding:8px;">長押しして保存してください</p></body></html>');}
+        if(btn){btn.textContent='✅ タブを開きました';setTimeout(resetBtn,2500);}
       }
     },'image/png');
-  }).catch(function(){
-    btn.textContent='📥 評価カードを保存・共有';
-    btn.disabled=false;
-    showToast('生成失敗。スクショをお試しください。');
+  }).catch(function(e){
+    showToast('生成失敗: '+e.message);
+    resetBtn();
   });
 }
 
