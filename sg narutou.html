@@ -135,7 +135,7 @@
       <div style="display:flex;gap:8px;">
         <button class="alloc-btn active" id="mode-btn-normal" onclick="setMode('normal')" style="flex:1;padding:10px;">🔒 通常</button>
         <button class="alloc-btn" id="mode-btn-are" onclick="setMode('are')" style="flex:1;padding:10px;">⚡ 荒れ</button>
-        <button class="alloc-btn" id="mode-btn-skip" onclick="setMode('skip')" style="flex:1;padding:10px;">⏭ SKIP</button>
+        <button class="alloc-btn" id="mode-btn-skip" onclick="setMode('skip')" style="display:none;">⏭ SKIP</button>
       </div>
       <button class="btn btn-gold" onclick="applyMode()" style="margin-top:8px;">買い目を生成</button>
     </div>
@@ -654,9 +654,9 @@ function calcAreIndex(d){
 // モード判定（JSで確定）
 // ============================================================
 function judgeMode(areIndex, nigeRate){
-  // SG専用: 荒れ指数を優先。逃げ率だけで通常判定しない
+  // SG専用モード判定（スキップなし）
+  if(nigeRate>=70) return 'normal';
   if(areIndex>=8) return 'are';
-  if(areIndex>=4) return 'skip';
   return 'normal';
 }
 
@@ -1018,11 +1018,9 @@ async function runYoso(){
     const modeLabel=mode==='are'?'⚡ 荒れモード':mode==='skip'?'⏭ スキップ':'🔒 通常モード';
     modeEl.innerHTML=`<span class="mode-badge ${modeCls}">${modeLabel}</span> <span style="font-size:12px;color:var(--muted);">荒れ指数 <strong style="color:var(--text);">${areIndex}点</strong> / 逃げ率 <strong style="color:var(--text);">${nigeRate.toFixed(1)}%</strong></span>`;
 
-    if(mode==='skip'){
-      document.getElementById('ai-raw').textContent='スキップ推奨レースです（荒れ指数4〜7点）';
-      document.getElementById('bet-section').style.display='none';
-      setMode('skip');
-      return;
+    // 荒れ指数4〜7点: スキップ推奨アラートを表示するが予想は続行
+    if(areIndex>=4&&areIndex<=7&&nigeRate<70){
+      showToast('⚠️ 荒れ指数'+areIndex+'点 参入注意');
     }
 
     // 4. JSスコアによる機械的ランキング生成（Gemini不使用）
