@@ -237,6 +237,7 @@
     </div>
 
     <!-- 印変更UI -->
+    <button onclick="showEditMark()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:8px;">✏️ ◎○▲を変更して再生成</button>
     <div id="editMarkWrap" style="display:none;" class="card">
       <div class="card-title" style="font-size:11px;">◎○▲を差し替えて再生成</div>
       <div style="display:flex;gap:8px;margin-bottom:10px;">
@@ -577,12 +578,61 @@ function parseData(text){
     }
   }
 
-  // 今節走数（早見から推定）
-  const hayamiSection=text.match(/早見\s+([\dR-]+)\s+([\dR-]+)\s+([\dR-]+)\s+([\dR-]+)\s+([\dR-]+)\s+([\dR-]+)/);
-  if(hayamiSection){
-    // 早見の値から今節走数を推定（簡易版）
-    for(let i=0;i<6;i++) d.boats[i].sessonRaces=hayamiSection[i+1]==='-'?0:parseInt(hayamiSection[i+1])||0;
+  // 今節走数推定（通常エンジン準拠）
+  // 今節1着率・2連対率から逆算（estimateRaceCountSG）
+  function estimateRaceCountSG(wins, ren2){
+    for(var n=1;n<=12;n++){
+      var ok=true;
+      [wins,ren2].forEach(function(rate){
+        if(rate===null||rate===undefined||rate===0) return;
+        var found=false;
+        for(var k=0;k<=n;k++){if(Math.abs(Math.round(k/n*1000)/10-rate)<0.6){found=true;break;}}
+        if(!found) ok=false;
+      });
+      if(ok) return n;
+    }
+    return null;
   }
+  (function(){
+    var counts={};
+    d.boats.forEach(function(b){
+      // 今節1着率と2連対率から走数を逆算
+      const w1=b.sessonPt>0?(b.sessonPt>=6?1:0)*100/1:null; // 簡易
+      // 今節成績セクションから1着率・2連対率を取得済みの場合に使用
+      // ここではsessonPtの値から走数を近似
+      // sessonPt = 得点 / 走数 なので走数 = 得点合計 / sessonPt は不明
+      // 代替: 早見R番号で近似
+    });
+  })();
+  // 早見から走数近似（シンプルかつ確実）
+  const hayamiSection=text.match(/早見[\t ]+([\dR\-]+)[\t ]+([\dR\-]+)[\t ]+([\dR\-]+)[\t ]+([\dR\-]+)[\t ]+([\dR\-]+)[\t ]+([\dR\-]+)/);
+  if(hayamiSection){
+    for(let i=0;i<6;i++){
+      const val=(hayamiSection[i+1]||'').trim();
+      if(val==='-'||!val){
+        d.boats[i].sessonRaces=0;
+      } else {
+        const rnum=parseInt(val)||0;
+        // SGは各艇が1日に2〜3走する。早見R番号から走数を推定
+        // 1〜4R=1走, 5〜8R=2走, 9〜12R=3走
+        d.boats[i].sessonRaces=rnum<=4?1:rnum<=8?2:3;
+      }
+    }
+  }
+  // フォールバック: 今節1着率の分母から逆算
+  (function(){
+    const ichi=text.match(/1着率[\t ]([\d.]+)%[\t ]([\d.]+)%[\t ]([\d.]+)%[\t ]([\d.]+)%[\t ]([\d.]+)%[\t ]([\d.]+)%/);
+    const niren=text.match(/2連対率[\t ]([\d.]+)%[\t ]([\d.]+)%[\t ]([\d.]+)%[\t ]([\d.]+)%[\t ]([\d.]+)%[\t ]([\d.]+)%/);
+    if(ichi&&niren){
+      for(let i=0;i<6;i++){
+        if(d.boats[i].sessonRaces>0) continue; // 既に推定済み
+        const w=parseFloat(ichi[i+1])||0;
+        const r=parseFloat(niren[i+1])||0;
+        const n=estimateRaceCountSG(w,r);
+        if(n) d.boats[i].sessonRaces=n;
+      }
+    }
+  })();
 
   // F休み（未消化F＝ペナルティ対象）
   const fRestSection=text.match(/F休み\s+([\-\d\/～]+)\s+([\-\d\/～]+)\s+([\-\d\/～]+)\s+([\-\d\/～]+)\s+([\-\d\/～]+)\s+([\-\d\/～]+)/);
@@ -615,22 +665,31 @@ function calcAreScore(d){
 
   // 合成ST計算（節間平均ST × 0.7 ＋ コース別平均ST × 0.3）
   // 今節平均STあり → 節間主軸 / なし（初日等）→ コース別のみ
-  // コース別優先順: SG/G1 → 当地 → フォールバック0.18
+  // 今節走数判定（通常エンジン準拠）
+  // 走数3以下=序盤、4以上=終盤
+  const raceCounts=boats.map(b=>b.sessonRaces||0).filter(v=>v>0);
+  const avgRaceCount=raceCounts.length?raceCounts.reduce((s,v)=>s+v,0)/raceCounts.length:0;
+  const isEarlyRace=avgRaceCount<=3;
+
+  // コース別ST（キャリアベース）
   boats.forEach(b=>{
     const courseST=b.sgAvgST||b.atchiAvgST||0.18;
+    // 序盤: 今節ST比重低（30%）、終盤: 高（70%）
+    const sessonW=isEarlyRace?0.3:0.7;
     b.compositeST=b.sessonAvgST>0
-      ? b.sessonAvgST*0.7+courseST*0.3
+      ? b.sessonAvgST*sessonW+courseST*(1-sessonW)
       : courseST;
   });
   const stVals=boats.map(b=>b.compositeST).filter(v=>v>0);
   const stMin=stVals.length?Math.min(...stVals):0.10;
   const stMax=stVals.length?Math.max(...stVals):0.25;
 
-  // 今節得点率正規化
+  // 正規化用最大値
   const tokuMax=Math.max(...boats.map(b=>b.sessonPt))||1;
-
-  // モーター2連対率正規化
+  const tokuMin=Math.min(...boats.map(b=>b.sessonPt).filter(v=>v>0))||0;
   const motorMax=Math.max(...boats.map(b=>b.motor2ren))||1;
+  const kinsetsuAll=boats.map(b=>b.kinsetsu6m||0);
+  const kinsetsuMax=Math.max(...kinsetsuAll)||1;
 
   // 逃げ率（1号艇）
   const nigeRate1=d.boats[0].atchiNige>0?d.boats[0].atchiNige:d.boats[0].nigerate6m;
@@ -638,49 +697,73 @@ function calcAreScore(d){
   const scores=boats.map(b=>{
     let s=0;
 
-    // ① 攻撃力（差し+捲り+捲り差し）×0.4（cap無し）
-    const atk=(b.sashi6m+b.makuri6m+b.makurisashi6m*0.4);
-    s+=atk*0.4;
+    // ① 今節得点率
+    // 序盤=10pt、終盤=25pt（通常エンジン準拠）
+    const tokWeight=isEarlyRace?10:25;
+    if(tokuMax>tokuMin) s+=(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*tokWeight;
+    else if(b.sessonPt>0) s+=tokWeight/2;
 
-    // ② 展示機力ランク ×3 max15pt（rank0=15pt rank5=0pt）
-    if(b.exRank>=0) s+=(5-b.exRank)*3;
+    // ② キャリア勝率（直近6ヶ月）
+    // 序盤=20pt（キャリア重視）、終盤=5pt（通常エンジン準拠）
+    const rateWeight=isEarlyRace?20:5;
+    if(kinsetsuMax>0) s+=( b.kinsetsu6m||0)/kinsetsuMax*rateWeight;
 
-    // ③ 周回機力ランク ×3 max15pt
-    if(b.lapRank>=0) s+=(5-b.lapRank)*3;
+    // ③ 展示機力ランク max14pt（rank1=14pt rank6=0pt）
+    if(b.exRank>=0) s+=(5-b.exRank)*2.8;
 
-    // ④ 合成ST max15pt（節間×0.7＋コース別×0.3、相対化）
-    const stPt=(stMax>stMin)?(stMax-b.compositeST)/(stMax-stMin)*15:0;
+    // ④ 周回機力ランク max14pt
+    if(b.lapRank>=0) s+=(5-b.lapRank)*2.8;
+
+    // ⑤ 合成ST max8pt（通常エンジン準拠・序盤終盤問わず）
+    const stPt=(stMax>stMin)?(stMax-b.compositeST)/(stMax-stMin)*8:0;
     s+=stPt;
 
-    // ⑤ 今節得点率 max15pt（相対化）
-    s+=(b.sessonPt||0)/tokuMax*15;
-
-    // ⑥ モーター2連対率 max10pt（相対化）
-    if(motorMax>0) s+=(b.motor2ren||0)/motorMax*10;
-
-    // ⑦ 1号艇評価（当地・SG逃げ率に応じてボーナス/ペナルティ）
-    if(b.no===1){
-      if(nigeRate1>=75) s+=15;       // 逃げ率75%以上 → 大ボーナス
-      else if(nigeRate1>=65) s+=10;  // 65%以上 → ボーナス
-      else if(nigeRate1>=55) s+=5;   // 55%以上 → 小ボーナス
-      else if(nigeRate1>=45) s+=0;   // 45%以上 → 現状維持
-      else s-=10;                     // 45%未満 → ペナルティ
+    // ⑥ 直前ST max10pt（展示STをコース内相対評価）
+    const dirST=b.directST||0;
+    const dirSTvals=boats.map(x=>x.directST||0).filter(v=>v>0);
+    const dirSTmin=dirSTvals.length?Math.min(...dirSTvals):0.10;
+    const dirSTmax=dirSTvals.length?Math.max(...dirSTvals):0.25;
+    if(!b.isExhibitF&&dirST>0&&dirSTmax>dirSTmin){
+      s+=(dirSTmax-dirST)/(dirSTmax-dirSTmin)*10;
     }
 
-    // ⑧ 未消化Fペナルティ -10pt（F休み持ち艇のみ、-15→-10に緩和）
+    // ⑦ 攻撃力（差し+捲り+捲り差し×0.4）max8pt
+    const atk=(b.sashi6m+b.makuri6m+b.makurisashi6m*0.4);
+    const atkMax=Math.max(...boats.map(x=>x.sashi6m+x.makuri6m+x.makurisashi6m*0.4))||1;
+    s+=atk/atkMax*8;
+
+    // ⑧ モーター2連対率 max10pt
+    if(motorMax>0) s+=(b.motor2ren||0)/motorMax*10;
+
+    // ⑨ 1号艇ボーナス（通常エンジン: 逃げ率65%以上で+5pt）
+    if(b.no===1){
+      if(nigeRate1>=75) s+=10;
+      else if(nigeRate1>=65) s+=5;
+      else if(nigeRate1>=50) s+=0;
+      else s-=5;
+    }
+
+    // ⑩ 終盤ペナルティ：今節1着率0%（通常エンジン準拠）
+    if(!isEarlyRace&&(b.sessonPt||0)===0&&b.sessonRaces>=2) s-=2;
+
+    // ⑪ Fペナルティ
     if(b.isF) s-=10;
 
-    // ⑨ 賞除外艇は強制最下位（-999pt）
+    // ⑫ 賞除外艇は強制最下位
     if(b.isJogai) s=-999;
 
+    const _toku=isEarlyRace?
+      (tokuMax>tokuMin?(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*10:0):
+      (tokuMax>tokuMin?(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*25:0);
     return{no:b.no, raw:s, tenji:b.tenji, syukai:b.syukai,
-      _atk:atk*0.4, _ex:(b.exRank>=0?(5-b.exRank)*3:0),
-      _lap:(b.lapRank>=0?(5-b.lapRank)*3:0),
+      _atk:atk/atkMax*8,
+      _ex:(b.exRank>=0?(5-b.exRank)*2.8:0),
+      _lap:(b.lapRank>=0?(5-b.lapRank)*2.8:0),
       _st:stPt,
-      _toku:(b.sessonPt||0)/tokuMax*15,
+      _toku:_toku,
       _motor:(b.motor2ren||0)/motorMax*10,
-      _pen1:(b.no===1&&nigeRate1<50?-15:0),
-      _penF:(b.isF?-15:0)};
+      _pen1:(b.no===1&&nigeRate1<50?-5:0),
+      _penF:(b.isF?-10:0)};
   });
 
   return scores.sort((a,b)=>b.raw-a.raw);
@@ -1086,7 +1169,7 @@ async function runYoso(){
 }
 
 function clearYoso(){
-  ['inp-data','inp-chakuju','inp-payout-reg'].forEach(id=>{var el=document.getElementById(id);if(el)el.value='';});
+  var inpData=document.getElementById('inp-data');if(inpData)inpData.value='';
   document.getElementById('inp-racenum').value='';
   document.getElementById('yoso-result').style.display='none';
   document.getElementById('bet-section').style.display='none';
@@ -1155,8 +1238,8 @@ function buildXSummary(withAmount){
   const maruStr=maruBoat?circled[maruBoat-1]:'◎';
 
   // 本線/抑えに分類
-  const honsen=betsRaw.filter(b=>b.type.includes('G1')||b.type==='本線');
-  const osaee=betsRaw.filter(b=>!b.type.includes('G1')&&b.type!=='本線');
+  const honsen=betsRaw.filter(b=>b.type==='本線');
+  const osaee=betsRaw.filter(b=>b.type!=='本線');
 
   // 賭け金込みの場合は各買い目に金額追加
   const getRealBets=(arr)=>{
@@ -1447,9 +1530,7 @@ function commitResult(type){
   updateV2Result(_resultInputId, chakuju, payout, isHit, entry.maru);
 
   closeResultModal();
-  renderLog();
   updateLogSummary();
-  renderTsudoi();
   showToast(type==='skip'?'⏭ SKIP登録':isHit?'✅ 的中登録！':'❌ 外れ登録');
 }
 
@@ -1462,8 +1543,9 @@ function closeResultModal(){
 // 払戻
 // ============================================================
 function renderHaraiSel(){
-  const logs=getLogs();
   const sel=document.getElementById('harai-sel');
+  if(!sel) return;
+  const logs=getLogs();
   sel.innerHTML='<option value="">— 選択 —</option>';
   for(const l of logs){
     const opt=document.createElement('option');
@@ -1474,7 +1556,8 @@ function renderHaraiSel(){
   }
 }
 function saveHarai(){
-  const id=parseInt(document.getElementById('harai-sel').value),amount=parseInt(document.getElementById('harai-amount').value);
+  const _hsel=document.getElementById('harai-sel');if(!_hsel){showToast('払戻機能は無効です');return;}
+  const id=parseInt(_hsel.value),amount=parseInt(document.getElementById('harai-amount').value);
   if(!id||isNaN(amount)){showToast('選択と金額を入力してください');return;}
   const logs=getLogs(),idx=logs.findIndex(l=>l.id===id);
   if(idx<0){showToast('ログが見つかりません');return;}
@@ -1484,54 +1567,16 @@ function saveHarai(){
   saveLogs(logs);
   updateV2Result(id,logs[idx].chakuju,amount,true,logs[idx].maru);
   showToast('払戻を登録しました');
-  renderHaraiSel();
   updateLogSummary();
 }
-function parsePaste(){
-  const text=document.getElementById('harai-paste').value;
-  const m=text.match(/3連単[^\d]*([\d,]+)円/);
-  if(m){document.getElementById('harai-amount').value=m[1].replace(/,/g,'');showToast('¥'+m[1]+' を検出しました');}
-  else showToast('払戻金額が検出できませんでした');
-}
+function parsePaste(){showToast('この機能は現在無効です');}
 
 // ============================================================
 // 集い管理
 // ============================================================
-function renderTsudoi(){
-  const logs=getLogs(),s=getSettings();
-  const today=new Date();
-  const todayStr=today.toISOString().slice(0,10);
-  const todayLogs=logs.filter(l=>l.date===todayStr&&l.result!=='skip');
-  const hitLogs=logs.filter(l=>l.result==='hit');
-  const invLogs=logs.filter(l=>l.result!=='skip'&&l.result!==null);
-  const totalInvest=invLogs.reduce((s,l)=>s+(l.invest||0),0);
-  const totalReturn=hitLogs.reduce((s,l)=>s+(l.payout||0),0);
-  const rate=totalInvest>0?Math.round(totalReturn/totalInvest*100):0;
-  document.getElementById('st-kaisu').textContent=`${todayLogs.length}/${s.maxrace||3}`;
-  document.getElementById('st-teki').textContent=`${hitLogs.length}件`;
-  document.getElementById('st-invest').textContent='¥'+totalInvest.toLocaleString();
-  document.getElementById('st-return').textContent='¥'+totalReturn.toLocaleString();
-  const rEl=document.getElementById('st-rate');
-  rEl.textContent=totalInvest>0?rate+'%':'—';
-  rEl.className='stat-val '+(rate>=100?'green':rate>=50?'gold':'red');
-  document.getElementById('rate-bar').style.width=Math.min(rate,100)+'%';
-  const byDate={};
-  for(const l of logs){
-    if(!byDate[l.date]) byDate[l.date]={invest:0,ret:0,hit:0,total:0};
-    const dd=byDate[l.date];
-    if(l.result!=='skip'&&l.result!==null){dd.invest+=l.invest||0;dd.total++;}
-    if(l.result==='hit'){dd.ret+=l.payout||0;dd.hit++;}
-  }
-  const dailyEl=document.getElementById('daily-list');
-  const dates=Object.keys(byDate).sort().reverse();
-  if(!dates.length){dailyEl.innerHTML='<p style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">データなし</p>';return;}
-  dailyEl.innerHTML=dates.map(dt=>{
-    const dd=byDate[dt],r=dd.invest>0?Math.round(dd.ret/dd.invest*100):0;
-    return`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span>${dt.replace(/^\d{4}-/,'').replace('-','/')}</span><span style="color:var(--muted);">${dd.hit}/${dd.total}件</span><span style="color:${r>=100?'var(--green)':'var(--muted)'};">${r}%</span><span style="color:var(--gold);">¥${dd.ret.toLocaleString()}</span></div>`;
-  }).join('');
-}
-function saveSettings(){saveSettingsData({maxrace:parseInt(document.getElementById('set-maxrace').value)||3});showToast('設定保存しました');}
-function resetAll(){if(!confirm('全データをリセットしますか？')) return;localStorage.removeItem(STORE_KEY);renderTsudoi();showToast('リセットしました');}
+function renderTsudoi(){}
+function saveSettings(){showToast('設定保存しました');}
+function resetAll(){if(!confirm('全データをリセットしますか？')) return;localStorage.removeItem(STORE_KEY);updateLogSummary();showToast('リセットしました');}
 
 // ============================================================
 // ログ描画（強化版）
@@ -1539,6 +1584,7 @@ function resetAll(){if(!confirm('全データをリセットしますか？')) r
 function renderLog(){
   const logs=getLogs().slice().reverse();
   const el=document.getElementById('log-list'),empty=document.getElementById('log-empty');
+  if(!el||!empty) return; // ログタブ未使用
   if(!logs.length){el.innerHTML='';empty.style.display='block';return;}
   empty.style.display='none';
   el.innerHTML=logs.map(l=>{
@@ -1702,11 +1748,10 @@ function showHitAnalysis(){
       <div style="flex:1;text-align:center;padding:10px;background:var(--surface2);border-radius:6px;"><div style="font-size:16px;font-weight:700;color:var(--gold);">¥${maxPay.toLocaleString()}</div><div style="font-size:10px;color:var(--muted);">最高配当</div></div>
     </div>`);
   }
-  html+=`<button onclick="renderLog();document.getElementById('logAnalysis').innerHTML='';" style="width:100%;padding:10px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:6px;font-size:12px;-webkit-appearance:none;">← 戻る</button>`;
+  html+=`<button onclick="updateLogSummary();" style="width:100%;padding:10px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:6px;font-size:12px;-webkit-appearance:none;">← 戻る</button>`;
   html+=`</div>`;
-  const el=document.getElementById('logAnalysis');
-  el.innerHTML=html;
-  el.scrollIntoView({behavior:'smooth',block:'start'});
+  const el=document.getElementById('yosoLogSummary');
+  if(el){el.innerHTML+=html;el.scrollIntoView({behavior:'smooth',block:'start'});}
 }
 
 // ============================================================
@@ -1753,11 +1798,10 @@ function showMissDetail(){
       <div style="font-size:10px;color:var(--muted);word-break:break-all;">${allBets.join(' ')}</div>
     </div>`;
   });
-  html+=`<button onclick="renderLog();document.getElementById('logAnalysis').innerHTML='';" style="width:100%;padding:10px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:6px;font-size:12px;-webkit-appearance:none;margin-top:4px;">← 戻る</button>`;
+  html+=`<button onclick="updateLogSummary();" style="width:100%;padding:10px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:6px;font-size:12px;-webkit-appearance:none;margin-top:4px;">← 戻る</button>`;
   html+=`</div>`;
-  const el=document.getElementById('logAnalysis');
-  el.innerHTML=html;
-  el.scrollIntoView({behavior:'smooth',block:'start'});
+  const el=document.getElementById('yosoLogSummary');
+  if(el){el.innerHTML+=html;el.scrollIntoView({behavior:'smooth',block:'start'});}
 }
 
 // ============================================================
@@ -1766,7 +1810,6 @@ function showMissDetail(){
 function resetLog(){
   if(!confirm('ログをリセットしますか？')) return;
   localStorage.removeItem(STORE_KEY);
-  renderLog();
   updateLogSummary();
   showToast('リセットしました');
 }
@@ -1985,6 +2028,68 @@ function _showEvalImg(canvas){
   var wrap=document.getElementById('evalImgWrap');
   var img=document.getElementById('evalImg');
   if(wrap&&img){img.src=dataUrl;wrap.style.display='block';wrap.scrollIntoView({behavior:'smooth',block:'nearest'});}
+}
+
+// ============================================================
+// 印変更・再生成
+// ============================================================
+function showEditMark(){
+  if(!currentAreScores||!currentAreScores.length){showToast('先に予想実行してください');return;}
+  const wrap=document.getElementById('editMarkWrap');
+  if(!wrap) return;
+  // セレクトを1〜6で初期化
+  ['editMaru','editShiro','editSankaku'].forEach(function(id,idx){
+    const sel=document.getElementById(id);
+    if(!sel) return;
+    sel.innerHTML='';
+    for(var n=1;n<=6;n++){
+      var opt=document.createElement('option');
+      opt.value=n;
+      opt.textContent=n+'号艇';
+      if(currentAreScores[idx]&&currentAreScores[idx].no===n) opt.selected=true;
+      sel.appendChild(opt);
+    }
+  });
+  wrap.style.display=wrap.style.display==='none'?'block':'none';
+}
+
+function regenerateBets(){
+  if(!currentParsedData||!currentAreScores){showToast('先に予想実行してください');return;}
+  const maruSel=document.getElementById('editMaru');
+  const shiroSel=document.getElementById('editShiro');
+  const sankakuSel=document.getElementById('editSankaku');
+  if(!maruSel||!shiroSel||!sankakuSel) return;
+  const newMaru=parseInt(maruSel.value);
+  const newShiro=parseInt(shiroSel.value);
+  const newSankaku=parseInt(sankakuSel.value);
+  if(newMaru===newShiro||newMaru===newSankaku||newShiro===newSankaku){
+    showToast('◎○▲は別々の号艇を選んでください');return;
+  }
+  // 現在のareScoresを元に新しいランキングを構築
+  // 指定された◎○▲を先頭に、残りはスコア順
+  const specified=[newMaru,newShiro,newSankaku];
+  const rest=currentAreScores
+    .filter(s=>!specified.includes(parseInt(s.no)))
+    .sort((a,b)=>b.raw-a.raw)
+    .map(s=>parseInt(s.no));
+  const newOrder=[...specified,...rest];
+  const marks=['◎','○','▲','△','▽','×'];
+  const newRanking=newOrder.map((boat,i)=>({rank:i+1,boat,mark:marks[i]||'×'}));
+
+  // ai-rawを更新
+  document.getElementById('ai-raw').textContent=newRanking.map(function(r){return r.rank+'位 '+r.boat+'号艇 '+r.mark;}).join(String.fromCharCode(10));
+
+  // currentCalcDataのrankingを更新してbets再生成
+  if(currentCalcData){
+    currentCalcData.ranking=newRanking;
+    currentCalcData.betsRaw=selectedMode==='are'
+      ?buildBetsAre(newRanking,selectedBetCount,currentCalcData.nigeRate)
+      :buildBetsNormal(newRanking,selectedBetCount,currentParsedData);
+    currentCalcData.betcount=currentCalcData.betsRaw.length;
+  }
+  generateBets(currentParsedData, currentAreScores, selectedMode);
+  document.getElementById('editMarkWrap').style.display='none';
+  showToast('◎'+newMaru+'○'+newShiro+'▲'+newSankaku+'で再生成しました');
 }
 
 // sgAutoSaveLog（writeToV2のラッパー）
