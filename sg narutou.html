@@ -1183,8 +1183,9 @@ function buildXSummary(withAmount){
     return compressBetsSG(arr);
   };
 
+  const venueVal=document.getElementById('inp-venue')?document.getElementById('inp-venue').value||'鳴門':'鳴門';
   const lines=[
-    `鳴門${racenum}R`,
+    `${venueVal}${racenum}R`,
     ``,
     `${maruStr}の軸で勝負。`,
     `${hyokaOrder}`,
@@ -1816,35 +1817,63 @@ function renderEvalCard(xText, venue, racenum){
 
 function saveEvalCard(){
   var card=document.getElementById('evalCard');
-  if(!card) return;
+  if(!card){showToast('カードが見つかりません');return;}
+  if(typeof html2canvas!=='function'){showToast('スクリーンショットで保存してください');return;}
   var btn=document.querySelector('.eval-save-btn');
-  if(btn){btn.textContent='生成中...';btn.disabled=true;}
   function resetBtn(){if(btn){btn.textContent='📥 評価カードを保存・共有';btn.disabled=false;}}
-  html2canvas(card,{
+  if(btn){btn.textContent='生成中...';btn.disabled=true;}
+
+  // CSSカスタムプロパティをSafari向けにインライン展開
+  function inlineStyles(el){
+    var cs=window.getComputedStyle(el);
+    var inlineProps=['background','background-color','color','font-size','font-weight',
+      'font-family','font-style','border-radius','padding','margin','display',
+      'width','height','border','border-top','border-right','border-bottom','border-left',
+      'box-shadow','text-align','letter-spacing','line-height','text-shadow',
+      'position','top','right','bottom','left','overflow','flex-direction',
+      'align-items','justify-content','gap','flex','filter'];
+    inlineProps.forEach(function(p){
+      try{var v=cs.getPropertyValue(p);if(v)el.style[p]=v;}catch(e){}
+    });
+    Array.from(el.children).forEach(function(child){inlineStyles(child);});
+  }
+
+  // カードをcloneしてインライン化
+  var clone=card.cloneNode(true);
+  clone.style.position='fixed';
+  clone.style.top='-9999px';
+  clone.style.left='-9999px';
+  clone.style.background='#0c0c0c';
+  clone.style.borderRadius='10px';
+  clone.style.padding='16px 14px 18px';
+  clone.style.width=card.offsetWidth+'px';
+  document.body.appendChild(clone);
+  inlineStyles(clone);
+
+  html2canvas(clone,{
     scale:3,
-    useCORS:true,
-    backgroundColor:'#0a0a0a',
+    useCORS:false,
+    allowTaint:false,
+    backgroundColor:'#0c0c0c',
     logging:false,
-    allowTaint:true
+    foreignObjectRendering:false,
+    removeContainer:true
   }).then(function(canvas){
+    document.body.removeChild(clone);
     canvas.toBlob(function(blob){
+      if(!blob){showToast('画像生成失敗');resetBtn();return;}
       var file=new File([blob],'G_評価カード.png',{type:'image/png'});
-      // Web Share API（iOS Safari → カメラロールに保存可能）
       if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-        navigator.share({files:[file],title:'G.の総合評価'}).then(function(){
-          if(btn){btn.textContent='✅ 共有しました';setTimeout(resetBtn,2000);}
-        }).catch(function(){
-          // share拒否 → ページ内img表示（長押しで保存）
-          _showEvalImg(canvas);
-          resetBtn();
-        });
+        navigator.share({files:[file],title:'G.の総合評価'})
+          .then(function(){if(btn){btn.textContent='✅ 共有しました';setTimeout(resetBtn,2500);}})
+          .catch(function(){_showEvalImg(canvas);resetBtn();});
       } else {
-        // フォールバック: ページ内img表示
         _showEvalImg(canvas);
         resetBtn();
       }
     },'image/png');
   }).catch(function(e){
+    try{document.body.removeChild(clone);}catch(ee){}
     showToast('生成失敗: '+e.message);
     resetBtn();
   });
