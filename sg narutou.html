@@ -229,7 +229,6 @@
       <div class="sum-row"><span class="sum-label">最小回収（1点的中）</span><span class="sum-val green" id="sum-return">—</span></div>
       <div class="sum-row"><span class="sum-label">回収率目安</span><span class="sum-val" id="sum-rate">—</span></div>
     </div>
-    </div>
 
     <div class="card">
       <div class="card-title">𝕏 X投稿サマリー</div>
@@ -251,6 +250,12 @@
       </div>
       <button onclick="regenerateBets()" class="btn btn-ghost" style="width:100%;">🔄 買い目を再生成</button>
     </div>
+
+    <!-- 保存ボタン（固定） -->
+    <div id="save-result-btn-wrap" style="margin-top:8px;display:none;">
+      <button onclick="saveResult('pending')" style="width:100%;padding:14px;background:var(--gold);color:#000;border:none;border-radius:8px;font-size:14px;font-weight:700;-webkit-appearance:none;letter-spacing:.05em;">💾 この予想を保存する</button>
+    </div>
+
     </div><!-- /bet-section -->
 
     <!-- 評価カード -->
@@ -366,15 +371,9 @@ function generateBets(d, areScores, mode){
   recalcAlloc();
   updateXPreview();
 
-  // 予想保存ボタンを動的追加（重複防止）
-  var existSaveBtn=document.getElementById('save-result-btn-wrap');
-  if(!existSaveBtn){
-    var saveWrap=document.createElement('div');
-    saveWrap.id='save-result-btn-wrap';
-    saveWrap.style.cssText='margin-top:8px;';
-    saveWrap.innerHTML='<button onclick="saveResult(\'pending\')" style="width:100%;padding:14px;background:var(--gold);color:#000;border:none;border-radius:8px;font-size:14px;font-weight:700;-webkit-appearance:none;letter-spacing:.05em;">💾 この予想を保存する</button>';
-    document.getElementById('bet-section').appendChild(saveWrap);
-  }
+  // 保存ボタンを表示
+  var sbw=document.getElementById('save-result-btn-wrap');
+  if(sbw) sbw.style.display='block';
 
   // 評価カード生成
   var venue = document.getElementById('inp-venue') ? document.getElementById('inp-venue').value : '';
@@ -1167,7 +1166,7 @@ function clearYoso(){
   document.getElementById('yoso-result').style.display='none';
   document.getElementById('bet-section').style.display='none';
   var sbw=document.getElementById('save-result-btn-wrap');
-  if(sbw) sbw.remove();
+  if(sbw) sbw.style.display='none';
   currentCalcData=null;
   currentParsedData=null;
   currentAreScores=null;
@@ -1361,8 +1360,9 @@ function saveResult(resultType){
   writeToV2(entry);
 
   showToast(resultType==='skip'?'⏭ スキップ登録':'💾 予想保存 → 結果は後で入力');
-  updateLogSummary();
   clearYoso();
+  // clearYoso後にupdateLogSummaryを呼ぶ（DOMが確実に存在する状態で）
+  setTimeout(function(){updateLogSummary();},50);
 }
 
 // ============================================================
