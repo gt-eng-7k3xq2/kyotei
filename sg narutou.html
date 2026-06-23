@@ -267,6 +267,10 @@
     </div>
     <button class="eval-save-btn" onclick="saveEvalCard()">📥 評価カードを保存・共有</button>
     <p class="eval-hint">または📱<span>スクリーンショット</span>でも保存できます</p>
+    <div id="evalImgWrap" style="display:none;margin-top:10px;text-align:center;">
+      <p style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:6px;">⬇️ 長押しして保存</p>
+      <img id="evalImg" style="max-width:100%;border-radius:8px;display:block;margin:0 auto;">
+    </div>
   </div>
 
     <!-- ログサマリー（予想タブ内） -->
@@ -1812,46 +1816,49 @@ function renderEvalCard(xText, venue, racenum){
 
 function saveEvalCard(){
   var card=document.getElementById('evalCard');
-  if(!card){showToast('カードが見つかりません');return;}
-  if(typeof html2canvas!=='function'){showToast('スクリーンショットで保存してください');return;}
+  if(!card) return;
   var btn=document.querySelector('.eval-save-btn');
-  function resetBtn(){if(btn){btn.textContent='📥 評価カードを保存・共有';btn.disabled=false;}}
   if(btn){btn.textContent='生成中...';btn.disabled=true;}
-  // Safari向け: scale:2・allowTaint:false・foreignObjectRendering:false
+  function resetBtn(){if(btn){btn.textContent='📥 評価カードを保存・共有';btn.disabled=false;}}
   html2canvas(card,{
-    scale:2,
-    useCORS:false,
-    allowTaint:false,
-    backgroundColor:'#0c0c0c',
+    scale:3,
+    useCORS:true,
+    backgroundColor:'#0a0a0a',
     logging:false,
-    foreignObjectRendering:false,
-    removeContainer:true
+    allowTaint:true
   }).then(function(canvas){
-    var dataUrl=canvas.toDataURL('image/png');
     canvas.toBlob(function(blob){
-      if(!blob){showToast('画像生成失敗');resetBtn();return;}
       var file=new File([blob],'G_評価カード.png',{type:'image/png'});
-      // iOS Safari: Web Share API（ファイル共有）
+      // Web Share API（iOS Safari → カメラロールに保存可能）
       if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-        navigator.share({files:[file],title:'G.の総合評価'})
-          .then(function(){if(btn){btn.textContent='✅ 共有完了';setTimeout(resetBtn,2000);}})
-          .catch(function(){
-            // share失敗時は新タブ（長押しで保存）
-            var w=window.open('','_blank');
-            if(w){w.document.write('<html><body style="margin:0;background:#000;"><img src="'+dataUrl+'" style="max-width:100%;display:block;"><p style="color:#fff;font-family:sans-serif;text-align:center;padding:8px;">長押しして保存してください</p></body></html>');}
-            resetBtn();
-          });
+        navigator.share({files:[file],title:'G.の総合評価'}).then(function(){
+          if(btn){btn.textContent='✅ 共有しました';setTimeout(resetBtn,2000);}
+        }).catch(function(){
+          // share拒否 → ページ内img表示（長押しで保存）
+          _showEvalImg(canvas);
+          resetBtn();
+        });
       } else {
-        // 新タブで開く（長押し保存）
-        var w=window.open('','_blank');
-        if(w){w.document.write('<html><body style="margin:0;background:#000;"><img src="'+dataUrl+'" style="max-width:100%;display:block;"><p style="color:#fff;font-family:sans-serif;text-align:center;padding:8px;">長押しして保存してください</p></body></html>');}
-        if(btn){btn.textContent='✅ タブを開きました';setTimeout(resetBtn,2500);}
+        // フォールバック: ページ内img表示
+        _showEvalImg(canvas);
+        resetBtn();
       }
     },'image/png');
   }).catch(function(e){
     showToast('生成失敗: '+e.message);
     resetBtn();
   });
+}
+
+function _showEvalImg(canvas){
+  var dataUrl=canvas.toDataURL('image/png');
+  var wrap=document.getElementById('evalImgWrap');
+  var img=document.getElementById('evalImg');
+  if(wrap&&img){
+    img.src=dataUrl;
+    wrap.style.display='block';
+    wrap.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
 }
 
 // sgAutoSaveLog（writeToV2のラッパー）
