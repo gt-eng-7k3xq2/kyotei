@@ -1872,29 +1872,43 @@ function saveEvalCard(){
     var titleText='G.の総合評価'+String.fromCodePoint(0x1F6A4)+(venue&&racenum?'　'+venue+racenum+'R':'');
     var COLORS={1:'#a8a8a8',2:'#3a3a3a',3:'#c42222',4:'#1e52cc',5:'#cc9a00',6:'#168432'};
     var TCOLORS={1:'#000',2:'#fff',3:'#fff',4:'#fff',5:'#000',6:'#fff'};
-    var slotsHtml='';
-    slots.forEach(function(slot,i){
+
+    var boatData=[];
+    slots.forEach(function(slot){
       var badge=slot.querySelector('.eval-badge');
       var starsOn=slot.querySelectorAll('.eval-star-on');
       var boat=parseInt((badge&&badge.textContent.trim())||'0')||0;
-      var sc=starsOn?starsOn.length:0;
-      var bg=COLORS[boat]||'#888';
-      var tc=TCOLORS[boat]||'#fff';
+      boatData.push({boat:boat,stars:starsOn?starsOn.length:0});
+    });
+
+    // 各スロットをflexで縦積み（badge上・stars下）
+    var slotsHtml='';
+    boatData.forEach(function(d,i){
+      var bg=COLORS[d.boat]||'#888';
+      var tc=TCOLORS[d.boat]||'#fff';
       var stHtml='';
-      for(var s=0;s<5;s++) stHtml+='<span style="color:'+(s<sc?'#c9a84c':'#2a2a2a')+';font-size:13px;">&#9733;</span>';
-      if(i>0) slotsHtml+='<div style="color:#4a4a4a;font-size:14px;font-weight:700;align-self:center;margin-bottom:22px;flex-shrink:0;">&#8250;</div>';
-      slotsHtml+='<div style="display:flex;flex-direction:column;align-items:center;gap:6px;width:13%;">'
-        +'<div style="width:100%;aspect-ratio:1/1;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:900;font-family:Anton,sans-serif;background:'+bg+';color:'+tc+';box-shadow:0 2px 10px rgba(0,0,0,.7);">'+boat+'</div>'
+      for(var s=0;s<5;s++){
+        stHtml+='<span style="color:'+(s<d.stars?'#c9a84c':'#2a2a2a')+';font-size:11px;line-height:1;display:inline-block;">&#9733;</span>';
+      }
+      if(i>0) slotsHtml+='<div style="color:#4a4a4a;font-size:13px;font-weight:700;flex-shrink:0;align-self:flex-start;padding-top:20px;padding-bottom:30px;display:flex;align-items:center;">&#8250;</div>';
+      slotsHtml+=''
+        +'<div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;">'
+        +'<div style="width:100%;padding-bottom:100%;position:relative;border-radius:12px;background:'+bg+';box-shadow:0 2px 10px rgba(0,0,0,.7);">'
+        +'<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:900;font-family:Anton,sans-serif;color:'+tc+';">'+d.boat+'</span>'
+        +'</div>'
         +'<div style="display:flex;gap:1px;justify-content:center;width:100%;">'+stHtml+'</div>'
         +'</div>';
     });
+
     var html='<!DOCTYPE html><html><head><meta charset="UTF-8">'
+      +'<link rel="preconnect" href="https://fonts.googleapis.com">'
       +'<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:ital,wght@1,900&family=Anton&display=swap">'
       +'<meta name="viewport" content="width=device-width,initial-scale=1">'
-      +'</head><body style="margin:0;padding:16px;background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;">'
-      +'<div style="position:relative;border-radius:10px;overflow:hidden;padding:16px 14px 18px;background:#0c0c0c;width:100%;max-width:460px;">'
-      +'<div style="text-align:center;font-family:Noto Serif JP,serif;font-style:italic;font-weight:900;font-size:24px;letter-spacing:.04em;color:#e8c96a;text-shadow:0 0 20px rgba(200,153,60,0.3);margin-bottom:5px;">'+titleText+'</div>'
-      +'<div style="display:block;height:9px;margin:0 auto 12px;width:52%;background:linear-gradient(90deg,transparent,rgba(255,220,80,.6),transparent);border-radius:50%;filter:blur(2px);"></div>'
+      +'<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>'
+      +'</head><body style="margin:0;padding:20px 12px;background:#111;font-family:sans-serif;">'
+      +'<div id="card" style="position:relative;border-radius:10px;overflow:hidden;padding:16px 14px 18px;background:#0c0c0c;width:100%;box-sizing:border-box;">'
+      +'<div style="text-align:center;font-family:Noto Serif JP,serif;font-style:italic;font-weight:900;font-size:clamp(18px,5vw,26px);letter-spacing:.04em;color:#e8c96a;text-shadow:0 0 20px rgba(200,153,60,0.3),0 2px 4px rgba(0,0,0,1);margin-bottom:5px;line-height:1.1;">'+titleText+'</div>'
+      +'<div style="display:block;height:9px;margin:0 auto 12px;width:52%;background:linear-gradient(90deg,transparent,rgba(255,220,80,.6),transparent);border-radius:50%;filter:blur(2.5px);"></div>'
       +'<div style="background:#141414;border:1px solid #2e2e2e;border-radius:8px;padding:14px 8px 12px;position:relative;display:flex;align-items:flex-start;justify-content:space-between;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 4px 24px rgba(0,0,0,.9);">'
       +'<div style="position:absolute;top:5px;right:5px;width:16px;height:16px;border-top:2px solid #c9a84c;border-right:2px solid #c9a84c;"></div>'
       +'<div style="position:absolute;bottom:5px;left:5px;width:16px;height:16px;border-bottom:2px solid #c9a84c;border-left:2px solid #c9a84c;"></div>'
@@ -1906,12 +1920,36 @@ function saveEvalCard(){
       +'<div style="position:absolute;width:9px;height:9px;left:50%;transform:translateX(-50%);top:0;background:radial-gradient(circle,#ffe580,#c9a84c,transparent);border-radius:50%;"></div>'
       +'</div>'
       +'</div>'
-      +'<p style="color:#888;font-size:13px;text-align:center;margin-top:14px;font-family:sans-serif;">長押しして画像を保存してください</p>'
+      +'<div id="msg" style="color:#888;font-size:13px;text-align:center;margin-top:14px;padding:0 8px;">フォント読込中...</div>'
+      +'<script>'
+      +'document.fonts.ready.then(function(){'
+      +'  document.getElementById("msg").textContent="生成中...";'
+      +'  var card=document.getElementById("card");'
+      +'  html2canvas(card,{scale:3,useCORS:true,backgroundColor:"#0c0c0c",logging:false,allowTaint:true}).then(function(canvas){'
+      +'    canvas.toBlob(function(blob){'
+      +'      var file=new File([blob],"G_評価カード.png",{type:"image/png"});'
+      +'      if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){'
+      +'        navigator.share({files:[file],title:"G.の総合評価"})'
+      +'          .then(function(){document.getElementById("msg").textContent="✅ 共有しました";window.close();})'
+      +'          .catch(function(){showImg(canvas);});'
+      +'      } else { showImg(canvas); }'
+      +'    },"image/png");'
+      +'  }).catch(function(){document.getElementById("msg").textContent="生成失敗。スクショで保存してください。";});'
+      +'});'
+      +'function showImg(canvas){'
+      +'  var img=document.createElement("img");'
+      +'  img.src=canvas.toDataURL("image/png");'
+      +'  img.style="max-width:100%;display:block;margin:12px auto;border-radius:8px;";'
+      +'  document.body.appendChild(img);'
+      +'  document.getElementById("msg").textContent="長押しして画像を保存してください";'
+      +'}'
+      +'<\/script>'
       +'</body></html>';
+
     var blob=new Blob([html],{type:'text/html'});
     var url=URL.createObjectURL(blob);
     window.open(url,'_blank');
-    setTimeout(function(){URL.revokeObjectURL(url);},60000);
+    setTimeout(function(){URL.revokeObjectURL(url);},120000);
     if(btn){btn.textContent='✅ タブを開きました';setTimeout(resetBtn,3000);}
   }catch(e){
     showToast('エラー: '+e.message);
