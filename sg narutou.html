@@ -176,7 +176,7 @@
 
     <div class="card">
       <div class="card-title">𝕏 X投稿サマリー</div>
-      <div id="x-summary-preview" class="ai-output" style="min-height:80px;font-size:11px;"></div>
+      <textarea id="x-summary-preview" class="ai-output" style="min-height:100px;font-size:11px;width:100%;background:var(--card-bg);color:var(--text);border:1px solid #444;border-radius:8px;padding:8px;resize:vertical;box-sizing:border-box;"></textarea>
       <div style="display:flex;gap:8px;margin-top:4px;">
         <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="copyXSummary(false)">𝕏 サマリーのみ</button>
         <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--gold);border-color:var(--gold);" onclick="copyXSummary(true)">𝕏 賭け金込み</button>
@@ -1148,29 +1148,19 @@ function buildXSummary(withAmount){
 function updateXPreview(){
   const el=document.getElementById('x-summary-preview');
   if(!el) return;
-  el.textContent=buildXSummary(false);
+  el.value=buildXSummary(false);
 }
 
 function copyXSummary(withAmount){
-  const text=buildXSummary(withAmount);
+  const el=document.getElementById('x-summary-preview');
+  // textareaの内容をそのままコピー（手動編集済みの場合も対応）
+  const text=el?el.value:buildXSummary(withAmount);
   if(!text){showToast('買い目を生成してください');return;}
   navigator.clipboard.writeText(text).then(()=>{
-    showToast(withAmount?'𝕏 賭け金込みコピー！':'𝕏 サマリーコピー！');
-  }).catch(()=>{
-    // フォールバック
-    const ta=document.createElement('textarea');
-    ta.value=text;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    showToast(withAmount?'𝕏 賭け金込みコピー！':'𝕏 サマリーコピー！');
+    showToast(withAmount?'𝕏 賭け金込みコピー':'𝕏 サマリーコピー');
   });
 }
 
-// ============================================================
-// 結果登録
-// ============================================================
 function saveResult(resultType){
   if(!currentCalcData){showToast('予想を実行してください');return;}
   const chakuju=document.getElementById('inp-chakuju').value.trim();
