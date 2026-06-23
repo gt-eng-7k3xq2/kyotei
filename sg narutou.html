@@ -284,9 +284,8 @@
     <p class="eval-hint">または📱<span>スクリーンショット</span>でも保存できます</p>
   </div>
 
-    <!-- ログサマリー -->
-    <div id="logSummary" style="margin-top:12px;padding:0 0 20px;"></div>
-    <div id="logAnalysis" style="margin-top:4px;"></div>
+    <!-- ログサマリー（予想タブ内） -->
+    <div id="yosoLogSummary" style="margin-top:12px;padding:0 0 20px;"></div>
 
   </div>
 </div>
@@ -344,6 +343,16 @@
   <div id="logAnalysis" style="margin-bottom:8px;"></div>
   <div id="log-list"></div>
   <p id="log-empty" style="text-align:center;color:var(--muted);padding:40px;font-size:13px;">ログなし</p>
+</div>
+
+<!-- 結果入力モーダル -->
+<div id="result-modal" class="modal-wrap" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:200;padding:16px;align-items:center;justify-content:center;">
+  <div class="modal-box" style="max-width:380px;width:100%;">
+    <div class="modal-title">🏁 結果入力</div>
+    <div id="modal-race-label" style="font-size:12px;color:var(--muted);margin-bottom:12px;"></div>
+    <div id="modal-body"></div>
+    <button onclick="closeResultModal()" class="btn btn-ghost" style="margin-top:8px;">キャンセル</button>
+  </div>
 </div>
 
 
@@ -1189,25 +1198,240 @@ function copyXSummary(withAmount){
   });
 }
 
+// ============================================================
+// 結果登録（買い目確定後の即時登録 → 結果入力は後から）
+// ============================================================
 function saveResult(resultType){
   if(!currentCalcData){showToast('予想を実行してください');return;}
-  const chakuju=document.getElementById('inp-chakuju').value.trim();
-  const payout=parseInt(document.getElementById('inp-payout-reg').value)||0;
   const rows=document.querySelectorAll('#bet-tbody tr');
   const betsWithAmt=currentCalcData.betsRaw.map((b,i)=>{
     const amtCell=rows[i]?.querySelector('.amt-cell');
     const oddsInp=rows[i]?.querySelector('.odds-inp');
-    return{...b,amount:parseInt((amtCell?.textContent||'0').replace(/[¥,]/g,''))||0,odds:parseFloat(oddsInp?.value)||0};
+    return{val:b.val,type:b.type,amount:parseInt((amtCell?.textContent||'0').replace(/[¥,]/g,''))||0,odds:parseFloat(oddsInp?.value)||0};
   });
   const totalInvest=betsWithAmt.reduce((s,b)=>s+b.amount,0);
   const today=new Date();
-  const dateStr=`${today.getFullYear()}/${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}`;
+  const dateStr=today.toISOString().slice(0,10);
+  const venue=document.getElementById('inp-venue').value||'鳴門';
+  const racenumRaw=document.getElementById('inp-racenum').value||'?';
+  const ranking=currentCalcData.ranking||[];
+  const maruBoat=ranking[0]?ranking[0].boat:null;
+  const shiroBoat=ranking[1]?ranking[1].boat:null;
+  const sankakuBoat=ranking[2]?ranking[2].boat:null;
+
+  const id=Date.now();
+  const entry={
+    id,
+    date:dateStr,
+    venue,
+    racenum:racenumRaw,
+    honme:currentCalcData.honme,
+    mode:currentCalcData.mode,
+    nigeRate:currentCalcData.nigeRate,
+    areIndex:currentCalcData.areIndex,
+    betcount:currentCalcData.betcount,
+    bets:betsWithAmt,
+    invest:totalInvest||currentCalcData.shikin,
+    maru:maruBoat,
+    shiro:shiroBoat,
+    sankaku:sankakuBoat,
+    result:resultType==='skip'?'skip':null, // skip以外は後入力
+    chakuju:null,
+    payout:0,
+    miss:resultType==='skip'?['skip']:[]
+  };
+
   const logs=getLogs();
-  logs.push({id:Date.now(),date:dateStr,racenum:currentCalcData.racenum,honme:currentCalcData.honme,mode:currentCalcData.mode,nigeRate:currentCalcData.nigeRate,areIndex:currentCalcData.areIndex,betcount:currentCalcData.betcount,bets:betsWithAmt,invest:totalInvest||currentCalcData.shikin,result:resultType,chakuju,payout:resultType==='hit'?payout:0});
-  if(logs.length>100) logs.splice(0,logs.length-100);
+  // 同日同場所同レース重複防止
+  const dupIdx=logs.findIndex(l=>l.venue===venue&&l.racenum===racenumRaw&&l.date===dateStr&&!l.result);
+  if(dupIdx>=0) logs.splice(dupIdx,1);
+  logs.push(entry);
+  if(logs.length>200) logs.splice(0,logs.length-200);
   saveLogs(logs);
-  showToast(resultType==='hit'?'✅ 的中登録！':resultType==='skip'?'⏭ スキップ登録':'❌ 外れ登録');
+
+  // kyotei_v2にも書き込み（gtools連携）
+  writeToV2(entry);
+
+  showToast(resultType==='skip'?'⏭ スキップ登録':'💾 予想保存 → 結果は後で入力');
+  updateLogSummary();
   clearYoso();
+}
+
+// ============================================================
+// kyotei_v2 書き込み（gtools連携）
+// ============================================================
+function writeToV2(entry){
+  try{
+    const betsV2=(entry.bets||[]).map(b=>({val:b.val,type:b.type==='本線'?'honsen':'osaee'}));
+    const racenumV2=String(entry.racenum).replace(/R$/i,'')+'R';
+    const v2entry={
+      id:entry.id,
+      date:entry.date,
+      venue:entry.venue||'鳴門',
+      raceNum:racenumV2,
+      ver:'sg-v1',
+      shinkido:entry.mode==='are'?'荒':'通',
+      nigeRate:entry.nigeRate,
+      areScore:entry.areIndex,
+      pts:entry.betcount,
+      maru:entry.maru,
+      shiro:entry.shiro,
+      sankaku:entry.sankaku,
+      result:'',
+      payout:'',
+      bets:betsV2,
+      miss:[],
+      memo:''
+    };
+    let v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+    // 重複除去
+    v2logs=v2logs.filter(l=>!(l.venue===v2entry.venue&&l.raceNum===v2entry.raceNum&&l.date===v2entry.date&&!l.result));
+    v2logs.unshift(v2entry);
+    if(v2logs.length>300) v2logs=v2logs.slice(0,300);
+    localStorage.setItem('kyotei_v2',JSON.stringify(v2logs));
+  }catch(e){console.error('writeToV2 error:',e);}
+}
+
+// kyotei_v2の結果更新（commitResultから呼ぶ）
+function updateV2Result(entryId, chakuju, payout, isHit, maruBoat){
+  try{
+    const v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+    const idx=v2logs.findIndex(l=>l.id===entryId);
+    if(idx<0) return;
+    const l=v2logs[idx];
+    l.result=chakuju||'';
+    l.payout=payout>0?'¥'+payout.toLocaleString():'';
+    // miss分類
+    if(isHit){
+      l.miss=['hit'];
+    } else {
+      const parts=(chakuju||'').split('-');
+      const first=parts[0],second=parts[1],third=parts[2];
+      const maruStr=String(maruBoat||l.maru||'');
+      const allBets=(l.bets||[]).map(b=>b.val);
+      const inBet=allBets.includes(chakuju||'');
+      if(!maruStr||(!parts.includes(maruStr))){
+        l.miss=['ichaku']; // ◎着外
+      } else if(first===maruStr&&!inBet){
+        l.miss=['nichaku']; // ◎1着だが紐ズレ
+      } else if(first!==maruStr){
+        l.miss=['ichaku']; // ◎が1着以外
+      } else {
+        l.miss=['tensu']; // 点数外
+      }
+    }
+    localStorage.setItem('kyotei_v2',JSON.stringify(v2logs));
+  }catch(e){console.error('updateV2Result error:',e);}
+}
+
+// ============================================================
+// 結果入力モーダル
+// ============================================================
+var _resultInputId=null;
+var _resultSel={1:null,2:null,3:null};
+
+function openResultModal(id){
+  _resultInputId=id;
+  _resultSel={1:null,2:null,3:null};
+  const logs=getLogs();
+  const entry=logs.find(l=>l.id===id);
+  if(!entry) return;
+  document.getElementById('modal-race-label').textContent=
+    (entry.venue||'鳴門')+' '+entry.racenum+'R　'+entry.date+'　'+(entry.mode==='are'?'⚡荒れ':'🔒通常');
+  _renderModalBody();
+  const modal=document.getElementById('result-modal');
+  modal.style.display='flex';
+}
+
+function _renderModalBody(){
+  const entry=getLogs().find(l=>l.id===_resultInputId);
+  if(!entry) return;
+  let html='';
+  ['1着','2着','3着'].forEach((label,pi)=>{
+    const pos=pi+1;
+    html+=`<div style="font-size:11px;color:var(--muted);margin-bottom:5px;">${label}</div>`;
+    html+=`<div style="display:flex;gap:5px;margin-bottom:10px;">`;
+    [1,2,3,4,5,6].forEach(n=>{
+      const active=_resultSel[pos]===n;
+      html+=`<button onclick="_selBoat(${pos},${n})" style="flex:1;padding:10px 0;border:1px solid ${active?'var(--gold)':'var(--border)'};border-radius:4px;font-size:13px;font-weight:700;background:${active?'rgba(201,168,76,.2)':'var(--surface2)'};color:${active?'var(--gold)':'var(--text)'};-webkit-appearance:none;">${n}</button>`;
+    });
+    html+='</div>';
+  });
+  html+=`<div style="font-size:11px;color:var(--muted);margin-bottom:5px;">払戻金額 (円)</div>`;
+  html+=`<input type="number" id="modal-payout" placeholder="例: 15200" style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:14px;margin-bottom:12px;">`;
+  const sel=_resultSel;
+  const chakuju=sel[1]&&sel[2]&&sel[3]?`${sel[1]}-${sel[2]}-${sel[3]}`:null;
+  const allBets=(entry.bets||[]).map(b=>b.val);
+  const isHit=chakuju?allBets.includes(chakuju):false;
+  if(chakuju){
+    const color=isHit?'var(--green)':'var(--muted)';
+    html+=`<div style="font-size:12px;color:${color};margin-bottom:10px;">結果: ${chakuju}　${isHit?'✅ 的中':'—'}`;
+    if(isHit) html+=` <span style="font-size:10px;">（買い目に入ってた）</span>`;
+    html+=`</div>`;
+  }
+  html+=`<div style="display:flex;gap:8px;">`;
+  if(isHit){
+    html+=`<button onclick="commitResult('hit')" class="btn btn-gold btn-sm" style="flex:1;">✅ 的中登録</button>`;
+  } else if(chakuju){
+    html+=`<button onclick="commitResult('miss')" class="btn btn-ghost btn-sm" style="flex:1;color:var(--red);">❌ 外れ登録</button>`;
+  }
+  html+=`<button onclick="commitResult('skip')" class="btn btn-ghost btn-sm" style="flex:1;">⏭ SKIP</button>`;
+  html+=`</div>`;
+  document.getElementById('modal-body').innerHTML=html;
+}
+
+function _selBoat(pos,n){
+  _resultSel[pos]=n;
+  _renderModalBody();
+}
+
+function commitResult(type){
+  if(!_resultInputId) return;
+  const logs=getLogs();
+  const idx=logs.findIndex(l=>l.id===_resultInputId);
+  if(idx<0) return;
+  const entry=logs[idx];
+  const sel=_resultSel;
+  const chakuju=sel[1]&&sel[2]&&sel[3]?`${sel[1]}-${sel[2]}-${sel[3]}`:null;
+  const payout=parseInt(document.getElementById('modal-payout')?.value||'0')||0;
+  const allBets=(entry.bets||[]).map(b=>b.val);
+  const isHit=type==='hit'||(chakuju&&allBets.includes(chakuju));
+
+  // miss分類
+  let miss=[];
+  if(type==='skip'){
+    miss=['skip'];
+  } else if(isHit){
+    miss=['hit'];
+  } else if(chakuju){
+    const parts=chakuju.split('-');
+    const maruStr=String(entry.maru||'');
+    const inBet=allBets.includes(chakuju);
+    if(maruStr&&!parts.includes(maruStr)) miss=['ichaku'];
+    else if(maruStr&&parts[0]===maruStr&&!inBet) miss=['nichaku'];
+    else if(maruStr&&parts[0]!==maruStr) miss=['ichaku'];
+    else miss=['tensu'];
+  }
+
+  logs[idx].result=type==='skip'?'skip':(isHit?'hit':'miss');
+  logs[idx].chakuju=chakuju;
+  logs[idx].payout=isHit?payout:0;
+  logs[idx].miss=miss;
+  saveLogs(logs);
+
+  // v2更新
+  updateV2Result(_resultInputId, chakuju, payout, isHit, entry.maru);
+
+  closeResultModal();
+  renderLog();
+  updateLogSummary();
+  renderTsudoi();
+  showToast(type==='skip'?'⏭ SKIP登録':isHit?'✅ 的中登録！':'❌ 外れ登録');
+}
+
+function closeResultModal(){
+  document.getElementById('result-modal').style.display='none';
+  _resultInputId=null;
 }
 
 // ============================================================
@@ -1217,15 +1441,27 @@ function renderHaraiSel(){
   const logs=getLogs();
   const sel=document.getElementById('harai-sel');
   sel.innerHTML='<option value="">— 選択 —</option>';
-  for(const l of logs){const opt=document.createElement('option');opt.value=l.id;opt.textContent=`${l.date} ${l.racenum}R [${l.result}] (${l.mode==='are'?'荒れ':'通常'})`;sel.appendChild(opt);}
+  for(const l of logs){
+    const opt=document.createElement('option');
+    opt.value=l.id;
+    const label=`${l.date} ${l.venue||''}${l.racenum}R [${l.result||'未入力'}] (${l.mode==='are'?'荒れ':'通常'})`;
+    opt.textContent=label;
+    sel.appendChild(opt);
+  }
 }
 function saveHarai(){
   const id=parseInt(document.getElementById('harai-sel').value),amount=parseInt(document.getElementById('harai-amount').value);
   if(!id||isNaN(amount)){showToast('選択と金額を入力してください');return;}
   const logs=getLogs(),idx=logs.findIndex(l=>l.id===id);
   if(idx<0){showToast('ログが見つかりません');return;}
-  logs[idx].payout=amount;logs[idx].result='hit';
-  saveLogs(logs);showToast('払戻を登録しました');renderHaraiSel();
+  logs[idx].payout=amount;
+  logs[idx].result='hit';
+  logs[idx].miss=['hit'];
+  saveLogs(logs);
+  updateV2Result(id,logs[idx].chakuju,amount,true,logs[idx].maru);
+  showToast('払戻を登録しました');
+  renderHaraiSel();
+  updateLogSummary();
 }
 function parsePaste(){
   const text=document.getElementById('harai-paste').value;
@@ -1240,10 +1476,10 @@ function parsePaste(){
 function renderTsudoi(){
   const logs=getLogs(),s=getSettings();
   const today=new Date();
-  const todayStr=`${today.getFullYear()}/${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}`;
+  const todayStr=today.toISOString().slice(0,10);
   const todayLogs=logs.filter(l=>l.date===todayStr&&l.result!=='skip');
   const hitLogs=logs.filter(l=>l.result==='hit');
-  const invLogs=logs.filter(l=>l.result!=='skip');
+  const invLogs=logs.filter(l=>l.result!=='skip'&&l.result!==null);
   const totalInvest=invLogs.reduce((s,l)=>s+(l.invest||0),0);
   const totalReturn=hitLogs.reduce((s,l)=>s+(l.payout||0),0);
   const rate=totalInvest>0?Math.round(totalReturn/totalInvest*100):0;
@@ -1259,7 +1495,7 @@ function renderTsudoi(){
   for(const l of logs){
     if(!byDate[l.date]) byDate[l.date]={invest:0,ret:0,hit:0,total:0};
     const dd=byDate[l.date];
-    if(l.result!=='skip'){dd.invest+=l.invest||0;dd.total++;}
+    if(l.result!=='skip'&&l.result!==null){dd.invest+=l.invest||0;dd.total++;}
     if(l.result==='hit'){dd.ret+=l.payout||0;dd.hit++;}
   }
   const dailyEl=document.getElementById('daily-list');
@@ -1267,14 +1503,14 @@ function renderTsudoi(){
   if(!dates.length){dailyEl.innerHTML='<p style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">データなし</p>';return;}
   dailyEl.innerHTML=dates.map(dt=>{
     const dd=byDate[dt],r=dd.invest>0?Math.round(dd.ret/dd.invest*100):0;
-    return`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span>${dt}</span><span style="color:var(--muted);">${dd.hit}/${dd.total}件</span><span style="color:${r>=100?'var(--green)':'var(--muted)'};">${r}%</span><span style="color:var(--gold);">¥${dd.ret.toLocaleString()}</span></div>`;
+    return`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span>${dt.replace(/^\d{4}-/,'').replace('-','/')}</span><span style="color:var(--muted);">${dd.hit}/${dd.total}件</span><span style="color:${r>=100?'var(--green)':'var(--muted)'};">${r}%</span><span style="color:var(--gold);">¥${dd.ret.toLocaleString()}</span></div>`;
   }).join('');
 }
 function saveSettings(){saveSettingsData({maxrace:parseInt(document.getElementById('set-maxrace').value)||3});showToast('設定保存しました');}
 function resetAll(){if(!confirm('全データをリセットしますか？')) return;localStorage.removeItem(STORE_KEY);renderTsudoi();showToast('リセットしました');}
 
 // ============================================================
-// ログ
+// ログ描画（強化版）
 // ============================================================
 function renderLog(){
   const logs=getLogs().slice().reverse();
@@ -1283,20 +1519,239 @@ function renderLog(){
   empty.style.display='none';
   el.innerHTML=logs.map(l=>{
     const bets=(l.bets||[]).map(b=>b.val).join(' ');
-    const bc=l.result==='hit'?'badge-hit':l.result==='skip'?'badge-skip':'badge-miss';
-    const bt=l.result==='hit'?'的中':l.result==='skip'?'SKIP':'外れ';
-    return`<div class="log-item"><div class="log-left"><div class="log-race">${l.date} ${l.racenum}R</div><div class="log-meta">${l.mode==='are'?'⚡荒れ':'🔒通常'} 荒れ${l.areIndex||'?'}点 逃${l.nigeRate||'?'}% ${l.betcount||'?'}点</div><div class="log-bets">${bets}</div></div><div class="log-right">${l.result==='hit'?`<div class="log-payout">¥${(l.payout||0).toLocaleString()}</div>`:''}<div class="log-badge ${bc}">${bt}</div></div></div>`;
+    const isPending=!l.result;
+    const isSkip=l.result==='skip';
+    const isHit=l.result==='hit';
+    const isMiss=l.result==='miss';
+    const bc=isHit?'badge-hit':isSkip?'badge-skip':'badge-miss';
+    const bt=isHit?'的中':isSkip?'SKIP':isPending?'未入力':'外れ';
+    const missLabel={ichaku:'◎着外',nichaku:'紐ズレ',tensu:'点数外',skip:'SKIP',hit:'的中'}[((l.miss||[])[0])||'']||'';
+    const pendingBtn=isPending?`<button onclick="openResultModal(${l.id})" style="font-size:10px;padding:4px 8px;background:var(--gold);color:#000;border:none;border-radius:4px;font-weight:700;margin-top:4px;">結果入力</button>`:'';
+    return`<div class="log-item">
+      <div class="log-left">
+        <div class="log-race">${l.date} ${l.venue||'鳴門'} ${l.racenum}R</div>
+        <div class="log-meta">${l.mode==='are'?'⚡荒れ':'🔒通常'} 荒れ${l.areIndex||'?'}点 逃${l.nigeRate?l.nigeRate.toFixed(1):'?'}% ${l.betcount||'?'}点</div>
+        <div class="log-bets">${bets}</div>
+        ${missLabel&&!isHit&&!isSkip?`<div style="font-size:10px;color:var(--red);margin-top:2px;">${missLabel}</div>`:''}
+        ${pendingBtn}
+      </div>
+      <div class="log-right">
+        ${isHit?`<div class="log-payout">¥${(l.payout||0).toLocaleString()}</div>`:''}
+        <div class="log-badge ${isPending?'badge-miss':bc}">${bt}</div>
+      </div>
+    </div>`;
   }).join('');
 }
 
 // ============================================================
-// APIキー・トースト
+// ログサマリー（予想タブ内・強化版）
 // ============================================================
+function updateLogSummary(){
+  const logs=getLogs();
+  const el=document.getElementById('yosoLogSummary');
+  if(!el) return;
+  const done=logs.filter(l=>l.result&&l.result!=='skip');
+  const pending=logs.filter(l=>!l.result);
+  const hits=done.filter(l=>l.result==='hit');
+  const totalPayout=hits.reduce((s,l)=>s+(l.payout||0),0);
+  if(!done.length&&!pending.length){el.style.display='none';return;}
+  el.style.display='block';
+  let html='<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;">';
+  html+='<div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:1.5px;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px;">予想ログ</div>';
+  if(pending.length){
+    html+=`<div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:8px;">📋 結果未入力（${pending.length}件）</div>`;
+    pending.slice().reverse().forEach(l=>{
+      html+=`<button onclick="openResultModal(${l.id})" style="display:block;width:100%;text-align:left;padding:9px 10px;margin-bottom:4px;background:rgba(201,168,76,.1);color:var(--gold);border:1px solid rgba(201,168,76,.3);border-radius:6px;font-size:12px;font-weight:700;-webkit-appearance:none;">${l.venue||'鳴門'} ${l.racenum}R　${l.date} → 結果を入力</button>`;
+    });
+    html+='<div style="height:8px;"></div>';
+  }
+  if(done.length){
+    const hitRate=Math.round(hits.length/done.length*100);
+    html+=`<div style="display:flex;gap:8px;margin-bottom:8px;">
+      <div style="flex:1;text-align:center;padding:10px;background:var(--surface2);border-radius:6px;">
+        <div style="font-size:18px;font-weight:700;color:var(--green);">${hitRate}%</div>
+        <div style="font-size:10px;color:var(--muted);">的中率</div>
+        <div style="font-size:10px;color:var(--muted);">${hits.length}/${done.length}</div>
+      </div>
+      <div style="flex:1;text-align:center;padding:10px;background:var(--surface2);border-radius:6px;">
+        <div style="font-size:14px;font-weight:700;color:var(--gold);">¥${totalPayout.toLocaleString()}</div>
+        <div style="font-size:10px;color:var(--muted);">累計払戻</div>
+      </div>
+    </div>`;
+    if(done.length>=5){
+      html+=`<button onclick="switchTab('log');showHitAnalysis();" style="width:100%;padding:10px;background:rgba(76,175,125,.08);color:var(--green);border:1px solid rgba(76,175,125,.3);border-radius:6px;font-size:12px;font-weight:700;-webkit-appearance:none;margin-bottom:6px;">🎯 当たり分析</button>`;
+    }
+    if(done.length-hits.length>0){
+      html+=`<button onclick="switchTab('log');showMissDetail();" style="width:100%;padding:10px;background:rgba(224,80,80,.08);color:var(--red);border:1px solid rgba(224,80,80,.3);border-radius:6px;font-size:12px;font-weight:700;-webkit-appearance:none;">📊 外れ詳細（${done.length-hits.length}件）</button>`;
+    }
+  }
+  html+='</div>';
+  el.innerHTML=html;
+}
 
+// ============================================================
+// 当たり分析（kyotei_v2ベース）
+// ============================================================
+function showHitAnalysis(){
+  const v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+  const done=v2logs.filter(l=>l.result&&l.miss&&l.miss.length&&!l.miss.includes('miseru')&&!l.miss.includes('skip'));
+  if(done.length<5){showToast('データが不足しています（5件以上必要）');return;}
+  const hits=done.filter(l=>l.miss.includes('hit'));
+  const misses=done.filter(l=>!l.miss.includes('hit'));
+  const hitRate=Math.round(hits.length/done.length*100);
+  function pct(h,t){return t>0?Math.round(h/t*100):0;}
+  function parsePay(p){return parseInt((p||'').replace(/[¥￥,]/g,''))||0;}
+  // 荒れ指数帯別
+  const areBands=[
+    {label:'0〜3点',min:0,max:3,hit:0,total:0},
+    {label:'4〜7点',min:4,max:7,hit:0,total:0},
+    {label:'8〜11点',min:8,max:11,hit:0,total:0},
+    {label:'12点〜',min:12,max:999,hit:0,total:0}
+  ];
+  done.forEach(l=>{
+    const sc=l.areScore;
+    if(sc===null||sc===undefined) return;
+    for(const b of areBands){if(sc>=b.min&&sc<=b.max){b.total++;if(l.miss.includes('hit'))b.hit++;return;}}
+  });
+  // 逃げ率帯別
+  const nigeBands=[
+    {label:'〜49%',min:0,max:49,hit:0,total:0},
+    {label:'50〜64%',min:50,max:64,hit:0,total:0},
+    {label:'65%〜',min:65,max:999,hit:0,total:0}
+  ];
+  done.forEach(l=>{
+    const nr=l.nigeRate;
+    if(nr===null||nr===undefined) return;
+    for(const b of nigeBands){if(nr>=b.min&&nr<=b.max){b.total++;if(l.miss.includes('hit'))b.hit++;return;}}
+  });
+  // モード別
+  const modeStat={normal:{hit:0,total:0},are:{hit:0,total:0}};
+  done.forEach(l=>{
+    const m=l.shinkido==='荒'?'are':'normal';
+    modeStat[m].total++;
+    if(l.miss.includes('hit')) modeStat[m].hit++;
+  });
+  // 本線/抑え別的中
+  let honsenHit=0,osaeeHit=0;
+  hits.forEach(l=>{
+    if(!l.bets||!l.result) return;
+    const matched=l.bets.find(b=>b.val===l.result);
+    if(!matched) return;
+    if(matched.type==='honsen') honsenHit++; else osaeeHit++;
+  });
+  // 配当
+  const hitPayouts=hits.map(l=>parsePay(l.payout)).filter(v=>v>0);
+  const avgPay=hitPayouts.length>0?Math.round(hitPayouts.reduce((s,v)=>s+v,0)/hitPayouts.length):0;
+  const maxPay=hitPayouts.length>0?Math.max(...hitPayouts):0;
 
+  function barRow(label,h,t,color){
+    const p=pct(h,t);
+    const c=color||'var(--green)';
+    return`<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;"><span>${label}</span><span style="color:${c};font-weight:700;">${h}/${t}件 (${p}%)</span></div><div style="height:5px;background:var(--surface2);border-radius:3px;"><div style="height:5px;width:${p}%;background:${c};border-radius:3px;"></div></div></div>`;
+  }
+  function sec(title,content){
+    return`<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);"><div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.5px;margin-bottom:10px;">${title}</div>${content}</div>`;
+  }
+
+  let html=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;">`;
+  html+=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px;">
+    <div style="font-size:10px;font-weight:700;color:var(--green);letter-spacing:1.5px;">🎯 当たり分析</div>
+    <div style="font-size:10px;color:var(--muted);">${done.length}件 / 的中${hits.length}件 (${hitRate}%)</div>
+  </div>`;
+  // 荒れ指数
+  let aHtml=''; areBands.forEach(b=>{if(b.total>0)aHtml+=barRow(b.label,b.hit,b.total);});
+  if(aHtml) html+=sec('① 荒れ指数帯別',aHtml);
+  // 逃げ率
+  let nHtml=''; nigeBands.forEach(b=>{if(b.total>0)nHtml+=barRow(b.label,b.hit,b.total);});
+  if(nHtml) html+=sec('② 逃げ率帯別',nHtml);
+  // モード別
+  const mHtml=barRow('通常モード',modeStat.normal.hit,modeStat.normal.total,'var(--green)')+barRow('荒れモード',modeStat.are.hit,modeStat.are.total,'var(--red)');
+  html+=sec('③ モード別',mHtml);
+  // 本線/抑え別
+  if(hits.length>0){
+    html+=sec('④ 本線/抑え別的中',barRow('本線的中',honsenHit,hits.length,'var(--gold)')+barRow('抑え的中',osaeeHit,hits.length,'var(--blue)'));
+  }
+  // 配当
+  if(hitPayouts.length>0){
+    html+=sec('⑤ 的中配当',`<div style="display:flex;gap:8px;">
+      <div style="flex:1;text-align:center;padding:10px;background:var(--surface2);border-radius:6px;"><div style="font-size:16px;font-weight:700;color:var(--green);">¥${avgPay.toLocaleString()}</div><div style="font-size:10px;color:var(--muted);">平均配当</div></div>
+      <div style="flex:1;text-align:center;padding:10px;background:var(--surface2);border-radius:6px;"><div style="font-size:16px;font-weight:700;color:var(--gold);">¥${maxPay.toLocaleString()}</div><div style="font-size:10px;color:var(--muted);">最高配当</div></div>
+    </div>`);
+  }
+  html+=`<button onclick="renderLog();document.getElementById('logAnalysis').innerHTML='';" style="width:100%;padding:10px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:6px;font-size:12px;-webkit-appearance:none;">← 戻る</button>`;
+  html+=`</div>`;
+  const el=document.getElementById('logAnalysis');
+  el.innerHTML=html;
+  el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ============================================================
+// 外れ詳細（kyotei_v2ベース）
+// ============================================================
+function showMissDetail(){
+  const v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+  const missLogs=v2logs.filter(l=>l.result&&l.miss&&l.miss.length&&!l.miss.includes('hit')&&!l.miss.includes('skip')&&!l.miss.includes('miseru'));
+  if(!missLogs.length){showToast('外れデータなし');return;}
+
+  const MISS_LABELS={ichaku:'◎着外',nichaku:'紐ズレ',tensu:'点数外'};
+  let ichakuN=0,nichakuN=0,tensuN=0;
+  missLogs.forEach(l=>{
+    const m=(l.miss||[])[0];
+    if(m==='ichaku') ichakuN++;
+    else if(m==='nichaku') nichakuN++;
+    else tensuN++;
+  });
+
+  let html=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;">`;
+  html+=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:6px;">
+    <div style="font-size:10px;color:var(--red);font-weight:700;letter-spacing:1.5px;">📊 外れ詳細（${missLogs.length}件）</div>
+  </div>`;
+  html+=`<div style="display:flex;gap:8px;margin-bottom:12px;">
+    <div style="flex:1;text-align:center;padding:8px;background:var(--surface2);border-radius:6px;"><div style="font-size:16px;font-weight:700;color:var(--red);">${ichakuN}</div><div style="font-size:10px;color:var(--muted);">◎着外</div></div>
+    <div style="flex:1;text-align:center;padding:8px;background:var(--surface2);border-radius:6px;"><div style="font-size:16px;font-weight:700;color:var(--blue);">${nichakuN}</div><div style="font-size:10px;color:var(--muted);">紐ズレ</div></div>
+    <div style="flex:1;text-align:center;padding:8px;background:var(--surface2);border-radius:6px;"><div style="font-size:16px;font-weight:700;color:var(--muted);">${tensuN}</div><div style="font-size:10px;color:var(--muted);">点数外</div></div>
+  </div>`;
+
+  missLogs.forEach(l=>{
+    const allBets=(l.bets||[]).map(b=>b.val);
+    const combo=l.result||'';
+    const inBet=allBets.includes(combo);
+    const mLabel=MISS_LABELS[((l.miss||[])[0])||'']||'外れ';
+    const mColor=((l.miss||[])[0])==='ichaku'?'var(--red)':((l.miss||[])[0])==='nichaku'?'var(--blue)':'var(--muted)';
+    const modeLabel=l.shinkido==='荒'?'荒れ':'通常';
+    html+=`<div style="background:var(--surface2);border-radius:6px;padding:10px;margin-bottom:6px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <span style="font-size:13px;font-weight:700;">${l.venue||'鳴門'} ${l.raceNum} <span style="font-size:10px;color:var(--muted);">[${modeLabel}]</span></span>
+        <span style="font-size:11px;font-weight:700;color:${mColor};">${mLabel}</span>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">荒れ${l.areScore||'?'}点 逃げ${l.nigeRate||'?'}% ◎${l.maru||'?'}○${l.shiro||'?'}</div>
+      <div style="font-size:12px;margin-bottom:3px;">結果: <b>${combo}</b>　${inBet?'<span style="color:var(--green);">✅ 買い目に入ってた</span>':'<span style="color:var(--red);">❌ 買い目になし</span>'}</div>
+      <div style="font-size:10px;color:var(--muted);word-break:break-all;">${allBets.join(' ')}</div>
+    </div>`;
+  });
+  html+=`<button onclick="renderLog();document.getElementById('logAnalysis').innerHTML='';" style="width:100%;padding:10px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:6px;font-size:12px;-webkit-appearance:none;margin-top:4px;">← 戻る</button>`;
+  html+=`</div>`;
+  const el=document.getElementById('logAnalysis');
+  el.innerHTML=html;
+  el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ============================================================
+// ログリセット
+// ============================================================
+function resetLog(){
+  if(!confirm('ログをリセットしますか？')) return;
+  localStorage.removeItem(STORE_KEY);
+  renderLog();
+  updateLogSummary();
+  showToast('リセットしました');
+}
+
+// ============================================================
+// トースト・ユーティリティ
+// ============================================================
 function saveKey(){}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
-// 設定初期化はDOMContentLoaded後に実行
 
 // 場所・レース番号の保存
 function saveVenueRace(){
@@ -1316,6 +1771,8 @@ function loadVenueRace(){
 
 window.addEventListener('DOMContentLoaded',function(){
   loadVenueRace();
+  updateLogSummary();
+  renderLog();
 });
 
 </script>
