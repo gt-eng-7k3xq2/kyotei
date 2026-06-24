@@ -256,13 +256,16 @@
     </div>
 
     <!-- 印変更UI -->
-    <button onclick="showEditMark()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:8px;">✏️ ◎○▲を変更して再生成</button>
+    <button onclick="showEditMark()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:8px;">✏️ 印を変更して再生成</button>
     <div id="editMarkWrap" style="display:none;" class="card">
-      <div class="card-title" style="font-size:11px;">◎○▲を差し替えて再生成</div>
-      <div style="display:flex;gap:8px;margin-bottom:10px;">
-        <div style="flex:1;"><div style="font-size:10px;color:#c9a84c;margin-bottom:4px;">◎</div><select id="editMaru" style="width:100%;padding:6px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;"></select></div>
-        <div style="flex:1;"><div style="font-size:10px;color:#888;margin-bottom:4px;">○</div><select id="editShiro" style="width:100%;padding:6px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;"></select></div>
-        <div style="flex:1;"><div style="font-size:10px;color:#666;margin-bottom:4px;">▲</div><select id="editSankaku" style="width:100%;padding:6px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;"></select></div>
+      <div class="card-title" style="font-size:11px;">印を差し替えて再生成（1位〜6位）</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">
+        <div><div style="font-size:10px;color:#c9a84c;margin-bottom:3px;">◎ 1位</div><select id="editMaru" style="width:100%;padding:6px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;font-size:12px;"></select></div>
+        <div><div style="font-size:10px;color:#aaa;margin-bottom:3px;">○ 2位</div><select id="editShiro" style="width:100%;padding:6px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;font-size:12px;"></select></div>
+        <div><div style="font-size:10px;color:#888;margin-bottom:3px;">▲ 3位</div><select id="editSankaku" style="width:100%;padding:6px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;font-size:12px;"></select></div>
+        <div><div style="font-size:10px;color:#666;margin-bottom:3px;">△ 4位</div><select id="editYonkaku" style="width:100%;padding:6px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;font-size:12px;"></select></div>
+        <div><div style="font-size:10px;color:#555;margin-bottom:3px;">▽ 5位</div><select id="editGo" style="width:100%;padding:6px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;font-size:12px;"></select></div>
+        <div><div style="font-size:10px;color:#444;margin-bottom:3px;">× 6位</div><select id="editRoku" style="width:100%;padding:6px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;font-size:12px;"></select></div>
       </div>
       <button onclick="regenerateBets()" class="btn btn-ghost" style="width:100%;">🔄 買い目を再生成</button>
     </div>
@@ -2038,16 +2041,22 @@ function showEditMark(){
   if(!currentAreScores||!currentAreScores.length){showToast('先に予想実行してください');return;}
   const wrap=document.getElementById('editMarkWrap');
   if(!wrap) return;
-  // セレクトを1〜6で初期化
-  ['editMaru','editShiro','editSankaku'].forEach(function(id,idx){
+  const d=currentParsedData;
+  const marksArr=['◎','○','▲','△','▽','×'];
+  const selIds=['editMaru','editShiro','editSankaku','editYonkaku','editGo','editRoku'];
+  selIds.forEach(function(id,idx){
     const sel=document.getElementById(id);
     if(!sel) return;
     sel.innerHTML='';
     for(var n=1;n<=6;n++){
       var opt=document.createElement('option');
       opt.value=n;
-      opt.textContent=n+'号艇';
-      if(currentAreScores[idx]&&currentAreScores[idx].no===n) opt.selected=true;
+      var nm=d&&d.boats[n-1]?d.boats[n-1].name:'';
+      var curRank=currentAreScores.findIndex(s=>parseInt(s.no)===n);
+      var markLabel=curRank>=0?(marksArr[curRank]||''):'';
+      opt.textContent=n+'号艇'+(nm?' '+nm.split(' ')[0]:'')+(markLabel?' '+markLabel:'');
+      // 現在のランキング順で対応する号艇をデフォルト選択
+      if(currentAreScores[idx]&&parseInt(currentAreScores[idx].no)===n) opt.selected=true;
       sel.appendChild(opt);
     }
   });
@@ -2056,41 +2065,65 @@ function showEditMark(){
 
 function regenerateBets(){
   if(!currentParsedData||!currentAreScores){showToast('先に予想実行してください');return;}
-  const maruSel=document.getElementById('editMaru');
-  const shiroSel=document.getElementById('editShiro');
-  const sankakuSel=document.getElementById('editSankaku');
-  if(!maruSel||!shiroSel||!sankakuSel) return;
-  const newMaru=parseInt(maruSel.value);
-  const newShiro=parseInt(shiroSel.value);
-  const newSankaku=parseInt(sankakuSel.value);
-  if(newMaru===newShiro||newMaru===newSankaku||newShiro===newSankaku){
-    showToast('◎○▲は別々の号艇を選んでください');return;
+  const selIds=['editMaru','editShiro','editSankaku','editYonkaku','editGo','editRoku'];
+  const newOrder=selIds.map(id=>parseInt(document.getElementById(id).value));
+
+  // 重複チェック
+  if(new Set(newOrder).size!==6){
+    showToast('同じ号艇を重複して選択しています');return;
   }
-  // 現在のareScoresを元に新しいランキングを構築
-  // 指定された◎○▲を先頭に、残りはスコア順
-  const specified=[newMaru,newShiro,newSankaku];
-  const rest=currentAreScores
-    .filter(s=>!specified.includes(parseInt(s.no)))
-    .sort((a,b)=>b.raw-a.raw)
-    .map(s=>parseInt(s.no));
-  const newOrder=[...specified,...rest];
+
   const marks=['◎','○','▲','△','▽','×'];
   const newRanking=newOrder.map((boat,i)=>({rank:i+1,boat,mark:marks[i]||'×'}));
 
-  // ai-rawを更新
-  document.getElementById('ai-raw').textContent=newRanking.map(function(r){return r.rank+'位 '+r.boat+'号艇 '+r.mark;}).join(String.fromCharCode(10));
+  // currentAreScoresを新順序に更新
+  currentAreScores=newOrder.map((boat)=>{
+    const orig=(currentAreScores||[]).find(s=>parseInt(s.no)===boat)||{no:boat,raw:0};
+    return Object.assign({},orig,{no:boat});
+  });
 
-  // currentCalcDataのrankingを更新してbets再生成
+  // AIランキング表示更新（選手名付き）
+  const d=currentParsedData;
+  document.getElementById('ai-raw').textContent=newRanking.map(function(r){
+    const nm=d&&d.boats[r.boat-1]?d.boats[r.boat-1].name:'';
+    return r.rank+'位 '+r.boat+'号艇 '+r.mark+(nm?' '+nm:'');
+  }).join(String.fromCharCode(10));
+
+  // 買い目再生成
+  const nigeRate=currentCalcData?currentCalcData.nigeRate:0;
+  const newBets=selectedMode==='are'
+    ?buildBetsAre(newRanking,selectedBetCount,nigeRate)
+    :buildBetsNormal(newRanking,selectedBetCount,currentParsedData);
+
+  // currentCalcData更新
   if(currentCalcData){
     currentCalcData.ranking=newRanking;
-    currentCalcData.betsRaw=selectedMode==='are'
-      ?buildBetsAre(newRanking,selectedBetCount,currentCalcData.nigeRate)
-      :buildBetsNormal(newRanking,selectedBetCount,currentParsedData);
-    currentCalcData.betcount=currentCalcData.betsRaw.length;
+    currentCalcData.betsRaw=newBets;
+    currentCalcData.betcount=newBets.length;
+    currentCalcData.maru=newOrder[0];
+    currentCalcData.shiro=newOrder[1];
+    currentCalcData.sankaku=newOrder[2];
   }
-  generateBets(currentParsedData, currentAreScores, selectedMode);
+
+  // 買い目テーブル再描画
+  const tbody=document.getElementById('bet-tbody');
+  if(tbody){
+    const shikin=currentCalcData?currentCalcData.shikin:3000;
+    tbody.innerHTML=newBets.map(function(b){
+      return`<tr><td>${b.val}</td><td>${b.type}</td><td><input class="odds-inp" type="number" step="0.1" min="1" placeholder="—" style="width:60px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px;font-size:12px;"></td><td><input class="conf-inp" type="range" min="1" max="5" value="3" style="width:50px;"></td><td class="amt-cell" style="text-align:right;">¥${Math.floor(shikin/newBets.length/100)*100}</td><td class="ret-cell" style="text-align:right;">—</td></tr>`;
+    }).join('');
+  }
+
+  // Xサマリー・評価カード・資金配分更新
+  updateXPreview();
+  const venueVal=(document.getElementById('inp-venue')||{}).value||'';
+  const racenumVal=(document.getElementById('inp-racenum')||{}).value||'';
+  renderEvalCard('',venueVal,racenumVal);
+  recalcAlloc();
+
   document.getElementById('editMarkWrap').style.display='none';
-  showToast('◎'+newMaru+'○'+newShiro+'▲'+newSankaku+'で再生成しました');
+  const maruNm=d&&d.boats[newOrder[0]-1]?d.boats[newOrder[0]-1].name.split(' ')[0]:'';
+  showToast('◎'+newOrder[0]+(maruNm?maruNm:'')+'で再生成しました');
 }
 
 // ============================================================
