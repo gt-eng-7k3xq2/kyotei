@@ -360,11 +360,14 @@ function generateBets(d, areScores, mode){
   if(!ranking.length){showToast('AIランキングがありません');return;}
 
   // レース種別に応じて逃げ率ソースを切り替え
+  // 当地は10走以上あるときのみ信頼性あり
   const _rtype=selectedRaceType||'sg';
-  const nigeRate=_rtype==='sg'?(d.boats[0].sgNige>0?d.boats[0].sgNige:d.boats[0].nigerate6m):
-                 _rtype==='g1'?(d.boats[0].sgNige>0?d.boats[0].sgNige:(d.boats[0].atchiNige>0?d.boats[0].atchiNige:d.boats[0].nigerate6m)):
-                 _rtype==='g2g3'?(d.boats[0].atchiNige>0?d.boats[0].atchiNige:d.boats[0].nigerate6m):
-                 /* ippan */(d.boats[0].atchiNige>0?d.boats[0].atchiNige:d.boats[0].nigerate6m);
+  const _b1=d.boats[0];
+  const _atchiValid=_b1.atchiNige>0&&(_b1.atchiNigeCount||0)>=10;
+  const nigeRate=_rtype==='sg'?(_b1.sgNige>0?_b1.sgNige:_b1.nigerate6m):
+                 _rtype==='g1'?(_b1.sgNige>0?_b1.sgNige:(_atchiValid?_b1.atchiNige:_b1.nigerate6m)):
+                 _rtype==='g2g3'?(_atchiValid?_b1.atchiNige:_b1.nigerate6m):
+                 /* ippan */(_atchiValid?_b1.atchiNige:_b1.nigerate6m);
   const{areIndex}=calcAreIndex(d);
   const betsRaw=mode==='are'?buildBetsAre(ranking,selectedBetCount,nigeRate):buildBetsNormal(ranking,selectedBetCount,currentParsedData);
 
@@ -432,7 +435,7 @@ function setBetCount(n,btn){selectedBetCount=n;document.querySelectorAll('.bc-bt
 // ============================================================
 function parseData(text){
   const d={boats:[]};
-  for(let i=1;i<=6;i++) d.boats.push({no:i,name:'',regno:'',nigerate6m:0,nigerate1y:0,atchiNige:0,sgNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sg1chakuRate:0,sg1chakuCount:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,avgTenji:0,syukai:0,syukaiFoot:0,avgSyukaiFoot:0,directST:0,isExhibitF:false,isF:false});
+  for(let i=1;i<=6;i++) d.boats.push({no:i,name:'',regno:'',nigerate6m:0,nigerate1y:0,atchiNige:0,atchiNigeCount:0,sgNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sg1chakuRate:0,sg1chakuCount:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,avgTenji:0,syukai:0,syukaiFoot:0,avgSyukaiFoot:0,directST:0,isExhibitF:false,isF:false});
 
   // 逃げ率パース（優先順位: SG/G1 → 当地 → 直近6ヶ月）
   // 直近6ヶ月
@@ -449,10 +452,16 @@ function parseData(text){
       if(ln.includes('1着率')&&!inAre){inAre=true;continue;}
       if(!inAre)continue;
       if(ln.includes('当地')){
-        var vals=[];
-        var re=/([\d.]+)%/g,m2;
-        while((m2=re.exec(ln))!==null) vals.push(parseFloat(m2[1]));
-        for(var j=0;j<Math.min(vals.length,6);j++) d.boats[j].atchiNige=vals[j];
+        var vals=[], counts=[];
+        // xx% (n) の形式から率と走数を両方取得
+        var re2=/([\d.]+)%\s*\((\d+)\)/g, m3;
+        while((m3=re2.exec(ln))!==null){vals.push(parseFloat(m3[1]));counts.push(parseInt(m3[2]));}
+        // 走数なしの場合は%だけ取得
+        if(!vals.length){var re=/([\d.]+)%/g,m2;while((m2=re.exec(ln))!==null)vals.push(parseFloat(m2[1]));}
+        for(var j=0;j<Math.min(vals.length,6);j++){
+          d.boats[j].atchiNige=vals[j];
+          d.boats[j].atchiNigeCount=counts[j]||0; // 走数
+        }
         break;
       }
       if(ln.includes('直近')&&inAre&&ln.includes('%')) continue;
@@ -766,11 +775,13 @@ function calcAreScore(d){
   const kinsetsuMax=Math.max(...kinsetsuAll)||1;
 
   // 逃げ率（1号艇）
-  // レース種別に応じて逃げ率ソース切り替え
+  // レース種別に応じて逃げ率ソース切り替え（当地は10走以上のみ信頼）
   const _rtype2=selectedRaceType||'sg';
-  const nigeRate1=_rtype2==='sg'?(d.boats[0].sgNige>0?d.boats[0].sgNige:d.boats[0].nigerate6m):
-                  _rtype2==='g1'?(d.boats[0].sgNige>0?d.boats[0].sgNige:(d.boats[0].atchiNige>0?d.boats[0].atchiNige:d.boats[0].nigerate6m)):
-                  (d.boats[0].atchiNige>0?d.boats[0].atchiNige:d.boats[0].nigerate6m);
+  const _b1s=d.boats[0];
+  const _atchiValid2=_b1s.atchiNige>0&&(_b1s.atchiNigeCount||0)>=10;
+  const nigeRate1=_rtype2==='sg'?(_b1s.sgNige>0?_b1s.sgNige:_b1s.nigerate6m):
+                  _rtype2==='g1'?(_b1s.sgNige>0?_b1s.sgNige:(_atchiValid2?_b1s.atchiNige:_b1s.nigerate6m)):
+                  (_atchiValid2?_b1s.atchiNige:_b1s.nigerate6m);
 
   // コース別2連対率・3連対率正規化（SG/G1優先）
   const cr2Max=Math.max(...boats.map(b=>b.sg1chakuRate||0))||1;
@@ -866,7 +877,8 @@ function calcAreScore(d){
 function calcNigeRate(d){
   const b1=d.boats[0];
   // 当地10走以上なら当地優先
-  return b1.sgNige>0?b1.sgNige:(b1.atchiNige>0?b1.atchiNige:b1.nigerate6m);
+  const _atchiOK=b1.atchiNige>0&&(b1.atchiNigeCount||0)>=10;
+  return b1.sgNige>0?b1.sgNige:(_atchiOK?b1.atchiNige:b1.nigerate6m);
 }
 
 function calcAreIndex(d){
@@ -1220,10 +1232,19 @@ function recalcAlloc(){
   if(allocMode==='equal'){
     weights=items.map(()=>1);
   } else if(allocMode==='equalret'){
+    // 均等回収: 各買い目の期待回収額を揃える
+    // 目標回収額 = shikin（投資額と同等）
+    // 購入額 = 目標回収額 / オッズ → オッズが高い=少額
     const anyOdds=items.some(it=>it.odds>0);
     if(anyOdds){
-      const avg=items.filter(it=>it.odds>0).reduce((s,it)=>s+(1/it.odds),0)/Math.max(1,items.filter(it=>it.odds>0).length);
-      weights=items.map(it=>it.odds>0?1/it.odds:avg);
+      // オッズなし買い目は平均オッズで代用
+      const validOdds=items.filter(it=>it.odds>0).map(it=>it.odds);
+      const avgOdds=validOdds.reduce((s,o)=>s+o,0)/Math.max(1,validOdds.length);
+      // 各買い目の重みは 1/odds（オッズが高いほど少額）
+      weights=items.map(it=>{
+        const o=it.odds>0?it.odds:avgOdds;
+        return 1/o;
+      });
     } else weights=items.map(()=>1);
   } else {
     weights=items.map(it=>it.conf);
