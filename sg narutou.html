@@ -228,6 +228,7 @@
       <div class="sum-row"><span class="sum-label">合計投資</span><span class="sum-val gold" id="sum-invest">¥0</span></div>
       <div class="sum-row"><span class="sum-label">最小回収（1点的中）</span><span class="sum-val green" id="sum-return">—</span></div>
       <div class="sum-row"><span class="sum-label">回収率目安</span><span class="sum-val" id="sum-rate">—</span></div>
+      <div id="sum-gosei" style="display:none;"></div>
     </div>
 
     <div class="card">
@@ -1081,6 +1082,27 @@ function recalcAlloc(){
   } else {
     document.getElementById('sum-return').textContent='—';
     document.getElementById('sum-rate').textContent='—';
+  }
+  // 合成オッズ表示
+  if(currentCalcData){
+    const oddsMap=extractOddsMap(document.getElementById('inp-data').value);
+    const betVals=(currentCalcData.betsRaw||[]).map(b=>b.val);
+    const gosei=calcGoseiOdds(betVals,oddsMap);
+    const gEl=document.getElementById('sum-gosei');
+    if(gEl){
+      if(gosei){
+        const validCount=betVals.filter(v=>oddsMap[v]&&oddsMap[v]>0).length;
+        gEl.innerHTML='<span style="font-size:10px;color:var(--muted);">合成オッズ</span><span style="font-size:20px;font-weight:700;color:var(--gold);margin-left:8px;">'+gosei+'倍</span><span style="font-size:10px;color:var(--muted);margin-left:6px;">('+validCount+'点)</span>';
+        gEl.style.display='flex';
+        gEl.style.alignItems='center';
+        gEl.style.padding='10px';
+        gEl.style.background='var(--surface2)';
+        gEl.style.borderRadius='6px';
+        gEl.style.marginTop='8px';
+      } else {
+        gEl.style.display='none';
+      }
+    }
   }
 }
 
@@ -1971,6 +1993,18 @@ function regenerateBets(){
   generateBets(currentParsedData, currentAreScores, selectedMode);
   document.getElementById('editMarkWrap').style.display='none';
   showToast('◎'+newMaru+'○'+newShiro+'▲'+newSankaku+'で再生成しました');
+}
+
+// ============================================================
+// 合成オッズ計算（通常エンジン準拠）
+// ============================================================
+function calcGoseiOdds(betsArr, oddsMap){
+  var sum=0;
+  betsArr.forEach(function(bet){
+    var o=oddsMap[bet];
+    if(o&&o>0) sum+=1/o;
+  });
+  return sum===0?null:(1/sum).toFixed(1);
 }
 
 // sgAutoSaveLog（writeToV2のラッパー）
