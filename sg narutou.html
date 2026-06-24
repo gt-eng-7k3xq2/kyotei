@@ -517,23 +517,34 @@ function parseData(text){
   })();
 
   // 選手名（漢字）・登録番号パース
-  // 競艇日和の「選手情報」テーブルから抽出
   // 登録番号行: タブ区切りで4〜5桁の数字が6つ
   const regnoLine=text.match(/\t(\d{4,5})\t(\d{4,5})\t(\d{4,5})\t(\d{4,5})\t(\d{4,5})\t(\d{4,5})/);
   if(regnoLine){
     for(let i=0;i<6;i++) d.boats[i].regno=regnoLine[i+1]||'';
   }
-  // 漢字名行: 漢字を含む6列のタブ区切り行
-  // 「選手\n情報」テーブルの漢字名行を探す
+  // 漢字名: オッズセクションの "1\t菅章哉" 形式が最も確実
   (function(){
-    const lines=text.split('\n');
-    for(let i=0;i<lines.length;i++){
-      const ln=lines[i];
-      const parts=ln.split('\t').map(p=>p.trim()).filter(p=>p);
-      // 漢字を含む6つのカラムがある行
-      if(parts.length>=6 && parts.slice(0,6).every(p=>/[一-龥]/.test(p)) && !parts[0].includes('期') && !parts[0].includes('号艇')){
-        for(let j=0;j<6;j++) d.boats[j].name=parts[j]||'';
-        break;
+    var lines=text.split('\n');
+    var inOdds=false;
+    for(var li=0;li<lines.length;li++){
+      var ln=lines[li];
+      if(ln.includes('=== オッズ ===')) {inOdds=true;continue;}
+      if(!inOdds) continue;
+      var m=ln.match(/^([1-6])\t([^\t\d][^\t]+)$/);
+      if(m){
+        var no=parseInt(m[1]);
+        var name=m[2].trim();
+        if(/[一-龥]/.test(name)&&no>=1&&no<=6) d.boats[no-1].name=name;
+      }
+    }
+    // フォールバック: 直前情報の選手情報テーブル（漢字6列行）
+    if(d.boats.every(b=>!b.name)){
+      for(var li2=0;li2<lines.length;li2++){
+        var parts=lines[li2].split('\t').map(p=>p.trim()).filter(p=>p);
+        if(parts.length>=6&&parts.slice(0,6).every(p=>/[一-龥]/.test(p))&&!parts[0].includes('期')&&!parts[0].includes('号艇')){
+          for(var j=0;j<6;j++) d.boats[j].name=parts[j]||'';
+          break;
+        }
       }
     }
   })();
