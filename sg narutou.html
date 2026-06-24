@@ -996,24 +996,25 @@ function parseRanking(text){
 // 買い目生成（JS固定）
 // ============================================================
 function buildBetsNormal(ranking, pts, parsedData){
-  // 通常エンジン(kyotei_yoso.html)完全準拠
-  // ranking: [{boat,mark}, ...] ◎○▲△▽×順
-  // 信頼度B相当: ◎頭 OR ○頭の1着、3着は△まで（▽×除外）
-  // スコア = 1着rank×10 + 2着rank×10 + 3着rank（小さいほど良い）
-  // 8点: 上位4点=本線、次4点=抑え
+  // 通常エンジン準拠 + 紐ズレ対策強化版
+  // 逃げ率判定: nigeRate取得
+  const b1 = currentParsedData&&currentParsedData.boats[0];
+  const nigeR = b1?(b1.sgNige>0?b1.sgNige:(b1.atchiNige>0?b1.atchiNige:b1.nigerate6m)):0;
+  const isNigeRace = nigeR >= 65; // 逃げ率65%以上は逃げ特化買い目
 
   if(ranking.length<4) return [];
-  const maru    = String(ranking[0].boat); // ◎ rank1
-  const shiro   = String(ranking[1].boat); // ○ rank2
-  const sankaku = String(ranking[2].boat); // ▲ rank3
-  const yonkaku = String(ranking[3].boat); // △ rank4
-  const go      = ranking[4]?String(ranking[4].boat):null; // ▽ rank5
-  const sixth   = ranking[5]?String(ranking[5].boat):null; // × rank6
+  const maru    = String(ranking[0].boat);
+  const shiro   = String(ranking[1].boat);
+  const sankaku = ranking[2]?String(ranking[2].boat):null;
+  const yonkaku = ranking[3]?String(ranking[3].boat):null;
+  const go      = ranking[4]?String(ranking[4].boat):null;
 
   const rankMap = {};
-  rankMap[maru]=1; rankMap[shiro]=2; rankMap[sankaku]=3; rankMap[yonkaku]=4;
-  if(go)    rankMap[go]=5;
-  if(sixth) rankMap[sixth]=6;
+  rankMap[maru]=1; rankMap[shiro]=2;
+  if(sankaku) rankMap[sankaku]=3;
+  if(yonkaku) rankMap[yonkaku]=4;
+  if(go)      rankMap[go]=5;
+  if(ranking[5]) rankMap[String(ranking[5].boat)]=6;
 
   // 賞除外艇を除いた艇リスト
   const activeBoats = ranking
@@ -1023,42 +1024,74 @@ function buildBetsNormal(ranking, pts, parsedData){
     })
     .map(r=>String(r.boat));
 
-  const all = [];
-  for(const a of activeBoats){
+  const honsen=[], osaee=[];
+
+  if(isNigeRace){
+    // ===== 逃げ特化モード =====
+    // 1着: ◎固定（逃げ艇に乗る）
+    // 本線: ◎頭 2着=○▲ 3着=▽まで
+    // 抑え: ◎頭 2着=△▽ 3着=▽まで
     for(const b of activeBoats){
-      if(b===a) continue;
+      if(b===maru) continue;
+      const bRank=rankMap[b]||9;
+      if(bRank>=6) continue;
       for(const c of activeBoats){
-        if(c===a||c===b) continue;
-        // 1着制約: ◎頭 OR ○頭のみ
-        if(a!==maru && a!==shiro) continue;
-        // 3着制約: ▽(rank5)まで（×のみ除外）紐ズレ対策
-        if((rankMap[c]||99)>=6) continue;
-        const score=(rankMap[a]||9)*10+(rankMap[b]||9)*10+(rankMap[c]||9);
-        all.push({val:`${a}-${b}-${c}`, score});
+        if(c===maru||c===b) continue;
+        const cRank=rankMap[c]||9;
+        if(cRank>=6) continue;
+        const score=bRank*10+cRank;
+        if(bRank<=3){
+          honsen.push({val:`${maru}-${b}-${c}`,score});
+        } else if(bRank<=5){
+          osaee.push({val:`${maru}-${b}-${c}`,score});
+        }
+      }
+    }
+  } else {
+    // ===== 通常モード =====
+    // 1着: ◎ OR ○
+    // 本線: 2着=▲以内 3着=▽まで
+    // 抑え: 2着=△▽ 3着=▽まで
+    for(const a of activeBoats){
+      if(a!==maru&&a!==shiro) continue;
+      for(const b of activeBoats){
+        if(b===a) continue;
+        const bRank=rankMap[b]||9;
+        if(bRank>=6) continue;
+        for(const c of activeBoats){
+          if(c===a||c===b) continue;
+          const cRank=rankMap[c]||9;
+          if(cRank>=6) continue;
+          const score=(rankMap[a]||9)*100+bRank*10+cRank;
+          if(bRank<=3){
+            honsen.push({val:`${a}-${b}-${c}`,score});
+          } else if(bRank<=5){
+            osaee.push({val:`${a}-${b}-${c}`,score});
+          }
+        }
       }
     }
   }
-  all.sort((a,b)=>a.score-b.score);
 
-  // 重複除去してtop取得
-  const seen=new Set(), top=[];
-  for(const item of all){
-    if(top.length>=15) break;
-    if(!seen.has(item.val)){seen.add(item.val);top.push(item.val);}
-  }
+  honsen.sort((a,b)=>a.score-b.score);
+  osaee.sort((a,b)=>a.score-b.score);
 
-  // 点数に応じて本線・抑え分割
-  let honsenCount, osaeeCount;
-  if(pts<=4){       honsenCount=4;  osaeeCount=0; }
-  else if(pts<=6){  honsenCount=6;  osaeeCount=0; }
-  else if(pts<=8){  honsenCount=4;  osaeeCount=4; }
-  else if(pts<=12){ honsenCount=6;  osaeeCount=6; }
-  else {            honsenCount=6;  osaeeCount=9; }
+  const dedup=(arr)=>{const seen=new Set(),out=[];for(const x of arr){if(!seen.has(x.val)){seen.add(x.val);out.push(x.val);}}return out;};
+  const honsenVals=dedup(honsen);
+  const osaeeVals=dedup(osaee).filter(v=>!honsenVals.includes(v));
+
+  // 点数配分
+  let hc, oc;
+  if(pts<=4){       hc=4;  oc=0; }
+  else if(pts<=6){  hc=4;  oc=2; }
+  else if(pts<=8){  hc=4;  oc=4; }
+  else if(pts<=12){ hc=6;  oc=6; }
+  else {            hc=7;  oc=6; }
 
   const bets=[];
-  top.slice(0, honsenCount).forEach(v=>bets.push({val:v, type:'本線'}));
-  top.slice(honsenCount, honsenCount+osaeeCount).forEach(v=>bets.push({val:v, type:'抑え'}));
-  return bets.slice(0, pts);
+  honsenVals.slice(0,hc).forEach(v=>bets.push({val:v,type:'本線'}));
+  osaeeVals.slice(0,oc).forEach(v=>bets.push({val:v,type:'抑え'}));
+  return bets.slice(0,pts);
 }
 
 function buildBetsAre(ranking, pts, nigeRate){
