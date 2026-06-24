@@ -1236,7 +1236,7 @@ async function runYoso(){
     const scoreEl=document.getElementById('score-display');
     scoreEl.innerHTML='<div class="score-grid">'+areScores.map((s,si)=>{
       const isJg=s.raw<=-999;
-      const nm=d.boats[si]?d.boats[si].name:'';
+      const nm=d.boats[s.no-1]?d.boats[s.no-1].name:'';
       return`<div class="score-cell"><div class="boat-no">${s.no}号艇${nm?'<br><span style="font-size:8px;color:var(--muted);">'+nm+'</span>':''}</div><div class="score-val" style="${isJg?'color:var(--muted);font-size:11px;':''}"> ${isJg?'除外':s.raw.toFixed(0)}</div><div class="score-label">${isJg?'賞除外':'pt'}</div></div>`;
     }).join('')+'</div>';
     // スコア内訳デバッグ表示
