@@ -812,6 +812,12 @@ function calcAreScore(d){
     if(dirST!=null&&dirSTmax>dirSTmin){
       s+=(dirSTmax-dirST)/(dirSTmax-dirSTmin)*10;
     }
+    // ST最悪艇ペナルティ: 直前STが全体最悪かつ今節平均STも最悪の場合
+    if(!b.isExhibitF&&dirST!=null&&dirST===dirSTmax&&dirSTmax>dirSTmin){
+      const sessonSTvals=boats.map(x=>x.sessonAvgST||0).filter(v=>v>0);
+      const sessonSTmax=sessonSTvals.length?Math.max(...sessonSTvals):0;
+      if(b.sessonAvgST>0&&b.sessonAvgST===sessonSTmax) s-=5; // 直前・今節ともに最悪
+    }
 
     // ⑦ 2連対率 序盤12pt/終盤10pt（通常エンジン準拠・攻撃力の代わり）
     const renWeight=isEarlyRace?12:10;
@@ -919,9 +925,11 @@ function calcAreIndex(d){
 // モード判定（JSで確定）
 // ============================================================
 function judgeMode(areIndex, nigeRate){
-  // SG専用モード判定（スキップなし）
-  if(nigeRate>=70) return 'normal';
-  if(areIndex>=8) return 'are';
+  // ログ分析結果: areScore55以上かつ逃げ率60%未満 または areScore65以上で荒れ推奨
+  // areScore8→55に引き上げ（50台の軸外れ率が高かったため）
+  if(nigeRate>=70) return 'normal'; // 逃げ率高い場合は通常固定
+  if(areIndex>=65) return 'are';    // areScore65以上は確実に荒れ
+  if(areIndex>=55&&nigeRate<60) return 'are'; // areScore55以上かつ逃げ率低い
   return 'normal';
 }
 
@@ -1023,8 +1031,8 @@ function buildBetsNormal(ranking, pts, parsedData){
         if(c===a||c===b) continue;
         // 1着制約: ◎頭 OR ○頭のみ
         if(a!==maru && a!==shiro) continue;
-        // 3着制約: △(rank4)まで（▽×除外）
-        if((rankMap[c]||99)>=5) continue;
+        // 3着制約: ▽(rank5)まで（×のみ除外）紐ズレ対策
+        if((rankMap[c]||99)>=6) continue;
         const score=(rankMap[a]||9)*10+(rankMap[b]||9)*10+(rankMap[c]||9);
         all.push({val:`${a}-${b}-${c}`, score});
       }
