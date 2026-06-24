@@ -270,10 +270,7 @@
       <button onclick="regenerateBets()" class="btn btn-ghost" style="width:100%;">🔄 買い目を再生成</button>
     </div>
 
-    <!-- 保存ボタン（固定） -->
-    <div id="save-result-btn-wrap" style="margin-top:8px;display:none;">
-      <button onclick="saveResult('pending')" style="width:100%;padding:14px;background:var(--gold);color:#000;border:none;border-radius:8px;font-size:14px;font-weight:700;-webkit-appearance:none;letter-spacing:.05em;">💾 この予想を保存する</button>
-    </div>
+
 
     </div><!-- /bet-section -->
 
@@ -308,10 +305,10 @@
 <!-- ログサマリー（予想タブ内・yoso-result外に配置） -->
 <div id="yosoLogSummary" style="margin-top:12px;padding:0 0 20px;"></div>
 
-  <div class="card">
-    <div class="card-title">📋 BMペースト</div>
-
-
+<!-- 保存ボタン（BMペースト跡地） -->
+<div id="save-result-btn-wrap-bottom" style="padding:0 0 20px;display:none;">
+  <button onclick="saveResult('pending')" style="width:100%;padding:16px;background:var(--gold);color:#000;border:none;border-radius:8px;font-size:15px;font-weight:700;-webkit-appearance:none;letter-spacing:.05em;cursor:pointer;">💾 この予想を保存する</button>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -397,7 +394,7 @@ function generateBets(d, areScores, mode){
   updateXPreview();
 
   // 保存ボタンを表示
-  var sbw=document.getElementById('save-result-btn-wrap');
+  var sbw=document.getElementById('save-result-btn-wrap-bottom');
   if(sbw) sbw.style.display='block';
 
   // 評価カード生成
@@ -1028,23 +1025,29 @@ function buildBetsNormal(ranking, pts, parsedData){
 
   if(isNigeRace){
     // ===== 逃げ特化モード =====
-    // 1着: ◎固定（逃げ艇に乗る）
-    // 本線: ◎頭 2着=○▲ 3着=▽まで
-    // 抑え: ◎頭 2着=△▽ 3着=▽まで
-    for(const b of activeBoats){
-      if(b===maru) continue;
-      const bRank=rankMap[b]||9;
-      if(bRank>=6) continue;
+    // 1着: ◎固定
+    // 2着軸ごとに3着を▽までまとめて買う
+    // 本線: 2着=○▲ × 3着=△▽まで
+    // 抑え: 2着=△▽ × 3着=▲まで
+
+    // 2着候補を本線・抑えに分類
+    const honsenNige2 = activeBoats.filter(b=>b!==maru&&(rankMap[b]||9)<=3); // ○▲
+    const osaeeNige2  = activeBoats.filter(b=>b!==maru&&(rankMap[b]||9)>=4&&(rankMap[b]||9)<=5); // △▽
+
+    for(const b of honsenNige2){
       for(const c of activeBoats){
         if(c===maru||c===b) continue;
         const cRank=rankMap[c]||9;
         if(cRank>=6) continue;
-        const score=bRank*10+cRank;
-        if(bRank<=3){
-          honsen.push({val:`${maru}-${b}-${c}`,score});
-        } else if(bRank<=5){
-          osaee.push({val:`${maru}-${b}-${c}`,score});
-        }
+        honsen.push({val:`${maru}-${b}-${c}`, score:(rankMap[b]||9)*10+(cRank)});
+      }
+    }
+    for(const b of osaeeNige2){
+      for(const c of activeBoats){
+        if(c===maru||c===b) continue;
+        const cRank=rankMap[c]||9;
+        if(cRank>=6) continue;
+        osaee.push({val:`${maru}-${b}-${c}`, score:(rankMap[b]||9)*10+(cRank)});
       }
     }
   } else {
@@ -1082,11 +1085,21 @@ function buildBetsNormal(ranking, pts, parsedData){
 
   // 点数配分
   let hc, oc;
-  if(pts<=4){       hc=4;  oc=0; }
-  else if(pts<=6){  hc=4;  oc=2; }
-  else if(pts<=8){  hc=4;  oc=4; }
-  else if(pts<=12){ hc=6;  oc=6; }
-  else {            hc=7;  oc=6; }
+  if(isNigeRace){
+    // 逃げ特化: 本線=○▲×各3着(最大6点)、抑え=△▽×各3着(残り)
+    if(pts<=4){       hc=4;  oc=0; }
+    else if(pts<=6){  hc=6;  oc=0; }
+    else if(pts<=8){  hc=6;  oc=2; }
+    else if(pts<=12){ hc=6;  oc=6; }
+    else {            hc=6;  oc=7; }
+  } else {
+    // 通常モード
+    if(pts<=4){       hc=4;  oc=0; }
+    else if(pts<=6){  hc=4;  oc=2; }
+    else if(pts<=8){  hc=4;  oc=4; }
+    else if(pts<=12){ hc=6;  oc=6; }
+    else {            hc=7;  oc=6; }
+  }
 
   const bets=[];
   honsenVals.slice(0,hc).forEach(v=>bets.push({val:v,type:'本線'}));
@@ -1324,7 +1337,7 @@ function clearYoso(){
   document.getElementById('inp-racenum').value='';
   document.getElementById('yoso-result').style.display='none';
   document.getElementById('bet-section').style.display='none';
-  var sbw=document.getElementById('save-result-btn-wrap');
+  var sbw=document.getElementById('save-result-btn-wrap-bottom');
   if(sbw) sbw.style.display='none';
   currentCalcData=null;
   currentParsedData=null;
