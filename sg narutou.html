@@ -367,6 +367,12 @@ function setNigeMode(mode){
 function applyMode(){
   if(!currentParsedData||!currentAreScores){showToast('先に予想実行してください');return;}
   if(selectedMode==='skip'){showToast('スキップ設定です');return;}
+  // DOMから直接アクティブなボタンを読み取る（iOS Safari対策）
+  const activeNigeBtn=['auto','high','mid','low'].find(m=>{
+    const btn=document.getElementById('nige-btn-'+m);
+    return btn&&btn.classList.contains('active');
+  })||'auto';
+  selectedNigeMode=activeNigeBtn;
   showToast('構成: '+selectedNigeMode);
   generateBets(currentParsedData, currentAreScores, selectedMode);
 }
