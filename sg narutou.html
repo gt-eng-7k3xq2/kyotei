@@ -850,8 +850,8 @@ function calcAreScore(d){
     // ⑫ Fペナルティ（通常エンジン準拠: -3pt）
     if(b.isF) s-=3;
 
-    // ⑬ 賞除外艇は強制最下位
-    if(b.isJogai) s=-999;
+    // ⑬ 賞除外艇は大きなペナルティ（買い目候補からは除外しない）
+    if(b.isJogai) s-=30;
 
     const _toku=isEarlyRace?
       (tokuMax>tokuMin?(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*10:0):
@@ -1008,7 +1008,8 @@ function buildBetsNormal(ranking, pts, parsedData){
   // 通常エンジン準拠 + 紐ズレ対策強化版
   // 逃げ率判定: nigeRate取得
   const b1 = currentParsedData&&currentParsedData.boats[0];
-  const nigeR = b1?(b1.sgNige>0?b1.sgNige:(b1.atchiNige>0?b1.atchiNige:b1.nigerate6m)):0;
+  const _atchiValidBN = b1&&b1.atchiNige>0&&(b1.atchiNigeCount||0)>=10;
+  const nigeR = b1?(b1.sgNige>0?b1.sgNige:(_atchiValidBN?b1.atchiNige:b1.nigerate6m)):0;
   // 逃げ率で買い目モードを3段階に分類
   // high(65%+): ◎頭固定・2着広く
   // mid(50-65%): ◎頭+○頭、2着に◎も入れる
@@ -1035,11 +1036,7 @@ function buildBetsNormal(ranking, pts, parsedData){
 
   // 賞除外艇を除いた艇リスト
   const activeBoats = ranking
-    .filter(r => {
-      const s = currentAreScores&&currentAreScores.find(sc=>sc.no===r.boat);
-      return !(s&&s.raw<=-999);
-    })
-    .map(r=>String(r.boat));
+    .map(r=>String(r.boat)); // 賞除外も含めて買い目候補に入れる
 
   const honsen=[], osaee=[];
 
@@ -1348,12 +1345,12 @@ async function runYoso(){
     // スコア表示（デバッグ情報含む）
     const scoreEl=document.getElementById('score-display');
     scoreEl.innerHTML='<div class="score-grid">'+areScores.map((s,si)=>{
-      const isJg=s.raw<=-999;
+      const isJg=s.raw<=-990; // -999のみ除外表示（賞除外は-30なので通常表示）
       const nm=d.boats[s.no-1]?d.boats[s.no-1].name:'';
       return`<div class="score-cell"><div class="boat-no">${s.no}号艇${nm?'<br><span style="font-size:8px;color:var(--muted);">'+nm+'</span>':''}</div><div class="score-val" style="${isJg?'color:var(--muted);font-size:11px;':''}"> ${isJg?'除外':s.raw.toFixed(0)}</div><div class="score-label">${isJg?'賞除外':'pt'}</div></div>`;
     }).join('')+'</div>';
     // スコア内訳デバッグ表示
-    const debugLines=areScores.map(s=>s.raw<=-999?`${s.no}号: 【賞除外】`:`${s.no}号: 攻${s._atk.toFixed(1)} 展示${s._ex} 周回${s._lap} ST${s._st.toFixed(1)} 得点${s._toku.toFixed(1)} モーター${s._motor.toFixed(1)} 逃ペナ${s._pen1} Fペナ${s._penF} = ${s.raw.toFixed(1)}pt`).join('\n');
+    const debugLines=areScores.map(s=>s.raw<=-990?`${s.no}号: 【賞除外】`:`${s.no}号: 攻${s._atk.toFixed(1)} 展示${s._ex} 周回${s._lap} ST${s._st.toFixed(1)} 得点${s._toku.toFixed(1)} モーター${s._motor.toFixed(1)} 逃ペナ${s._pen1} Fペナ${s._penF} = ${s.raw.toFixed(1)}pt`).join('\n');
     const parseLines=d.boats.map(b=>`${b.no}号${b.name?'('+b.name+')':''}: 得点${b.isJogai?'除外':b.sessonPt} 直前ST${b.directST}${b.isExhibitF?'(展示F)':''} F休${b.isF?'✓':'-'} 展示${b.tenji} 周回${b.syukai} 差${b.sashi6m}% 捲${b.makuri6m}% Motor${b.motor2ren}%`).join('\n');
     scoreEl.innerHTML+=`<details style="margin-top:8px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">📋 スコア内訳</summary><pre style="font-size:10px;color:var(--muted);margin-top:6px;overflow-x:auto;">${debugLines}\n\n【パース値】\n${parseLines}</pre></details>`;
     const modeEl=document.getElementById('mode-result');
