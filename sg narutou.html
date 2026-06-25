@@ -1099,29 +1099,28 @@ function buildBetsNormal(ranking, pts, parsedData){
       }
     }
   } else if(nigeMode === 'mid'){
-    // ===== 半逃げモード（◎=1号艇・逃げ率50-65%）=====
-    // 本線: ◎頭（2着=○▲）＋○頭（2着に◎含む）
-    // 抑え: ◎頭（2着=△▽）
-    const honsenFirst = [maru, shiro]; // ◎○が1着候補
-    for(const a of honsenFirst){
-      for(const b of activeBoats){
-        if(b===a) continue;
-        const bRank=rankMap[b]||9;
-        if(bRank>=6) continue;
-        for(const c of activeBoats){
-          if(c===a||c===b) continue;
-          const cRank=rankMap[c]||9;
-          if(cRank>=6) continue;
-          const score=(rankMap[a]||9)*100+bRank*10+cRank;
-          // 本線: 2着が▲以内（◎頭）or 2着が◎（○頭）
-          if(a===maru&&bRank<=3){
-            honsen.push({val:`${a}-${b}-${c}`,score});
-          } else if(a===shiro&&b===maru){
-            honsen.push({val:`${a}-${b}-${c}`,score});
-          } else if(a===maru&&bRank>=4&&bRank<=5){
-            osaee.push({val:`${a}-${b}-${c}`,score});
-          }
-        }
+    // ===== 2艇頭モード =====
+    // 本線: ◎頭2着=○×3点 + ○頭2着=◎×3点（均等）
+    // 抑え: ◎頭2着=▲以下
+
+    const rankOrder2 = activeBoats.slice().sort((a,b)=>(rankMap[a]||9)-(rankMap[b]||9));
+    const thirdAll2 = rankOrder2.filter(b=>b!==maru&&b!==shiro&&(rankMap[b]||9)<=5);
+
+    // ◎頭・2着=○・3着=残り（評価順）
+    const maruShiroThirds = thirdAll2;
+    for(const c of maruShiroThirds){
+      honsen.push({val:`${maru}-${shiro}-${c}`, score:10+(rankMap[c]||9)});
+    }
+    // ○頭・2着=◎・3着=残り（評価順）
+    for(const c of thirdAll2){
+      honsen.push({val:`${shiro}-${maru}-${c}`, score:200+(rankMap[c]||9)});
+    }
+    // 抑え: ◎頭・2着=▲以下
+    const osaee2nd2=rankOrder2.filter(b=>b!==maru&&b!==shiro&&(rankMap[b]||9)<=5);
+    for(const b of osaee2nd2){
+      const thirds2=rankOrder2.filter(c=>c!==maru&&c!==b&&(rankMap[c]||9)<=5);
+      for(const c of thirds2){
+        osaee.push({val:`${maru}-${b}-${c}`, score:(rankMap[b]||9)*10+(rankMap[c]||9)});
       }
     }
   } else {
@@ -1167,12 +1166,12 @@ function buildBetsNormal(ranking, pts, parsedData){
     else if(pts<=12){ hc=6;  oc=6; }
     else {            hc=6;  oc=7; }
   } else if(nigeMode === 'mid'){
-    // 半逃げ: 本線=◎頭2着○▲＋○頭2着◎、抑え=◎頭2着△▽
+    // 2艇頭: 本線=◎-○×3点+○-◎×3点、抑え=◎-▲以下
     if(pts<=4){       hc=4;  oc=0; }
-    else if(pts<=6){  hc=6;  oc=0; } // 1-3-245/1-4-235を本線6点
-    else if(pts<=8){  hc=6;  oc=2; } // +抑え2点
-    else if(pts<=12){ hc=9;  oc=3; }
-    else {            hc=9;  oc=4; }
+    else if(pts<=6){  hc=6;  oc=0; }
+    else if(pts<=8){  hc=6;  oc=2; }
+    else if(pts<=12){ hc=6;  oc=6; }
+    else {            hc=6;  oc=7; }
   } else {
     // 通常モード点数配分: 2着軸ごとに均等割り当て
     if(pts<=4){       hc=4;  oc=0; }
