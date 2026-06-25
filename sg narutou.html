@@ -218,16 +218,16 @@
         <button class="alloc-btn" id="mode-btn-are" onclick="setMode('are')" style="flex:1;padding:10px;">⚡ 荒れ</button>
         <button class="alloc-btn" id="mode-btn-skip" onclick="setMode('skip')" style="display:none;">⏭ SKIP</button>
       </div>
-      <button class="btn btn-gold" onclick="applyMode()" style="margin-top:8px;">買い目を生成</button>
-      <div style="margin-top:10px;">
+      <div style="margin-top:10px;position:relative;z-index:10;">
         <label style="font-size:12px;color:var(--muted);margin-bottom:6px;display:block;">買い目構成</label>
         <div style="display:flex;gap:6px;">
-          <button class="alloc-btn active" id="nige-btn-auto" onclick="setNigeMode('auto')" style="flex:1;padding:8px;font-size:11px;">🤖 自動</button>
-          <button class="alloc-btn" id="nige-btn-high" onclick="setNigeMode('high')" style="flex:1;padding:8px;font-size:11px;">🔒 逃げ固定</button>
-          <button class="alloc-btn" id="nige-btn-mid" onclick="setNigeMode('mid')" style="flex:1;padding:8px;font-size:11px;">⚖️ 2艇頭</button>
-          <button class="alloc-btn" id="nige-btn-low" onclick="setNigeMode('low')" style="flex:1;padding:8px;font-size:11px;">🔀 通常</button>
+          <button class="alloc-btn active" id="nige-btn-auto" onclick="setNigeMode('auto');showToast('自動')" style="flex:1;padding:8px;font-size:11px;">🤖 自動</button>
+          <button class="alloc-btn" id="nige-btn-high" onclick="setNigeMode('high');showToast('逃げ固定')" style="flex:1;padding:8px;font-size:11px;">🔒 逃げ固定</button>
+          <button class="alloc-btn" id="nige-btn-mid" onclick="setNigeMode('mid');showToast('2艇頭')" style="flex:1;padding:8px;font-size:11px;">⚖️ 2艇頭</button>
+          <button class="alloc-btn" id="nige-btn-low" onclick="setNigeMode('low');showToast('通常')" style="flex:1;padding:8px;font-size:11px;">🔀 通常</button>
         </div>
       </div>
+      <button class="btn btn-gold" onclick="applyMode()" style="margin-top:8px;">買い目を生成</button>
     </div>
     <div id="bet-section" style="display:none;">
     <div class="card">
@@ -367,6 +367,7 @@ function setNigeMode(mode){
 function applyMode(){
   if(!currentParsedData||!currentAreScores){showToast('先に予想実行してください');return;}
   if(selectedMode==='skip'){showToast('スキップ設定です');return;}
+  showToast('構成: '+selectedNigeMode);
   generateBets(currentParsedData, currentAreScores, selectedMode);
 }
 
