@@ -942,11 +942,13 @@ function calcAreIndex(d){
 // モード判定（JSで確定）
 // ============================================================
 function judgeMode(areIndex, nigeRate){
-  // ログ分析結果: areScore55以上かつ逃げ率60%未満 または areScore65以上で荒れ推奨
-  // areScore8→55に引き上げ（50台の軸外れ率が高かったため）
-  if(nigeRate>=70) return 'normal'; // 逃げ率高い場合は通常固定
-  if(areIndex>=65) return 'are';    // areScore65以上は確実に荒れ
-  if(areIndex>=55&&nigeRate<60) return 'are'; // areScore55以上かつ逃げ率低い
+  // calcAreIndexの最大スコアは約15〜18点
+  // 逃げ率70%以上は通常固定
+  if(nigeRate>=70) return 'normal';
+  // areIndex10以上で荒れ推奨（逃げ率60%未満）
+  if(areIndex>=10&&nigeRate<60) return 'are';
+  // areIndex13以上は逃げ率関係なく荒れ
+  if(areIndex>=13) return 'are';
   return 'normal';
 }
 
