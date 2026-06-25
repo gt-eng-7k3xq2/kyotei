@@ -1356,17 +1356,16 @@ async function runYoso(){
     // 場所・レース番号を自動セット
     if(d.venue){
       const venueEl=document.getElementById('inp-venue');
-      if(venueEl&&!venueEl.value) venueEl.value=d.venue;
-      else if(venueEl&&venueEl.value!==d.venue) venueEl.value=d.venue;
+      if(venueEl) venueEl.value=d.venue; // optionのtextContent=value形式
     }
     if(d.raceNum){
       const raceEl=document.getElementById('inp-racenum');
       if(raceEl){
-        const rno=d.raceNum.replace('R','');
+        const rno=d.raceNum.replace('R','').trim(); // "7R"→"7"
         raceEl.value=rno;
-        saveVenueRace();
       }
     }
+    saveVenueRace();
 
     // スコア表示（デバッグ情報含む）
     const scoreEl=document.getElementById('score-display');
