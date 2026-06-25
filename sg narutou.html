@@ -850,8 +850,8 @@ function calcAreScore(d){
     // ⑫ Fペナルティ（通常エンジン準拠: -3pt）
     if(b.isF) s-=3;
 
-    // ⑬ 賞除外艇は大きなペナルティ（買い目候補からは除外しない）
-    if(b.isJogai) s-=30;
+    // ⑬ 賞除外艇は-10ptペナルティ（買い目候補に残す）
+    if(b.isJogai) s-=10;
 
     const _toku=isEarlyRace?
       (tokuMax>tokuMin?(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*10:0):
@@ -1035,8 +1035,9 @@ function buildBetsNormal(ranking, pts, parsedData){
   if(ranking[5]) rankMap[String(ranking[5].boat)]=6;
 
   // 賞除外艇を除いた艇リスト
+  // activeBoatsをランク順（評価順）に並べる
   const activeBoats = ranking
-    .map(r=>String(r.boat)); // 賞除外も含めて買い目候補に入れる
+    .map(r=>String(r.boat)); // 賞除外も含めて買い目候補に入れる（rankingはすでにスコア降順）
 
   const honsen=[], osaee=[];
 
@@ -1088,27 +1089,35 @@ function buildBetsNormal(ranking, pts, parsedData){
       }
     }
   } else {
-    // ===== 通常モード =====
-    // 1着: ◎ OR ○
-    // 本線: 2着=▲以内 3着=▽まで
-    // 抑え: 2着=△▽ 3着=▽まで
-    for(const a of activeBoats){
-      if(a!==maru&&a!==shiro) continue;
-      for(const b of activeBoats){
-        if(b===a) continue;
-        const bRank=rankMap[b]||9;
-        if(bRank>=6) continue;
-        for(const c of activeBoats){
-          if(c===a||c===b) continue;
-          const cRank=rankMap[c]||9;
-          if(cRank>=6) continue;
-          const score=(rankMap[a]||9)*100+bRank*10+cRank;
-          if(bRank<=3){
-            honsen.push({val:`${a}-${b}-${c}`,score});
-          } else if(bRank<=5){
-            osaee.push({val:`${a}-${b}-${c}`,score});
-          }
-        }
+    // ===== 通常モード（low）=====
+    // ◎頭固定・2着軸ごとに3着を残り全艇
+    // 本線: 2着=○▲、3着=残り全艇（2着軸ごと交互）
+    // 抑え: 2着=△▽、3着=残り全艇（2着軸ごと交互）
+    const thirdCands = activeBoats.filter(b=>(rankMap[b]||9)<=5);
+
+    // 2着候補をランク順にグループ化
+    const honsenNige2 = activeBoats.filter(b=>b!==maru&&(rankMap[b]||9)<=3); // ○▲
+    const osaeeNige2  = activeBoats.filter(b=>b!==maru&&(rankMap[b]||9)>=4&&(rankMap[b]||9)<=5); // △▽
+
+    // 各2着軸の3着リスト（ランク順）
+    const hGroups = honsenNige2.map(b=>({
+      b, thirds: thirdCands.filter(c=>c!==maru&&c!==b)
+    }));
+    const oGroups = osaeeNige2.map(b=>({
+      b, thirds: thirdCands.filter(c=>c!==maru&&c!==b)
+    }));
+
+    // 2着軸ごとに交互に1点ずつ割り当て
+    const maxLen = Math.max(...hGroups.map(g=>g.thirds.length), 1);
+    for(let i=0;i<maxLen;i++){
+      for(const g of hGroups){
+        if(i<g.thirds.length) honsen.push({val:`${maru}-${g.b}-${g.thirds[i]}`, score:(rankMap[g.b]||9)*10+(rankMap[g.thirds[i]]||9)});
+      }
+    }
+    const maxLenO = Math.max(...oGroups.map(g=>g.thirds.length), 1);
+    for(let i=0;i<maxLenO;i++){
+      for(const g of oGroups){
+        if(i<g.thirds.length) osaee.push({val:`${maru}-${g.b}-${g.thirds[i]}`, score:(rankMap[g.b]||9)*10+(rankMap[g.thirds[i]]||9)});
       }
     }
   }
@@ -1137,10 +1146,10 @@ function buildBetsNormal(ranking, pts, parsedData){
     else if(pts<=12){ hc=9;  oc=3; }
     else {            hc=9;  oc=4; }
   } else {
-    // 通常モード
+    // 通常モード点数配分: 2着軸ごとに均等割り当て
     if(pts<=4){       hc=4;  oc=0; }
-    else if(pts<=6){  hc=4;  oc=2; }
-    else if(pts<=8){  hc=4;  oc=4; }
+    else if(pts<=6){  hc=6;  oc=0; }
+    else if(pts<=8){  hc=6;  oc=2; }
     else if(pts<=12){ hc=6;  oc=6; }
     else {            hc=7;  oc=6; }
   }
