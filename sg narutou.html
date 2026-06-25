@@ -219,6 +219,15 @@
         <button class="alloc-btn" id="mode-btn-skip" onclick="setMode('skip')" style="display:none;">⏭ SKIP</button>
       </div>
       <button class="btn btn-gold" onclick="applyMode()" style="margin-top:8px;">買い目を生成</button>
+      <div style="margin-top:10px;">
+        <label style="font-size:12px;color:var(--muted);margin-bottom:6px;display:block;">買い目構成</label>
+        <div style="display:flex;gap:6px;">
+          <button class="alloc-btn active" id="nige-btn-auto" onclick="setNigeMode('auto')" style="flex:1;padding:8px;font-size:11px;">🤖 自動</button>
+          <button class="alloc-btn" id="nige-btn-high" onclick="setNigeMode('high')" style="flex:1;padding:8px;font-size:11px;">🔒 逃げ固定</button>
+          <button class="alloc-btn" id="nige-btn-mid" onclick="setNigeMode('mid')" style="flex:1;padding:8px;font-size:11px;">⚖️ 2艇頭</button>
+          <button class="alloc-btn" id="nige-btn-low" onclick="setNigeMode('low')" style="flex:1;padding:8px;font-size:11px;">🔀 通常</button>
+        </div>
+      </div>
     </div>
     <div id="bet-section" style="display:none;">
     <div class="card">
@@ -342,6 +351,16 @@ function setMode(mode){
   ['normal','are','skip'].forEach(m=>{
     const el=document.getElementById('mode-btn-'+m);
     if(el) el.classList.toggle('active',m===mode);
+  });
+}
+
+var selectedNigeMode = 'auto'; // 'auto'|'high'|'mid'|'low'
+
+function setNigeMode(mode){
+  selectedNigeMode = mode;
+  ['auto','high','mid','low'].forEach(m=>{
+    const btn = document.getElementById('nige-btn-'+m);
+    if(btn) btn.classList.toggle('active', m===mode);
   });
 }
 
@@ -1020,14 +1039,14 @@ function buildBetsNormal(ranking, pts, parsedData){
   const b1 = currentParsedData&&currentParsedData.boats[0];
   const _atchiValidBN = b1&&b1.atchiNige>0&&(b1.atchiNigeCount||0)>=10;
   const nigeR = b1?(b1.sgNige>0?b1.sgNige:(_atchiValidBN?b1.atchiNige:b1.nigerate6m)):0;
-  // 逃げ率で買い目モードを3段階に分類
-  // high(65%+): ◎頭固定・2着広く
-  // mid(50-65%): ◎頭+○頭、2着に◎も入れる
-  // low(50%未満): ◎○両頭
-  const maru1 = String(ranking[0].boat) === '1'; // ◎が1号艇か
-  const nigeMode = (maru1 && nigeR >= 65) ? 'high'
-                 : (maru1 && nigeR >= 50) ? 'mid'
-                 : 'low';
+  // 逃げ率で買い目モードを3段階に分類（手動指定があれば優先）
+  const maru1 = String(ranking[0].boat) === '1';
+  const _autoNigeMode = (maru1 && nigeR >= 65) ? 'high'
+                      : (maru1 && nigeR >= 50) ? 'mid'
+                      : 'low';
+  const nigeMode = (typeof selectedNigeMode !== 'undefined' && selectedNigeMode !== 'auto')
+                 ? selectedNigeMode
+                 : _autoNigeMode;
   const isNigeRace = nigeMode !== 'low';
 
   if(ranking.length<4) return [];
@@ -1381,7 +1400,10 @@ async function runYoso(){
     const modeEl=document.getElementById('mode-result');
     const modeCls=mode==='are'?'mode-are':mode==='skip'?'mode-skip':'mode-normal';
     const modeLabel=mode==='are'?'⚡ 荒れモード':mode==='skip'?'⏭ スキップ':'🔒 通常モード';
-    modeEl.innerHTML=`<span class="mode-badge ${modeCls}">${modeLabel}</span> <span style="font-size:12px;color:var(--muted);">荒れ指数 <strong style="color:var(--text);">${areIndex}点</strong> / 逃げ率 <strong style="color:var(--text);">${nigeRate.toFixed(1)}%</strong></span>`;
+    const _maru1=d.boats[0]&&String(d.boats[0].no)==='1';
+    const _autoNige=(_maru1&&nigeRate>=65)?'high':(_maru1&&nigeRate>=50)?'mid':'low';
+    const nigeLabel={'high':'逃げ固定','mid':'2艇頭','low':'通常'}[_autoNige];
+    modeEl.innerHTML=`<span class="mode-badge ${modeCls}">${modeLabel}</span> <span style="font-size:12px;color:var(--muted);">荒れ指数 <strong style="color:var(--text);">${areIndex}点</strong> / 逃げ率 <strong style="color:var(--text);">${nigeRate.toFixed(1)}%</strong> / 構成auto: <strong style="color:var(--gold);">${nigeLabel}</strong></span>`;
 
     // 荒れ指数4〜7点: スキップ推奨アラートを表示するが予想は続行
     if(areIndex>=4&&areIndex<=7&&nigeRate<70){
