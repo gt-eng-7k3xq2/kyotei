@@ -525,6 +525,14 @@ function parseData(text){
     }
   })();
 
+  // レース情報（BMデータ冒頭から取得）
+  // フォーマット: "=== レース情報 ===\n場所\tXR\t日付"
+  const raceMeta=text.match(/=== レース情報 ===\n([^\t\n]+)\t(\d+R)(?:\t(\d+))?/);
+  if(raceMeta){
+    d.venue=raceMeta[1].trim();
+    d.raceNum=raceMeta[2].trim();
+  }
+
   // 選手名（漢字）・登録番号パース
   // 登録番号行: タブ区切りで4〜5桁の数字が6つ
   const regnoLine=text.match(/\t(\d{4,5})\t(\d{4,5})\t(\d{4,5})\t(\d{4,5})\t(\d{4,5})\t(\d{4,5})/);
@@ -1090,34 +1098,26 @@ function buildBetsNormal(ranking, pts, parsedData){
     }
   } else {
     // ===== 通常モード（low）=====
-    // ◎頭固定・2着軸ごとに3着を残り全艇
-    // 本線: 2着=○▲、3着=残り全艇（2着軸ごと交互）
-    // 抑え: 2着=△▽、3着=残り全艇（2着軸ごと交互）
-    const thirdCands = activeBoats.filter(b=>(rankMap[b]||9)<=5);
+    // ◎頭固定
+    // 本線: 2着=○▲ × 3着=残り全艇（評価順）
+    // 抑え: 2着=△▽ × 3着=○▲のみ
+    const rankOrder = activeBoats.slice().sort((a,b)=>(rankMap[a]||9)-(rankMap[b]||9));
+    const thirdAll  = rankOrder.filter(b=>b!==maru&&(rankMap[b]||9)<=5);
+    const honsen2nd = rankOrder.filter(b=>b!==maru&&(rankMap[b]||9)<=3); // ○▲
+    const osaee2nd  = rankOrder.filter(b=>b!==maru&&(rankMap[b]||9)>=4&&(rankMap[b]||9)<=5); // △▽
 
-    // 2着候補をランク順にグループ化
-    const honsenNige2 = activeBoats.filter(b=>b!==maru&&(rankMap[b]||9)<=3); // ○▲
-    const osaeeNige2  = activeBoats.filter(b=>b!==maru&&(rankMap[b]||9)>=4&&(rankMap[b]||9)<=5); // △▽
-
-    // 各2着軸の3着リスト（ランク順）
-    const hGroups = honsenNige2.map(b=>({
-      b, thirds: thirdCands.filter(c=>c!==maru&&c!==b)
-    }));
-    const oGroups = osaeeNige2.map(b=>({
-      b, thirds: thirdCands.filter(c=>c!==maru&&c!==b)
-    }));
-
-    // 2着軸ごとに交互に1点ずつ割り当て
-    const maxLen = Math.max(...hGroups.map(g=>g.thirds.length), 1);
-    for(let i=0;i<maxLen;i++){
-      for(const g of hGroups){
-        if(i<g.thirds.length) honsen.push({val:`${maru}-${g.b}-${g.thirds[i]}`, score:(rankMap[g.b]||9)*10+(rankMap[g.thirds[i]]||9)});
+    // 本線: 各2着軸ごとに3着を評価順で列挙
+    for(const b of honsen2nd){
+      const thirds = thirdAll.filter(c=>c!==b);
+      for(const c of thirds){
+        honsen.push({val:`${maru}-${b}-${c}`, score:(rankMap[b]||9)*10+(rankMap[c]||9)});
       }
     }
-    const maxLenO = Math.max(...oGroups.map(g=>g.thirds.length), 1);
-    for(let i=0;i<maxLenO;i++){
-      for(const g of oGroups){
-        if(i<g.thirds.length) osaee.push({val:`${maru}-${g.b}-${g.thirds[i]}`, score:(rankMap[g.b]||9)*10+(rankMap[g.thirds[i]]||9)});
+    // 抑え: 各2着軸ごとに3着=○▲のみ
+    for(const b of osaee2nd){
+      const thirds = thirdAll.filter(c=>c!==b&&(rankMap[c]||9)<=3);
+      for(const c of thirds){
+        osaee.push({val:`${maru}-${b}-${c}`, score:(rankMap[b]||9)*10+(rankMap[c]||9)});
       }
     }
   }
@@ -1350,6 +1350,21 @@ async function runYoso(){
     // 3. 荒れ指数・逃げ率・モード判定（全部JS）
     const{areIndex,nigeRate}=calcAreIndex(d);
     const mode=judgeMode(areIndex,nigeRate);
+
+    // 場所・レース番号を自動セット
+    if(d.venue){
+      const venueEl=document.getElementById('inp-venue');
+      if(venueEl&&!venueEl.value) venueEl.value=d.venue;
+      else if(venueEl&&venueEl.value!==d.venue) venueEl.value=d.venue;
+    }
+    if(d.raceNum){
+      const raceEl=document.getElementById('inp-racenum');
+      if(raceEl){
+        const rno=d.raceNum.replace('R','');
+        raceEl.value=rno;
+        saveVenueRace();
+      }
+    }
 
     // スコア表示（デバッグ情報含む）
     const scoreEl=document.getElementById('score-display');
