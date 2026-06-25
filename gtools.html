@@ -244,6 +244,35 @@ html,body{min-height:100vh;background:#04040c;}
   </div>
 </div>
 
+<div class="page" id="page-ohayo">
+  <div class="card">
+    <div class="card-title">🌅 おはよう投稿ジェネレーター</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.7;">
+      埼玉の天気・今日のニュース・スポーツ・曜日ネタなど<br>リアルタイムで拾って自然な朝の一言を生成します
+    </div>
+    <button onclick="generateOhayo()" style="width:100%;background:var(--gold);color:#080810;border:none;border-radius:var(--r);font-size:15px;font-weight:800;padding:14px;-webkit-appearance:none;cursor:pointer;">🌅 おはよう投稿を生成</button>
+  </div>
+  <div id="ohayo-loading" style="display:none;text-align:center;padding:30px;color:var(--text2);font-size:13px;">
+    <div style="font-size:28px;margin-bottom:10px;animation:spin 2s linear infinite;">⏳</div>
+    今日の話題をリアルタイムで調査中…
+  </div>
+  <div id="ohayo-result" style="display:none;">
+    <div class="card">
+      <div class="card-title">𝕏 生成された投稿</div>
+      <div id="ohayo-text" style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);padding:14px;white-space:pre-wrap;font-size:14px;line-height:1.9;color:var(--text);min-height:80px;"></div>
+      <button onclick="copyOhayo()" id="ohayo-copy-btn" style="margin-top:10px;width:100%;padding:13px;background:var(--gold);color:#000;border:none;border-radius:var(--r2);font-size:14px;font-weight:700;-webkit-appearance:none;">📋 コピーしてXへ</button>
+      <button onclick="generateOhayo()" style="margin-top:8px;width:100%;padding:11px;background:var(--surface2);color:var(--text2);border:1px solid var(--border2);border-radius:var(--r2);font-size:13px;font-weight:600;-webkit-appearance:none;">🔄 別パターンを生成</button>
+    </div>
+    <div class="card" style="margin-top:10px;">
+      <div class="card-title">📡 拾ったネタ</div>
+      <div id="ohayo-info" style="font-size:12px;color:var(--text2);line-height:1.8;white-space:pre-wrap;"></div>
+    </div>
+  </div>
+  <div id="ohayo-error" style="display:none;" class="card">
+    <div style="color:var(--red);font-size:13px;" id="ohayo-error-msg"></div>
+  </div>
+</div>
+
 <div id="nippo-overlay">
   <div id="nippo-ui-bar" style="position:fixed;top:calc(14px + env(safe-area-inset-top));left:0;right:0;z-index:901;display:flex;align-items:center;justify-content:space-between;padding:0 16px;">
     <button onclick="enterScreenshotMode()" style="background:rgba(201,168,76,0.2);border:1px solid rgba(201,168,76,0.4);color:#c9a84c;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;">📸 スクショモード</button>
@@ -288,6 +317,7 @@ html,body{min-height:100vh;background:#04040c;}
   <div class="nav-item" onclick="switchPage('analysis')"><div class="nav-icon">📊</div><div class="nav-label">分析</div></div>
   <div class="nav-item" onclick="switchPage('logs')"><div class="nav-icon">📋</div><div class="nav-label">ログ</div></div>
   <div class="nav-item" onclick="switchPage('nippo')"><div class="nav-icon">📅</div><div class="nav-label">日報</div></div>
+  <div class="nav-item" onclick="switchPage('ohayo')"><div class="nav-icon">🌅</div><div class="nav-label">朝投稿</div></div>
 </nav>
 <div class="toast" id="toast"></div>
 </div>
@@ -306,7 +336,7 @@ function switchPage(p){
   document.querySelectorAll('#tool-1 .page').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('#tool-1 .nav-item').forEach(el=>el.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
-  const pages=['input','analysis','logs','nippo'];
+  const pages=['input','analysis','logs','nippo','ohayo'];
   document.querySelectorAll('#tool-1 .nav-item')[pages.indexOf(p)].classList.add('active');
   if(p==='analysis')renderAnalysis();
   if(p==='logs')renderLogs();
@@ -358,6 +388,122 @@ function renderLogs(){
 }
 function toggleBetsDetail(id){const el=document.getElementById('bets-'+id);if(!el)return;el.classList.toggle('open');const t=el.previousElementSibling;t.textContent=el.classList.contains('open')?'▼ 買い目を隠す':'▶ 買い目 '+(getLogs().find(l=>l.id===id)?.bets?.length||0)+'点';}
 function filterDate(d){currentDateFilter=d;renderLogs();}
+
+// ============================================================
+// 朝投稿ジェネレーター（web search全任せ版）
+// ============================================================
+async function generateOhayo(){
+  document.getElementById('ohayo-loading').style.display='block';
+  document.getElementById('ohayo-result').style.display='none';
+  document.getElementById('ohayo-error').style.display='none';
+
+  const now=new Date();
+  const dow=['日','月','火','水','木','金','土'][now.getDay()];
+  const month=now.getMonth()+1;
+  const date=now.getDate();
+  const dateStr=`${now.getFullYear()}年${month}月${date}日（${dow}曜日）`;
+
+  const prompt=`今日は${dateStr}です。
+
+競艇予想Xアカウント「GARONboat（雄大）」の朝のおはよう投稿文を1つ作ってください。
+
+【投稿の構成】
+「おはようございます🚤」で始まり、今日のリアルな話題を一言挟んで、今日も予想頑張るという締めで終わる。合計80〜120文字程度。
+
+【話題の選び方】
+以下の中からその日に最も旬なものを1つだけ自然に入れる。複数入れない。
+- 埼玉の今朝の天気（暑い・寒い・雨・晴れなど）
+- 昨日〜今朝のスポーツ結果（サッカー・野球・テニス・F1など）
+- 今話題のニュース（台風・選挙・社会的な出来事など）
+- 曜日・季節ならではのネタ（月曜の憂鬱、金曜の解放感、梅雨、紅葉など）
+- その他今日ならではのリアルな話題
+
+【文体のルール】
+- ハッシュタグ不要
+- 堅くならず、フォロワーへの自然な世間話レベル
+- 「今日も」「さあ」などポジティブな言葉で締める
+- 絵文字は控えめに1〜2個
+
+web検索で今日${dateStr}のリアルな情報（天気予報・ニュース・スポーツ速報など）を調べてから投稿文を作成してください。
+
+出力形式：
+---ネタ---
+（何を話題にしたか一言）
+---投稿文---
+（投稿文のみ）`;
+
+  try{
+    // マルチターンでweb searchを処理
+    let messages=[{role:'user',content:prompt}];
+    let finalText='';
+
+    for(let i=0;i<5;i++){
+      const res=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          model:'claude-sonnet-4-6',
+          max_tokens:1000,
+          tools:[{type:'web_search_20250305',name:'web_search'}],
+          messages
+        })
+      });
+      if(!res.ok) throw new Error(`API ${res.status}`);
+      const data=await res.json();
+
+      // assistantのメッセージを履歴に追加
+      messages.push({role:'assistant',content:data.content});
+
+      // stop_reasonがend_turnならテキストを取得して終了
+      if(data.stop_reason==='end_turn'){
+        finalText=data.content.filter(b=>b.type==='text').map(b=>b.text).join('').trim();
+        break;
+      }
+
+      // tool_useがあればtool_resultを返す
+      if(data.stop_reason==='tool_use'){
+        const toolResults=data.content
+          .filter(b=>b.type==='tool_use')
+          .map(b=>({
+            type:'tool_result',
+            tool_use_id:b.id,
+            content:'検索が完了しました'
+          }));
+        messages.push({role:'user',content:toolResults});
+      }
+    }
+
+    if(!finalText) throw new Error('投稿文を生成できませんでした');
+
+    // ネタと投稿文を分離
+    const netaMatch=finalText.match(/---ネタ---\s*([\s\S]*?)---投稿文---\s*([\s\S]*)/);
+    let neta='', postText='';
+    if(netaMatch){
+      neta=netaMatch[1].trim();
+      postText=netaMatch[2].trim();
+    } else {
+      postText=finalText;
+    }
+
+    document.getElementById('ohayo-loading').style.display='none';
+    document.getElementById('ohayo-result').style.display='block';
+    document.getElementById('ohayo-text').textContent=postText;
+    document.getElementById('ohayo-info').textContent=neta||'';
+  }catch(e){
+    document.getElementById('ohayo-loading').style.display='none';
+    document.getElementById('ohayo-error').style.display='block';
+    document.getElementById('ohayo-error-msg').textContent='エラー: '+e.message;
+  }
+}
+
+function copyOhayo(){
+  const text=document.getElementById('ohayo-text').textContent;
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn=document.getElementById('ohayo-copy-btn');
+    btn.textContent='✅ コピー完了';
+    setTimeout(()=>btn.textContent='📋 コピーしてXへ',2000);
+  });
+}
 
 function exportForClaude(){
   const logs=getLogs();
