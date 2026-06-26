@@ -553,10 +553,11 @@ function parseData(text){
 
   // レース情報（BMデータ冒頭から取得）
   // フォーマット: "=== レース情報 ===\n場所\tXR\t日付"
-  const raceMeta=text.match(/=== レース情報 ===\n([^\t\n]+)\t(\d+R)(?:\t(\d+))?/);
+  const raceMeta=text.match(/=== レース情報 ===\n([^\t\n]+)\t(\d+R)(?:\t(\d+))?(?:\t締切(\d{1,2}:\d{2}))?/);
   if(raceMeta){
     d.venue=raceMeta[1].trim();
     d.raceNum=raceMeta[2].trim();
+    if(raceMeta[4]) d.〆切=raceMeta[4].trim();
   }
 
   // 選手名（漢字）・登録番号パース
@@ -1550,8 +1551,9 @@ function buildXSummary(withAmount){
   };
 
   const venueVal=document.getElementById('inp-venue')?document.getElementById('inp-venue').value||'鳴門':'鳴門';
+  const 〆切=currentParsedData&&currentParsedData['〆切']?` 締切${currentParsedData['〆切']}`:'';
   const lines=[
-    `${venueVal}${racenum}R`,
+    `${venueVal}${racenum}R${〆切}`,
     ``,
     `${maruStr}の軸で勝負。`,
     `${hyokaOrder}`,
