@@ -557,7 +557,7 @@ function parseData(text){
   if(raceMeta){
     d.venue=raceMeta[1].trim();
     d.raceNum=raceMeta[2].trim();
-    if(raceMeta[4]) d.〆切=raceMeta[4].trim();
+    if(raceMeta[4]) d.shimekiri=raceMeta[4].trim();
   }
 
   // 選手名（漢字）・登録番号パース
@@ -1551,9 +1551,9 @@ function buildXSummary(withAmount){
   };
 
   const venueVal=document.getElementById('inp-venue')?document.getElementById('inp-venue').value||'鳴門':'鳴門';
-  const 〆切=currentParsedData&&currentParsedData['〆切']?` 締切${currentParsedData['〆切']}`:'';
+  const shimekiri=currentParsedData&&currentParsedData.shimekiri?` 締切${currentParsedData.shimekiri}`:'';
   const lines=[
-    `${venueVal}${racenum}R${〆切}`,
+    `${venueVal}${racenum}R${shimekiri}`,
     ``,
     `${maruStr}の軸で勝負。`,
     `${hyokaOrder}`,
