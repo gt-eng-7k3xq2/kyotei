@@ -665,10 +665,15 @@ function parseData(text){
   if(avgTenjiSection){
     for(let i=0;i<6;i++) d.boats[i].avgTenji=parseFloat(avgTenjiSection[i+1])||0;
   }
-  // 直前周り足（大きいほど良い）
+  // 直前周り足（タイム・小さいほど良い）
   const syukaiFootSection=text.match(/(?:^|\n)周り足\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/m);
   if(syukaiFootSection){
     for(let i=0;i<6;i++) d.boats[i].syukaiFoot=parseFloat(syukaiFootSection[i+1])||0;
+  }
+  // 直線タイム（小さいほど良い・場によっては存在しない）
+  const chokusenSection=text.match(/(?:^|\n)直線\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/m);
+  if(chokusenSection){
+    for(let i=0;i<6;i++) d.boats[i].chokusen=parseFloat(chokusenSection[i+1])||0;
   }
   // 周回タイム（直前・ランク計算にも使用）
   const syukaiTimeSection=text.match(/(?:^|\n)周回\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/m);
@@ -769,13 +774,37 @@ function parseData(text){
 function calcAreScore(d){
   const boats=d.boats;
 
-  // 展示ランク（タイム小さいほど良い）: 直前||平均展示
-  const exVals=boats.map(b=>b.tenji||b.avgTenji||99);
-  const exOrder=[...boats].sort((a,b)=>(a.tenji||a.avgTenji||99)-(b.tenji||b.avgTenji||99));
+  // ===== 展示足ランク（展示＋周り足＋直線の合計ランク、全て小さいほど良い）=====
+  // 各指標を6艇内でランク付け（0=最速, 5=最遅）し合算 → 合計小さいほど好足
+  const rankAsc=(arr)=>{
+    // arr: [{no, val}] valの小さい順にrank付け。val=0(未取得)は最下位扱い
+    const sorted=[...arr].sort((a,b)=>{
+      if(!a.val&&!b.val) return 0;
+      if(!a.val) return 1;
+      if(!b.val) return -1;
+      return a.val-b.val;
+    });
+    const rankMap={};
+    sorted.forEach((x,i)=>rankMap[x.no]=i);
+    return rankMap;
+  };
+  const tenjiRank=rankAsc(boats.map(b=>({no:b.no,val:b.tenji||b.avgTenji||0})));
+  const syukaiFootRank=rankAsc(boats.map(b=>({no:b.no,val:b.syukaiFoot||b.avgSyukaiFoot||0})));
+  const hasChokusen=boats.some(b=>b.chokusen>0);
+  const chokusenRank=hasChokusen?rankAsc(boats.map(b=>({no:b.no,val:b.chokusen||0}))):{};
+  boats.forEach(b=>{
+    // 合計ランク: 指標が揃っているほど精度高い
+    const rTenji=tenjiRank[b.no]??5;
+    const rFoot=syukaiFootRank[b.no]??5;
+    const rChokusen=hasChokusen?(chokusenRank[b.no]??5):null;
+    // 展示足合計ランク（3指標あり: 0〜15、2指標: 0〜10）
+    b.exhibitFootRank=rTenji+rFoot+(rChokusen!==null?rChokusen:0);
+    b.exhibitFootMax=(hasChokusen?15:10); // 最大値（最遅の場合）
+  });
+
   // 周回タイムランク（タイム小さいほど良い）: 直前||平均周回
   const lapOrder=[...boats].sort((a,b)=>(a.syukai||a.avgSyukai||99)-(b.syukai||b.avgSyukai||99));
   boats.forEach(b=>{
-    b.exRank=exOrder.findIndex(x=>x.no===b.no);
     b.lapRank=lapOrder.findIndex(x=>x.no===b.no);
     // フォールバック: syukaiが0の場合はavgSyukaiを補完
     if(!b.syukai&&b.avgSyukai) b.syukai=b.avgSyukai;
@@ -837,8 +866,10 @@ function calcAreScore(d){
     const rateWeight=isEarlyRace?20:5;
     if(kinsetsuMax>0) s+=(b.kinsetsu6m||0)/kinsetsuMax*rateWeight;
 
-    // ③ 展示機力ランク max14pt
-    if(b.exRank>=0) s+=(5-b.exRank)*2.8;
+    // ③ 展示足スコア（展示＋周り足＋直線の合計ランク） max14pt
+    // exhibitFootRank: 小さいほど好足（0=全指標1位）
+    const exMax=b.exhibitFootMax||10;
+    s+=(exMax-b.exhibitFootRank)/exMax*14;
 
     // ④ 周回機力ランク max14pt
     if(b.lapRank>=0) s+=(5-b.lapRank)*2.8;
@@ -892,9 +923,10 @@ function calcAreScore(d){
       (tokuMax>tokuMin?(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*10:0):
       (tokuMax>tokuMin?(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*25:0);
     const _atk=ren/cr2Max*renWeight;
+    const _exScore=(exMax-b.exhibitFootRank)/exMax*14;
     return{no:b.no, raw:s, tenji:b.tenji, syukai:b.syukai,
       _atk:_atk,
-      _ex:(b.exRank>=0?(5-b.exRank)*2.8:0),
+      _ex:_exScore,
       _lap:(b.lapRank>=0?(5-b.lapRank)*2.8:0),
       _st:stPt,
       _toku:_toku,
