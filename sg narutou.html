@@ -461,7 +461,7 @@ function setBetCount(n,btn){selectedBetCount=n;document.querySelectorAll('.bc-bt
 // ============================================================
 function parseData(text){
   const d={boats:[]};
-  for(let i=1;i<=6;i++) d.boats.push({no:i,name:'',regno:'',nigerate6m:0,nigerate1y:0,atchiNige:0,atchiNigeCount:0,sgNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sg1chakuRate:0,sg1chakuCount:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,avgTenji:0,syukai:0,syukaiFoot:0,avgSyukaiFoot:0,directST:0,isExhibitF:false,isF:false});
+  for(let i=1;i<=6;i++) d.boats.push({no:i,name:'',regno:'',nigerate6m:0,nigerate1y:0,atchiNige:0,atchiNigeCount:0,sgNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sg1chakuRate:0,sg1chakuCount:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,avgTenji:0,syukai:0,syukaiFoot:0,avgSyukaiFoot:0,chokusen:0,directST:0,isExhibitF:false,isF:false});
 
   // 逃げ率パース（優先順位: SG/G1 → 当地 → 直近6ヶ月）
   // 直近6ヶ月
@@ -1465,7 +1465,7 @@ async function runYoso(){
     }).join('')+'</div>';
     // スコア内訳デバッグ表示
     const debugLines=areScores.map(s=>s.raw<=-990?`${s.no}号: 【賞除外】`:`${s.no}号: 攻${s._atk.toFixed(1)} 展示${parseFloat(s._ex).toFixed(1)} 周回${parseFloat(s._lap).toFixed(1)} ST${s._st.toFixed(1)} 得点${s._toku.toFixed(1)} モーター${s._motor.toFixed(1)} 逃ペナ${s._pen1} Fペナ${s._penF} = ${s.raw.toFixed(1)}pt`).join('\n');
-    const parseLines=d.boats.map(b=>`${b.no}号${b.name?'('+b.name+')':''}: 得点${b.isJogai?'除外':b.sessonPt} 直前ST${b.directST}${b.isExhibitF?'(展示F)':''} F休${b.isF?'✓':'-'} 展示${b.tenji} 周回${b.syukai} 差${b.sashi6m}% 捲${b.makuri6m}% Motor${b.motor2ren}%`).join('\n');
+    const parseLines=d.boats.map(b=>`${b.no}号${b.name?'('+b.name+')':''}: 得点${b.isJogai?'除外':b.sessonPt} 直前ST${b.directST}${b.isExhibitF?'(展示F)':''} F休${b.isF?'✓':'-'} 展示${b.tenji} 周足${b.syukaiFoot||0} 直線${b.chokusen||0} 周回${b.syukai} Motor${b.motor2ren}%`).join('\n');
     scoreEl.innerHTML+=`<details style="margin-top:8px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">📋 スコア内訳</summary><pre style="font-size:10px;color:var(--muted);margin-top:6px;overflow-x:auto;">${debugLines}\n\n【パース値】\n${parseLines}</pre></details>`;
     const modeEl=document.getElementById('mode-result');
     const modeCls=mode==='are'?'mode-are':mode==='skip'?'mode-skip':'mode-normal';
