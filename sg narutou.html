@@ -1204,9 +1204,9 @@ function buildBetsNormal(ranking, pts, parsedData){
         honsen.push({val:`${maru}-${b}-${c}`, score:(rankMap[b]||9)*10+(rankMap[c]||9)});
       }
     }
-    // 抑え: 各2着軸ごとに3着=○▲のみ
+    // 抑え: 各2着軸ごとに3着=○固定（2位評価が必ず絡む構成）
     for(const b of osaee2nd){
-      const thirds = thirdAll.filter(c=>c!==b&&(rankMap[c]||9)<=3);
+      const thirds = [shiro].filter(c=>c!==b); // ○固定
       for(const c of thirds){
         osaee.push({val:`${maru}-${b}-${c}`, score:(rankMap[b]||9)*10+(rankMap[c]||9)});
       }
