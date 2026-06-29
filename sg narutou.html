@@ -397,6 +397,36 @@ function generateBets(d, areScores, mode){
   const{areIndex}=calcAreIndex(d);
   const betsRaw=mode==='are'?buildBetsAre(ranking,selectedBetCount,nigeRate):buildBetsNormal(ranking,selectedBetCount,currentParsedData);
 
+  // 自信度計算（ログ分析ベース）
+  function calcConfidence(mode, nigeRate, areIndex){
+    if(mode==='are'){
+      if(nigeRate>=70) return {pct:0, label:'見送り推奨', color:'#e05566'};
+      if(nigeRate>=50) return {pct:30, label:'低', color:'#c9a84c'};
+      return {pct:22, label:'低', color:'#c9a84c'};
+    }
+    // 通常モード
+    if(nigeRate>=70){
+      if(areIndex<=4)  return {pct:27, label:'中', color:'#c9a84c'};
+      if(areIndex<=7)  return {pct:43, label:'高', color:'#4caf87'};
+      return {pct:100, label:'高', color:'#4caf87'}; // サンプル少ないが参考
+    }
+    if(nigeRate>=65){
+      if(areIndex<=4)  return {pct:50, label:'高', color:'#4caf87'};
+      if(areIndex<=7)  return {pct:0,  label:'見送り推奨', color:'#e05566'};
+    }
+    if(nigeRate>=50){
+      if(areIndex<=4)  return {pct:40, label:'中', color:'#c9a84c'};
+      if(areIndex<=7)  return {pct:14, label:'低', color:'#c9a84c'};
+      return {pct:0, label:'見送り推奨', color:'#e05566'};
+    }
+    // nigeRate50%未満
+    return {pct:0, label:'見送り推奨', color:'#e05566'};
+  }
+  const conf=calcConfidence(mode, nigeRate, areIndex);
+  const confBadge=conf.label==='見送り推奨'
+    ? `<span class="info-chip" style="color:${conf.color};font-weight:700;">⛔ 見送り推奨</span>`
+    : `<span class="info-chip" style="color:${conf.color};font-weight:700;">自信度 ${conf.pct}%（${conf.label}）</span>`;
+
   // バッジ更新
   const modeLabel=mode==='are'?'⚡ 荒れ':'🔒 通常';
   const modeCls=mode==='are'?'mode-are':'mode-normal';
@@ -405,7 +435,8 @@ function generateBets(d, areScores, mode){
     <span class="info-chip">荒れ指数 <span>${areIndex}点</span></span>
     <span class="info-chip">逃げ率 <span>${nigeRate.toFixed(1)}%</span></span>
     <span class="info-chip">${racenum}R</span>
-    <span class="info-chip">買い目 <span>${betsRaw.length}点</span></span>`;
+    <span class="info-chip">買い目 <span>${betsRaw.length}点</span></span>
+    ${confBadge}`;
 
   // テーブル描画
   const tbody=document.getElementById('bet-tbody');
