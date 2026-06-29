@@ -461,7 +461,7 @@ function setBetCount(n,btn){selectedBetCount=n;document.querySelectorAll('.bc-bt
 // ============================================================
 function parseData(text){
   const d={boats:[]};
-  for(let i=1;i<=6;i++) d.boats.push({no:i,name:'',regno:'',nigerate6m:0,nigerate1y:0,atchiNige:0,atchiNigeCount:0,sgNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sg1chakuRate:0,sg1chakuCount:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,avgTenji:0,syukai:0,syukaiFoot:0,avgSyukaiFoot:0,chokusen:0,directST:0,isExhibitF:false,isF:false});
+  for(let i=1;i<=6;i++) d.boats.push({no:i,name:'',regno:'',nigerate6m:0,nigerate1y:0,atchiNige:0,atchiNigeCount:0,sgNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sg1chakuRate:0,sg1chakuCount:0,ippan2ren:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,avgTenji:0,syukai:0,syukaiFoot:0,avgSyukaiFoot:0,chokusen:0,directST:0,isExhibitF:false,isF:false});
 
   // 逃げ率パース（優先順位: SG/G1 → 当地 → 直近6ヶ月）
   // 直近6ヶ月
@@ -600,6 +600,12 @@ function parseData(text){
       d.boats[i].sg1chakuRate=parseFloat(sgSection[idx])||0;
       d.boats[i].sg1chakuCount=parseInt(sgSection[idx+1])||0;
     });
+  }
+
+  // 一般戦2連対率（ippanモード時のスコア計算に使用）
+  const ippanRenSection=text.match(/一般戦\s+([\d.]+)%[\t ]+([\d.]+)%[\t ]+([\d.]+)%[\t ]+([\d.]+)%[\t ]+([\d.]+)%[\t ]+([\d.]+)%/);
+  if(ippanRenSection){
+    for(let i=0;i<6;i++) d.boats[i].ippan2ren=parseFloat(ippanRenSection[i+1])||0;
   }
 
   // 直近6ヶ月勝率
@@ -893,10 +899,15 @@ function calcAreScore(d){
       if(b.sessonAvgST>0&&b.sessonAvgST===sessonSTmax) s-=5; // 直前・今節ともに最悪
     }
 
-    // ⑦ 2連対率 序盤12pt/終盤10pt（通常エンジン準拠・攻撃力の代わり）
+    // ⑦ 2連対率 序盤12pt/終盤10pt
+    // SG/G1モード: SG/G1 2連対率、一般戦/G2G3モード: 一般戦2連対率
     const renWeight=isEarlyRace?12:10;
-    const ren=b.sg1chakuRate||0; // SG/G1 2連対率
-    if(cr2Max>0) s+=ren/cr2Max*renWeight;
+    const useIppanRen=(_rtype2==='ippan'||_rtype2==='g2g3');
+    const ren=useIppanRen?(b.ippan2ren||0):(b.sg1chakuRate||0);
+    const renMax=useIppanRen?
+      Math.max(...boats.map(x=>x.ippan2ren||0))||1:
+      cr2Max;
+    if(renMax>0) s+=ren/renMax*renWeight;
 
     // ⑧ モーター2連対率 max10pt
     if(motorMax>0) s+=(b.motor2ren||0)/motorMax*10;
