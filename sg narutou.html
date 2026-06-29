@@ -1004,10 +1004,10 @@ function judgeMode(areIndex, nigeRate){
   // calcAreIndexの最大スコアは約15〜18点
   // 逃げ率70%以上は通常固定
   if(nigeRate>=70) return 'normal';
-  // areIndex10以上で荒れ推奨（逃げ率60%未満）
-  if(areIndex>=10&&nigeRate<60) return 'are';
-  // areIndex13以上は逃げ率関係なく荒れ
-  if(areIndex>=13) return 'are';
+  // areIndex10以上で荒れ推奨（逃げ率50%未満）※50〜60%帯は通常に変更
+  if(areIndex>=10&&nigeRate<50) return 'are';
+  // areIndex13以上でも逃げ率60%未満のみ荒れ
+  if(areIndex>=13&&nigeRate<60) return 'are';
   return 'normal';
 }
 
