@@ -397,35 +397,36 @@ function generateBets(d, areScores, mode){
   const{areIndex}=calcAreIndex(d);
   const betsRaw=mode==='are'?buildBetsAre(ranking,selectedBetCount,nigeRate):buildBetsNormal(ranking,selectedBetCount,currentParsedData);
 
-  // 自信度計算（ログ分析ベース）
+  // 自信度計算（ログ分析ベース・9段階）
   function calcConfidence(mode, nigeRate, areIndex){
+    let grade;
     if(mode==='are'){
-      if(nigeRate>=70) return {pct:0, label:'見送り推奨', color:'#e05566'};
-      if(nigeRate>=50) return {pct:30, label:'低', color:'#c9a84c'};
-      return {pct:22, label:'低', color:'#c9a84c'};
+      if(nigeRate>=70)      grade=1;
+      else if(nigeRate>=50) grade=5;
+      else                  grade=3;
+    } else {
+      if(nigeRate<50){
+        grade=1;
+      } else if(nigeRate<65){
+        if(areIndex<=4)      grade=6;
+        else if(areIndex<=7) grade=2;
+        else                 grade=1;
+      } else if(nigeRate<70){
+        if(areIndex<=4)      grade=8;
+        else if(areIndex<=7) grade=1;
+        else                 grade=1;
+      } else {
+        // nigeRate70%以上
+        if(areIndex<=4)      grade=4;
+        else if(areIndex<=7) grade=7;
+        else                 grade=9;
+      }
     }
-    // 通常モード
-    if(nigeRate>=70){
-      if(areIndex<=4)  return {pct:27, label:'中', color:'#c9a84c'};
-      if(areIndex<=7)  return {pct:43, label:'高', color:'#4caf87'};
-      return {pct:100, label:'高', color:'#4caf87'}; // サンプル少ないが参考
-    }
-    if(nigeRate>=65){
-      if(areIndex<=4)  return {pct:50, label:'高', color:'#4caf87'};
-      if(areIndex<=7)  return {pct:0,  label:'見送り推奨', color:'#e05566'};
-    }
-    if(nigeRate>=50){
-      if(areIndex<=4)  return {pct:40, label:'中', color:'#c9a84c'};
-      if(areIndex<=7)  return {pct:14, label:'低', color:'#c9a84c'};
-      return {pct:0, label:'見送り推奨', color:'#e05566'};
-    }
-    // nigeRate50%未満
-    return {pct:0, label:'見送り推奨', color:'#e05566'};
+    const colors=['','#e05566','#e07855','#e09944','#c9a84c','#a8b040','#7ab54c','#4caf87','#3db876','#2dc96a'];
+    return {grade, color:colors[grade]};
   }
   const conf=calcConfidence(mode, nigeRate, areIndex);
-  const confBadge=conf.label==='見送り推奨'
-    ? `<span class="info-chip" style="color:${conf.color};font-weight:700;">⛔ 見送り推奨</span>`
-    : `<span class="info-chip" style="color:${conf.color};font-weight:700;">自信度 ${conf.pct}%（${conf.label}）</span>`;
+  const confBadge=`<span class="info-chip" style="color:${conf.color};font-weight:700;">自信度 ${conf.grade}/9</span>`;
 
   // バッジ更新
   const modeLabel=mode==='are'?'⚡ 荒れ':'🔒 通常';
