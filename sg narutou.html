@@ -889,8 +889,8 @@ function calcAreScore(d){
   const cr2Max=Math.max(...boats.map(b=>b.sg1chakuRate||0))||1;
   const cr3Max=Math.max(...boats.map(b=>b.kinsetsu6m||0))||1; // 3連対はキャリアで代用
 
-  // コースボーナス（通常エンジン準拠）
-  const courseBonus=[3,2,1,1,0,-2];
+  // コースボーナス（ログ分析ベース：2025-06実績で2号◎8.3%/3号◎0%のため減算）
+  const courseBonus=[3,0.5,-0.5,1,0,-2];
 
   const scores=boats.map(b=>{
     let s=0;
@@ -1004,6 +1004,12 @@ function calcAreIndex(d){
   const outerAtk=d.boats.slice(3).reduce((s,b)=>s+(b.sashi6m+b.makuri6m+b.makurisashi6m*0.4),0)/3;
   if(outerAtk>30) score+=4;
   else if(outerAtk>15) score+=2;
+
+  // 2.5 2・3号艇の差し力（実績データ：◎2号8.3%/◎3号0%のため、差し力が高い場合は荒れ要素として加点）
+  const b2=d.boats[1], b3=d.boats[2];
+  const innerSashi=((b2?.sashi6m||0)+(b3?.sashi6m||0))/2;
+  if(innerSashi>25) score+=2;
+  else if(innerSashi>12) score+=1;
 
   // 3. モーター格差
   const motors=d.boats.map(b=>b.motor2ren).filter(v=>v>0);
@@ -1175,12 +1181,16 @@ function buildBetsNormal(ranking, pts, parsedData){
   if(nigeMode === 'high'){
     // ===== 逃げ固定モード（逃げ率65%以上）=====
     // スジ補正適用: 2着候補をスジ順位でソート
-    const honsenNige2 = activeBoats.filter(b=>b!==maru&&(rankMap[b]||9)<=3)
+    let honsenNige2 = activeBoats.filter(b=>b!==maru&&(rankMap[b]||9)<=3)
       .sort((a,b)=>{
         const sa=(rankMap[a]||9)*10+sujiBonus(maru,a);
         const sb=(rankMap[b]||9)*10+sujiBonus(maru,b);
         return sa-sb;
       });
+    // ◎が4号艇以降の場合、1号艇を2着候補に必須で含める（内側艇への差し対策）
+    if(parseInt(maru)>=4 && activeBoats.includes(1) && !honsenNige2.includes(1)){
+      honsenNige2 = [1, ...honsenNige2].slice(0,3);
+    }
     const osaeeNige2  = activeBoats.filter(b=>b!==maru&&(rankMap[b]||9)>=4&&(rankMap[b]||9)<=5)
       .sort((a,b)=>{
         const sa=(rankMap[a]||9)*10+sujiBonus(maru,a);
@@ -1206,11 +1216,15 @@ function buildBetsNormal(ranking, pts, parsedData){
   } else if(nigeMode === 'mid'){
     // ===== 2艇頭モード =====
     // スジ補正適用: 2着候補の並び順をスジで補正
-    const rankOrder2 = activeBoats.slice().sort((a,b)=>{
+    let rankOrder2 = activeBoats.slice().sort((a,b)=>{
       const sa=(rankMap[a]||9)*10+sujiBonus(maru,a);
       const sb=(rankMap[b]||9)*10+sujiBonus(maru,b);
       return sa-sb;
     });
+    // ◎が4号艇以降の場合、1号艇を上位に必須で繰り上げ（内側艇への差し対策）
+    if(parseInt(maru)>=4 && activeBoats.includes(1)){
+      rankOrder2 = [1, ...rankOrder2.filter(b=>b!==1)];
+    }
     const thirdAll2 = rankOrder2.filter(b=>b!==maru&&b!==shiro&&(rankMap[b]||9)<=5);
 
     // ◎頭・2着=○・3着=残り（評価順）
