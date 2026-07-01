@@ -941,6 +941,13 @@ function calcAreScore(d){
       cr2Max;
     if(renMax>0) s+=ren/renMax*renWeight;
 
+    // ⑦.5 差し・まくり実績スコア max8pt（外側艇が2・3着に紛れ込むケースへの対策。荒れ指数計算(calcAreIndex)で
+    // 既に使っているsashi6m/makuri6m/makurisashi6mを通常予想のランキングにも反映する）
+    const sashiAtkVals=boats.map(x=>(x.sashi6m||0)+(x.makuri6m||0)+(x.makurisashi6m||0)*0.4);
+    const sashiAtkMax=Math.max(...sashiAtkVals)||1;
+    const bSashiAtk=(b.sashi6m||0)+(b.makuri6m||0)+(b.makurisashi6m||0)*0.4;
+    if(sashiAtkMax>0) s+=bSashiAtk/sashiAtkMax*8;
+
     // ⑧ モーター2連対率 max10pt
     if(motorMax>0) s+=(b.motor2ren||0)/motorMax*10;
 
@@ -969,6 +976,7 @@ function calcAreScore(d){
     const _exScore=(exMax-b.exhibitFootRank)/exMax*14;
     return{no:b.no, raw:s, tenji:b.tenji, syukai:b.syukai,
       _atk:_atk,
+      _sashi:bSashiAtk/sashiAtkMax*8,
       _ex:_exScore,
       _lap:(b.lapRank>=0?(5-b.lapRank)*2.8:0),
       _st:stPt,
@@ -1521,7 +1529,7 @@ async function runYoso(){
       return`<div class="score-cell"><div class="boat-no">${s.no}号艇${nm?'<br><span style="font-size:8px;color:var(--muted);">'+nm+'</span>':''}</div><div class="score-val" style="${isJg?'color:var(--muted);font-size:11px;':''}"> ${isJg?'除外':s.raw.toFixed(0)}</div><div class="score-label">${isJg?'賞除外':'pt'}</div></div>`;
     }).join('')+'</div>';
     // スコア内訳デバッグ表示
-    const debugLines=areScores.map(s=>s.raw<=-990?`${s.no}号: 【賞除外】`:`${s.no}号: 攻${s._atk.toFixed(1)} 展示${parseFloat(s._ex).toFixed(1)} 周回${parseFloat(s._lap).toFixed(1)} ST${s._st.toFixed(1)} 得点${s._toku.toFixed(1)} モーター${s._motor.toFixed(1)} 逃ペナ${s._pen1} Fペナ${s._penF} = ${s.raw.toFixed(1)}pt`).join('\n');
+    const debugLines=areScores.map(s=>s.raw<=-990?`${s.no}号: 【賞除外】`:`${s.no}号: 攻${s._atk.toFixed(1)} 差捲${s._sashi.toFixed(1)} 展示${parseFloat(s._ex).toFixed(1)} 周回${parseFloat(s._lap).toFixed(1)} ST${s._st.toFixed(1)} 得点${s._toku.toFixed(1)} モーター${s._motor.toFixed(1)} 逃ペナ${s._pen1} Fペナ${s._penF} = ${s.raw.toFixed(1)}pt`).join('\n');
     const parseLines=d.boats.map(b=>`${b.no}号${b.name?'('+b.name+')':''}: 得点${b.isJogai?'除外':b.sessonPt} 直前ST${b.directST}${b.isExhibitF?'(展示F)':''} F休${b.isF?'✓':'-'} 展示${b.tenji} 周足${b.syukaiFoot||0} 直線${b.chokusen||0} 周回${b.syukai} Motor${b.motor2ren}%`).join('\n');
     scoreEl.innerHTML+=`<details style="margin-top:8px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">📋 スコア内訳</summary><pre style="font-size:10px;color:var(--muted);margin-top:6px;overflow-x:auto;">${debugLines}\n\n【パース値】\n${parseLines}</pre></details>`;
     const modeEl=document.getElementById('mode-result');
@@ -1670,17 +1678,64 @@ function buildXSummary(withAmount){
     return compressBetsSG(arr);
   };
 
+  // 展示・機力・展開：スコア内訳(currentAreScores)から各項目トップ艇を抽出してヒント文を自動生成
+  // ユーザーは投稿前にこの一言を書き足す/直す前提の下書き
+  const boatMark=(no)=>circled[no-1]||`${no}号艇`;
+  // コース番号ごとに使っていい決まり手を固定（艇番=コースの前提）。
+  // ここをLLMや裁量に任せると④なのに「差し」等の齟齬が出るので、コード側で強制する。
+  const COURSE_KIMARITE={
+    1:[], // 1号艇の逃げは前提なので言及しない
+    2:['差し'],
+    3:['差し','まくり差し'],
+    4:['まくり','まくり差し'],
+    5:['まくり'],
+    6:['まくり差し']
+  };
+  const pickKimarite=(no)=>{
+    const valid=COURSE_KIMARITE[no]||[];
+    if(!valid.length) return null;
+    const raw=(currentParsedData&&currentParsedData.boats[no-1])||{};
+    const cands=[];
+    if(valid.includes('差し')) cands.push(['差し',raw.sashi6m||0]);
+    if(valid.includes('まくり')) cands.push(['まくり',raw.makuri6m||0]);
+    if(valid.includes('まくり差し')) cands.push(['まくり差し',raw.makurisashi6m||0]);
+    cands.sort((a,b)=>b[1]-a[1]);
+    return cands[0][1]>0 ? cands[0] : null; // 実績0なら言及しない
+  };
+
+  let tenjiLine='', kiryokuLine='', tenkaiLine='';
+  if(currentAreScores && currentAreScores.length){
+    const byEx=[...currentAreScores].sort((a,b)=>(b._ex||0)-(a._ex||0));
+    const byLap=[...currentAreScores].sort((a,b)=>(b._lap||0)-(a._lap||0));
+    if(byEx[0]) tenjiLine=`${boatMark(byEx[0].no)}の伸びが良い`;
+    if(byLap[0]) kiryokuLine=`${boatMark(byLap[0].no)}の周回が安定`;
+
+    // 展開: 軸以外の艇の中で「その艇のコースで実際に有効な決まり手」の実績値が最も高い艇を採用
+    const threats=currentAreScores
+      .filter(s=>s.no!==maruBoat)
+      .map(s=>{const k=pickKimarite(s.no); return k?{no:s.no,word:k[0],val:k[1]}:null;})
+      .filter(Boolean)
+      .sort((a,b)=>b.val-a.val);
+    tenkaiLine = threats[0]
+      ? `${boatMark(threats[0].no)}に${threats[0].word}の実績あり、要警戒`
+      : `${maruStr}が想定通りなら先手`;
+  }
+
   const venueVal=document.getElementById('inp-venue')?document.getElementById('inp-venue').value||'鳴門':'鳴門';
   const shimekiri=currentParsedData&&currentParsedData.shimekiri?` 締切${currentParsedData.shimekiri}`:'';
   const lines=[
-    `${venueVal}${racenum}R${shimekiri}`,
+    `【${venueVal}${racenum}R】${shimekiri}`,
+    `展示：${tenjiLine}`,
+    `機力：${kiryokuLine}`,
+    `展開：${tenkaiLine}`,
     ``,
-    `${maruStr}の軸で勝負。`,
-    `${hyokaOrder}`,
+    `【総合分析】`,
+    `${maruStr}の軸で勝負。評価順 ${hyokaOrder}`,
     ``,
-    `本線　${fmtBets(honsen)}`,
+    `本線`,
+    `${fmtBets(honsen)}`,
   ];
-  if(osaee.length) lines.push(`抑え　${fmtBets(osaee)}`);
+  if(osaee.length) lines.push(``, `抑え`, `${fmtBets(osaee)}`);
   lines.push(``, `G.`);
 
   return lines.join('\n');
