@@ -1752,7 +1752,7 @@ function buildXSummary(withAmount){
     // 差が一番大きい(=突出している)項目を採用
     candidates.sort((a,b)=>b.g-a.g);
     tenjiLine = candidates[0]
-      ? `${label(candidates[0].arr[0].no)}の${candidates[0].word}が目立つ`
+      ? `${label(candidates[0].arr[0].no)}の${candidates[0].word}⚪︎`
       : '';
 
     // 機力: モーター2連率（機力＝機関の力の話。周回タイムではない）。
@@ -1761,7 +1761,7 @@ function buildXSummary(withAmount){
       .filter(x=>boatsInBets.has(x.no))
       .sort((a,b)=>b.val-a.val);
     kiryokuLine = motorOrder[0]
-      ? `${label(motorOrder[0].no)}のモーターが仕上がっている`
+      ? `${label(motorOrder[0].no)}のモーター気配⚪︎`
       : '';
 
     // 展開文: 単艇のスコアではなく艇同士の関係性からパターンを判定する
@@ -1784,8 +1784,10 @@ function buildXSummary(withAmount){
     const isDarkHorse=(no)=>rankOf(no)>=4 && boatsInBets.has(no);
 
     let pattern=null;
-    // パターン1: ②が握って内側差し（①の逃げ率が低め＋②のSTが①並み以上）
-    if(nige1<65 && st1!=null && st2!=null && st2<=st1+0.02){
+    // パターン1: ②が握って内側差し（①の逃げ率が低め＋②のSTが①並み以上＋②自身に逃げ/先出しの実績あり）
+    // STの速さだけでは「握るタイプかどうか」は分からないため、②自身の逃げ率実績も条件に含める。
+    const boat2NigeRate=bd(2).nigerate6m||0;
+    if(nige1<65 && st1!=null && st2!=null && st2<=st1+0.02 && boat2NigeRate>=10){
       pattern=`${label(2)}が握って内側から差す展開も想定`;
     }
     // パターン2: ④仕掛け⑤追走の3着争い（4のまくり系実績が最も高く、5も僅差で続く。
@@ -1909,7 +1911,7 @@ function computeTenkaiFacts(){
     rankingList:ranking.map((r,i)=>`${i+1}位:${label(r.boat)}`),
     nige1逃げ率:nige1,
     "1号艇が軸ではない場合の逃げ脅威":boat1IsThreat?{label:label(1),逃げ率:nige1}:null,
-    st比較:[1,2].filter(no=>boatsInBets.has(no)||no===maruBoat).map(no=>({no,label:label(no),ST:st(no)})),
+    st比較:[1,2].filter(no=>boatsInBets.has(no)||no===maruBoat).map(no=>({no,label:label(no),ST:st(no),逃げ率実績:bd(no).nigerate6m||0})),
     決まり手実績_買い目内のみ:kimariteFacts,
     ruleBasedTenkaiLine:buildXSummary(false).split('\n').find(l=>l.startsWith('展開：'))?.replace('展開：','')||''
   };
@@ -1952,7 +1954,9 @@ async function generateTenkaiAI(){
   表す言葉を使ってよいが、根拠のない因果は作らない。
   ・「さばく」＝決まり手を問わず「うまく捌いて上位に食い込む」の意味で幅広く使える
   ・「マーク」＝軸の直後について差す動き（例：「軸マークから差せそうな○」）
-  ・「先攻め」「握る」＝スタートで積極的に位置を取りにいく動き
+  ・「先攻め」「握る」＝スタートで積極的に位置を取りにいく動き。ただし「握る」はfacts内の
+    st比較にある該当艇の「逃げ率実績」が0に近い場合は使わない（実績が無い選手を握るタイプと
+    書くのは根拠が無い）。
   ・「差し」は「ブイ際差す」「ブイ際鋭く差して」のようにターンマーク付近の描写を添えてもよい
   ・対抗艇のラベルは「相手筆頭」「強敵」「逆転候補」を状況に応じて使い分ける（毎回同じ表現を避ける）
   ・締めの表現は「〜も差はない」「〜も僅差」「展開次第では〜も浮上」を使い分ける
