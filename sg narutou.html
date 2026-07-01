@@ -6,7 +6,7 @@
 <title>⚡G. 予想エンジン</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,700;1,900&family=Noto+Serif+JP:wght@700;900&family=Noto+Sans+JP:wght@400;700&family=Anton&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700;1,900&family=Noto+Serif+JP:wght@700;900&family=Noto+Sans+JP:wght@200;300;400;700&family=Anton&family=Tenor+Sans&family=DM+Serif+Display:ital@0;1&display=swap">
 <style>
   :root{--bg:#102a1c;--surface:#1a4228;--surface2:#225535;--border:#347a48;--gold:#c9a84c;--gold2:#f0d080;--red:#e05050;--blue:#4a9eff;--green:#4caf7d;--text:#eef5f0;--muted:#82cc96;--font:-apple-system,'Hiragino Sans',sans-serif;}
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
@@ -141,6 +141,31 @@
 .eval-stars{display:flex;gap:1px;justify-content:center;flex-wrap:nowrap;width:100%;}
 .eval-star-on{color:#c9a84c;font-size:clamp(8px,2.3vw,13px);line-height:1;}
 .eval-star-off{color:#2a2a2a;font-size:clamp(8px,2.3vw,13px);line-height:1;}
+
+/* ── サムネイル生成（note用タイトル画像） ── */
+.thumb-wrap{width:100%;max-width:780px;margin:0 auto;}
+#thumb-cv{width:100%;aspect-ratio:1200/630;position:relative;overflow:hidden;background:#060606;}
+.thumb-bg-hatch{position:absolute;inset:0;z-index:1;background:repeating-linear-gradient(-48deg,transparent 0px,transparent 38px,rgba(255,255,255,0.014) 38px,rgba(255,255,255,0.014) 39px);}
+.thumb-bg-left{position:absolute;top:0;left:0;bottom:0;width:44%;z-index:2;background:linear-gradient(135deg,rgba(192,154,60,0.07) 0%,rgba(192,154,60,0.03) 60%,transparent 100%);}
+.thumb-bg-bloom{position:absolute;top:50%;left:22%;transform:translate(-50%,-50%);width:38%;aspect-ratio:1;border-radius:50%;z-index:3;background:radial-gradient(circle,rgba(200,153,60,0.22) 0%,rgba(200,153,60,0.08) 40%,transparent 70%);}
+.thumb-vignette{position:absolute;inset:0;z-index:4;pointer-events:none;background:radial-gradient(ellipse 110% 100% at 50% 50%,transparent 40%,rgba(0,0,0,0.35) 100%);}
+.thumb-top-line{position:absolute;top:0;left:0;right:0;height:2.5px;z-index:20;background:linear-gradient(90deg,transparent 0%,#7A5E20 15%,#E8C86A 40%,#F5DFA0 50%,#E8C86A 60%,#7A5E20 85%,transparent 100%);}
+.thumb-div-line{position:absolute;top:8%;bottom:8%;left:44%;width:1px;z-index:10;background:linear-gradient(180deg,transparent 0%,rgba(200,153,60,0.6) 20%,rgba(232,200,106,0.8) 50%,rgba(200,153,60,0.6) 80%,transparent 100%);}
+.thumb-left{position:absolute;top:0;left:0;bottom:0;width:44%;z-index:15;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.thumb-hex-svg{width:clamp(100px,19vw,176px);display:block;filter:drop-shadow(0 0 clamp(8px,1.5vw,16px) rgba(200,153,60,0.7)) drop-shadow(0 0 clamp(24px,5vw,56px) rgba(200,153,60,0.25)) drop-shadow(0 0 clamp(40px,8vw,90px) rgba(200,153,60,0.1));}
+.thumb-logo-sub{font-family:'Tenor Sans',sans-serif;font-size:clamp(8px,1.1vw,11px);letter-spacing:0.5em;color:#C8993C;text-transform:uppercase;margin-top:clamp(8px,1.5vw,16px);}
+.thumb-right{position:absolute;top:0;right:0;bottom:0;left:46%;z-index:15;display:flex;flex-direction:column;justify-content:center;padding-right:clamp(16px,3vw,36px);padding-bottom:clamp(20px,3.5vw,34px);gap:0;}
+.thumb-eyebrow{font-family:'Tenor Sans',sans-serif;font-size:clamp(8px,1.1vw,11px);letter-spacing:0.45em;color:#E8C86A;text-transform:uppercase;margin-bottom:clamp(8px,1.4vw,16px);}
+.thumb-venue{font-family:'Playfair Display','DM Serif Display',serif;font-weight:900;font-size:clamp(46px,9.5vw,108px);line-height:0.86;color:#FFFFFF;letter-spacing:0.03em;text-shadow:0 0 clamp(12px,2.5vw,30px) rgba(200,153,60,0.2),0 clamp(2px,0.4vw,4px) clamp(8px,1.5vw,18px) rgba(0,0,0,0.5);margin-bottom:clamp(6px,1.1vw,12px);}
+.thumb-race-row{display:flex;align-items:baseline;gap:clamp(2px,0.35vw,4px);margin-bottom:clamp(12px,2.2vw,26px);}
+.thumb-race-n{font-family:'Playfair Display',serif;font-weight:700;font-size:clamp(26px,5.4vw,64px);color:#FFFFFF;line-height:1;text-shadow:0 0 clamp(10px,2vw,24px) rgba(200,153,60,0.6);}
+.thumb-race-r{font-family:'Tenor Sans',sans-serif;font-size:clamp(14px,2.6vw,30px);color:#FFFFFF;letter-spacing:0.15em;padding-bottom:clamp(2px,0.3vw,4px);opacity:0.85;}
+.thumb-rule{width:clamp(28px,5.5vw,64px);height:1.5px;background:linear-gradient(90deg,#E8C86A,rgba(200,153,60,0.2));margin-bottom:clamp(10px,2vw,24px);}
+.thumb-deadline{font-family:'Tenor Sans',sans-serif;font-size:clamp(12px,2.3vw,22px);letter-spacing:0.18em;color:#FFFFFF;margin-bottom:clamp(7px,1.3vw,14px);border-left:clamp(2px,0.3vw,3px) solid #C8993C;padding-left:clamp(7px,1.2vw,14px);}
+.thumb-comment{font-family:'Noto Sans JP',sans-serif;font-weight:300;font-size:clamp(10px,1.5vw,14px);letter-spacing:0.12em;color:rgba(255,255,255,0.85);line-height:1.65;padding-left:clamp(9px,1.5vw,17px);}
+.thumb-bot{position:absolute;bottom:0;left:0;right:0;height:clamp(24px,4.2vw,38px);z-index:20;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(14px,2.5vw,30px);border-top:1px solid rgba(200,153,60,0.22);background:rgba(6,6,6,0.5);}
+.thumb-bot-l,.thumb-bot-r{font-family:'Tenor Sans',sans-serif;font-size:clamp(8px,1.1vw,11px);letter-spacing:0.38em;color:#C8993C;text-transform:uppercase;}
+.thumb-comment-edit{width:100%;background:var(--card-bg,#161616);color:var(--text,#fff);border:1px solid #444;border-radius:6px;padding:9px;font-size:13px;font-family:'Noto Sans JP',sans-serif;resize:vertical;margin-top:8px;box-sizing:border-box;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -313,6 +338,56 @@
     </div>
   </div>
 
+  <!-- note用サムネイル -->
+  <div class="eval-card-wrap" id="thumbWrap">
+    <div class="div"></div>
+    <div class="eval-card-hdr">noteタイトル画像</div>
+    <div class="thumb-wrap">
+      <div id="thumb-cv">
+        <div class="thumb-bg-hatch"></div>
+        <div class="thumb-bg-left"></div>
+        <div class="thumb-bg-bloom"></div>
+        <div class="thumb-vignette"></div>
+        <div class="thumb-top-line"></div>
+        <div class="thumb-div-line"></div>
+        <div class="thumb-left">
+          <svg class="thumb-hex-svg" viewBox="0 0 200 232" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="thumb-gs" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#5A3E10"/>
+                <stop offset="35%" stop-color="#C8993C"/>
+                <stop offset="50%" stop-color="#F5DFA0"/>
+                <stop offset="65%" stop-color="#C8993C"/>
+                <stop offset="100%" stop-color="#5A3E10"/>
+              </linearGradient>
+            </defs>
+            <polygon points="100,5 195,55 195,177 100,227 5,177 5,55" fill="#060606" stroke="url(#thumb-gs)" stroke-width="5.5"/>
+            <text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-family="'Playfair Display',Georgia,serif" font-weight="900" font-size="100" fill="#F4F0E8" letter-spacing="1">G</text>
+          </svg>
+          <div class="thumb-logo-sub">Boat Racing</div>
+        </div>
+        <div class="thumb-right">
+          <div class="thumb-eyebrow">Premium Analysis</div>
+          <div class="thumb-venue" id="thumb-venue">住之江</div>
+          <div class="thumb-race-row">
+            <div class="thumb-race-n" id="thumb-rn">6</div>
+            <div class="thumb-race-r">R</div>
+          </div>
+          <div class="thumb-rule"></div>
+          <div class="thumb-deadline" id="thumb-dt">締切 10:30</div>
+          <div class="thumb-comment" id="thumb-comment">展開読み＋推奨買い目</div>
+        </div>
+        <div class="thumb-bot">
+          <div class="thumb-bot-l">G. Prediction — note</div>
+          <div class="thumb-bot-r">@gallonboat_24</div>
+        </div>
+      </div>
+    </div>
+    <textarea id="thumb-comment-input" class="thumb-comment-edit" rows="2" placeholder="コメント（例: 展開読み＋推奨買い目）" oninput="updateThumbComment()">展開読み＋推奨買い目</textarea>
+    <button class="eval-save-btn" onclick="saveThumbCard()">📥 サムネイルを保存・共有</button>
+    <p class="eval-hint">または📱<span>スクリーンショット</span>でも保存できます</p>
+  </div>
+
   </div>
 </div>
 
@@ -467,6 +542,7 @@ function generateBets(d, areScores, mode){
   aiTenkaiLine=null; // 新しいレースの予想なので前のAI展開文は破棄
   recalcAlloc();
   updateXPreview();
+  updateThumbCard();
 
   // 保存ボタンを表示
   var sbw=document.getElementById('save-result-btn-wrap-bottom');
@@ -1885,6 +1961,78 @@ function updateXPreview(){
   const el=document.getElementById('x-summary-preview');
   if(!el) return;
   el.value=buildXSummary('x');
+}
+
+// ============================================================
+// noteタイトル画像サムネイル（評価カードと同じ流れで保存・共有）
+// ============================================================
+function updateThumbCard(){
+  if(!currentCalcData) return;
+  const venueEl=document.getElementById('thumb-venue');
+  const rnEl=document.getElementById('thumb-rn');
+  const dtEl=document.getElementById('thumb-dt');
+  if(!venueEl||!rnEl||!dtEl) return;
+
+  const venueVal=document.getElementById('inp-venue')?document.getElementById('inp-venue').value||'鳴門':'鳴門';
+  const racenum=currentCalcData.racenum||'?';
+  const shimekiri=currentParsedData&&currentParsedData.shimekiri?currentParsedData.shimekiri:'';
+
+  venueEl.textContent=venueVal;
+  rnEl.textContent=racenum;
+  dtEl.textContent=shimekiri?`締切 ${shimekiri}`:'';
+
+  updateThumbComment();
+}
+
+function updateThumbComment(){
+  const input=document.getElementById('thumb-comment-input');
+  const disp=document.getElementById('thumb-comment');
+  if(!input||!disp) return;
+  disp.textContent=input.value;
+}
+
+function saveThumbCard(){
+  const card=document.getElementById('thumb-cv');
+  if(!card) return;
+  const btn=document.querySelector('#thumbWrap .eval-save-btn');
+  const origLabel='📥 サムネイルを保存・共有';
+  btn.textContent='生成中...';
+  btn.disabled=true;
+  html2canvas(card,{
+    scale:3,
+    useCORS:true,
+    backgroundColor:'#060606',
+    logging:false,
+    allowTaint:true
+  }).then(function(canvas){
+    canvas.toBlob(function(blob){
+      const venueVal=document.getElementById('thumb-venue')?.textContent||'G';
+      const rnVal=document.getElementById('thumb-rn')?.textContent||'';
+      const file=new File([blob],`G_サムネイル_${venueVal}${rnVal}R.png`,{type:'image/png'});
+      if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+        navigator.share({files:[file],title:'G. Prediction'}).then(function(){
+          btn.textContent='✅ 共有しました';
+          setTimeout(function(){btn.textContent=origLabel;btn.disabled=false;},2000);
+        }).catch(function(){
+          btn.textContent=origLabel;
+          btn.disabled=false;
+        });
+      } else {
+        const url=URL.createObjectURL(blob);
+        const link=document.createElement('a');
+        link.download=`G_サムネイル_${venueVal}${rnVal}R.png`;
+        link.href=url;
+        link.click();
+        setTimeout(function(){URL.revokeObjectURL(url);},1000);
+        btn.textContent='✅ 保存しました';
+        setTimeout(function(){btn.textContent=origLabel;btn.disabled=false;},2000);
+      }
+    },'image/png');
+  }).catch(function(){
+    btn.textContent=origLabel;
+    btn.disabled=false;
+    showToast('生成失敗。スクリーンショットで保存してください。');
+  });
 }
 
 // ============================================================
