@@ -1704,21 +1704,95 @@ function buildXSummary(withAmount){
   };
 
   let tenjiLine='', kiryokuLine='', tenkaiLine='';
+  const bd=(no)=>(currentParsedData&&currentParsedData.boats[no-1])||{};
+  const nm=(no)=>{
+    const n=bd(no).name;
+    return n?(n.split(' ')[0]||n):'';
+  };
+  const label=(no)=>`${boatMark(no)}${nm(no)}`;
+  // 順位付け（タイム系は小さいほど良い）。0/未取得は最下位扱い。
+  const rankByAsc=(getVal)=>{
+    const withVal=[1,2,3,4,5,6].map(no=>({no,val:getVal(no)})).filter(x=>x.val>0);
+    return [...withVal].sort((a,b)=>a.val-b.val);
+  };
   if(currentAreScores && currentAreScores.length){
-    const byEx=[...currentAreScores].sort((a,b)=>(b._ex||0)-(a._ex||0));
-    const byLap=[...currentAreScores].sort((a,b)=>(b._lap||0)-(a._lap||0));
-    if(byEx[0]) tenjiLine=`${boatMark(byEx[0].no)}の伸びが良い`;
-    if(byLap[0]) kiryokuLine=`${boatMark(byLap[0].no)}の周回が安定`;
+    // 展示: 周り足・直線・出足(展示タイム)のうち、最も突出している項目と艇を選ぶ
+    // （「伸びが良い」のような曖昧語は使わず、周り足/直線/出足のどれかを明言する）
+    const footOrder=rankByAsc(no=>bd(no).syukaiFoot||bd(no).avgSyukaiFoot||0);
+    const chokusenOrder=rankByAsc(no=>bd(no).chokusen||0);
+    const tenjiOrder=rankByAsc(no=>bd(no).tenji||bd(no).avgTenji||0);
+    const gap=(arr)=>arr.length>=2?(arr[1].val-arr[0].val):0;
+    const candidates=[
+      {word:'周り足',arr:footOrder,g:gap(footOrder)},
+      {word:'直線の伸び',arr:chokusenOrder,g:gap(chokusenOrder)},
+      {word:'出足',arr:tenjiOrder,g:gap(tenjiOrder)}
+    ].filter(c=>c.arr.length);
+    // 差が一番大きい(=突出している)項目を採用
+    candidates.sort((a,b)=>b.g-a.g);
+    tenjiLine = candidates[0]
+      ? `${label(candidates[0].arr[0].no)}の${candidates[0].word}が目立つ`
+      : '';
 
-    // 展開: 軸以外の艇の中で「その艇のコースで実際に有効な決まり手」の実績値が最も高い艇を採用
-    const threats=currentAreScores
-      .filter(s=>s.no!==maruBoat)
-      .map(s=>{const k=pickKimarite(s.no); return k?{no:s.no,word:k[0],val:k[1]}:null;})
-      .filter(Boolean)
-      .sort((a,b)=>b.val-a.val);
-    tenkaiLine = threats[0]
-      ? `${boatMark(threats[0].no)}に${threats[0].word}の実績あり、要警戒`
-      : `${maruStr}が想定通りなら先手`;
+    // 機力: モーター2連率（機力＝機関の力の話。周回タイムではない）
+    const motorOrder=rankByAsc(no=>bd(no).motor2ren||0).sort((a,b)=>b.val-a.val); // motor2ren高いほど良い
+    kiryokuLine = motorOrder[0]
+      ? `${label(motorOrder[0].no)}のモーターが仕上がっている`
+      : '';
+
+    // 展開文: 単艇のスコアではなく艇同士の関係性からパターンを判定する
+    // ※ 発動条件は初期値。実戦で違和感があれば都度しきい値を調整すること。
+    const st=(no)=>{const b=bd(no); return b.directST>0?b.directST:(b.sessonAvgST>0?b.sessonAvgST:null);};
+    const b1=bd(1), st1=st(1), st2=st(2);
+    const _b1s2=currentParsedData&&currentParsedData.boats[0];
+    const _atchiOK2=_b1s2&&_b1s2.atchiNige>0&&(_b1s2.atchiNigeCount||0)>=10;
+    const nige1=_b1s2?(_b1s2.sgNige>0?_b1s2.sgNige:(_atchiOK2?_b1s2.atchiNige:_b1s2.nigerate6m)):0;
+
+    const outerAtk=(no)=>Math.max(bd(no).makuri6m||0,bd(no).makurisashi6m||0);
+    const boat4Atk=outerAtk(4), boat5Atk=outerAtk(5), boat6Atk=outerAtk(6);
+
+    // 評価順位（◎○▲=1〜3位は既に予想に入っている艇なので「警戒」の対象外。
+    // 4位以下(△▽×)の伏兵だけを展開コメントで扱う。
+    const rankOf=(no)=>{
+      const idx=ranking.findIndex(r=>String(r.boat)===String(no));
+      return idx>=0?idx+1:99;
+    };
+    const isDarkHorse=(no)=>rankOf(no)>=4;
+
+    let pattern=null;
+    // パターン1: ②が握って内側差し（①の逃げ率が低め＋②のSTが①並み以上）
+    if(nige1<65 && st1!=null && st2!=null && st2<=st1+0.02){
+      pattern=`${label(2)}が握って内側から差す展開も想定`;
+    }
+    // パターン2: ④仕掛け⑤追走の3着争い（4のまくり系実績が最も高く、5も僅差で続く。
+    // ただし4・5が両方とも既に◎○▲入りしている場合は「もう予想に織り込み済み」なので言及しない）
+    else if(boat4Atk>0 && boat4Atk>=boat5Atk*0.6 && boat4Atk>=Math.max(outerAtk(3),outerAtk(6)) && (isDarkHorse(4)||isDarkHorse(5))){
+      pattern = boat5Atk>0
+        ? `${label(4)}仕掛け${label(5)}追走で3着争いも`
+        : `${label(4)}の仕掛けに警戒`;
+    }
+    // パターン3: 外枠一撃（5・6号艇は評価順4位以下の伏兵の場合のみ言及）
+    else if((boat5Atk>0||boat6Atk>0) && (isDarkHorse(5)||isDarkHorse(6))){
+      const outerBoat = boat6Atk>boat5Atk ? 6 : 5;
+      const otherOuter = outerBoat===6 ? 5 : 6;
+      pattern = (bd(otherOuter) && outerAtk(otherOuter)>0 && isDarkHorse(otherOuter))
+        ? `外枠${label(outerBoat)}の一撃に警戒。展開次第では${label(otherOuter)}も浮上`
+        : `外枠${label(outerBoat)}の一撃に警戒`;
+    }
+
+    if(pattern){
+      tenkaiLine=pattern;
+    } else {
+      // フォールバック: 評価順4位以下(△▽×)の伏兵の中だけで警戒艇を探す。
+      // ◎○▲は既に予想に入っている艇なので「まくり実績あり」等の当たり前の言及はしない。
+      const threats=currentAreScores
+        .filter(s=>isDarkHorse(s.no))
+        .map(s=>{const k=pickKimarite(s.no); return k?{no:s.no,word:k[0],val:k[1]}:null;})
+        .filter(Boolean)
+        .sort((a,b)=>b.val-a.val);
+      tenkaiLine = threats[0]
+        ? `${label(threats[0].no)}に${threats[0].word}の伏兵警戒`
+        : `想定通りなら${maruStr}中心の決着`;
+    }
   }
 
   const venueVal=document.getElementById('inp-venue')?document.getElementById('inp-venue').value||'鳴門':'鳴門';
@@ -1730,7 +1804,7 @@ function buildXSummary(withAmount){
     `展開：${tenkaiLine}`,
     ``,
     `【総合分析】`,
-    `${maruStr}の軸で勝負。評価順 ${hyokaOrder}`,
+    `軸は${maruStr}。評価順 ${hyokaOrder}`,
     ``,
     `本線`,
     `${fmtBets(honsen)}`,
