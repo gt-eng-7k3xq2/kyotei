@@ -2061,7 +2061,17 @@ function computeTenkaiFacts(){
   const label=(no)=>`${circled[no-1]||no+'号艇'}${nm(no)}`;
 
   const boatsInBets=new Set();
-  betsRaw.filter(b=>b.type==='本線').forEach(b=>String(b.val).split('-').forEach(n=>boatsInBets.add(parseInt(n))));
+  const honsenBets=betsRaw.filter(b=>b.type==='本線');
+  honsenBets.forEach(b=>String(b.val).split('-').forEach(n=>boatsInBets.add(parseInt(n))));
+
+  // 本線で2着候補として使われている艇（=買い目上もっとも重要度が高い対抗艇）を明示的に抽出。
+  // これを渡さないと、3着要員程度の艇にAIが言及して本命級の2着候補を無視するズレが起きる。
+  const honsen2ndBoats=new Set();
+  honsenBets.forEach(b=>{
+    const parts=String(b.val).split('-');
+    if(parts[1]) honsen2ndBoats.add(parseInt(parts[1]));
+  });
+  honsen2ndBoats.delete(maruBoat);
 
   const rankOf=(no)=>{
     const idx=ranking.findIndex(r=>String(r.boat)===String(no));
@@ -2084,8 +2094,15 @@ function computeTenkaiFacts(){
     if(valid.includes('差し')) vals['差し']=raw.sashi6m||0;
     if(valid.includes('まくり')) vals['まくり']=raw.makuri6m||0;
     if(valid.includes('まくり差し')) vals['まくり差し']=raw.makurisashi6m||0;
-    kimariteFacts.push({no,label:label(no),course:no,rank:rankOf(no),決まり手実績:vals});
+    kimariteFacts.push({
+      no,label:label(no),course:no,rank:rankOf(no),
+      重要度:honsen2ndBoats.has(no)?'2着候補(本線・最重要)':'3着候補のみ',
+      決まり手実績:vals
+    });
   }
+  // 重要度順（2着候補を先に）に並べ替え、AIが優先順位を誤解しないようにする
+  kimariteFacts.sort((a,b)=>(a.重要度==='2着候補(本線・最重要)'?0:1)-(b.重要度==='2着候補(本線・最重要)'?0:1));
+
   // 1号艇は軸の時は前提(逃げ)なので言及不要だが、軸でない時は対抗艇の逃げ脅威として扱う
   const boat1IsThreat = maruBoat!==1 && boatsInBets.has(1);
 
@@ -2093,6 +2110,7 @@ function computeTenkaiFacts(){
     軸_1着想定艇:label(maruBoat),
     レース分類:currentCalcData.mode==='are'?'荒れ想定(混戦・自信度低め)':'通常想定(軸が堅め)',
     荒れ指数:currentCalcData.areIndex,
+    本線2着候補_最重要:[...honsen2ndBoats].map(no=>label(no)),
     boatsInBets:[...boatsInBets].sort((a,b)=>a-b).map(no=>label(no)),
     rankingList:ranking.map((r,i)=>`${i+1}位:${label(r.boat)}`),
     nige1逃げ率:nige1,
@@ -2132,6 +2150,10 @@ async function generateTenkaiAI(){
 - 4号艇は決まり手の代わりに「カド」という位置呼称で表現してもよい（実例で頻出のため）。
 - 【確定事実】の買い目に入っている艇（boatsInBets）以外の艇には一切言及しない。
   買い目に入っていない艇を褒める/警戒するのは「じゃあなぜ買わないのか」という矛盾になる。
+- 【最重要】facts内の「本線2着候補_最重要」に挙がっている艇は、買い目上もっとも重みが大きい対抗艇。
+  この中の艇を差し置いて、決まり手実績_買い目内のみの「重要度:3着候補のみ」の艇だけを取り上げるのは禁止。
+  2着候補が複数いる場合、最低でも最有力の1艇（決まり手実績が高い方）には必ず触れること。
+  「3着候補のみ」の艇に触れるのは、2着候補に触れた上で余裕がある場合のみ。
 - 【最重要】facts内の「軸_1着想定艇」は1着想定の艇。この艇を「追走」「後追い」「〜の後を追う」のように
   他艇より劣後する立場で描写することは絶対禁止。「仕掛け」「追走」等の役割分担を書く場合、
   仕掛ける側・追走する側のどちらに軸を置くかは、軸が最終的に先着する展開と矛盾しないように
