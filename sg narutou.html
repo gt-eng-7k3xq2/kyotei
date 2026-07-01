@@ -263,8 +263,9 @@
         <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="resetAiTenkai()">↺ ルールに戻す</button>
       </div>
       <div style="display:flex;gap:8px;margin-top:4px;">
-        <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="copyXSummary(false)">𝕏 サマリーのみ</button>
-        <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--gold);border-color:var(--gold);" onclick="copyXSummary(true)">𝕏 賭け金込み</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="copyXSummary('x')">𝕏 X用</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="copyXSummary('note')">📝 note用</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--gold);border-color:var(--gold);" onclick="copyXSummary('all')">📋 全部用</button>
       </div>
     </div>
 
@@ -1634,7 +1635,7 @@ function compressBetsSG(bets){
   return res.join('/');
 }
 
-function buildXSummary(withAmount){
+function buildXSummary(mode,withAmount){
   if(!currentCalcData) return '';
   const racenum=currentCalcData.racenum||'?';
   const ranking=currentCalcData.ranking||[];
@@ -1836,28 +1837,54 @@ function buildXSummary(withAmount){
 
   const venueVal=document.getElementById('inp-venue')?document.getElementById('inp-venue').value||'鳴門':'鳴門';
   const shimekiri=currentParsedData&&currentParsedData.shimekiri?` 締切${currentParsedData.shimekiri}`:'';
-  const lines=[
+
+  // 共通ヘッダー（展示/機力/展開/総合分析）はX用・ノート用・全部用で共通
+  const headerLines=[
     `【${venueVal}${racenum}R】${shimekiri}`,
     `展示：${tenjiLine}`,
     `機力：${kiryokuLine}`,
     `展開：${tenkaiLine}`,
     ``,
     `【総合分析】`,
-    `軸は${maruStr}。評価順 ${hyokaOrder}`,
-    ``,
-    `本線`,
-    `${fmtBets(honsen)}`,
+    `軸は：${maruStr}`,
+    `評価順：${hyokaOrder}`,
   ];
-  if(osaee.length) lines.push(``, `抑え`, `${fmtBets(osaee)}`);
-  lines.push(``, `G.`);
 
-  return lines.join('\n');
+  if(mode==='x'){
+    // X投稿用: 買い目は出さず、プロフィール(note)へ誘導
+    return [...headerLines, ``, `最終予想・買い目はプロフィールから。`, ``, `G.`].join('\n');
+  }
+
+  // 本線・抑えのブロック（ノート用・全部用で共通）
+  const betLines=[`本線`, `${fmtBets(honsen)}`];
+  if(osaee.length) betLines.push(``, `抑え`, `${fmtBets(osaee)}`);
+
+  if(mode==='note'){
+    // note用: 展示/機力/展開/総合分析＋本線・抑え（賭け金は出さない）
+    return [...headerLines, ``, ...betLines, ``, `G.`].join('\n');
+  }
+
+  // 全部用（従来のwithAmount相当）: 上記に加えて賭け金込みの内訳を追加
+  const allLines=[...headerLines, ``, ...betLines];
+  if(withAmount){
+    const oddsRows=Array.from(document.querySelectorAll('#bet-tbody tr'));
+    if(oddsRows.length){
+      allLines.push(``, `【賭け金内訳】`);
+      oddsRows.forEach(tr=>{
+        const val=tr.querySelector('.bet-val')?.textContent||'';
+        const amt=tr.querySelector('.amt-cell')?.textContent||'';
+        if(val) allLines.push(`${val}　${amt}`);
+      });
+    }
+  }
+  allLines.push(``, `G.`);
+  return allLines.join('\n');
 }
 
 function updateXPreview(){
   const el=document.getElementById('x-summary-preview');
   if(!el) return;
-  el.value=buildXSummary(false);
+  el.value=buildXSummary('x');
 }
 
 // ============================================================
@@ -1924,7 +1951,7 @@ function computeTenkaiFacts(){
     "1号艇が軸ではない場合の逃げ脅威":boat1IsThreat?{label:label(1),逃げ率:nige1}:null,
     st比較:[1,2].filter(no=>boatsInBets.has(no)||no===maruBoat).map(no=>({no,label:label(no),ST:st(no),逃げ率実績:bd(no).nigerate6m||0})),
     決まり手実績_買い目内のみ:kimariteFacts,
-    ruleBasedTenkaiLine:buildXSummary(false).split('\n').find(l=>l.startsWith('展開：'))?.replace('展開：','')||''
+    ruleBasedTenkaiLine:buildXSummary('x').split('\n').find(l=>l.startsWith('展開：'))?.replace('展開：','')||''
   };
 }
 
@@ -2031,12 +2058,17 @@ function resetAiTenkai(){
   updateXPreview();
 }
 
-function copyXSummary(withAmount){
-  // withAmount=trueの場合は賭け金込みで再生成、falseはtextarea内容（手動編集対応）
-  const text=withAmount?buildXSummary(true):(document.getElementById('x-summary-preview')?.value||buildXSummary(false));
+function copyXSummary(mode){
+  // mode='x': textarea内容（手動編集対応、買い目なし）
+  // mode='note': 展示/機力/展開/総合分析＋本線・抑え（買い目あり、賭け金なし）
+  // mode='all': noteの内容＋賭け金内訳
+  const text = mode==='x'
+    ? (document.getElementById('x-summary-preview')?.value||buildXSummary('x'))
+    : buildXSummary(mode, mode==='all');
   if(!text){showToast('買い目を生成してください');return;}
+  const label = mode==='x'?'𝕏 X用':mode==='note'?'📝 note用':'📋 全部用';
   navigator.clipboard.writeText(text).then(()=>{
-    showToast(withAmount?'𝕏 賭け金込みコピー':'𝕏 サマリーコピー');
+    showToast(label+'コピー');
   }).catch(()=>{
     // clipboard APIが使えない場合のフォールバック
     const ta=document.createElement('textarea');
@@ -2045,7 +2077,7 @@ function copyXSummary(withAmount){
     ta.select();
     document.execCommand('copy');
     document.body.removeChild(ta);
-    showToast(withAmount?'𝕏 賭け金込みコピー':'𝕏 サマリーコピー');
+    showToast(label+'コピー');
   });
 }
 
