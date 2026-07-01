@@ -259,6 +259,10 @@
       <div class="card-title">𝕏 X投稿サマリー</div>
       <textarea id="x-summary-preview" class="ai-output" style="min-height:100px;font-size:11px;width:100%;background:var(--card-bg);color:var(--text);border:1px solid #444;border-radius:8px;padding:8px;resize:vertical;box-sizing:border-box;"></textarea>
       <div style="display:flex;gap:8px;margin-top:4px;">
+        <button id="ai-tenkai-btn" class="btn btn-ghost btn-sm" style="flex:1;" onclick="generateTenkaiAI()">🤖 展開をAIで書く</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="resetAiTenkai()">↺ ルールに戻す</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px;">
         <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="copyXSummary(false)">𝕏 サマリーのみ</button>
         <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--gold);border-color:var(--gold);" onclick="copyXSummary(true)">𝕏 賭け金込み</button>
       </div>
@@ -336,12 +340,15 @@ let selectedRaceType='sg'; // 'ippan','g2g3','g1','sg'
 let currentCalcData=null;
 let currentParsedData=null; // パース済みデータ保持
 let currentAreScores=null; // スコア保持
+let aiTenkaiLine=null; // AIで生成した展開コメント（あればルールベースより優先）
+let aiTenkaiLoading=false;
 
 function getLogs(){try{return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');}catch{return[];}}
 function saveLogs(l){localStorage.setItem(STORE_KEY,JSON.stringify(l));}
 function getSettings(){try{return JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{"maxrace":3}');}catch{return{maxrace:3};}}
 function saveSettingsData(s){localStorage.setItem(SETTINGS_KEY,JSON.stringify(s));}
 function getApiKey(){return localStorage.getItem(GEMINI_KEY)||'';}
+function setApiKey(k){localStorage.setItem(GEMINI_KEY,k);}
 
 // ============================================================
 // モード手動選択
@@ -451,6 +458,7 @@ function generateBets(d, areScores, mode){
 
   document.getElementById('bet-section').style.display='block';
   currentCalcData={racenum,honme,nigeRate,areIndex,mode,betcount:betsRaw.length,shikin,ranking,betsRaw};
+  aiTenkaiLine=null; // 新しいレースの予想なので前のAI展開文は破棄
   recalcAlloc();
   updateXPreview();
 
@@ -1705,9 +1713,17 @@ function buildXSummary(withAmount){
 
   let tenjiLine='', kiryokuLine='', tenkaiLine='';
   const bd=(no)=>(currentParsedData&&currentParsedData.boats[no-1])||{};
+  // 選手名データはスペース無しのフルネーム（例:菅章哉）で入ってくるため、
+  // 姓・名の区切りを機械的には判定できない。日本人の苗字は2文字が最多のため
+  // 「先頭2文字」を既定の推定苗字とする。1文字苗字(林・森・田 等)は誤る場合があるので
+  // 代表的なものだけ簡易リストで補正する。完全な精度が必要なら選手名鑑データが別途必要。
+  const ONE_CHAR_SURNAMES=['林','森','田','原','関','堀','進','辻','沢','岡'];
   const nm=(no)=>{
     const n=bd(no).name;
-    return n?(n.split(' ')[0]||n):'';
+    if(!n) return '';
+    if(n.includes(' ')) return n.split(' ')[0];
+    if(ONE_CHAR_SURNAMES.includes(n[0])) return n[0];
+    return n.slice(0,2);
   };
   const label=(no)=>`${boatMark(no)}${nm(no)}`;
   // 順位付け（タイム系は小さいほど良い）。0/未取得は最下位扱い。
@@ -1715,6 +1731,12 @@ function buildXSummary(withAmount){
     const withVal=[1,2,3,4,5,6].map(no=>({no,val:getVal(no)})).filter(x=>x.val>0);
     return [...withVal].sort((a,b)=>a.val-b.val);
   };
+  // 買い目のうち本線(honsen)に実際に登場する艇番の集合。抑えは保険的な買い目なので対象外。
+  // ここに入ってない艇を「機力が良い」「警戒」と持ち上げると「じゃあなんで買ってないのか」
+  // という矛盾になるため、展示以外(機力・展開)の艇選びは基本この集合の中からのみ行う。
+  const boatsInBets=new Set();
+  honsen.forEach(b=>String(b.val).split('-').forEach(n=>boatsInBets.add(parseInt(n))));
+
   if(currentAreScores && currentAreScores.length){
     // 展示: 周り足・直線・出足(展示タイム)のうち、最も突出している項目と艇を選ぶ
     // （「伸びが良い」のような曖昧語は使わず、周り足/直線/出足のどれかを明言する）
@@ -1733,8 +1755,11 @@ function buildXSummary(withAmount){
       ? `${label(candidates[0].arr[0].no)}の${candidates[0].word}が目立つ`
       : '';
 
-    // 機力: モーター2連率（機力＝機関の力の話。周回タイムではない）
-    const motorOrder=rankByAsc(no=>bd(no).motor2ren||0).sort((a,b)=>b.val-a.val); // motor2ren高いほど良い
+    // 機力: モーター2連率（機力＝機関の力の話。周回タイムではない）。
+    // 買い目に入ってない艇のモーターを持ち上げると矛盾するので買い目内の艇に限定。
+    const motorOrder=rankByAsc(no=>bd(no).motor2ren||0)
+      .filter(x=>boatsInBets.has(x.no))
+      .sort((a,b)=>b.val-a.val);
     kiryokuLine = motorOrder[0]
       ? `${label(motorOrder[0].no)}のモーターが仕上がっている`
       : '';
@@ -1756,7 +1781,7 @@ function buildXSummary(withAmount){
       const idx=ranking.findIndex(r=>String(r.boat)===String(no));
       return idx>=0?idx+1:99;
     };
-    const isDarkHorse=(no)=>rankOf(no)>=4;
+    const isDarkHorse=(no)=>rankOf(no)>=4 && boatsInBets.has(no);
 
     let pattern=null;
     // パターン1: ②が握って内側差し（①の逃げ率が低め＋②のSTが①並み以上）
@@ -1793,6 +1818,7 @@ function buildXSummary(withAmount){
         ? `${label(threats[0].no)}に${threats[0].word}の伏兵警戒`
         : `想定通りなら${maruStr}中心の決着`;
     }
+    if(aiTenkaiLine) tenkaiLine=aiTenkaiLine; // AI生成があれば上書き
   }
 
   const venueVal=document.getElementById('inp-venue')?document.getElementById('inp-venue').value||'鳴門':'鳴門';
@@ -1819,6 +1845,135 @@ function updateXPreview(){
   const el=document.getElementById('x-summary-preview');
   if(!el) return;
   el.value=buildXSummary(false);
+}
+
+// ============================================================
+// 展開コメントAI生成（鳴門エンジン内蔵・Gemini）
+// ============================================================
+// buildXSummary内のルールベース判定と同じ「確定事実」だけを抽出してAIに渡す。
+// 生データを渡して解釈させると空虚な一般論になるため、比較・順位・実績値は
+// ここで計算済みの形でJSON化して渡し、AIには文章化だけさせる。
+function computeTenkaiFacts(){
+  if(!currentCalcData||!currentAreScores) return null;
+  const ranking=currentCalcData.ranking||[];
+  const betsRaw=currentCalcData.betsRaw||[];
+  const maruBoat=ranking[0]?.boat;
+  if(!maruBoat) return null;
+
+  const bd=(no)=>(currentParsedData&&currentParsedData.boats[no-1])||{};
+  const ONE_CHAR_SURNAMES=['林','森','田','原','関','堀','進','辻','沢','岡'];
+  const nm=(no)=>{
+    const n=bd(no).name;
+    if(!n) return '';
+    if(n.includes(' ')) return n.split(' ')[0];
+    if(ONE_CHAR_SURNAMES.includes(n[0])) return n[0];
+    return n.slice(0,2);
+  };
+  const circled=['❶','❷','❸','❹','❺','❻'];
+  const label=(no)=>`${circled[no-1]||no+'号艇'}${nm(no)}`;
+
+  const boatsInBets=new Set();
+  betsRaw.filter(b=>b.type==='本線').forEach(b=>String(b.val).split('-').forEach(n=>boatsInBets.add(parseInt(n))));
+
+  const rankOf=(no)=>{
+    const idx=ranking.findIndex(r=>String(r.boat)===String(no));
+    return idx>=0?idx+1:99;
+  };
+
+  const st=(no)=>{const b=bd(no); return b.directST>0?b.directST:(b.sessonAvgST>0?b.sessonAvgST:null);};
+  const _b1s=currentParsedData&&currentParsedData.boats[0];
+  const _atchiOK=_b1s&&_b1s.atchiNige>0&&(_b1s.atchiNigeCount||0)>=10;
+  const nige1=_b1s?(_b1s.sgNige>0?_b1s.sgNige:(_atchiOK?_b1s.atchiNige:_b1s.nigerate6m)):0;
+
+  const COURSE_KIMARITE={2:['差し'],3:['差し','まくり差し'],4:['まくり','まくり差し'],5:['まくり'],6:['まくり差し']};
+  const kimariteFacts=[];
+  for(const no of boatsInBets){
+    if(no===maruBoat) continue;
+    const valid=COURSE_KIMARITE[no];
+    if(!valid) continue;
+    const raw=bd(no);
+    const vals={};
+    if(valid.includes('差し')) vals['差し']=raw.sashi6m||0;
+    if(valid.includes('まくり')) vals['まくり']=raw.makuri6m||0;
+    if(valid.includes('まくり差し')) vals['まくり差し']=raw.makurisashi6m||0;
+    kimariteFacts.push({no,label:label(no),course:no,rank:rankOf(no),決まり手実績:vals});
+  }
+
+  return{
+    maruLabel:label(maruBoat),
+    boatsInBets:[...boatsInBets].sort((a,b)=>a-b).map(no=>label(no)),
+    rankingList:ranking.map((r,i)=>`${i+1}位:${label(r.boat)}`),
+    nige1逃げ率:nige1,
+    st比較:[1,2].filter(no=>boatsInBets.has(no)||no===maruBoat).map(no=>({no,label:label(no),ST:st(no)})),
+    決まり手実績_買い目内のみ:kimariteFacts,
+    ruleBasedTenkaiLine:buildXSummary(false).split('\n').find(l=>l.startsWith('展開：'))?.replace('展開：','')||''
+  };
+}
+
+async function generateTenkaiAI(){
+  const key=getApiKey();
+  if(!key){
+    const input=prompt('Gemini APIキーを入力してください（鳴門エンジンに保存されます）');
+    if(!input) return;
+    setApiKey(input.trim());
+  }
+  const facts=computeTenkaiFacts();
+  if(!facts){ showToast('先に予想を実行してください'); return; }
+
+  aiTenkaiLoading=true;
+  const btn=document.getElementById('ai-tenkai-btn');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ 生成中…'; }
+
+  const prompt_text=`あなたはボートレース専門紙の予想面を書いているベテラン記者です。
+実況ではなく事前予想の「展開」欄を書きます。読者はある程度の競艇知識がある前提。
+
+【絶対ルール】
+- 与えられた【確定事実】に無い内容は一切書かない。数字や艇の組み合わせを想像で補わない。
+- 1号艇の逃げは前提なので触れない。「◎の軸で勝負」のような言い回しは使わない。
+- 「勝負」「一発」「注目」等の煽り言葉は使わない。事実と根拠で淡々と書く。
+- コースの決まり手用語（差し／まくり／まくり差し）は【確定事実】の決まり手実績に書かれた
+  組み合わせのみ使う。それ以外のコース×決まり手の組み合わせは絶対に書かない。
+- 【確定事実】の買い目に入っている艇（boatsInBets）以外の艇には一切言及しない。
+  買い目に入っていない艇を褒める/警戒するのは「じゃあなぜ買わないのか」という矛盾になる。
+- 複数艇が絡む場合は「仕掛け」「追走」「握る」など艇同士の力関係を表す言葉を使ってよいが、
+  根拠のない因果は作らない。
+- 出力は1文、40字以内。体言止めや「〜も」で終える簡潔な予想文体。
+
+【文体の参考（内容ではなく言い回しのトーンだけ真似ること）】
+・②が握って内側から差す展開
+・④仕掛け⑤追走で3着争い
+・展開次第では外枠一気も
+
+【確定事実】
+${JSON.stringify(facts,null,2)}
+
+【出力】
+展開の1文のみ。前置き・説明・複数案の提示はしない。`;
+
+  try{
+    const res=await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${getApiKey()}`,
+      {method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({contents:[{parts:[{text:prompt_text}]}]})}
+    );
+    if(!res.ok){ const e=await res.json(); throw new Error(e.error?.message||`API ${res.status}`); }
+    const data=await res.json();
+    const text=data.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')?.trim()||'';
+    if(!text) throw new Error('テキストが取得できませんでした');
+    aiTenkaiLine=text.replace(/^展開：/,'').trim();
+    updateXPreview();
+    showToast('展開コメントをAIで生成しました');
+  }catch(e){
+    showToast('AI生成エラー: '+e.message);
+  }finally{
+    aiTenkaiLoading=false;
+    if(btn){ btn.disabled=false; btn.textContent='🤖 展開をAIで書く'; }
+  }
+}
+
+function resetAiTenkai(){
+  aiTenkaiLine=null;
+  updateXPreview();
 }
 
 function copyXSummary(withAmount){
