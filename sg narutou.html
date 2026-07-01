@@ -1555,7 +1555,7 @@ async function runYoso(){
 
     // 4. JSスコアによる機械的ランキング生成（Gemini不使用）
     const marks=['◎','○','▲','△','▽','×'];
-    const ranking=areScores.map((s,i)=>({rank:i+1,boat:parseInt(s.no),mark:marks[i]||'×'}));
+    const ranking=areScores.map((s,i)=>({rank:i+1,boat:parseInt(s.no),mark:marks[i]||'×',score:s.raw}));
 
     // ランキングテキスト表示
     const rankText=ranking.map(r=>{const nm=d.boats[r.boat-1]?d.boats[r.boat-1].name:'';return`${r.rank}位 ${r.boat}号艇 ${r.mark}${nm?' '+nm:''}`;}).join('\n');
@@ -1635,9 +1635,15 @@ function buildXSummary(withAmount){
   const ranking=currentCalcData.ranking||[];
   const betsRaw=currentCalcData.betsRaw||[];
 
-  // 評価順: ◎>○>▲>△>▽>× を号艇番号で表示
-  // 例: 4>1>6>5>3>2
-  const hyokaOrder=ranking.map(r=>r.boat).join('>');
+  // 評価順: ◎>○>▲>△>▽>× を号艇番号で表示。隣接するスコア差が大きいほど>を増やす
+  // 例: 4>1>6>>5>3>2（6と5の間に大きな差がある場合）
+  const hyokaOrder=ranking.map((r,i)=>{
+    if(i===0) return String(r.boat);
+    const prev=ranking[i-1];
+    const gap=(typeof prev.score==='number'&&typeof r.score==='number')?Math.abs(prev.score-r.score):0;
+    const arrows = gap>=15 ? '>>>' : gap>=8 ? '>>' : '>';
+    return arrows+r.boat;
+  }).join('');
 
   // ◎艇：丸数字＋選手苗字
   const maruBoat=ranking[0]?.boat;
@@ -2684,7 +2690,9 @@ function regenerateBets(){
   }
 
   const marks=['◎','○','▲','△','▽','×'];
-  const newRanking=newOrder.map((boat,i)=>({rank:i+1,boat,mark:marks[i]||'×'}));
+  const scoreByBoat={};
+  currentAreScores.forEach(s=>{scoreByBoat[s.no]=s.raw;});
+  const newRanking=newOrder.map((boat,i)=>({rank:i+1,boat,mark:marks[i]||'×',score:scoreByBoat[boat]}));
 
   // currentAreScoresを新順序に更新
   currentAreScores=newOrder.map((boat)=>{
