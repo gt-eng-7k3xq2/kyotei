@@ -291,8 +291,7 @@
       </div>
       <div style="display:flex;gap:8px;margin-top:4px;">
         <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="copyXSummary('x')">𝕏 X用</button>
-        <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="copyXSummary('note')">📝 note用</button>
-        <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--gold);border-color:var(--gold);" onclick="copyXSummary('all')">📋 全部用</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--gold);border-color:var(--gold);" onclick="copyXSummary('note')">📝 note用</button>
       </div>
     </div>
 
@@ -1928,42 +1927,40 @@ function buildXSummary(mode,withAmount){
     `評価順：${hyokaOrder}`,
   ];
 
+  // X投稿用: 買い目は出さず、プロフィール(note)へ誘導
+  const xLines=[...headerLines, ``, `最終予想・買い目はプロフィールから。`, ``, `G.`];
   if(mode==='x'){
-    // X投稿用: 買い目は出さず、プロフィール(note)へ誘導
-    return [...headerLines, ``, `最終予想・買い目はプロフィールから。`, ``, `G.`].join('\n');
+    return xLines.join('\n');
   }
 
   // 本線・抑えのブロック（ノート用・全部用で共通）
   const betLines=[`本線`, `${fmtBets(honsen)}`];
   if(osaee.length) betLines.push(``, `抑え`, `${fmtBets(osaee)}`);
 
+  // note用: 展示/機力/展開/総合分析＋本線・抑え（賭け金は出さない）
+  const noteLines=[...headerLines, ``, ...betLines, ``, `G.`];
   if(mode==='note'){
-    // note用: 展示/機力/展開/総合分析＋本線・抑え（賭け金は出さない）
-    return [...headerLines, ``, ...betLines, ``, `G.`].join('\n');
+    return noteLines.join('\n');
   }
 
-  // 全部用（従来のwithAmount相当）: 上記に加えて賭け金込みの内訳を追加
-  const allLines=[...headerLines, ``, ...betLines];
-  if(withAmount){
-    const oddsRows=Array.from(document.querySelectorAll('#bet-tbody tr'));
-    if(oddsRows.length){
-      allLines.push(``, `【賭け金内訳】`);
-      oddsRows.forEach(tr=>{
-        const val=tr.querySelector('.bet-val')?.textContent||'';
-        const amt=tr.querySelector('.amt-cell')?.textContent||'';
-        if(val) allLines.push(`${val}　${amt}`);
-      });
-    }
-  }
-  allLines.push(``, `G.`);
-  return allLines.join('\n');
+  // 全部用: X用とnote用を両方まとめて見れる形（賭け金の内訳は含めない）
+  const sep='─────────';
+  return [
+    `【X用】`,
+    ...xLines,
+    ``,
+    sep,
+    ``,
+    `【note用】`,
+    ...noteLines
+  ].join('\n');
 }
 
 function updateXPreview(){
   const el=document.getElementById('x-summary-preview');
   if(!el) return;
-  // プレビューは常に全部用(全文)を表示。X用/note用はここから独立して生成してコピーする。
-  el.value=buildXSummary('all', true);
+  // プレビューはnote用(展示/機力/展開/総合分析＋本線・抑え)を表示。X用はここから独立して生成してコピーする。
+  el.value=buildXSummary('note');
 }
 
 // ============================================================
@@ -2210,15 +2207,14 @@ function resetAiTenkai(){
 }
 
 function copyXSummary(mode){
-  // プレビュー欄(x-summary-preview)は常に全部用の全文を表示。
+  // プレビュー欄(x-summary-preview)はnote用の内容を表示（手動編集可）。
   // mode='x': 展示/機力/展開/総合分析のみ（買い目なし、noteへ誘導）
-  // mode='note': 上記＋本線・抑え（買い目あり、賭け金なし）
-  // mode='all': プレビューの内容（賭け金内訳込み・手動編集も反映）をそのままコピー
-  const text = mode==='all'
-    ? (document.getElementById('x-summary-preview')?.value||buildXSummary('all',true))
+  // mode='note': プレビューの内容（本線・抑え込み・手動編集も反映）をそのままコピー
+  const text = mode==='note'
+    ? (document.getElementById('x-summary-preview')?.value||buildXSummary('note'))
     : buildXSummary(mode);
   if(!text){showToast('買い目を生成してください');return;}
-  const label = mode==='x'?'𝕏 X用':mode==='note'?'📝 note用':'📋 全部用';
+  const label = mode==='x'?'𝕏 X用':'📝 note用';
   navigator.clipboard.writeText(text).then(()=>{
     showToast(label+'コピー');
   }).catch(()=>{
