@@ -165,7 +165,7 @@
 .thumb-comment{font-family:'Noto Sans JP',sans-serif;font-weight:300;font-size:clamp(10px,1.5vw,14px);letter-spacing:0.12em;color:rgba(255,255,255,0.85);line-height:1.65;padding-left:clamp(9px,1.5vw,17px);}
 .thumb-bot{position:absolute;bottom:0;left:0;right:0;height:clamp(24px,4.2vw,38px);z-index:20;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(14px,2.5vw,30px);border-top:1px solid rgba(200,153,60,0.22);background:rgba(6,6,6,0.5);}
 .thumb-bot-l,.thumb-bot-r{font-family:'Tenor Sans',sans-serif;font-size:clamp(8px,1.1vw,11px);letter-spacing:0.38em;color:#C8993C !important;-webkit-text-fill-color:#C8993C !important;text-transform:uppercase;}
-.thumb-comment-edit{width:100%;background:#1A1A1A !important;color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;border:1px solid #444 !important;border-radius:0;padding:10px 12px;font-size:16px;font-family:'Noto Sans JP',sans-serif;resize:none;margin-top:8px;box-sizing:border-box;outline:none;}
+.thumb-comment-edit{width:100%;height:auto;min-height:44px;background:#1A1A1A !important;color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;border:1px solid #444 !important;border-radius:0;padding:10px 12px;font-size:16px;font-family:'Noto Sans JP',sans-serif;resize:none;margin-top:8px;box-sizing:border-box;outline:none;}
 .thumb-comment-edit::placeholder{color:rgba(255,255,255,0.4) !important;-webkit-text-fill-color:rgba(255,255,255,0.4) !important;}
 .thumb-comment-edit:focus{border-color:#C8993C !important;}
 </style>
@@ -1962,7 +1962,8 @@ function buildXSummary(mode,withAmount){
 function updateXPreview(){
   const el=document.getElementById('x-summary-preview');
   if(!el) return;
-  el.value=buildXSummary('x');
+  // プレビューは常に全部用(全文)を表示。X用/note用はここから独立して生成してコピーする。
+  el.value=buildXSummary('all', true);
 }
 
 // ============================================================
@@ -2209,12 +2210,13 @@ function resetAiTenkai(){
 }
 
 function copyXSummary(mode){
-  // mode='x': textarea内容（手動編集対応、買い目なし）
-  // mode='note': 展示/機力/展開/総合分析＋本線・抑え（買い目あり、賭け金なし）
-  // mode='all': noteの内容＋賭け金内訳
-  const text = mode==='x'
-    ? (document.getElementById('x-summary-preview')?.value||buildXSummary('x'))
-    : buildXSummary(mode, mode==='all');
+  // プレビュー欄(x-summary-preview)は常に全部用の全文を表示。
+  // mode='x': 展示/機力/展開/総合分析のみ（買い目なし、noteへ誘導）
+  // mode='note': 上記＋本線・抑え（買い目あり、賭け金なし）
+  // mode='all': プレビューの内容（賭け金内訳込み・手動編集も反映）をそのままコピー
+  const text = mode==='all'
+    ? (document.getElementById('x-summary-preview')?.value||buildXSummary('all',true))
+    : buildXSummary(mode);
   if(!text){showToast('買い目を生成してください');return;}
   const label = mode==='x'?'𝕏 X用':mode==='note'?'📝 note用':'📋 全部用';
   navigator.clipboard.writeText(text).then(()=>{
