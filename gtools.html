@@ -206,10 +206,15 @@ html,body{min-height:100vh;background:#04040c;}
     <button class="btn-secondary" style="flex:1;font-size:12px;padding:9px;" onclick="exportForClaude()">🤖 Claudeに共有</button>
     <button class="btn-secondary" style="flex:1;font-size:12px;padding:9px;" onclick="exportJSON()">📥 JSONエクスポート</button>
   </div>
+  <div style="display:flex;gap:8px;margin-bottom:10px;">
+    <button class="btn-secondary" style="flex:1;font-size:12px;padding:9px;" onclick="document.getElementById('import-file-input').click()">📤 JSONインポート（復元）</button>
+  </div>
+  <input type="file" id="import-file-input" accept=".json,application/json" style="display:none;" onchange="importJSONFile(event)">
   <div id="log-list"></div>
 </div>
 
 <div class="page" id="page-nippo">
+
   <div class="card"><div class="card-title">📅 日報生成</div>
     <div class="field"><label>対象日</label><input type="date" id="nippo-date"></div>
     <div class="field" style="margin-bottom:10px;"><label>本線 単価</label><div class="unit-selector" id="honsen-selector"><div class="unit-btn" data-val="300" onclick="selectHonsen(this)">¥300</div><div class="unit-btn active" data-val="500" onclick="selectHonsen(this)">¥500</div><div class="unit-btn" data-val="1000" onclick="selectHonsen(this)">¥1,000</div><div class="unit-btn" data-val="2000" onclick="selectHonsen(this)">¥2,000</div></div></div>
@@ -532,9 +537,49 @@ function exportJSON(){
   const logs=getLogs();
   if(!logs.length){showToast('ログがありません');return;}
   const json=JSON.stringify(logs,null,2);
-  navigator.clipboard.writeText(json).then(()=>showToast('JSONをクリップボードにコピーしました')).catch(()=>{
+  // ファイルとしてダウンロード（iOSでは共有シートが開き「ファイル」に保存可能）
+  try{
+    const blob=new Blob([json],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    const ts=new Date().toISOString().slice(0,10);
+    a.href=url;
+    a.download=`kyotei_log_backup_${ts}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }catch(e){/* ダウンロード失敗時はクリップボードのみで継続 */}
+  navigator.clipboard.writeText(json).then(()=>showToast('JSONをダウンロード＆コピーしました')).catch(()=>{
     const ta=document.createElement('textarea');ta.value=json;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('JSONコピーしました');
   });
+}
+function importJSONFile(evt){
+  const file=evt.target.files&&evt.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    let imported;
+    try{
+      imported=JSON.parse(e.target.result);
+      if(!Array.isArray(imported)) throw new Error('配列ではありません');
+    }catch(err){
+      showToast('JSONの読み込みに失敗しました: '+err.message);
+      evt.target.value='';
+      return;
+    }
+    const existing=getLogs();
+    const existingIds=new Set(existing.map(l=>l.id));
+    // id重複は既存優先でスキップし、新規のみ追加（URL移行後の初回インポートなら全件新規追加になる）
+    const toAdd=imported.filter(l=>l&&l.id!=null&&!existingIds.has(l.id));
+    const merged=[...existing,...toAdd].sort((a,b)=>(b.id||0)-(a.id||0));
+    saveLogs(merged);
+    renderLogs();
+    showToast(`${toAdd.length}件を復元しました（合計${merged.length}件）`);
+    evt.target.value='';
+  };
+  reader.onerror=function(){showToast('ファイル読み込みエラー');evt.target.value='';};
+  reader.readAsText(file);
 }
 function deleteLog(id){const logs=getLogs().filter(l=>l.id!==id);saveLogs(logs);renderLogs();showToast('削除しました');}
 function renderAnalysisTabs(){

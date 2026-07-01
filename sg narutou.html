@@ -316,6 +316,11 @@
 </div>
 
 <!-- ログサマリー（予想タブ内・yoso-result外に配置） -->
+<div style="display:flex;gap:8px;margin:12px 0 8px;">
+  <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="exportSgJSON()">📥 ログをバックアップ</button>
+  <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="document.getElementById('sg-import-file-input').click()">📤 ログを復元</button>
+</div>
+<input type="file" id="sg-import-file-input" accept=".json,application/json" style="display:none;" onchange="importSgJSONFile(event)">
 <div id="yosoLogSummary" style="margin-top:12px;padding:0 0 20px;"></div>
 
 <!-- 保存ボタン（BMペースト跡地） -->
@@ -2317,6 +2322,54 @@ function parsePaste(){showToast('この機能は現在無効です');}
 function renderTsudoi(){}
 function saveSettings(){showToast('設定保存しました');}
 function resetAll(){if(!confirm('全データをリセットしますか？')) return;localStorage.removeItem(STORE_KEY);updateLogSummary();showToast('リセットしました');}
+
+function exportSgJSON(){
+  const logs=getLogs();
+  if(!logs.length){showToast('ログがありません');return;}
+  const json=JSON.stringify(logs,null,2);
+  try{
+    const blob=new Blob([json],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    const ts=new Date().toISOString().slice(0,10);
+    a.href=url;
+    a.download=`sg_narutou_log_backup_${ts}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }catch(e){/* ダウンロード失敗時はクリップボードのみで継続 */}
+  navigator.clipboard.writeText(json).then(()=>showToast('JSONをダウンロード＆コピーしました')).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=json;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('JSONコピーしました');
+  });
+}
+
+function importSgJSONFile(evt){
+  const file=evt.target.files&&evt.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    let imported;
+    try{
+      imported=JSON.parse(e.target.result);
+      if(!Array.isArray(imported)) throw new Error('配列ではありません');
+    }catch(err){
+      showToast('JSONの読み込みに失敗しました: '+err.message);
+      evt.target.value='';
+      return;
+    }
+    const existing=getLogs();
+    const existingIds=new Set(existing.map(l=>l.id));
+    const toAdd=imported.filter(l=>l&&l.id!=null&&!existingIds.has(l.id));
+    const merged=[...existing,...toAdd].sort((a,b)=>(b.id||0)-(a.id||0));
+    saveLogs(merged);
+    updateLogSummary();
+    showToast(`${toAdd.length}件を復元しました（合計${merged.length}件）`);
+    evt.target.value='';
+  };
+  reader.onerror=function(){showToast('ファイル読み込みエラー');evt.target.value='';};
+  reader.readAsText(file);
+}
 
 // ============================================================
 // ログ描画（強化版）
