@@ -1367,6 +1367,22 @@ function buildBetsNormal(ranking, pts, parsedData){
         osaee.push({val:`${maru}-${b}-${c}`, score:(rankMap[b]||9)*10+(rankMap[c]||9)});
       }
     }
+
+    // 軸ヘッジ: 実データ分析で軸(◎)が1着を外すケースが約4割あることが判明しているため、
+    // ▲(評価3位)が1着になるケースの保険を抑えの一部として追加する。
+    // ▲を軸に見立て、2着候補=◎○△、3着候補=残り上位から広めに取る。
+    if(sankaku && pts>=12){
+      const hedgeAxis=sankaku;
+      const hedge2nd=[maru,shiro,yonkaku].filter(b=>b&&b!==hedgeAxis);
+      const hedgeThirdAll=rankOrder.filter(b=>b!==hedgeAxis);
+      for(const b of hedge2nd){
+        const thirds=hedgeThirdAll.filter(c=>c!==b);
+        for(const c of thirds){
+          // scoreを高めのオフセットにして、通常の抑えより後回し（点数に余裕がある時だけ採用）にする
+          osaee.push({val:`${hedgeAxis}-${b}-${c}`, score:200+(rankMap[b]||9)*10+(rankMap[c]||9)});
+        }
+      }
+    }
   }
 
   honsen.sort((a,b)=>a.score-b.score);
