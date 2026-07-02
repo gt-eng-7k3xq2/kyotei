@@ -144,11 +144,11 @@
 
 /* ── サムネイル生成（note用タイトル画像） ── */
 .thumb-wrap{width:100%;max-width:780px;margin:0 auto;}
-#thumb-cv{width:100%;aspect-ratio:1200/630;position:relative;overflow:hidden;background:#060606;}
-.thumb-bg-hatch{position:absolute;inset:0;z-index:1;background:repeating-linear-gradient(-48deg,transparent 0px,transparent 38px,rgba(255,255,255,0.014) 38px,rgba(255,255,255,0.014) 39px);}
+#thumb-cv{width:100%;height:0;padding-bottom:52.5%;position:relative;overflow:hidden;background:#060606;}
+.thumb-bg-hatch{position:absolute;top:0;right:0;bottom:0;left:0;z-index:1;background:repeating-linear-gradient(-48deg,transparent 0px,transparent 38px,rgba(255,255,255,0.014) 38px,rgba(255,255,255,0.014) 39px);}
 .thumb-bg-left{position:absolute;top:0;left:0;bottom:0;width:44%;z-index:2;background:linear-gradient(135deg,rgba(192,154,60,0.07) 0%,rgba(192,154,60,0.03) 60%,transparent 100%);}
-.thumb-bg-bloom{position:absolute;top:50%;left:22%;transform:translate(-50%,-50%);width:38%;aspect-ratio:1;border-radius:50%;z-index:3;background:radial-gradient(circle,rgba(200,153,60,0.22) 0%,rgba(200,153,60,0.08) 40%,transparent 70%);}
-.thumb-vignette{position:absolute;inset:0;z-index:4;pointer-events:none;background:radial-gradient(ellipse 110% 100% at 50% 50%,transparent 40%,rgba(0,0,0,0.35) 100%);}
+.thumb-bg-bloom{position:absolute;top:50%;left:22%;transform:translate(-50%,-50%);width:38%;height:38%;border-radius:50%;z-index:3;background:radial-gradient(circle,rgba(200,153,60,0.22) 0%,rgba(200,153,60,0.08) 40%,transparent 70%);}
+.thumb-vignette{position:absolute;top:0;right:0;bottom:0;left:0;z-index:4;pointer-events:none;background:radial-gradient(ellipse 110% 100% at 50% 50%,transparent 40%,rgba(0,0,0,0.35) 100%);}
 .thumb-top-line{position:absolute;top:0;left:0;right:0;height:2.5px;z-index:20;background:linear-gradient(90deg,transparent 0%,#7A5E20 15%,#E8C86A 40%,#F5DFA0 50%,#E8C86A 60%,#7A5E20 85%,transparent 100%);}
 .thumb-div-line{position:absolute;top:8%;bottom:8%;left:44%;width:1px;z-index:10;background:linear-gradient(180deg,transparent 0%,rgba(200,153,60,0.6) 20%,rgba(232,200,106,0.8) 50%,rgba(200,153,60,0.6) 80%,transparent 100%);}
 .thumb-left{position:absolute;top:0;left:0;bottom:0;width:44%;z-index:15;display:flex;flex-direction:column;align-items:center;justify-content:center;}
@@ -1977,9 +1977,13 @@ function updateThumbCard(){
   const racenum=currentCalcData.racenum||'?';
   const shimekiri=currentParsedData&&currentParsedData.shimekiri?currentParsedData.shimekiri:'';
 
+  const DOW=['日','月','火','水','木','金','土'];
+  const today=new Date();
+  const dateStr=`${today.getMonth()+1}/${today.getDate()}（${DOW[today.getDay()]}）`;
+
   venueEl.textContent=venueVal;
   rnEl.textContent=racenum;
-  dtEl.textContent=shimekiri?`締切 ${shimekiri}`:'';
+  dtEl.textContent=shimekiri?`${dateStr}締切 ${shimekiri}`:dateStr;
 
   updateThumbComment();
 }
@@ -1998,6 +2002,10 @@ function saveThumbCard(){
   const origLabel='📥 サムネイルを保存・共有';
   btn.textContent='生成中...';
   btn.disabled=true;
+  // Webフォント(Playfair Display等)の読み込みを待ってからキャプチャする。
+  // 待たずに実行すると、フォールバックの太字ゴシックで描画されてしまう。
+  const fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+  fontsReady.then(function(){
   html2canvas(card,{
     scale:3,
     useCORS:true,
@@ -2032,6 +2040,7 @@ function saveThumbCard(){
     btn.textContent=origLabel;
     btn.disabled=false;
     showToast('生成失敗。スクリーンショットで保存してください。');
+  });
   });
 }
 
@@ -2140,9 +2149,12 @@ async function generateTenkaiAI(){
 
 【絶対ルール】
 - 与えられた【確定事実】に無い内容は一切書かない。数字や艇の組み合わせを想像で補わない。
-- 1号艇の逃げは、1号艇が軸(軸_1着想定艇)の場合のみ前提として触れない。1号艇が軸ではなく
-  対抗艇として買い目に入っている場合は、facts内の「1号艇が軸ではない場合の逃げ脅威」を根拠に
-  普通に触れてよい（例：「押さえは①の逃げ粘り」）。
+- 1号艇が軸(軸_1着想定艇)の場合、1号艇がスタートで先手を取る/有利な位置を取ることは競艇の大前提であり、
+  一切描写しない。「逃げ」という単語を避けて「イン先攻め」「先制」「有利な位置から」等の
+  言い換えで同じ内容を書くのも同様に禁止。軸①の文はその決まり手や位置取りの話から始めず、
+  対抗艇（本線2着候補）の話から始めること。
+  1号艇が軸ではなく対抗艇として買い目に入っている場合は、facts内の
+  「1号艇が軸ではない場合の逃げ脅威」を根拠に普通に触れてよい（例：「押さえは①の逃げ粘り」）。
 - 「◎の軸で勝負」のような言い回しは使わない。「勝負」「一発」「注目」等の煽り言葉も使わない。
   事実と根拠で淡々と書く。
 - コースの決まり手用語（差し／まくり／まくり差し）は【確定事実】の決まり手実績に書かれた
