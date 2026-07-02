@@ -1825,6 +1825,12 @@ function buildXSummary(mode,withAmount){
   // という矛盾になるため、展示以外(機力・展開)の艇選びは基本この集合の中からのみ行う。
   const boatsInBets=new Set();
   honsen.forEach(b=>String(b.val).split('-').forEach(n=>boatsInBets.add(parseInt(n))));
+  // 本線で2着候補として使われている艇のみ（3着位置だけの機械的な同居艇と区別するため）
+  const honsen2ndBoats=new Set();
+  honsen.forEach(b=>{
+    const parts=String(b.val).split('-');
+    if(parts[1]) honsen2ndBoats.add(parseInt(parts[1]));
+  });
 
   if(currentAreScores && currentAreScores.length){
     // 展示: 周り足・直線・出足(展示タイム)のうち、最も突出している項目と艇を選ぶ
@@ -1870,29 +1876,26 @@ function buildXSummary(mode,withAmount){
       const idx=ranking.findIndex(r=>String(r.boat)===String(no));
       return idx>=0?idx+1:99;
     };
-    const isDarkHorse=(no)=>rankOf(no)>=4 && boatsInBets.has(no);
+    const isDarkHorse=(no)=>rankOf(no)>=4 && honsen2ndBoats.has(no);
 
     let pattern=null;
     // パターン1: ②が握って内側差し（①の逃げ率が低め＋②のSTが①並み以上＋②自身に逃げ/先出しの実績あり）
     // STの速さだけでは「握るタイプかどうか」は分からないため、②自身の逃げ率実績も条件に含める。
     const boat2NigeRate=bd(2).nigerate6m||0;
     if(nige1<65 && st1!=null && st2!=null && st2<=st1+0.02 && boat2NigeRate>=10){
-      pattern=`${label(2)}が握って内側から差す展開も想定`;
+      pattern=`${label(2)}が握って内側から2着争い`;
     }
     // パターン2: ④仕掛け⑤追走の3着争い（4のまくり系実績が最も高く、5も僅差で続く。
     // ただし4・5が両方とも既に◎○▲入りしている場合は「もう予想に織り込み済み」なので言及しない）
     else if(boat4Atk>0 && boat4Atk>=boat5Atk*0.6 && boat4Atk>=Math.max(outerAtk(3),outerAtk(6)) && (isDarkHorse(4)||isDarkHorse(5))){
       pattern = boat5Atk>0
-        ? `${label(4)}仕掛け${label(5)}追走で3着争いも`
-        : `${label(4)}の仕掛けに警戒`;
+        ? `${label(4)}仕掛け${label(5)}追走で2着争いも`
+        : `${label(4)}が2着候補で仕掛けに警戒`;
     }
-    // パターン3: 外枠一撃（5・6号艇は評価順4位以下の伏兵の場合のみ言及）
+    // パターン3: 外枠一撃（5・6号艇は評価順4位以下の伏兵の場合のみ言及。軸+1艇までに絞る）
     else if((boat5Atk>0||boat6Atk>0) && (isDarkHorse(5)||isDarkHorse(6))){
       const outerBoat = boat6Atk>boat5Atk ? 6 : 5;
-      const otherOuter = outerBoat===6 ? 5 : 6;
-      pattern = (bd(otherOuter) && outerAtk(otherOuter)>0 && isDarkHorse(otherOuter))
-        ? `外枠${label(outerBoat)}の一撃に警戒。展開次第では${label(otherOuter)}も浮上`
-        : `外枠${label(outerBoat)}の一撃に警戒`;
+      pattern = `外枠${label(outerBoat)}の2着浮上に警戒`;
     }
 
     if(pattern){
@@ -1906,7 +1909,7 @@ function buildXSummary(mode,withAmount){
         .filter(Boolean)
         .sort((a,b)=>b.val-a.val);
       tenkaiLine = threats[0]
-        ? `${label(threats[0].no)}に${threats[0].word}の伏兵警戒`
+        ? `2着は${label(threats[0].no)}の${threats[0].word}に伏兵警戒`
         : `想定通りなら${maruStr}中心の決着`;
     }
     if(aiTenkaiLine) tenkaiLine=aiTenkaiLine; // AI生成があれば上書き
@@ -2094,7 +2097,8 @@ function computeTenkaiFacts(){
 
   const COURSE_KIMARITE={2:['差し'],3:['差し','まくり','まくり差し'],4:['まくり','まくり差し'],5:['まくり','まくり差し'],6:['まくり差し']};
   const kimariteFacts=[];
-  for(const no of boatsInBets){
+  for(const no of honsen2ndBoats){
+    // 3着候補のみの艇は決まり手実績を渡さない（機械的に含まれてるだけで技を狙って選んだ艇ではないため）
     if(no===maruBoat) continue;
     const valid=COURSE_KIMARITE[no];
     if(!valid) continue;
@@ -2103,14 +2107,8 @@ function computeTenkaiFacts(){
     if(valid.includes('差し')) vals['差し']=raw.sashi6m||0;
     if(valid.includes('まくり')) vals['まくり']=raw.makuri6m||0;
     if(valid.includes('まくり差し')) vals['まくり差し']=raw.makurisashi6m||0;
-    kimariteFacts.push({
-      no,label:label(no),course:no,rank:rankOf(no),
-      重要度:honsen2ndBoats.has(no)?'2着候補(本線・最重要)':'3着候補のみ',
-      決まり手実績:vals
-    });
+    kimariteFacts.push({no,label:label(no),course:no,rank:rankOf(no),決まり手実績:vals});
   }
-  // 重要度順（2着候補を先に）に並べ替え、AIが優先順位を誤解しないようにする
-  kimariteFacts.sort((a,b)=>(a.重要度==='2着候補(本線・最重要)'?0:1)-(b.重要度==='2着候補(本線・最重要)'?0:1));
 
   // 1号艇は軸の時は前提(逃げ)なので言及不要だが、軸でない時は対抗艇の逃げ脅威として扱う
   const boat1IsThreat = maruBoat!==1 && boatsInBets.has(1);
@@ -2162,10 +2160,19 @@ async function generateTenkaiAI(){
 - 4号艇は決まり手の代わりに「カド」という位置呼称で表現してもよい（実例で頻出のため）。
 - 【確定事実】の買い目に入っている艇（boatsInBets）以外の艇には一切言及しない。
   買い目に入っていない艇を褒める/警戒するのは「じゃあなぜ買わないのか」という矛盾になる。
-- 【最重要】facts内の「本線2着候補_最重要」に挙がっている艇は、買い目上もっとも重みが大きい対抗艇。
-  この中の艇を差し置いて、決まり手実績_買い目内のみの「重要度:3着候補のみ」の艇だけを取り上げるのは禁止。
-  2着候補が複数いる場合、最低でも最有力の1艇（決まり手実績が高い方）には必ず触れること。
-  「3着候補のみ」の艇に触れるのは、2着候補に触れた上で余裕がある場合のみ。
+- 【最重要】facts内の「決まり手実績_買い目内のみ」に載っている艇＝「本線2着候補_最重要」に
+  挙がっている艇のみが、決まり手やまくり/差しの実績を語ってよい対象。2着候補が複数いる場合、
+  最低でも最有力の1艇（決まり手実績が高い方）には必ず触れること。
+  それ以外の艇（本線の3着位置にだけ機械的に含まれている艇）には、決まり手やまくり/差しの
+  実績を一切書かない。狙って選んだ艇ではないのに「④の実績も」のように書くと、
+  実際には無い意図があるかのように読者に錯覚させるため厳禁。
+- 【最重要】買い目は軸(軸_1着想定艇)が1着になる前提で組まれている。対抗艇を「相手筆頭」
+  「強敵」とだけ書くと、まるでその艇が軸を負かして1着になる可能性を予想しているかのように
+  読める。しかし実際にその艇が1着を取れば、軸固定の買い目は全滅する。この矛盾を避けるため、
+  対抗艇について書く時は必ず「2着」の話だと分かる形にする（例：「②の2着争いが軽い」
+  「②が2着を脅かす」「2着には②が浮上」）。「①が1着、②が2着で決着」のように、
+  軸が1着であることとセットで書くか、2着という言葉を明示すること。
+  対抗艇の技を評価する文だけを単独で書いて1着の話であるかのように誤読させない。
 - 【最重要】facts内の「軸_1着想定艇」は1着想定の艇。この艇を「追走」「後追い」「〜の後を追う」のように
   他艇より劣後する立場で描写することは絶対禁止。「仕掛け」「追走」等の役割分担を書く場合、
   仕掛ける側・追走する側のどちらに軸を置くかは、軸が最終的に先着する展開と矛盾しないように
@@ -2191,22 +2198,25 @@ async function generateTenkaiAI(){
   「〜とみて期待する」「〜なら〜とみる」のような控えめな言い切りにする。
   "通常想定"の場合は「〜とみた」「〜だ」のようにはっきり言い切ってよい。
 - 荒れ想定かつ複数艇の絡みが複雑な場合、「Aが仕掛けてBが応戦するなら、Cに展開が向く」のような
-  条件連鎖（2段階まで）を使ってもよい。実例では自信度が低いほど連鎖が長くなる傾向がある。
-  ただしfactsに無い因果関係は作らない。
-- 出力は1文、40字以内。体言止めや「〜も」で終える簡潔な予想文体。
+  条件連鎖（2段階まで）を使ってもよい。ただしこの場合も登場する艇は合計2艇までとし、
+  3艇目以降を追加しない。ただしfactsに無い因果関係は作らない。
+- 【最重要】1文に登場させる艇は軸を含めて最大2艇まで。対抗筆頭1艇に絞り、
+  「〜も」「さらに〜も」で3艇目・4艇目を追加で列挙することは禁止。
+  複数の対抗艇に触れたくなっても、決まり手実績が最も高い1艇だけを選ぶこと。
+- 出力は1文、30字以内。体言止めで終える簡潔な予想文体。
 
 【文章の型（この順序・要素を意識すること。全部盛り込む必要はなく、事実がある部分だけでよい）】
-1. 軸が来る根拠（コース位置＋決まり手や位置取りの強み）
-2. 対抗筆頭1艇を軽く（決まり手＋根拠があれば一言）
-3. 複数艇が絡む場合のみ「〜も」で残りを軽く添える
+1. 軸が来る根拠（コース位置＋決まり手や位置取りの強み）。ただし軸が①の場合はこの要素を省略し、
+   いきなり対抗艇の話から始める（①が軸の時に①自身の位置取りを書かないルールと同じ）
+2. 対抗筆頭1艇の「2着」争いの話のみ（決まり手＋根拠があれば一言）。ここで終える。3艇目は追加しない。
 
-【文体の参考（内容ではなく言い回しのトーンだけ真似ること。軸の位置関係は毎回違うので固定しない）】
-・②が握って内側から差す展開
-・軸④が仕掛けて⑤が追走、3着争いは他艇へ
-・展開次第では外枠一気も
-・イン戦で先制、まくり差し鋭い⑤が相手筆頭
-・軸マークから差せそうな②が相手本線、押さえは①の逃げ粘り
-・②が仕掛けて①が抵抗するなら、④のカド差しに期待（荒れ想定・条件連鎖の例）
+【文体の参考（内容ではなく言い回しのトーンだけ真似ること。軸の位置関係は毎回違うので固定しない、
+　対抗艇は必ず2着の文脈で書く）】
+・②が握って内側から2着争い
+・軸④が仕掛け、⑤が2着追走
+・2着はまくり差し鋭い⑤が有力
+・軸マークから2着に浮上しそうな②が相手本線
+・②が仕掛けて①が抵抗するなら、2着は④のカド差しに期待（荒れ想定・条件連鎖の例）
 
 【確定事実】
 ${JSON.stringify(facts,null,2)}
