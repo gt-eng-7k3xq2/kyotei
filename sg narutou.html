@@ -2311,6 +2311,23 @@ function saveResult(resultType){
   const sankakuBoat=ranking[2]?ranking[2].boat:null;
 
   const id=Date.now();
+  // 通常モードにも荒モードと同じ形式でスコア内訳を記録する。
+  // これが無いと「なぜ軸を外したか」を後から診断できないため必須。
+  const scoresDetail=(currentAreScores||[]).map(s=>({
+    n:String(s.no),
+    score:Math.round((s.raw||0)*10)/10,
+    detail:{
+      atk:Math.round((s._atk||0)*10)/10,
+      sashi:Math.round((s._sashi||0)*10)/10,
+      ex:Math.round((s._ex||0)*10)/10,
+      lap:Math.round((s._lap||0)*10)/10,
+      st:Math.round((s._st||0)*10)/10,
+      toku:Math.round((s._toku||0)*10)/10,
+      motor:Math.round((s._motor||0)*10)/10,
+      pen1:s._pen1||0,
+      penF:s._penF||0
+    }
+  }));
   const entry={
     id,
     date:dateStr,
@@ -2326,6 +2343,7 @@ function saveResult(resultType){
     maru:maruBoat,
     shiro:shiroBoat,
     sankaku:sankakuBoat,
+    scores:scoresDetail,
     result:resultType==='skip'?'skip':null, // skip以外は後入力
     chakuju:null,
     payout:0,
