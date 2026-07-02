@@ -2264,12 +2264,18 @@ function resetAiTenkai(){
 }
 
 function copyXSummary(mode){
-  // プレビュー欄(x-summary-preview)はnote用の内容を表示（手動編集可）。
-  // mode='x': 展示/機力/展開/総合分析のみ（買い目なし、noteへ誘導）
-  // mode='note': プレビューの内容（本線・抑え込み・手動編集も反映）をそのままコピー
-  const text = mode==='note'
-    ? (document.getElementById('x-summary-preview')?.value||buildXSummary('note'))
-    : buildXSummary(mode);
+  // プレビュー欄(x-summary-preview)はnote用の内容(見出し＋本線・抑え)を表示。手動編集はどちらのコピーにも反映する。
+  // mode='note': プレビューの内容をそのままコピー
+  // mode='x': プレビューから見出し部分(「本線」より前)だけを抜き出し、買い目の代わりに固定の誘導文を付ける
+  const previewText = document.getElementById('x-summary-preview')?.value || buildXSummary('note');
+  let text;
+  if(mode==='note'){
+    text = previewText;
+  } else {
+    const honsenIdx = previewText.indexOf('\n本線');
+    const headerPart = (honsenIdx>=0 ? previewText.slice(0, honsenIdx) : previewText).replace(/\n+$/,'');
+    text = `${headerPart}\n\n最終予想・買い目はプロフィールから。\n\nG.`;
+  }
   if(!text){showToast('買い目を生成してください');return;}
   const label = mode==='x'?'𝕏 X用':'📝 note用';
   navigator.clipboard.writeText(text).then(()=>{
@@ -2384,6 +2390,7 @@ function writeToV2(entry){
       maru:entry.maru,
       shiro:entry.shiro,
       sankaku:entry.sankaku,
+      scores:entry.scores||[],
       result:'',
       payout:'',
       bets:betsV2,
