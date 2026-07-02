@@ -1748,10 +1748,21 @@ function buildXSummary(mode,withAmount){
   const maruBoat=ranking[0]?.boat;
   const circled=['❶','❷','❸','❹','❺','❻'];
   const maruCircle=maruBoat?circled[maruBoat-1]:'◎';
-  // 選手名から苗字を取得（currentParsedDataから）
-  const maruName=currentParsedData&&maruBoat&&currentParsedData.boats[maruBoat-1]&&currentParsedData.boats[maruBoat-1].name
-    ?currentParsedData.boats[maruBoat-1].name.split(' ')[0]||currentParsedData.boats[maruBoat-1].name
-    :'';
+  // 選手名データはスペース無しのフルネーム（例:菅章哉）で入ってくるため、
+  // 姓・名の区切りを機械的には判定できない。日本人の苗字は2文字が最多のため
+  // 「先頭2文字」を既定の推定苗字とする。1文字苗字(林・森・田 等)は誤る場合があるので
+  // 代表的なものだけ簡易リストで補正する。完全な精度が必要なら選手名鑑データが別途必要。
+  const bd=(no)=>(currentParsedData&&currentParsedData.boats[no-1])||{};
+  const ONE_CHAR_SURNAMES=['林','森','田','原','関','堀','進','辻','沢','岡'];
+  const nm=(no)=>{
+    const n=bd(no).name;
+    if(!n) return '';
+    if(n.includes(' ')) return n.split(' ')[0];
+    if(ONE_CHAR_SURNAMES.includes(n[0])) return n[0];
+    return n.slice(0,2);
+  };
+  const label=(no)=>`${circled[no-1]||no+'号艇'}${nm(no)}`;
+  const maruName=maruBoat?nm(maruBoat):'';
   const maruStr=maruName?maruCircle+maruName:maruCircle;
 
   // 本線/抑えに分類
@@ -1817,20 +1828,6 @@ function buildXSummary(mode,withAmount){
   };
 
   let tenjiLine='', kiryokuLine='', tenkaiLine='';
-  const bd=(no)=>(currentParsedData&&currentParsedData.boats[no-1])||{};
-  // 選手名データはスペース無しのフルネーム（例:菅章哉）で入ってくるため、
-  // 姓・名の区切りを機械的には判定できない。日本人の苗字は2文字が最多のため
-  // 「先頭2文字」を既定の推定苗字とする。1文字苗字(林・森・田 等)は誤る場合があるので
-  // 代表的なものだけ簡易リストで補正する。完全な精度が必要なら選手名鑑データが別途必要。
-  const ONE_CHAR_SURNAMES=['林','森','田','原','関','堀','進','辻','沢','岡'];
-  const nm=(no)=>{
-    const n=bd(no).name;
-    if(!n) return '';
-    if(n.includes(' ')) return n.split(' ')[0];
-    if(ONE_CHAR_SURNAMES.includes(n[0])) return n[0];
-    return n.slice(0,2);
-  };
-  const label=(no)=>`${boatMark(no)}${nm(no)}`;
   // 順位付け（タイム系は小さいほど良い）。0/未取得は最下位扱い。
   const rankByAsc=(getVal)=>{
     const withVal=[1,2,3,4,5,6].map(no=>({no,val:getVal(no)})).filter(x=>x.val>0);
@@ -1863,7 +1860,7 @@ function buildXSummary(mode,withAmount){
     // 差が一番大きい(=突出している)項目を採用
     candidates.sort((a,b)=>b.g-a.g);
     tenjiLine = candidates[0]
-      ? `${label(candidates[0].arr[0].no)}の${candidates[0].word}⚪︎`
+      ? `${label(candidates[0].arr[0].no)}⚪︎`
       : '';
 
     // 機力: モーター2連率（機力＝機関の力の話。周回タイムではない）。
@@ -1872,7 +1869,7 @@ function buildXSummary(mode,withAmount){
       .filter(x=>boatsInBets.has(x.no))
       .sort((a,b)=>b.val-a.val);
     kiryokuLine = motorOrder[0]
-      ? `${label(motorOrder[0].no)}のモーター気配⚪︎`
+      ? `${label(motorOrder[0].no)}⚪︎`
       : '';
 
     // 展開文: 単艇のスコアではなく艇同士の関係性からパターンを判定する
