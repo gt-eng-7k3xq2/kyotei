@@ -577,7 +577,47 @@ function switchTab(name){
 
 
 }
-function setBetCount(n,btn){selectedBetCount=n;document.querySelectorAll('.bc-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
+function setBetCount(n,btn){
+  selectedBetCount=n;
+  document.querySelectorAll('.bc-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  refreshBetsForCount();
+}
+
+// 点数ボタン変更時、印の並び順(currentAreScores)はそのままに買い目だけ再計算する。
+// 印を変える場合(regenerateBets)と違い、editMaru等の選択欄には依存しない。
+function refreshBetsForCount(){
+  if(!currentCalcData||!currentAreScores||!currentAreScores.length) return; // まだ予想実行前なら何もしない
+  const marks=['◎','○','▲','△','▽','×'];
+  const ranking=currentAreScores.map((s,i)=>({rank:i+1,boat:parseInt(s.no),mark:marks[i]||'×',score:s.raw}));
+  const nigeRate=currentCalcData.nigeRate||0;
+  const newBets=currentCalcData.mode==='are'
+    ?buildBetsAre(ranking,selectedBetCount,nigeRate)
+    :buildBetsNormal(ranking,selectedBetCount,currentParsedData);
+
+  currentCalcData.ranking=ranking;
+  currentCalcData.betsRaw=newBets;
+  currentCalcData.betcount=newBets.length;
+  currentCalcData.maru=ranking[0]?.boat;
+  currentCalcData.shiro=ranking[1]?.boat;
+  currentCalcData.sankaku=ranking[2]?.boat;
+
+  const tbody=document.getElementById('bet-tbody');
+  if(tbody){
+    const shikin=currentCalcData.shikin||3000;
+    tbody.innerHTML=newBets.map(function(b){
+      return`<tr><td>${b.val}</td><td>${b.type}</td><td><input class="odds-inp" type="number" step="0.1" min="1" placeholder="—" style="width:60px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px;font-size:12px;"></td><td><input class="conf-inp" type="range" min="1" max="5" value="3" style="width:50px;"></td><td class="amt-cell" style="text-align:right;">¥${Math.floor(shikin/newBets.length/100)*100}</td><td class="ret-cell" style="text-align:right;">—</td></tr>`;
+    }).join('');
+  }
+
+  updateXPreview();
+  updateThumbCard();
+  const venueVal=(document.getElementById('inp-venue')||{}).value||'';
+  const racenumVal=(document.getElementById('inp-racenum')||{}).value||'';
+  renderEvalCard('',venueVal,racenumVal);
+  recalcAlloc();
+  showToast(selectedBetCount+'点構成に更新しました');
+}
 
 // ============================================================
 // データパース（競艇日和テキスト → 構造化）
