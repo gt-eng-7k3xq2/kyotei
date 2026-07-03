@@ -1730,36 +1730,49 @@ function clearYoso(){
 function compressBetsSG(bets){
   const vals=bets.map(b=>typeof b==='string'?b:b.val);
   if(!vals.length) return '';
-  // Step1: 1着-2着固定で3着をグループ化
-  const g12={},order12=[];
+  const valSet=new Set(vals);
+  const used=new Set();
+  const swapResults=[];
+
+  // ステップ1: 1着・2着の入れ替えペアを検出（例: 2-3-5 と 3-2-5 → "2=3-5"）
   for(const v of vals){
+    if(used.has(v)) continue;
+    const p=v.split('-');
+    if(p.length!==3) continue;
+    const a=p[0],b=p[1],c=p[2];
+    const swapped=b+'-'+a+'-'+c;
+    if(a!==b && valSet.has(swapped) && !used.has(swapped)){
+      used.add(v);used.add(swapped);
+      const parts=parseInt(a)<parseInt(b)?[a,b]:[b,a];
+      swapResults.push(parts[0]+'='+parts[1]+'-'+c);
+    }
+  }
+  // ステップ2: 残りから2着・3着の入れ替えペアを検出（例: 3-4-6 と 3-6-4 → "3-4=6"）
+  for(const v of vals){
+    if(used.has(v)) continue;
+    const p=v.split('-');
+    if(p.length!==3) continue;
+    const a=p[0],b=p[1],c=p[2];
+    const swapped=a+'-'+c+'-'+b;
+    if(b!==c && valSet.has(swapped) && !used.has(swapped)){
+      used.add(v);used.add(swapped);
+      const parts=parseInt(b)<parseInt(c)?[b,c]:[c,b];
+      swapResults.push(a+'-'+parts[0]+'='+parts[1]);
+    }
+  }
+
+  // ステップ3: 残りは1着-2着固定で3着をグループ化して個別表示
+  const remaining=vals.filter(v=>!used.has(v));
+  const g12={},order12=[];
+  for(const v of remaining){
     const p=v.split('-');if(p.length!==3)continue;
     const key=p[0]+'-'+p[1];
     if(!g12[key]){g12[key]=[];order12.push(key);}
     if(!g12[key].includes(p[2]))g12[key].push(p[2]);
   }
-  // Step2: 1着でまとめて対称チェック（2着セット==3着セットなら f-SS-TT）
-  const g1={},order1=[];
-  for(const key of order12){
-    const[f,s]=key.split('-');
-    if(!g1[f]){g1[f]={sl:[],tm:{}};order1.push(f);}
-    g1[f].sl.push(s);
-    g1[f].tm[s]=g12[key].slice().sort((a,b)=>parseInt(a)-parseInt(b));
-  }
-  const res=[];
-  for(const f of order1){
-    const{sl,tm}=g1[f];
-    const allS=sl.slice().sort((a,b)=>parseInt(a)-parseInt(b));
-    const allT=[...new Set(sl.flatMap(s=>tm[s]))].sort((a,b)=>parseInt(a)-parseInt(b));
-    const sSet=new Set(allS),tSet=new Set(allT);
-    const symmetric=sSet.size===tSet.size&&[...sSet].every(x=>tSet.has(x));
-    if(symmetric){
-      res.push(f+'-'+allS.join('')+'-'+allT.join(''));
-    }else{
-      for(const s of sl) res.push(f+'-'+s+'-'+tm[s].join(''));
-    }
-  }
-  return res.join('/');
+  const res=order12.map(key=>key+'-'+g12[key].sort((a,b)=>parseInt(a)-parseInt(b)).join(''));
+
+  return [...swapResults, ...res].join('/');
 }
 
 function buildXSummary(mode,withAmount){
