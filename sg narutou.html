@@ -1063,7 +1063,7 @@ function calcAreScore(d){
     const _toku=isEarlyRace?
       (tokuMax>tokuMin?(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*10:0):
       (tokuMax>tokuMin?(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*25:0);
-    const _atk=ren/cr2Max*renWeight;
+    const _atk=renMax>0?ren/renMax*renWeight:0;
     const _exScore=(exMax-b.exhibitFootRank)/exMax*14;
     return{no:b.no, raw:s, tenji:b.tenji, syukai:b.syukai,
       _atk:_atk,
