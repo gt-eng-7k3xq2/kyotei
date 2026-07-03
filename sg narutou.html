@@ -224,7 +224,7 @@
           <button class="bc-btn" onclick="setBetCount(6,this)">6</button>
           <button class="bc-btn" onclick="setBetCount(8,this)">8</button>
           <button class="bc-btn active" onclick="setBetCount(12,this)">12</button>
-          <button class="bc-btn" onclick="setBetCount(13,this)">13</button>
+          <button class="bc-btn" onclick="setBetCount(14,this)">14</button>
           <button class="bc-btn" onclick="setBetCount(16,this)">16</button>
         </div>
       </div>
@@ -1424,64 +1424,58 @@ function buildBetsNormal(ranking, pts, parsedData){
 }
 
 function buildBetsAre(ranking, pts, nigeRate){
-  // 荒れエンジン(kyotei_are.html)のmakeAreBets準拠
+  // 荒れエンジン: 実ログ分析(2026-07-03)に基づく再設計版。
+  // ◎が1着に来る確率31.1%、○が1着に来る確率16.4%（比率約2:1）。
+  // ◎単独固定ではなく◎○を軸候補として折り返し、実績比に応じて◎を厚く○を薄く配分する。
   if(ranking.length<5) return [];
   const m = String(ranking[0].boat); // ◎
   const s = String(ranking[1].boat); // ○
   const sa= String(ranking[2].boat); // ▲
   const yo= String(ranking[3].boat); // △
   const go= String(ranking[4].boat); // ▽
+  const roku = ranking[5]?String(ranking[5].boat):null; // ×
 
-  // 逃げ率65%未満かつ1号艇が◎○▲△▽に入っていない場合は1号艇を2着に入れる
-  const use1 = (nigeRate < 65)
-    && m!=='1' && s!=='1' && sa!=='1' && yo!=='1' && go!=='1';
-
-  let honsen, osaee;
-  if(use1){
-    honsen = [
-      m+'-'+s+'-1',   // ◎-○-1
-      m+'-'+s+'-'+sa, // ◎-○-▲
-      m+'-1-'+s,      // ◎-1-○
-      m+'-1-'+sa,     // ◎-1-▲
-      m+'-'+sa+'-'+s, // ◎-▲-○
-      m+'-'+sa+'-1',  // ◎-▲-1
-      m+'-'+s+'-'+go, // ◎-○-▽
-    ];
-    osaee = [
-      s+'-'+m+'-1',   // ○-◎-1
-      s+'-'+m+'-'+sa, // ○-◎-▲
-      sa+'-'+m+'-'+s, // ▲-◎-○
-      sa+'-'+s+'-'+m, // ▲-○-◎
-      yo+'-'+m+'-'+s, // △-◎-○
-      yo+'-'+s+'-'+m, // △-○-◎
-    ];
-  } else {
-    honsen = [
-      m+'-'+s+'-'+sa,  // ◎-○-▲
-      m+'-'+s+'-'+yo,  // ◎-○-△
-      m+'-'+sa+'-'+s,  // ◎-▲-○
-      m+'-'+sa+'-'+yo, // ◎-▲-△
-      m+'-'+yo+'-'+s,  // ◎-△-○
-      m+'-'+yo+'-'+sa, // ◎-△-▲
-      m+'-'+s+'-'+go,  // ◎-○-▽
-    ];
-    osaee = [
-      s+'-'+m+'-'+sa,  // ○-◎-▲
-      s+'-'+m+'-'+yo,  // ○-◎-△
-      sa+'-'+m+'-'+s,  // ▲-◎-○
-      sa+'-'+s+'-'+m,  // ▲-○-◎
-      yo+'-'+m+'-'+s,  // △-◎-○
-      yo+'-'+s+'-'+m,  // △-○-◎
-    ];
+  // 優先度付きリスト（priority昇順=優先度高い順）。ptsで上から切り出す。
+  // ①◎-○=▲△×(折り返し) 6点 → ②○-◎=▲△(折り返し) 4点 → ③◎-▲=△(折り返し) 2点
+  // ①②=本線(◎○が絡む主力)、③=抑え(◎▲の保険)として扱う。
+  const cands = [];
+  let p = 0;
+  // ①◎-○=▲△×: ◎-○-{▲△×} と ◎-{▲△×}-○
+  for(const c of [sa, yo, roku]){
+    if(!c) continue;
+    cands.push({val:`${m}-${s}-${c}`, p:p++, group:'本線'});
+  }
+  for(const c of [sa, yo, roku]){
+    if(!c) continue;
+    cands.push({val:`${m}-${c}-${s}`, p:p++, group:'本線'});
+  }
+  // ②○-◎=▲△(×): ○-◎-{▲△(×)} と ○-{▲△(×)}-◎。14点構成では×も含めて広げる。
+  const set2 = pts>=13 ? [sa, yo, roku] : [sa, yo];
+  for(const c of set2){
+    if(!c) continue;
+    cands.push({val:`${s}-${m}-${c}`, p:p++, group:'本線'});
+  }
+  for(const c of set2){
+    if(!c) continue;
+    cands.push({val:`${s}-${c}-${m}`, p:p++, group:'本線'});
+  }
+  // ③◎-▲=△(▽): ◎-▲-△(▽) と ◎-△(▽)-▲（保険枠）。16点構成では▽も含めて広げる。
+  const set3 = pts>=15 ? [yo, go] : [yo];
+  for(const c of set3){
+    cands.push({val:`${m}-${sa}-${c}`, p:p++, group:'抑え'});
+  }
+  for(const c of set3){
+    cands.push({val:`${m}-${c}-${sa}`, p:p++, group:'抑え'});
   }
 
-  // 重複除去して点数分返す
-  const seen=new Set(), bets=[];
-  const all=[...honsen.map(v=>({val:v,type:'本線'})),...osaee.map(v=>({val:v,type:'抑え'}))];
-  for(const b of all){
-    if(bets.length>=pts) break;
-    if(!seen.has(b.val)){seen.add(b.val);bets.push(b);}
+  // 重複除去して優先度順にpts分だけ採用
+  const seen=new Set(), picked=[];
+  for(const c of cands){
+    if(picked.length>=pts) break;
+    if(!seen.has(c.val)){seen.add(c.val);picked.push(c);}
   }
+  // 本線/抑えの分類: グループタグをそのまま使う
+  const bets = picked.map(c=>({val:c.val, type:c.group}));
   return bets;
 }
 
