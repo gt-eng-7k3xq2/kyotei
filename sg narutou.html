@@ -1480,17 +1480,18 @@ function buildBetsAre(ranking, pts, nigeRate){
   // ①②=本線(◎○が絡む主力)、③=抑え(◎▲の保険)として扱う。
   const cands = [];
   let p = 0;
-  // ①◎-○=▲△×: ◎-○-{▲△×} と ◎-{▲△×}-○
-  for(const c of [sa, yo, roku]){
+  // ①◎-○=▲△×(▽): ◎-○-{▲△×(▽)} と ◎-{▲△×(▽)}-○。14点構成では▽も含めて広げる。
+  const set1 = pts>=14 ? [sa, yo, roku, go] : [sa, yo, roku];
+  for(const c of set1){
     if(!c) continue;
     cands.push({val:`${m}-${s}-${c}`, p:p++, group:'本線'});
   }
-  for(const c of [sa, yo, roku]){
+  for(const c of set1){
     if(!c) continue;
     cands.push({val:`${m}-${c}-${s}`, p:p++, group:'本線'});
   }
-  // ②○-◎=▲△(×): ○-◎-{▲△(×)} と ○-{▲△(×)}-◎。14点構成では×も含めて広げる。
-  const set2 = pts>=13 ? [sa, yo, roku] : [sa, yo];
+  // ②○-◎=▲△: ○-◎-{▲△} と ○-{▲△}-◎
+  const set2 = [sa, yo];
   for(const c of set2){
     if(!c) continue;
     cands.push({val:`${s}-${m}-${c}`, p:p++, group:'本線'});
