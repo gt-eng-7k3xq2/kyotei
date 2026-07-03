@@ -1734,20 +1734,35 @@ function compressBetsSG(bets){
   const used=new Set();
   const swapResults=[];
 
-  // ステップ1: 1着・2着の入れ替えペアを検出（例: 2-3-5 と 3-2-5 → "2=3-5"）
+  // ステップ1: 1着・2着の入れ替えペアを検出し、同じペアで3着違いが複数あればまとめる
+  // 例: 1-3-6&3-1-6 と 1-3-2&3-2-1 → どちらも(1,3)ペアなら "1=3-62" に統合
+  const pair12Map={}; // key: "小-大" → 3着の配列
   for(const v of vals){
-    if(used.has(v)) continue;
     const p=v.split('-');
     if(p.length!==3) continue;
     const a=p[0],b=p[1],c=p[2];
+    if(a===b) continue;
     const swapped=b+'-'+a+'-'+c;
-    if(a!==b && valSet.has(swapped) && !used.has(swapped)){
-      used.add(v);used.add(swapped);
-      const parts=parseInt(a)<parseInt(b)?[a,b]:[b,a];
-      swapResults.push(parts[0]+'='+parts[1]+'-'+c);
+    if(!valSet.has(swapped)) continue;
+    const key=(parseInt(a)<parseInt(b)?a+'-'+b:b+'-'+a);
+    if(!pair12Map[key]) pair12Map[key]=[];
+    if(!pair12Map[key].includes(c)) pair12Map[key].push(c);
+  }
+  for(const key in pair12Map){
+    const[small,large]=key.split('-');
+    const cs=pair12Map[key];
+    // このペアに属する全組み合わせを使用済みにする
+    let anyUsed=false;
+    for(const c of cs){
+      const v1=small+'-'+large+'-'+c, v2=large+'-'+small+'-'+c;
+      if(valSet.has(v1)&&valSet.has(v2)){used.add(v1);used.add(v2);anyUsed=true;}
+    }
+    if(anyUsed){
+      swapResults.push(small+'='+large+'-'+cs.sort((a,b)=>parseInt(a)-parseInt(b)).join(''));
     }
   }
-  // ステップ2: 残りから2着・3着の入れ替えペアを検出（例: 3-4-6 と 3-6-4 → "3-4=6"）
+
+  // ステップ2: 残りから2着・3着の入れ替えペアを検出（1着固定、単純ペア）
   for(const v of vals){
     if(used.has(v)) continue;
     const p=v.split('-');
