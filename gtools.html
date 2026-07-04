@@ -196,6 +196,7 @@ html,body{min-height:100vh;background:#04040c;}
   <div id="analysis-daily-list"></div>
   <div class="card"><div class="section-title">ハズレパターン分布</div><div id="miss-bars"></div></div>
   <div class="card"><div class="section-title">改修インサイト</div><div id="insight-area"><div class="empty-state"><div class="icon">📊</div>10レース以上記録すると表示されます</div></div></div>
+  <div class="card"><div class="section-title">軸ミス時のスコア診断</div><div id="score-diagnosis"><div class="empty-state"><div class="icon">🔬</div>詳細スコア付きの軸ミスが貯まると表示されます</div></div></div>
   <div class="card"><div class="section-title">バージョン別的中率</div><div id="ver-stats"><div style="font-size:12px;color:var(--text2);text-align:center;padding:10px 0;">記録が増えると表示されます</div></div></div>
   <div class="card"><div class="section-title">場別的中率</div><div id="venue-stats"><div style="font-size:12px;color:var(--text2);text-align:center;padding:10px 0;">記録が増えると表示されます</div></div></div>
 </div>
@@ -368,6 +369,11 @@ function switchPage(p){
     var pd=document.getElementById('post-date');if(pd)pd.value=today;
   }
 }
+// スコアエンジンのバージョン。sg_narutou.html/kyotei_backtest.htmlと揃えて管理する。
+// 変更履歴:
+// v1 (〜2026-07-04): 初期版。差し・まくり実績スコア max8pt
+// v2 (2026-07-04〜): 差し・まくり実績スコアを8pt→12ptに引き上げ
+const SCORE_ENGINE_VERSION=2;
 function getLogs(){try{return JSON.parse(localStorage.getItem('kyotei_v2')||'[]');}catch{return[];}}
 function saveLogs(logs){localStorage.setItem('kyotei_v2',JSON.stringify(logs));}
 
@@ -609,6 +615,84 @@ function renderAnalysis(){
   const verEl=document.getElementById('ver-stats');
   if(analysisDFilter!=='all'){verEl.closest('.card').style.display='none';}else{verEl.closest('.card').style.display='';const verMap={};logs.forEach(l=>{const v=l.ver||'不明';if(!verMap[v])verMap[v]={total:0,hit:0};verMap[v].total++;if((l.miss||[]).includes('hit'))verMap[v].hit++;});const vers=Object.entries(verMap).sort((a,b)=>b[0].localeCompare(a[0]));verEl.innerHTML=vers.length?vers.map(([v,d])=>{const pct=Math.round(d.hit/d.total*100);return `<div class="bar-row"><div class="bar-label"><span>${v}</span><span>${d.hit}/${d.total}（${pct}%）</span></div><div class="bar-track"><div class="bar-fill blue" style="width:${pct}%"></div></div></div>`;}).join(''):'<div style="font-size:12px;color:var(--text2);text-align:center;padding:10px 0;">記録が増えると表示されます</div>';}
   const venueEl=document.getElementById('venue-stats'),venueMap={};logs.forEach(l=>{if(!l.venue)return;if(!venueMap[l.venue])venueMap[l.venue]={total:0,hit:0};venueMap[l.venue].total++;if((l.miss||[]).includes('hit'))venueMap[l.venue].hit++;});const venues=Object.entries(venueMap).filter(([,v])=>v.total>=2).sort((a,b)=>b[1].total-a[1].total);venueEl.innerHTML=venues.length?venues.map(([v,d])=>{const pct=Math.round(d.hit/d.total*100);return `<div class="bar-row"><div class="bar-label"><span>${v}</span><span>${d.hit}/${d.total}（${pct}%）</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div></div>`;}).join(''):'<div style="font-size:12px;color:var(--text2);text-align:center;padding:10px 0;">2レース以上記録した場が表示されます</div>';
+  renderScoreDiagnosis(logs);
+}
+
+// 軸ミス時、実際の1着艇が各スコア項目で軸を上回っていた頻度を診断する。
+// 「なぜ軸を外したか」を勘ではなくデータで特定するための機能。
+function renderScoreDiagnosis(logs){
+  const el=document.getElementById('score-diagnosis');
+  if(!el) return;
+  const fields=[
+    {key:'atk',label:'攻め(2連対率)'},
+    {key:'sashi',label:'差し・まくり実績'},
+    {key:'ex',label:'展示'},
+    {key:'lap',label:'周回'},
+    {key:'st',label:'ST'},
+    {key:'toku',label:'今節得点率'},
+    {key:'motor',label:'モーター'}
+  ];
+  // バージョン別の件数内訳（scoreVersionが無い古いログはv1扱い）
+  const verCounts={};
+  logs.forEach(l=>{const v=l.scoreVersion||1;verCounts[v]=(verCounts[v]||0)+1;});
+  const verSummary=Object.keys(verCounts).sort((a,b)=>a-b).map(v=>`v${v}: ${verCounts[v]}件`).join(' / ');
+  const verNote=`<div style="font-size:10px;color:var(--text2);margin-bottom:8px;">全ログのバージョン内訳: ${verSummary||'なし'}｜診断対象: v${SCORE_ENGINE_VERSION}のみ</div>`;
+
+  const versionLogs=logs.filter(l=>(l.scoreVersion||1)===SCORE_ENGINE_VERSION);
+  const ichakuWithDetail=versionLogs.filter(l=>{
+    if(!(l.miss||[]).includes('ichaku')) return false;
+    if(!l.scores||!l.scores.length) return false;
+    return l.scores.some(s=>s.detail);
+  });
+  if(ichakuWithDetail.length<10){
+    el.innerHTML=verNote+`<div class="empty-state"><div class="icon">🔬</div>v${SCORE_ENGINE_VERSION}で詳細スコア付きの軸ミスが${ichakuWithDetail.length}件あります。10件以上で診断表示されます</div>`;
+    return;
+  }
+  const wins={},diffSum={},diffCount={};
+  fields.forEach(f=>{wins[f.key]=0;diffSum[f.key]=0;diffCount[f.key]=0;});
+  let comparisons=0;
+  ichakuWithDetail.forEach(l=>{
+    if(!l.result) return;
+    const resultBoat=String(l.result).split('-')[0];
+    const maru=String(l.maru);
+    const scoreMap={};
+    l.scores.forEach(s=>{scoreMap[String(s.n)]=s.detail||{};});
+    if(!scoreMap[resultBoat]||!scoreMap[maru]) return;
+    comparisons++;
+    fields.forEach(f=>{
+      const wv=scoreMap[resultBoat][f.key]||0;
+      const mv=scoreMap[maru][f.key]||0;
+      diffSum[f.key]+=(wv-mv);
+      diffCount[f.key]++;
+      if(wv>mv) wins[f.key]++;
+    });
+  });
+  if(comparisons<10){
+    el.innerHTML=verNote+`<div class="empty-state"><div class="icon">🔬</div>比較可能件数が${comparisons}件です。10件以上で診断表示されます</div>`;
+    return;
+  }
+  const rows=fields.map(f=>{
+    const pct=Math.round(wins[f.key]/comparisons*100);
+    const avg=diffCount[f.key]?(diffSum[f.key]/diffCount[f.key]):0;
+    const barColor=pct>=25?'var(--red)':pct>=15?'var(--gold)':'var(--text2)';
+    return `<div class="bar-row"><div class="bar-label"><span>${f.label}</span><span>${wins[f.key]}/${comparisons}件（${pct}%）平均差${avg>=0?'+':''}${avg.toFixed(1)}</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${barColor};"></div></div></div>`;
+  }).join('');
+  const sorted=fields.slice().sort((a,b)=>wins[b.key]-wins[a.key]);
+  const top=sorted[0];
+  const topPct=Math.round(wins[top.key]/comparisons*100);
+  const note = comparisons<33
+    ? `※ n=${comparisons}件。傾向は見えていますが確定には60〜80件が目安です。`
+    : `※ n=${comparisons}件。傾向として信頼できる量になってきています。`;
+  el.innerHTML=verNote+`
+    <div style="font-size:11px;color:var(--text2);margin-bottom:10px;">
+      軸ミス時、実際の1着艇が各項目で軸を上回っていた割合（n=${comparisons}）
+    </div>
+    ${rows}
+    <div class="insight-box" style="margin-top:10px;">
+      <div class="insight-label">最も軸を上回りやすい項目: ${top.label}（${topPct}%）</div>
+      <p>${top.label}の重みを見直す価値がある可能性があります。${note}</p>
+    </div>
+  `;
 }
 function parsePayout(p){if(!p)return 0;return parseInt((p+'').replace(/[¥￥,\s]/g,''))||0;}
 function selectHonsen(el){document.querySelectorAll('#honsen-selector .unit-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');honsenUnit=parseInt(el.dataset.val);localStorage.setItem('kyotei_honsenUnit',honsenUnit);}
