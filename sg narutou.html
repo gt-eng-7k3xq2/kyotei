@@ -422,6 +422,20 @@ let selectedRaceType='sg'; // 'ippan','g2g3','g1','sg'
 let currentCalcData=null;
 let currentParsedData=null; // パース済みデータ保持
 let currentAreScores=null; // スコア保持
+
+// ============================================================
+// スコアエンジン バージョン管理
+// calcAreScoreの重み配分を変更するたびに番号を上げ、ログに記録する。
+// これにより「どのバージョンのロジックで計算されたログか」を後から判別でき、
+// 重み調整の効果検証で新旧を混同しないようにする。
+//
+// 変更履歴:
+// v1 (〜2026-07-04): 初期版。差し・まくり実績スコア max8pt
+// v2 (2026-07-04〜): バックテストn=47で軸ミス時に実際の1着艇が
+//                    差し・まくり実績で軸を上回る頻度が53%と最多だったため
+//                    差し・まくり実績スコアを8pt→12ptに引き上げ
+// ============================================================
+const SCORE_ENGINE_VERSION=2;
 let aiTenkaiLine=null; // AIで生成した展開コメント（あればルールベースより優先）
 let aiTenkaiLoading=false;
 
@@ -2487,6 +2501,7 @@ function saveResult(resultType){
     shiro:shiroBoat,
     sankaku:sankakuBoat,
     scores:scoresDetail,
+    scoreVersion:SCORE_ENGINE_VERSION,
     result:resultType==='skip'?'skip':null, // skip以外は後入力
     chakuju:null,
     payout:0,
@@ -2531,6 +2546,7 @@ function writeToV2(entry){
       shiro:entry.shiro,
       sankaku:entry.sankaku,
       scores:entry.scores||[],
+      scoreVersion:entry.scoreVersion,
       result:'',
       payout:'',
       bets:betsV2,

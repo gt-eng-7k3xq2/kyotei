@@ -114,6 +114,11 @@ textarea{resize:vertical;}
 <script>
 // buildBetsNormal内部が参照するグローバル変数（本体ツールと同じ構造を再現）
 let currentParsedData=null;
+// スコアエンジンのバージョン。sg_narutou.html本体と揃えて管理する。
+// 変更履歴:
+// v1 (〜2026-07-04): 初期版。差し・まくり実績スコア max8pt
+// v2 (2026-07-04〜): 差し・まくり実績スコアを8pt→12ptに引き上げ
+const SCORE_ENGINE_VERSION=2;
 let selectedNigeMode='auto';
 let selectedRaceType='ippan'; // 'ippan','g2g3','g1','sg'（既定は一般戦。レースごとにUIから変更）
 
@@ -1238,6 +1243,7 @@ function runAll(){
         shiro:shiroBoat,
         sankaku:sankakuBoat,
         scores:scoresDetail,
+        scoreVersion:SCORE_ENGINE_VERSION,
         chakuju:resultStr,
         payout:payoutStr,
         miss
@@ -1290,9 +1296,19 @@ function renderScoreDiagnosis(){
     {key:'toku',label:'今節得点率'},
     {key:'motor',label:'モーター'}
   ];
-  const ichakuWithDetail=logs.filter(l=>l.miss==='ichaku'&&l.scores&&l.scores.some(s=>s.detail));
+  // バージョン別の件数内訳（scoreVersionが無い古いログはv1扱い）
+  const verCounts={};
+  logs.forEach(l=>{const v=l.scoreVersion||1;verCounts[v]=(verCounts[v]||0)+1;});
+  const verSummary=Object.keys(verCounts).sort((a,b)=>a-b)
+    .map(v=>`v${v}: ${verCounts[v]}件`).join(' / ');
+
+  // 診断は「最新バージョン」のログのみを対象にする（重みが違うバージョンを混ぜると診断がブレるため）
+  const targetVersion=SCORE_ENGINE_VERSION;
+  const versionLogs=logs.filter(l=>(l.scoreVersion||1)===targetVersion);
+  const ichakuWithDetail=versionLogs.filter(l=>l.miss==='ichaku'&&l.scores&&l.scores.some(s=>s.detail));
+  const verNote=`<div style="font-size:10px;color:var(--text2);margin-bottom:8px;">全ログのバージョン内訳: ${verSummary}｜診断対象: v${targetVersion}のみ</div>`;
   if(ichakuWithDetail.length<10){
-    el.innerHTML=`<div class="empty-state">詳細スコア付きの軸ミスが${ichakuWithDetail.length}件あります。10件以上で診断表示されます</div>`;
+    el.innerHTML=verNote+`<div class="empty-state">v${targetVersion}で詳細スコア付きの軸ミスが${ichakuWithDetail.length}件あります。10件以上で診断表示されます</div>`;
     return;
   }
   const wins={},diffSum={},diffCount={};
@@ -1314,7 +1330,7 @@ function renderScoreDiagnosis(){
     });
   });
   if(comparisons<10){
-    el.innerHTML=`<div class="empty-state">比較可能件数が${comparisons}件です。10件以上で診断表示されます</div>`;
+    el.innerHTML=verNote+`<div class="empty-state">比較可能件数が${comparisons}件です。10件以上で診断表示されます</div>`;
     return;
   }
   const rows=fields.map(f=>{
@@ -1325,7 +1341,7 @@ function renderScoreDiagnosis(){
   const sorted=fields.slice().sort((a,b)=>wins[b.key]-wins[a.key]);
   const top=sorted[0];
   const topPct=Math.round(wins[top.key]/comparisons*100);
-  el.innerHTML=`
+  el.innerHTML=verNote+`
     <div style="font-size:11px;color:var(--text2);margin-bottom:10px;">軸ミス時、実際の1着艇が各項目で軸を上回っていた割合（n=${comparisons}）</div>
     ${rows}
     <div style="margin-top:10px;padding:10px;background:rgba(201,168,76,0.08);border-radius:8px;">
