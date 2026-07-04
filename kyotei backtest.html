@@ -54,12 +54,26 @@ textarea{resize:vertical;}
     各レースのデータの間に区切り行として <code style="color:var(--gold);">###</code> を1行入れて貼ってください。
     自動でレースごとに分割して下の欄に追加します。
   </p>
+  <div class="btn-row" style="margin-bottom:8px;">
+    <select id="bulk-default-pts" style="flex:1;">
+      <option value="4">4点</option><option value="6">6点</option><option value="8">8点</option>
+      <option value="12" selected>12点</option><option value="14">14点</option><option value="16">16点</option>
+    </select>
+    <select id="bulk-default-rtype" style="flex:1;">
+      <option value="ippan" selected>一般戦</option>
+      <option value="g2g3">G2/G3</option>
+      <option value="g1">G1</option>
+      <option value="sg">SG</option>
+    </select>
+  </div>
+  <p style="font-size:10px;color:var(--text2);margin-bottom:8px;">↑ここで選んだ点数・種別が、分割で新規追加されるレースの初期値になります</p>
   <textarea id="bulk-paste" rows="6" placeholder="1レース目のデータ
 ###
 2レース目のデータ
 ###
 3レース目のデータ"></textarea>
   <button class="btn" style="width:100%;margin-top:8px;" onclick="splitBulkPaste()">🔀 分割して追加</button>
+  <button class="btn" style="width:100%;margin-top:8px;" onclick="applyPtsToAll()">📐 既存の全レースにこの点数・種別を一括適用</button>
 </div>
 
 <div class="card">
@@ -201,6 +215,10 @@ function parseData(text){
   if(raceMeta){
     d.venue=raceMeta[1].trim();
     d.raceNum=raceMeta[2].trim();
+    if(raceMeta[3]){
+      const ds=raceMeta[3].trim();
+      if(ds.length===8) d.raceDate=ds.slice(0,4)+'-'+ds.slice(4,6)+'-'+ds.slice(6,8);
+    }
     if(raceMeta[4]) d.shimekiri=raceMeta[4].trim();
   }
 
@@ -558,7 +576,7 @@ function calcAreScore(d){
     const sashiAtkVals=boats.map(x=>(x.sashi6m||0)+(x.makuri6m||0)+(x.makurisashi6m||0)*0.4);
     const sashiAtkMax=Math.max(...sashiAtkVals)||1;
     const bSashiAtk=(b.sashi6m||0)+(b.makuri6m||0)+(b.makurisashi6m||0)*0.4;
-    if(sashiAtkMax>0) s+=bSashiAtk/sashiAtkMax*8;
+    if(sashiAtkMax>0) s+=bSashiAtk/sashiAtkMax*12;
 
     // ⑧ モーター2連対率 max10pt
     if(motorMax>0) s+=(b.motor2ren||0)/motorMax*10;
@@ -588,7 +606,7 @@ function calcAreScore(d){
     const _exScore=(exMax-b.exhibitFootRank)/exMax*14;
     return{no:b.no, raw:s, tenji:b.tenji, syukai:b.syukai,
       _atk:_atk,
-      _sashi:bSashiAtk/sashiAtkMax*8,
+      _sashi:bSashiAtk/sashiAtkMax*12,
       _ex:_exScore,
       _lap:(b.lapRank>=0?(5-b.lapRank)*2.8:0),
       _st:stPt,
@@ -1028,6 +1046,11 @@ function addEntry(prefillData){
       if(tmp.venue||tmp.raceNum) label=`${tmp.venue||''}${tmp.raceNum||''}`;
     }catch(e){}
   }
+  // 一括貼り付け欄で選ばれてる点数・種別を新規レースの初期値にする
+  const defaultPts=(document.getElementById('bulk-default-pts')||{}).value||'12';
+  const defaultRtype=(document.getElementById('bulk-default-rtype')||{}).value||'ippan';
+  const ptsOptions=['4','6','8','12','14','16'].map(v=>`<option value="${v}"${v===defaultPts?' selected':''}>${v}点</option>`).join('');
+  const rtypeOptions=[['ippan','一般戦'],['g2g3','G2/G3'],['g1','G1'],['sg','SG']].map(([v,l])=>`<option value="${v}"${v===defaultRtype?' selected':''}>${l}</option>`).join('');
   const wrap=document.createElement('div');
   wrap.className='entry-card';
   wrap.id='entry-'+id;
@@ -1039,20 +1062,32 @@ function addEntry(prefillData){
     <textarea id="data-${id}" rows="4" placeholder="競艇日和データを貼り付け">${prefillData?prefillData.replace(/</g,'&lt;'):''}</textarea>
     <div class="btn-row" style="margin-top:8px;">
       <input id="result-${id}" type="text" placeholder="結果 例: 3-1-5">
-      <select id="pts-${id}" style="width:80px;">
-        <option value="4">4点</option><option value="6">6点</option><option value="8">8点</option>
-        <option value="12" selected>12点</option><option value="14">14点</option><option value="16">16点</option>
-      </select>
-      <select id="rtype-${id}" style="width:90px;">
-        <option value="ippan" selected>一般戦</option>
-        <option value="g2g3">G2/G3</option>
-        <option value="g1">G1</option>
-        <option value="sg">SG</option>
-      </select>
+      <input id="payout-${id}" type="text" placeholder="配当 例: ¥1,200" style="width:110px;">
+    </div>
+    <div class="btn-row" style="margin-top:8px;">
+      <select id="pts-${id}" style="width:80px;">${ptsOptions}</select>
+      <select id="rtype-${id}" style="width:90px;">${rtypeOptions}</select>
     </div>
     <div class="status-line" id="status-${id}"></div>
   `;
   document.getElementById('entries').appendChild(wrap);
+}
+
+function applyPtsToAll(){
+  const pts=(document.getElementById('bulk-default-pts')||{}).value||'12';
+  const rtype=(document.getElementById('bulk-default-rtype')||{}).value||'ippan';
+  const entries=document.querySelectorAll('#entries > div');
+  let count=0;
+  entries.forEach(entryEl=>{
+    const idMatch=entryEl.id.match(/entry-(\d+)/);
+    if(!idMatch) return;
+    const id=idMatch[1];
+    const ptsEl=document.getElementById('pts-'+id);
+    const rtypeEl=document.getElementById('rtype-'+id);
+    if(ptsEl){ptsEl.value=pts;count++;}
+    if(rtypeEl){rtypeEl.value=rtype;}
+  });
+  showToast(`${count}件のレースに${pts}点・${({ippan:'一般戦',g2g3:'G2/G3',g1:'G1',sg:'SG'})[rtype]}を適用しました`);
 }
 
 function splitBulkPaste(){
@@ -1086,6 +1121,7 @@ function applyBulkResults(){
     const id=idMatch[1];
     const dataEl=document.getElementById('data-'+id);
     const resultEl=document.getElementById('result-'+id);
+    const payoutEl=document.getElementById('payout-'+id);
     if(!dataEl||!resultEl) return;
     if(resultEl.value.trim()) return; // 既に結果が入ってるものは上書きしない
 
@@ -1098,6 +1134,7 @@ function applyBulkResults(){
     const match=results.find(r=>r.v===d.venue&&r.r===d.raceNum);
     if(match&&match.c){
       resultEl.value=match.c;
+      if(payoutEl&&match.p) payoutEl.value=match.p;
       filled++;
     } else {
       noMatch++;
@@ -1118,8 +1155,12 @@ function runAll(){
     const idMatch=entryEl.id.match(/entry-(\d+)/);
     if(!idMatch) return;
     const id=idMatch[1];
+    if(entryEl.dataset.done==='1'){
+      return; // 既に処理済みのレースは重複登録しないためスキップ
+    }
     const rawData=(document.getElementById('data-'+id)||{}).value?.trim();
     const resultStr=(document.getElementById('result-'+id)||{}).value?.trim();
+    const payoutStr=(document.getElementById('payout-'+id)||{}).value?.trim()||'';
     const pts=parseInt((document.getElementById('pts-'+id)||{}).value)||12;
     const rtype=(document.getElementById('rtype-'+id)||{}).value||'ippan';
     const statusEl=document.getElementById('status-'+id);
@@ -1153,6 +1194,16 @@ function runAll(){
       const maruStr=String(maruBoat);
       const parts=resultStr.split('-');
       const isHit=allBets.includes(resultStr);
+      const raceDate=d.raceDate||new Date().toISOString().slice(0,10);
+
+      // 重複チェック: 同じ場・レース番号・日付が既にログにあればスキップ（誤って2回投入するのを防止）
+      const dupIdx=logs.findIndex(l=>l.venue===d.venue&&l.racenum===(d.raceNum||'?').replace('R','').trim()&&l.date===raceDate);
+      if(dupIdx>=0){
+        if(statusEl) statusEl.innerHTML=`<span style="color:var(--red);">⚠ 重複スキップ（${d.venue||''}${d.raceNum||''} ${raceDate} は既に登録済み）</span>`;
+        entryEl.dataset.done='1';
+        entryEl.style.opacity='0.6';
+        return;
+      }
 
       let miss;
       if(isHit) miss='hit';
@@ -1176,7 +1227,7 @@ function runAll(){
 
       logs.push({
         id:Date.now()+Math.floor(Math.random()*1000),
-        date:new Date().toISOString().slice(0,10),
+        date:raceDate,
         venue:d.venue||'不明',
         racenum:(d.raceNum||'?').replace('R','').trim(),
         mode,
@@ -1188,13 +1239,16 @@ function runAll(){
         sankaku:sankakuBoat,
         scores:scoresDetail,
         chakuju:resultStr,
+        payout:payoutStr,
         miss
       });
 
       processed++;
       if(isHit) hitCount++;
       const missLabel={hit:'的中',ichaku:'軸ミス',nichaku:'紐ズレ'}[miss];
-      statusEl.innerHTML=`<span style="color:${isHit?'var(--green)':'var(--text2)'};">✓ ${d.venue||''}${d.raceNum||''} / 軸${maruStr} / ${missLabel}</span>`;
+      statusEl.innerHTML=`<span style="color:${isHit?'var(--green)':'var(--text2)'};">✓ ${d.venue||''}${d.raceNum||''} / 軸${maruStr} / ${missLabel}（登録済み）</span>`;
+      entryEl.dataset.done='1';
+      entryEl.style.opacity='0.6';
     }catch(e){
       errorCount++;
       if(statusEl) statusEl.innerHTML=`<span style="color:var(--red);">エラー: ${e.message}</span>`;
