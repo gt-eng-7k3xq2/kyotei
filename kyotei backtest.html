@@ -576,7 +576,7 @@ function calcAreScore(d){
       cr2Max;
     if(renMax>0) s+=ren/renMax*renWeight;
 
-    // ⑦.5 差し・まくり実績スコア max8pt（外側艇が2・3着に紛れ込むケースへの対策。荒れ指数計算(calcAreIndex)で
+    // ⑦.5 差し・まくり実績スコア max12pt（外側艇が2・3着に紛れ込むケースへの対策。荒れ指数計算(calcAreIndex)で
     // 既に使っているsashi6m/makuri6m/makurisashi6mを通常予想のランキングにも反映する）
     const sashiAtkVals=boats.map(x=>(x.sashi6m||0)+(x.makuri6m||0)+(x.makurisashi6m||0)*0.4);
     const sashiAtkMax=Math.max(...sashiAtkVals)||1;
