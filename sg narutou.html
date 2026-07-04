@@ -1072,12 +1072,13 @@ function calcAreScore(d){
       cr2Max;
     if(renMax>0) s+=ren/renMax*renWeight;
 
-    // ⑦.5 差し・まくり実績スコア max8pt（外側艇が2・3着に紛れ込むケースへの対策。荒れ指数計算(calcAreIndex)で
+    // ⑦.5 差し・まくり実績スコア max12pt（外側艇が2・3着に紛れ込むケースへの対策。荒れ指数計算(calcAreIndex)で
     // 既に使っているsashi6m/makuri6m/makurisashi6mを通常予想のランキングにも反映する）
+    // 2026-07-04 バックテストn=47で軸ミス時に実際の1着艇がこの項目で軸を上回る頻度が53%と最多だったため8→12ptに引き上げ
     const sashiAtkVals=boats.map(x=>(x.sashi6m||0)+(x.makuri6m||0)+(x.makurisashi6m||0)*0.4);
     const sashiAtkMax=Math.max(...sashiAtkVals)||1;
     const bSashiAtk=(b.sashi6m||0)+(b.makuri6m||0)+(b.makurisashi6m||0)*0.4;
-    if(sashiAtkMax>0) s+=bSashiAtk/sashiAtkMax*8;
+    if(sashiAtkMax>0) s+=bSashiAtk/sashiAtkMax*12;
 
     // ⑧ モーター2連対率 max10pt
     if(motorMax>0) s+=(b.motor2ren||0)/motorMax*10;
@@ -1107,7 +1108,7 @@ function calcAreScore(d){
     const _exScore=(exMax-b.exhibitFootRank)/exMax*14;
     return{no:b.no, raw:s, tenji:b.tenji, syukai:b.syukai,
       _atk:_atk,
-      _sashi:bSashiAtk/sashiAtkMax*8,
+      _sashi:bSashiAtk/sashiAtkMax*12,
       _ex:_exScore,
       _lap:(b.lapRank>=0?(5-b.lapRank)*2.8:0),
       _st:stPt,
