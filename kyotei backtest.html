@@ -63,6 +63,16 @@ textarea{resize:vertical;}
 </div>
 
 <div class="card">
+  <div class="section-title">結果を一括入力</div>
+  <p style="font-size:11px;color:var(--text2);margin-bottom:8px;">
+    払戻データ収集用ブックマークレットでコピーしたJSON（[{"v":場,"r":レース,"c":結果,"p":払戻,...}]形式）を貼ると、
+    場・レース番号が一致するレース入力欄に自動で結果を入れます。
+  </p>
+  <textarea id="result-bulk-paste" rows="4" placeholder='[{"v":"桐生","r":"1R","c":"3-1-5","p":"¥1,200","d":"2026-07-04"}, ...]'></textarea>
+  <button class="btn" style="width:100%;margin-top:8px;" onclick="applyBulkResults()">✅ 結果を自動入力</button>
+</div>
+
+<div class="card">
   <div class="section-title">レース入力</div>
   <div id="entries"></div>
   <button class="btn" style="width:100%;margin-top:6px;" onclick="addEntry()">＋ レース追加</button>
@@ -1053,6 +1063,48 @@ function splitBulkPaste(){
   chunks.forEach(chunk=>addEntry(chunk));
   document.getElementById('bulk-paste').value='';
   showToast(`${chunks.length}レース分を追加しました`);
+}
+
+function applyBulkResults(){
+  const raw=document.getElementById('result-bulk-paste').value.trim();
+  if(!raw){showToast('結果データを貼り付けてください');return;}
+  let results;
+  try{
+    results=JSON.parse(raw);
+    if(!Array.isArray(results)) throw new Error('配列ではありません');
+  }catch(e){
+    showToast('JSONの読み込みに失敗しました: '+e.message);
+    return;
+  }
+
+  const entries=document.querySelectorAll('#entries > div');
+  let filled=0, noMatch=0;
+
+  entries.forEach(entryEl=>{
+    const idMatch=entryEl.id.match(/entry-(\d+)/);
+    if(!idMatch) return;
+    const id=idMatch[1];
+    const dataEl=document.getElementById('data-'+id);
+    const resultEl=document.getElementById('result-'+id);
+    if(!dataEl||!resultEl) return;
+    if(resultEl.value.trim()) return; // 既に結果が入ってるものは上書きしない
+
+    const rawData=dataEl.value.trim();
+    if(!rawData) return;
+    let d;
+    try{ d=parseData(rawData); }catch(e){ return; }
+    if(!d.venue||!d.raceNum) return;
+
+    const match=results.find(r=>r.v===d.venue&&r.r===d.raceNum);
+    if(match&&match.c){
+      resultEl.value=match.c;
+      filled++;
+    } else {
+      noMatch++;
+    }
+  });
+
+  showToast(`✅ ${filled}件に結果を自動入力しました（未一致${noMatch}件）`);
 }
 
 function runAll(){
