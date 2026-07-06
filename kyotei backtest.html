@@ -118,7 +118,8 @@ let currentParsedData=null;
 // 変更履歴:
 // v1 (〜2026-07-04): 初期版。差し・まくり実績スコア max8pt
 // v2 (2026-07-04〜): 差し・まくり実績スコアを8pt→12ptに引き上げ
-const SCORE_ENGINE_VERSION=2;
+// v3 (2026-07-06〜): モーター10pt→13pt、合成ST8pt→10ptに引き上げ（本体sg_narutou.htmlと同期）
+const SCORE_ENGINE_VERSION=3;
 let selectedNigeMode='auto';
 let selectedRaceType='ippan'; // 'ippan','g2g3','g1','sg'（既定は一般戦。レースごとにUIから変更）
 
@@ -547,8 +548,9 @@ function calcAreScore(d){
     // ④ 周回機力ランク max14pt
     if(b.lapRank>=0) s+=(5-b.lapRank)*2.8;
 
-    // ⑤ 合成ST max8pt
-    const stPt=(stMax>stMin)?(stMax-b.compositeST)/(stMax-stMin)*8:0;
+    // ⑤ 合成ST max10pt
+    // 2026-07-06 バックテストn=119で軸ミス時に実際の1着艇がこの項目で軸を上回る頻度が38.7%(僅差)だったため8→10ptに引き上げ
+    const stPt=(stMax>stMin)?(stMax-b.compositeST)/(stMax-stMin)*10:0;
     s+=stPt;
 
     // ⑥ 直前ST max10pt（ST=0.00は最速として正しく計算）
@@ -583,8 +585,9 @@ function calcAreScore(d){
     const bSashiAtk=(b.sashi6m||0)+(b.makuri6m||0)+(b.makurisashi6m||0)*0.4;
     if(sashiAtkMax>0) s+=bSashiAtk/sashiAtkMax*12;
 
-    // ⑧ モーター2連対率 max10pt
-    if(motorMax>0) s+=(b.motor2ren||0)/motorMax*10;
+    // ⑧ モーター2連対率 max13pt
+    // 2026-07-06 バックテストn=119で軸ミス時に実際の1着艇がこの項目で軸を上回る頻度が42.9%と全項目中最多、かつ平均差がほぼ0(僅差)だったため10→13ptに引き上げ
+    if(motorMax>0) s+=(b.motor2ren||0)/motorMax*13;
 
     // ⑨ コースボーナス（通常エンジン準拠: [3,2,1,1,0,-2]）
     s+=courseBonus[(b.no-1)]||0;
@@ -616,7 +619,7 @@ function calcAreScore(d){
       _lap:(b.lapRank>=0?(5-b.lapRank)*2.8:0),
       _st:stPt,
       _toku:_toku,
-      _motor:(b.motor2ren||0)/motorMax*10,
+      _motor:(b.motor2ren||0)/motorMax*13,
       _pen1:(b.no===1&&nigeRate1<50?-5:b.no===1&&nigeRate1>=65?5:0),
       _penF:(b.isF?-10:0)};
   });

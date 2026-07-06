@@ -373,7 +373,8 @@ function switchPage(p){
 // 変更履歴:
 // v1 (〜2026-07-04): 初期版。差し・まくり実績スコア max8pt
 // v2 (2026-07-04〜): 差し・まくり実績スコアを8pt→12ptに引き上げ
-const SCORE_ENGINE_VERSION=2;
+// v3 (2026-07-06〜): モーター10pt→13pt、合成ST8pt→10ptに引き上げ
+const SCORE_ENGINE_VERSION=3;
 function getLogs(){try{return JSON.parse(localStorage.getItem('kyotei_v2')||'[]');}catch{return[];}}
 function saveLogs(logs){localStorage.setItem('kyotei_v2',JSON.stringify(logs));}
 
