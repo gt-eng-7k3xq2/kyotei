@@ -2857,50 +2857,191 @@ function venueToRomaji(venue){
   return map[venue]?('BOAT RACE '+map[venue]):'';
 }
 
+// ============================================================
+// 的中画像の書き出しをhtml2canvas(DOM再現)ではなくCanvas直接描画に変更。
+// html2canvasはDOM/CSSをJSで再実装してcanvas化するため、プレビューに比べて
+// 画質(特にフォントレンダリング)が劣化する既知の弱点がある。
+// 直接Canvas APIで背景画像+テキストを描くことで、プレビューと同等の
+// 鮮明さで書き出せるようにする。
+// ============================================================
+const TEKICHU_BASE_W=1024, TEKICHU_BASE_H=1536;
+const TEKICHU_BOAT_COLOR_HEX={1:'#FFFFFF',2:'#1A1A1A',3:'#D8283C',4:'#1E6FD9',5:'#F2C500',6:'#1FA24A'};
+const TEKICHU_BOAT_FG_HEX={1:'#111111',2:'#FFFFFF',3:'#FFFFFF',4:'#FFFFFF',5:'#111111',6:'#FFFFFF'};
+
+function tekichuLoadImg(src){
+  return new Promise(function(resolve,reject){
+    const img=new Image();
+    img.onload=function(){resolve(img);};
+    img.onerror=reject;
+    img.src=src;
+  });
+}
+
+// 簡易改行処理(指定幅に収まるよう文字単位で折り返す。日本語向け)
+function tekichuWrapText(ctx,text,maxWidth){
+  const lines=[];
+  const paragraphs=String(text).split('\n');
+  paragraphs.forEach(function(para){
+    if(para==='' ){ lines.push(''); return; }
+    let cur='';
+    for(const ch of para){
+      const test=cur+ch;
+      if(ctx.measureText(test).width>maxWidth && cur!==''){
+        lines.push(cur);
+        cur=ch;
+      } else {
+        cur=test;
+      }
+    }
+    if(cur) lines.push(cur);
+  });
+  return lines;
+}
+
 function saveTekichuCard(){
-  const card=document.getElementById('tekichu-cv');
-  if(!card) return;
+  const entry=_tekichuEntry||{};
   const btn=document.querySelector('#tekichu-modal .eval-save-btn');
   const origLabel='📥 的中画像を保存・共有';
   btn.textContent='生成中...';
   btn.disabled=true;
+
   const fontsReady=(document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
-  fontsReady.then(function(){
-    html2canvas(card,{
-      scale:3,
-      useCORS:true,
-      backgroundColor:'#030404',
-      logging:false,
-      allowTaint:true
-    }).then(function(canvas){
-      canvas.toBlob(function(blob){
-        const entry=_tekichuEntry||{};
-        const fname=`的中_${entry.venue||''}${entry.racenum||''}R.png`;
-        const file=new File([blob],fname,{type:'image/png'});
-        if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-          navigator.share({files:[file],title:'GALLON 的中'}).then(function(){
-            btn.textContent='✅ 共有しました';
-            setTimeout(function(){btn.textContent=origLabel;btn.disabled=false;},2000);
-          }).catch(function(){
-            btn.textContent=origLabel;
-            btn.disabled=false;
-          });
-        } else {
-          const url=URL.createObjectURL(blob);
-          const link=document.createElement('a');
-          link.download=fname;
-          link.href=url;
-          link.click();
-          setTimeout(function(){URL.revokeObjectURL(url);},1000);
-          btn.textContent='✅ 保存しました';
-          setTimeout(function(){btn.textContent=origLabel;btn.disabled=false;},2000);
-        }
-      },'image/png');
-    }).catch(function(){
-      btn.textContent=origLabel;
-      btn.disabled=false;
-      showToast('生成失敗。スクリーンショットで保存してください。');
+  fontsReady.then(function(){ return tekichuLoadImg(TEKICHU_BG_DATAURI); }).then(function(bgImg){
+    const SCALE=2; // 1024x1536ベースの2倍(2048x3072)で書き出し、十分な解像度を確保
+    const W=TEKICHU_BASE_W*SCALE, H=TEKICHU_BASE_H*SCALE;
+    const canvas=document.createElement('canvas');
+    canvas.width=W; canvas.height=H;
+    const ctx=canvas.getContext('2d');
+    ctx.imageSmoothingEnabled=true;
+    ctx.imageSmoothingQuality='high';
+
+    // 背景
+    ctx.drawImage(bgImg,0,0,W,H);
+
+    const px=function(fracOfW){ return fracOfW*W; };
+    const py=function(fracOfH){ return fracOfH*H; };
+    const fpx=function(basePx){ return basePx*SCALE; }; // 1024幅基準のpxサイズをキャンバス解像度に変換
+
+    // 場所名
+    ctx.textBaseline='top';
+    ctx.fillStyle='#FFFFFF';
+    ctx.font=`900 ${fpx(72)}px "Noto Serif JP", serif`;
+    ctx.fillText(entry.venue||'', px(0.205), py(0.396));
+
+    // 場所名ローマ字
+    ctx.fillStyle='#D9A94A';
+    ctx.font=`400 ${fpx(19)}px "Tenor Sans", sans-serif`;
+    const romaji=venueToRomaji(entry.venue||'');
+    // letter-spacing相当を手動で(0.08em)
+    (function(){
+      let x=px(0.207);
+      const y=py(0.456);
+      const ls=fpx(19)*0.08;
+      for(const ch of romaji.toUpperCase()){
+        ctx.fillText(ch,x,y);
+        x+=ctx.measureText(ch).width+ls;
+      }
+    })();
+
+    // レース番号
+    ctx.fillStyle='#FFFFFF';
+    ctx.font=`900 ${fpx(78)}px "Playfair Display", "Noto Serif JP", serif`;
+    ctx.fillText((entry.racenum||'')+'R', px(0.715), py(0.405));
+
+    // 結果3艇
+    const parts=(entry.chakuju||'').split('-').map(function(n){return parseInt(n);});
+    const names=entry.boatNames||[];
+    const cols=[0.20,0.45,0.70];
+    cols.forEach(function(leftFrac,i){
+      const boatNo=parts[i];
+      if(!boatNo) return;
+      const colX=px(leftFrac);
+      const colY=py(0.536);
+      const badgeSize=fpx(58);
+      const badgeRadius=fpx(7);
+      const bg=TEKICHU_BOAT_COLOR_HEX[boatNo]||'#333333';
+      const fg=TEKICHU_BOAT_FG_HEX[boatNo]||'#FFFFFF';
+      // バッジ(角丸四角)
+      ctx.fillStyle=bg;
+      ctx.beginPath();
+      const r=badgeRadius, bx=colX, by=colY, bw=badgeSize, bh=badgeSize;
+      ctx.moveTo(bx+r,by);
+      ctx.arcTo(bx+bw,by,bx+bw,by+bh,r);
+      ctx.arcTo(bx+bw,by+bh,bx,by+bh,r);
+      ctx.arcTo(bx,by+bh,bx,by,r);
+      ctx.arcTo(bx,by,bx+bw,by,r);
+      ctx.closePath();
+      ctx.fill();
+      // バッジ内番号
+      ctx.fillStyle=fg;
+      ctx.font=`900 ${fpx(34)}px "Noto Sans JP", sans-serif`;
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.fillText(String(boatNo), bx+bw/2, by+bh/2+fpx(2));
+      ctx.textAlign='left';
+      ctx.textBaseline='top';
+      // 選手名
+      const fullName=names[boatNo-1]||'';
+      ctx.fillStyle='#FFFFFF';
+      ctx.font=`700 ${fpx(25)}px "Noto Serif JP", serif`;
+      ctx.fillText(fullName, bx+bw+fpx(8), by+ (badgeSize-fpx(25)*1.15)/2 );
     });
+
+    // 配当
+    const payoutVal=entry.payout||0;
+    ctx.fillStyle='#E8C24A';
+    ctx.font=`900 ${fpx(88)}px "Playfair Display", "Noto Serif JP", serif`;
+    const payoutText='¥'+payoutVal.toLocaleString();
+    ctx.fillText(payoutText, px(0.205), py(0.635));
+    const payoutWidth=ctx.measureText(payoutText).width;
+    ctx.fillStyle='#FFFFFF';
+    ctx.font=`700 ${fpx(30)}px "Noto Serif JP", serif`;
+    ctx.fillText('円', px(0.205)+payoutWidth+fpx(8), py(0.635)+fpx(50));
+
+    // 根拠(複数行対応・幅で折り返し)
+    ctx.fillStyle='#FFFFFF';
+    ctx.font=`700 ${fpx(30)}px "Noto Sans JP", sans-serif`;
+    const basisMaxWidth=px(0.38);
+    const basisLines=tekichuWrapText(ctx, entry.tenkaiLine||document.getElementById('tekichu-basis-input').value||'', basisMaxWidth);
+    const lineHeight=fpx(30)*1.55;
+    let by2=py(0.752);
+    basisLines.forEach(function(line){
+      ctx.fillText(line, px(0.205), by2);
+      by2+=lineHeight;
+    });
+
+    canvas.toBlob(function(blob){
+      if(!blob){
+        btn.textContent=origLabel; btn.disabled=false;
+        showToast('生成失敗。スクリーンショットで保存してください。');
+        return;
+      }
+      const fname=`的中_${entry.venue||''}${entry.racenum||''}R.png`;
+      const file=new File([blob],fname,{type:'image/png'});
+      if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+        navigator.share({files:[file],title:'GALLON 的中'}).then(function(){
+          btn.textContent='✅ 共有しました';
+          setTimeout(function(){btn.textContent=origLabel;btn.disabled=false;},2000);
+        }).catch(function(){
+          btn.textContent=origLabel;
+          btn.disabled=false;
+        });
+      } else {
+        const url=URL.createObjectURL(blob);
+        const link=document.createElement('a');
+        link.download=fname;
+        link.href=url;
+        link.click();
+        setTimeout(function(){URL.revokeObjectURL(url);},1000);
+        btn.textContent='✅ 保存しました';
+        setTimeout(function(){btn.textContent=origLabel;btn.disabled=false;},2000);
+      }
+    },'image/png');
+  }).catch(function(err){
+    console.error('tekichu export error:',err);
+    btn.textContent=origLabel;
+    btn.disabled=false;
+    showToast('生成失敗。スクリーンショットで保存してください。');
   });
 }
 
