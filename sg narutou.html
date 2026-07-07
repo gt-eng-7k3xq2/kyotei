@@ -2774,7 +2774,7 @@ function openTekichuCard(entry){
   if(cv) cv.style.backgroundImage=`url("${TEKICHU_BG_DATAURI}")`;
 
   document.getElementById('tekichu-venue').textContent=entry.venue||'';
-  document.getElementById('tekichu-venue-sub').textContent=venueToRomaji(entry.venue||'');
+  document.getElementById('tekichu-venue-sub').textContent=''; // ローマ字は非表示に変更（漢字のみのシンプル表示）
   document.getElementById('tekichu-racenum').textContent=(entry.racenum||'')+'R';
 
   const parts=(entry.chakuju||'').split('-').map(n=>parseInt(n));
@@ -2928,20 +2928,7 @@ function saveTekichuCard(){
     ctx.font=`900 ${fpx(88)}px "Noto Serif JP", serif`;
     ctx.fillText(entry.venue||'', px(0.205), py(0.396));
 
-    // 場所名ローマ字
-    ctx.fillStyle='#D9A94A';
-    ctx.font=`400 ${fpx(23)}px "Tenor Sans", sans-serif`;
-    const romaji=venueToRomaji(entry.venue||'');
-    // letter-spacing相当を手動で(0.08em)
-    (function(){
-      let x=px(0.207);
-      const y=py(0.456);
-      const ls=fpx(23)*0.08;
-      for(const ch of romaji.toUpperCase()){
-        ctx.fillText(ch,x,y);
-        x+=ctx.measureText(ch).width+ls;
-      }
-    })();
+    // 場所名ローマ字は非表示（漢字のみのシンプル表示に変更）
 
     // レース番号
     ctx.fillStyle='#FFFFFF';
