@@ -2763,7 +2763,7 @@ let _tekichuEntry=null;
 function openTekichuCard(entry){
   _tekichuEntry=entry;
   const img=document.getElementById('tekichu-bg-img');
-  if(img && !img.src) img.src=TEKICHU_BG_DATAURI;
+  if(img) img.src=TEKICHU_BG_DATAURI;
 
   document.getElementById('tekichu-venue').textContent=entry.venue||'';
   document.getElementById('tekichu-venue-sub').textContent=venueToRomaji(entry.venue||'');
