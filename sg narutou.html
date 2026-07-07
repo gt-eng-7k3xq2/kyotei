@@ -2798,8 +2798,7 @@ function openTekichuCard(entry){
   }
 
   const payoutVal=entry.payout||0;
-  document.getElementById('tekichu-payout').innerHTML=
-    '¥'+payoutVal.toLocaleString()+'<span class="yen-suffix">円</span>';
+  document.getElementById('tekichu-payout').innerHTML='¥'+payoutVal.toLocaleString();
   const payoutInput=document.getElementById('tekichu-payout-input');
   payoutInput.value=payoutVal||'';
 
@@ -2826,7 +2825,7 @@ function updateTekichuPayout(){
   const disp=document.getElementById('tekichu-payout');
   if(!input||!disp) return;
   const val=parseInt(input.value||'0')||0;
-  disp.innerHTML='¥'+val.toLocaleString()+'<span class="yen-suffix">円</span>';
+  disp.innerHTML='¥'+val.toLocaleString();
   if(_tekichuEntry){
     _tekichuEntry.payout=val;
     // ログ本体・v2ミラー双方に反映（的中画像だけ直して裏のデータが古いままになるのを防ぐ）
@@ -2997,10 +2996,6 @@ function saveTekichuCard(){
     const payoutText='¥'+payoutVal.toLocaleString();
     ctx.fillText(payoutText, px(0.205), py(0.638));
     ctx.restore();
-    const payoutWidth=ctx.measureText(payoutText).width;
-    ctx.fillStyle=WARM_WHITE;
-    ctx.font=`700 ${fpx(34)}px "Noto Serif JP", serif`;
-    ctx.fillText('円', px(0.205)+payoutWidth+fpx(10), py(0.638)+fpx(56));
 
     // 根拠(複数行対応・幅で折り返し)
     ctx.fillStyle=WARM_WHITE;
