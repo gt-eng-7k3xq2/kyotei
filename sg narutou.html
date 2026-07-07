@@ -1501,8 +1501,10 @@ function buildBetsAre(ranking, pts, nigeRate){
   // ①②=本線(◎○が絡む主力)、③=抑え(◎▲の保険)として扱う。
   const cands = [];
   let p = 0;
-  // ①◎-○=▲△×(▽): ◎-○-{▲△×(▽)} と ◎-{▲△×(▽)}-○。14点構成では▽も含めて広げる。
-  const set1 = pts>=14 ? [sa, yo, roku, go] : [sa, yo, roku];
+  // ①◎-○=▲△▽: ◎-○-{▲△▽} と ◎-{▲△▽}-○。14点構成では×(roku)も含めて広げる。
+  // 2026-07-06修正: 12点構成で誤って×(6位/最下位艇)を組み込み、▽(5位)が抜けていたバグを修正。
+  // ×は評価最下位のため買い目候補から常に除外するのが正しい設計。14点以上の扱いは別途検討中。
+  const set1 = pts>=14 ? [sa, yo, roku, go] : [sa, yo, go];
   for(const c of set1){
     if(!c) continue;
     cands.push({val:`${m}-${s}-${c}`, p:p++, group:'本線'});
