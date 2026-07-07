@@ -174,8 +174,7 @@
 #tekichu-modal.show{display:flex;}
 .tekichu-modal-inner{background:var(--surface);border:1px solid var(--border);border-radius:12px;max-width:420px;width:100%;padding:16px;margin:auto;}
 .tekichu-modal-title{font-size:13px;font-weight:700;color:var(--gold);margin-bottom:12px;}
-#tekichu-cv{width:100%;height:0;padding-bottom:150%;position:relative;overflow:hidden;background:#030404;border-radius:8px;}
-#tekichu-cv img.tekichu-bg{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:1;}
+#tekichu-cv{width:100%;height:0;padding-bottom:150%;position:relative;overflow:hidden;background:#030404;border-radius:8px;background-size:100% 100%;background-repeat:no-repeat;background-position:0 0;}
 .tekichu-venue{position:absolute;left:20.5%;top:39.6%;width:31%;z-index:10;font-family:'Noto Sans JP',sans-serif;font-weight:900;font-size:clamp(20px,7vw,72px);line-height:1.05;color:#FFFFFF;letter-spacing:0.02em;}
 .tekichu-venue-sub{position:absolute;left:20.7%;top:45.6%;width:34%;z-index:10;font-family:'Tenor Sans',sans-serif;font-size:clamp(6px,1.9vw,19px);letter-spacing:0.08em;color:#D9A94A;text-transform:uppercase;}
 .tekichu-racenum{position:absolute;left:71.5%;top:40.5%;width:22%;z-index:10;font-family:'Noto Sans JP',sans-serif;font-weight:900;font-size:clamp(22px,7.6vw,78px);line-height:1;color:#FFFFFF;text-align:left;}
@@ -2541,6 +2540,15 @@ function saveResult(resultType){
     // 的中画像生成用に6艇分のフルネームをスナップショット保存（結果入力時には
     // currentParsedDataが別レースのものに変わっている場合があるため、保存時点で確保する）
     boatNames:(currentParsedData&&currentParsedData.boats||[]).map(b=>b&&b.name||''),
+    // 的中画像の根拠欄用に、Xサマリーの展開コメントもこの時点でスナップショット保存
+    // （同じ理由で、結果入力時にbuildXSummary()を呼んでも別レースのデータになっている可能性があるため）
+    tenkaiLine:(function(){
+      try{
+        const xsum=buildXSummary('x');
+        const line=xsum.split('\n').find(l=>l.startsWith('展開：'));
+        return line?line.replace('展開：','').trim():'';
+      }catch(e){ return (aiTenkaiLine||'').trim(); }
+    })(),
     result:resultType==='skip'?'skip':null, // skip以外は後入力
     chakuju:null,
     payout:0,
@@ -2762,8 +2770,8 @@ let _tekichuEntry=null;
 
 function openTekichuCard(entry){
   _tekichuEntry=entry;
-  const img=document.getElementById('tekichu-bg-img');
-  if(img) img.src=TEKICHU_BG_DATAURI;
+  const cv=document.getElementById('tekichu-cv');
+  if(cv) cv.style.backgroundImage=`url("${TEKICHU_BG_DATAURI}")`;
 
   document.getElementById('tekichu-venue').textContent=entry.venue||'';
   document.getElementById('tekichu-venue-sub').textContent=venueToRomaji(entry.venue||'');
@@ -2795,13 +2803,10 @@ function openTekichuCard(entry){
   const payoutInput=document.getElementById('tekichu-payout-input');
   payoutInput.value=payoutVal||'';
 
-  // 根拠のデフォルト値: Xサマリーの「展開：」行と全く同じロジック（AI生成があればそれ、無ければルールベース）を使う
-  let defaultBasis='';
-  try{
-    const xsum=buildXSummary('x');
-    const line=xsum.split('\n').find(l=>l.startsWith('展開：'));
-    defaultBasis=line?line.replace('展開：','').trim():'';
-  }catch(e){ defaultBasis=(aiTenkaiLine||'').trim(); }
+  // 根拠のデフォルト値: 予想保存時にスナップショットしたXサマリーの展開コメントを使う
+  // （結果入力タイミングではcurrentCalcData等が別レースのものに変わっている可能性があるため、
+  //   都度buildXSummary()を呼び直すのではなく保存済みの値をそのまま使う）
+  const defaultBasis=(entry.tenkaiLine||'').trim();
   const basisInput=document.getElementById('tekichu-basis-input');
   basisInput.value=defaultBasis;
   updateTekichuBasis();
@@ -3481,7 +3486,6 @@ window.addEventListener('DOMContentLoaded',function(){
   <div class="tekichu-modal-inner">
     <div class="tekichu-modal-title">🏆 的中画像</div>
     <div id="tekichu-cv">
-      <img class="tekichu-bg" id="tekichu-bg-img" src="" alt="">
       <div class="tekichu-venue" id="tekichu-venue"></div>
       <div class="tekichu-venue-sub" id="tekichu-venue-sub"></div>
       <div class="tekichu-racenum" id="tekichu-racenum"></div>
