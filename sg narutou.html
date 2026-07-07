@@ -2922,18 +2922,26 @@ function saveTekichuCard(){
     const py=function(fracOfH){ return fracOfH*H; };
     const fpx=function(basePx){ return basePx*SCALE; }; // 1024幅基準のpxサイズをキャンバス解像度に変換
 
-    // 場所名
+    const WARM_WHITE='#F5F0E4'; // 純白より僅かに温かみのあるオフホワイト(金色との統一感UP)
+
+    // 場所名(字間を少し空けて高級感を出す。ローマ字廃止に伴い行内で垂直方向に再センタリング)
     ctx.textBaseline='top';
-    ctx.fillStyle='#FFFFFF';
-    ctx.font=`900 ${fpx(88)}px "Noto Serif JP", serif`;
-    ctx.fillText(entry.venue||'', px(0.205), py(0.396));
+    ctx.fillStyle=WARM_WHITE;
+    ctx.font=`900 ${fpx(86)}px "Noto Serif JP", serif`;
+    (function(){
+      let x=px(0.205);
+      const y=py(0.415);
+      const ls=fpx(86)*0.04;
+      for(const ch of String(entry.venue||'')){
+        ctx.fillText(ch,x,y);
+        x+=ctx.measureText(ch).width+ls;
+      }
+    })();
 
-    // 場所名ローマ字は非表示（漢字のみのシンプル表示に変更）
-
-    // レース番号
-    ctx.fillStyle='#FFFFFF';
-    ctx.font=`900 ${fpx(95)}px "Playfair Display", "Noto Serif JP", serif`;
-    ctx.fillText((entry.racenum||'')+'R', px(0.715), py(0.405));
+    // レース番号(場所名と字高のバランスを合わせて僅かに縮小)
+    ctx.fillStyle=WARM_WHITE;
+    ctx.font=`900 ${fpx(84)}px "Playfair Display", "Noto Serif JP", serif`;
+    ctx.fillText((entry.racenum||'')+'R', px(0.715), py(0.418));
 
     // 結果3艇
     const parts=(entry.chakuju||'').split('-').map(function(n){return parseInt(n);});
@@ -2944,11 +2952,15 @@ function saveTekichuCard(){
       if(!boatNo) return;
       const colX=px(leftFrac);
       const colY=py(0.536);
-      const badgeSize=fpx(68);
-      const badgeRadius=fpx(7);
+      const badgeSize=fpx(66);
+      const badgeRadius=fpx(8);
       const bg=TEKICHU_BOAT_COLOR_HEX[boatNo]||'#333333';
       const fg=TEKICHU_BOAT_FG_HEX[boatNo]||'#FFFFFF';
-      // バッジ(角丸四角)
+      // バッジ(角丸四角、僅かな影で立体感を追加)
+      ctx.save();
+      ctx.shadowColor='rgba(0,0,0,0.5)';
+      ctx.shadowBlur=fpx(4);
+      ctx.shadowOffsetY=fpx(2);
       ctx.fillStyle=bg;
       ctx.beginPath();
       const r=badgeRadius, bx=colX, by=colY, bw=badgeSize, bh=badgeSize;
@@ -2959,9 +2971,10 @@ function saveTekichuCard(){
       ctx.arcTo(bx,by,bx+bw,by,r);
       ctx.closePath();
       ctx.fill();
+      ctx.restore();
       // バッジ内番号
       ctx.fillStyle=fg;
-      ctx.font=`900 ${fpx(40)}px "Noto Sans JP", sans-serif`;
+      ctx.font=`900 ${fpx(38)}px "Noto Sans JP", sans-serif`;
       ctx.textAlign='center';
       ctx.textBaseline='middle';
       ctx.fillText(String(boatNo), bx+bw/2, by+bh/2+fpx(2));
@@ -2969,28 +2982,32 @@ function saveTekichuCard(){
       ctx.textBaseline='top';
       // 選手名
       const fullName=names[boatNo-1]||'';
-      ctx.fillStyle='#FFFFFF';
-      ctx.font=`700 ${fpx(31)}px "Noto Serif JP", serif`;
-      ctx.fillText(fullName, bx+bw+fpx(8), by+ (badgeSize-fpx(31)*1.15)/2 );
+      ctx.fillStyle=WARM_WHITE;
+      ctx.font=`700 ${fpx(30)}px "Noto Serif JP", serif`;
+      ctx.fillText(fullName, bx+bw+fpx(10), by+ (badgeSize-fpx(30)*1.15)/2 );
     });
 
-    // 配当
+    // 配当(薄い金色の光彩を足して「的中!」タイトルと質感を揃える)
     const payoutVal=entry.payout||0;
+    ctx.save();
+    ctx.shadowColor='rgba(232,194,74,0.55)';
+    ctx.shadowBlur=fpx(14);
     ctx.fillStyle='#E8C24A';
-    ctx.font=`900 ${fpx(108)}px "Playfair Display", "Noto Serif JP", serif`;
+    ctx.font=`900 ${fpx(104)}px "Playfair Display", "Noto Serif JP", serif`;
     const payoutText='¥'+payoutVal.toLocaleString();
-    ctx.fillText(payoutText, px(0.205), py(0.635));
+    ctx.fillText(payoutText, px(0.205), py(0.638));
+    ctx.restore();
     const payoutWidth=ctx.measureText(payoutText).width;
-    ctx.fillStyle='#FFFFFF';
-    ctx.font=`700 ${fpx(36)}px "Noto Serif JP", serif`;
-    ctx.fillText('円', px(0.205)+payoutWidth+fpx(8), py(0.635)+fpx(58));
+    ctx.fillStyle=WARM_WHITE;
+    ctx.font=`700 ${fpx(34)}px "Noto Serif JP", serif`;
+    ctx.fillText('円', px(0.205)+payoutWidth+fpx(10), py(0.638)+fpx(56));
 
     // 根拠(複数行対応・幅で折り返し)
-    ctx.fillStyle='#FFFFFF';
-    ctx.font=`700 ${fpx(34)}px "Noto Serif JP", serif`;
+    ctx.fillStyle=WARM_WHITE;
+    ctx.font=`700 ${fpx(33)}px "Noto Serif JP", serif`;
     const basisMaxWidth=px(0.38);
     const basisLines=tekichuWrapText(ctx, entry.tenkaiLine||document.getElementById('tekichu-basis-input').value||'', basisMaxWidth);
-    const lineHeight=fpx(34)*1.5;
+    const lineHeight=fpx(33)*1.5;
     let by2=py(0.752);
     basisLines.forEach(function(line){
       ctx.fillText(line, px(0.205), by2);
