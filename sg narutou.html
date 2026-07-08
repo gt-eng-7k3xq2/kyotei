@@ -318,6 +318,7 @@
         <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="copyXSummary('x')">𝕏 X用</button>
         <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--gold);border-color:var(--gold);" onclick="copyXSummary('note')">📝 note用</button>
       </div>
+      <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:4px;" onclick="openClaudeDataModal()">📋 Claude用データを抽出（ここぞの時用）</button>
     </div>
 
     <!-- 印変更UI -->
@@ -977,6 +978,19 @@ function parseData(text){
     for(let i=0;i<6;i++){
       d.boats[i].isF=(fRestSection[i+1]!=='-');
     }
+  }
+
+  // 気象情報（Claude用データ抽出機能で使用。直前情報タブ末尾の1行）
+  const weatherMatch=text.match(/気温[\t ]+天気[\t ]+風速[\t ]+風向[\t ]+水温[\t ]+波高\r?\n([^\t\n]*)\t([^\t\n]*)\t([^\t\n]*)\t([^\t\n]*)\t([^\t\n]*)\t([^\t\n]*)/);
+  if(weatherMatch){
+    d.weather={
+      temp:weatherMatch[1].trim(),
+      condition:weatherMatch[2].trim(),
+      windSpeed:weatherMatch[3].trim(),
+      windDir:weatherMatch[4].trim(),
+      waterTemp:weatherMatch[5].trim(),
+      waveHeight:weatherMatch[6].trim()
+    };
   }
 
   return d;
@@ -2217,8 +2231,79 @@ function saveThumbCard(){
 }
 
 // ============================================================
-// 展開コメントAI生成（鳴門エンジン内蔵・Gemini）
+// Claude用コメント生成データ抽出（オンデマンド。毎回自動生成はしない）
 // ============================================================
+function buildClaudeCommentData(){
+  if(!currentCalcData||!currentParsedData) return '⚠️ データがありません。予想を作成してから使ってください。';
+  const ranking=currentCalcData.ranking||[];
+  const betsRaw=currentCalcData.betsRaw||[];
+  if(!ranking.length) return '⚠️ データがありません。予想を作成してから使ってください。';
+
+  const bd=(no)=>(currentParsedData.boats[no-1])||{};
+  const circled=['①','②','③','④','⑤','⑥'];
+
+  const venue=document.getElementById('inp-venue')?document.getElementById('inp-venue').value||'':'';
+  const racenum=currentCalcData.racenum||'';
+  const shimekiri=currentParsedData.shimekiri?`　締切${currentParsedData.shimekiri}`:'';
+
+  const maruBoat=ranking[0]?.boat;
+
+  const lines=[];
+  lines.push(`【${venue} ${racenum}R】${shimekiri}`);
+  lines.push('');
+
+  for(let no=1;no<=6;no++){
+    const b=bd(no);
+    const name=b.name||'(不明)';
+    const st=b.directST>0?b.directST.toFixed(2):(b.sessonAvgST>0?b.sessonAvgST.toFixed(2):'-');
+    const toku=b.sessonPt!=null?b.sessonPt.toFixed(2):'-';
+    const motor=b.motor2ren!=null?b.motor2ren.toFixed(1)+'%':'-';
+    const sashi=b.sashi6m||0, makuri=b.makuri6m||0, makurisashi=b.makurisashi6m||0;
+    const axisTag=(no===maruBoat)?'(軸)':'';
+    lines.push(`${circled[no-1]}${name}${axisTag}　ST${st}　今節得点率${toku}　モーター2連率${motor}　差し${sashi}%/まくり${makuri}%/まくり差し${makurisashi}%`);
+  }
+  lines.push('');
+
+  if(currentParsedData.weather){
+    const w=currentParsedData.weather;
+    lines.push(`気象: ${w.condition||'-'}　風速${w.windSpeed||'-'}　波高${w.waveHeight||'-'}　水温${w.waterTemp||'-'}`);
+    lines.push('');
+  }
+
+  const rankText=ranking.map((r,i)=>`${i+1}位:${circled[r.boat-1]||r.boat}`).join(' ');
+  lines.push(`評価順: ${rankText}`);
+
+  const honsen=betsRaw.filter(b=>b.type==='本線');
+  const osaee=betsRaw.filter(b=>b.type!=='本線');
+  if(honsen.length) lines.push(`本線: ${compressBetsSG(honsen)}`);
+  if(osaee.length) lines.push(`抑え: ${compressBetsSG(osaee)}`);
+  lines.push('');
+
+  lines.push('→ 上記を踏まえて、的中画像の「根拠」欄用に20〜30字程度の短い展開コメントを作って');
+
+  return lines.join('\n');
+}
+
+function openClaudeDataModal(){
+  const text=buildClaudeCommentData();
+  document.getElementById('claude-data-textarea').value=text;
+  document.getElementById('claude-data-modal').classList.add('show');
+}
+function closeClaudeDataModal(){
+  document.getElementById('claude-data-modal').classList.remove('show');
+}
+function copyClaudeData(){
+  const ta=document.getElementById('claude-data-textarea');
+  ta.select();
+  navigator.clipboard.writeText(ta.value).then(function(){
+    const btn=document.getElementById('claude-data-copy-btn');
+    const orig=btn.textContent;
+    btn.textContent='✅ コピーしました';
+    setTimeout(function(){btn.textContent=orig;},2000);
+  }).catch(function(){
+    showToast('コピーに失敗しました。手動で選択してコピーしてください。');
+  });
+}
 // buildXSummary内のルールベース判定と同じ「確定事実」だけを抽出してAIに渡す。
 // 生データを渡して解釈させると空虚な一般論になるため、比較・順位・実績値は
 // ここで計算済みの形でJSON化して渡し、AIには文章化だけさせる。
@@ -3667,5 +3752,19 @@ window.addEventListener('DOMContentLoaded',function(){
     <button onclick="closeTekichuModal()" style="width:100%;margin-top:8px;padding:10px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:6px;font-size:12px;-webkit-appearance:none;">閉じる</button>
   </div>
 </div>
+
+<!-- Claude用コメント生成データ抽出モーダル -->
+<div id="claude-data-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:250;padding:16px;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;max-width:420px;width:100%;padding:20px;max-height:90vh;overflow-y:auto;">
+    <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:6px;">📋 Claude用データ抽出</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6;">このテキストをコピーしてClaudeに貼り付け、展開コメントを書いてもらってください。</div>
+    <textarea id="claude-data-textarea" readonly style="width:100%;min-height:280px;background:#1A1A1A;color:#FFFFFF;border:1px solid #444;border-radius:6px;padding:10px 12px;font-size:12px;font-family:monospace;box-sizing:border-box;resize:vertical;"></textarea>
+    <button id="claude-data-copy-btn" class="eval-save-btn" onclick="copyClaudeData()" style="margin-top:10px;">📋 コピー</button>
+    <button onclick="closeClaudeDataModal()" style="width:100%;margin-top:8px;padding:10px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:6px;font-size:12px;-webkit-appearance:none;">閉じる</button>
+  </div>
+</div>
+<style>
+#claude-data-modal.show{display:flex !important;}
+</style>
 </body>
 </html>
