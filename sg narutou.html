@@ -3001,7 +3001,12 @@ function saveTekichuCard(){
     ctx.fillStyle=WARM_WHITE;
     ctx.font=`700 ${fpx(33)}px "Noto Serif JP", serif`;
     const basisMaxWidth=px(0.38);
-    const basisLines=tekichuWrapText(ctx, entry.tenkaiLine||document.getElementById('tekichu-basis-input').value||'', basisMaxWidth);
+    const basisInputEl=document.getElementById('tekichu-basis-input');
+    const basisSourceText=(basisInputEl&&basisInputEl.value!=='')?basisInputEl.value:(entry.tenkaiLine||'');
+    console.log('[的中画像デバッグ] textarea.value=',JSON.stringify(basisInputEl?basisInputEl.value:null),' entry.tenkaiLine=',JSON.stringify(entry.tenkaiLine),' 採用値=',JSON.stringify(basisSourceText));
+    window._tekichuDebugLastBasis=basisSourceText; // Safari開発者ツールが無くても後で確認できるよう保持
+    alert('【診断用・一時的】採用される根拠テキスト:\n'+basisSourceText); // 原因特定後に削除予定
+    const basisLines=tekichuWrapText(ctx, basisSourceText, basisMaxWidth);
     const lineHeight=fpx(33)*1.5;
     let by2=py(0.752);
     basisLines.forEach(function(line){
@@ -3015,7 +3020,12 @@ function saveTekichuCard(){
         showToast('生成失敗。スクリーンショットで保存してください。');
         return;
       }
-      const fname=`的中_${entry.venue||''}${entry.racenum||''}R.png`;
+      const ts=(function(){
+        const d=new Date();
+        const p=n=>String(n).padStart(2,'0');
+        return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+      })();
+      const fname=`的中_${entry.venue||''}${entry.racenum||''}R_${ts}.png`;
       const file=new File([blob],fname,{type:'image/png'});
       if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
         navigator.share({files:[file],title:'GALLON 的中'}).then(function(){
@@ -3030,8 +3040,15 @@ function saveTekichuCard(){
         const link=document.createElement('a');
         link.download=fname;
         link.href=url;
+        document.body.appendChild(link);
         link.click();
-        setTimeout(function(){URL.revokeObjectURL(url);},1000);
+        document.body.removeChild(link);
+        // iOS Safariのdownload属性は不安定な場合があるため、新規タブでも開いて
+        // 長押し保存できる状態を保険として用意する
+        setTimeout(function(){
+          window.open(url,'_blank');
+        },300);
+        setTimeout(function(){URL.revokeObjectURL(url);},60000);
         btn.textContent='✅ 保存しました';
         setTimeout(function(){btn.textContent=origLabel;btn.disabled=false;},2000);
       }
