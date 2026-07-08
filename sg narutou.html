@@ -3011,18 +3011,6 @@ function saveTekichuCard(){
       by2+=lineHeight;
     });
 
-    // ── 診断用マーカー(原因特定でき次第削除) ──
-    // 画像そのものに焼き込むことで、キャッシュ等の影響を受けずに「実際に動いたコード」を確認できるようにする
-    ctx.save();
-    ctx.fillStyle='rgba(255,0,255,0.9)';
-    ctx.fillRect(0,0,px(1),fpx(90));
-    ctx.fillStyle='#FFFFFF';
-    ctx.font=`700 ${fpx(20)}px sans-serif`;
-    ctx.fillText('DEBUG BUILD 20260708-2 textarea='+JSON.stringify(basisInputEl?basisInputEl.value:'(要素なし)'), fpx(10), fpx(10));
-    ctx.fillText('採用値='+JSON.stringify(basisSourceText), fpx(10), fpx(45));
-    ctx.restore();
-    // ── 診断用マーカーここまで ──
-
     canvas.toBlob(function(blob){
       if(!blob){
         btn.textContent=origLabel; btn.disabled=false;
