@@ -2892,6 +2892,9 @@ function openTekichuCard(entry){
   const payoutInput=document.getElementById('tekichu-payout-input');
   payoutInput.value=payoutVal||'';
 
+  // X投稿文の生成
+  updateTekichuXPost();
+
   // 根拠のデフォルト値: 予想保存時にスナップショットしたXサマリーの展開コメントを使う
   // （結果入力タイミングではcurrentCalcData等が別レースのものに変わっている可能性があるため、
   //   都度buildXSummary()を呼び直すのではなく保存済みの値をそのまま使う）
@@ -2901,6 +2904,39 @@ function openTekichuCard(entry){
   updateTekichuBasis();
 
   document.getElementById('tekichu-modal').classList.add('show');
+}
+
+// 的中報告のX投稿文を生成（例: 唐津5R\n\n2-3-1 / 24.5倍\n\n本線にて的中🎯）
+function buildTekichuXPost(entry){
+  const venue=entry.venue||'';
+  const racenum=entry.racenum||'';
+  const chakuju=entry.chakuju||'';
+  const payoutVal=entry.payout||0;
+  const odds=(payoutVal/100).toFixed(1);
+  // 的中した買い目が本線/抑えのどちらだったかを判定
+  const hitBet=(entry.bets||[]).find(b=>b.val===chakuju);
+  const betTypeLabel=hitBet?(hitBet.type==='本線'?'本線':'抑え'):'';
+  const hitLine=betTypeLabel?`${betTypeLabel}にて的中🎯`:'的中🎯';
+  return `${venue}${racenum}R\n\n${chakuju} / ${odds}倍\n\n${hitLine}`;
+}
+
+function updateTekichuXPost(){
+  if(!_tekichuEntry) return;
+  const ta=document.getElementById('tekichu-xpost-textarea');
+  if(ta) ta.value=buildTekichuXPost(_tekichuEntry);
+}
+
+function copyTekichuXPost(){
+  const ta=document.getElementById('tekichu-xpost-textarea');
+  ta.select();
+  navigator.clipboard.writeText(ta.value).then(function(){
+    const btn=document.getElementById('tekichu-xpost-copy-btn');
+    const orig=btn.textContent;
+    btn.textContent='✅ コピーしました';
+    setTimeout(function(){btn.textContent=orig;},2000);
+  }).catch(function(){
+    showToast('コピーに失敗しました。手動で選択してコピーしてください。');
+  });
 }
 
 function updateTekichuBasis(){
@@ -2928,6 +2964,7 @@ function updateTekichuPayout(){
         updateV2Result(_tekichuEntry.id,logs[idx].chakuju,val,true,logs[idx].maru);
       }
     }
+    updateTekichuXPost();
   }
 }
 
@@ -3754,6 +3791,11 @@ window.addEventListener('DOMContentLoaded',function(){
       <input type="number" id="tekichu-payout-input" placeholder="例: 128450" oninput="updateTekichuPayout()" style="width:100%;padding:10px;background:#1A1A1A;color:#FFFFFF;border:1px solid #444;border-radius:6px;font-size:15px;box-sizing:border-box;-webkit-appearance:none;">
     </div>
     <button class="eval-save-btn" onclick="saveTekichuCard()" style="margin-top:10px;">📥 的中画像を保存・共有</button>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+      <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">𝕏 投稿文</label>
+      <textarea id="tekichu-xpost-textarea" rows="4" style="width:100%;background:#1A1A1A;color:#FFFFFF;border:1px solid #444;border-radius:6px;padding:10px 12px;font-size:14px;box-sizing:border-box;resize:vertical;"></textarea>
+      <button id="tekichu-xpost-copy-btn" class="eval-save-btn" onclick="copyTekichuXPost()" style="margin-top:8px;">📋 投稿文をコピー</button>
+    </div>
     <button onclick="closeTekichuModal()" style="width:100%;margin-top:8px;padding:10px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:6px;font-size:12px;-webkit-appearance:none;">閉じる</button>
   </div>
 </div>
