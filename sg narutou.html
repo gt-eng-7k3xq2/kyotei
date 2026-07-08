@@ -3003,9 +3003,6 @@ function saveTekichuCard(){
     const basisMaxWidth=px(0.38);
     const basisInputEl=document.getElementById('tekichu-basis-input');
     const basisSourceText=(basisInputEl&&basisInputEl.value!=='')?basisInputEl.value:(entry.tenkaiLine||'');
-    console.log('[的中画像デバッグ] textarea.value=',JSON.stringify(basisInputEl?basisInputEl.value:null),' entry.tenkaiLine=',JSON.stringify(entry.tenkaiLine),' 採用値=',JSON.stringify(basisSourceText));
-    window._tekichuDebugLastBasis=basisSourceText; // Safari開発者ツールが無くても後で確認できるよう保持
-    alert('【診断用・一時的】採用される根拠テキスト:\n'+basisSourceText); // 原因特定後に削除予定
     const basisLines=tekichuWrapText(ctx, basisSourceText, basisMaxWidth);
     const lineHeight=fpx(33)*1.5;
     let by2=py(0.752);
@@ -3013,6 +3010,18 @@ function saveTekichuCard(){
       ctx.fillText(line, px(0.205), by2);
       by2+=lineHeight;
     });
+
+    // ── 診断用マーカー(原因特定でき次第削除) ──
+    // 画像そのものに焼き込むことで、キャッシュ等の影響を受けずに「実際に動いたコード」を確認できるようにする
+    ctx.save();
+    ctx.fillStyle='rgba(255,0,255,0.9)';
+    ctx.fillRect(0,0,px(1),fpx(90));
+    ctx.fillStyle='#FFFFFF';
+    ctx.font=`700 ${fpx(20)}px sans-serif`;
+    ctx.fillText('DEBUG BUILD 20260708-2 textarea='+JSON.stringify(basisInputEl?basisInputEl.value:'(要素なし)'), fpx(10), fpx(10));
+    ctx.fillText('採用値='+JSON.stringify(basisSourceText), fpx(10), fpx(45));
+    ctx.restore();
+    // ── 診断用マーカーここまで ──
 
     canvas.toBlob(function(blob){
       if(!blob){
