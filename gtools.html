@@ -295,6 +295,40 @@ html,body{min-height:100vh;background:#04040c;}
   </div>
 </div>
 
+<div class="page" id="page-tekichu">
+  <div class="card">
+    <div class="card-title">🏆 的中画像ジェネレーター</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.7;">
+      ベース画像に レース情報・配当・買い目 を重ねてX投稿用の画像を作ります
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:10px;color:var(--text2);display:block;margin-bottom:4px;">ベース画像</label>
+      <input type="file" id="tekichu-file" accept="image/*" style="display:none;" onchange="tekichuLoadImage(event)">
+      <button onclick="document.getElementById('tekichu-file').click()" style="width:100%;padding:11px;background:var(--surface2);color:var(--gold);border:1px solid var(--gold);border-radius:var(--r2);font-size:13px;font-weight:700;-webkit-appearance:none;cursor:pointer;">🖼 画像を選択</button>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px;">※一度選ぶと端末に保存され、次回から自動で読み込まれます</div>
+    </div>
+  </div>
+
+  <div class="card" id="tekichu-editor" style="display:none;">
+    <div class="card-title">📝 テキスト内容</div>
+    <div class="field"><label>場・R</label><input type="text" id="tekichu-race" placeholder="例: 唐津7R" oninput="tekichuRender()"></div>
+    <div class="field"><label>日付</label><input type="text" id="tekichu-date" placeholder="例: 2026/07/06" oninput="tekichuRender()"></div>
+    <div class="field"><label>配当</label><input type="text" id="tekichu-payout" placeholder="例: ¥97,720" oninput="tekichuRender()"></div>
+    <div class="field"><label>買い目</label><input type="text" id="tekichu-kaime" placeholder="例: 2-3-156" oninput="tekichuRender()"></div>
+
+    <div class="card-title" style="margin-top:14px;">🎨 レイヤー設定</div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:8px;">下のプレビューを直接タップ&ドラッグでも位置調整できます</div>
+    <div id="tekichu-layer-controls"></div>
+
+    <div class="card-title" style="margin-top:14px;">👁 プレビュー（ドラッグで位置調整）</div>
+    <div style="width:100%;overflow:hidden;border-radius:var(--r2);border:1px solid var(--border2);touch-action:none;">
+      <canvas id="tekichu-canvas" style="width:100%;display:block;touch-action:none;"></canvas>
+    </div>
+
+    <button onclick="tekichuDownload()" style="margin-top:12px;width:100%;padding:14px;background:var(--gold);color:#080810;border:none;border-radius:var(--r);font-size:15px;font-weight:800;-webkit-appearance:none;cursor:pointer;">💾 画像を保存</button>
+  </div>
+</div>
+
 <div id="nippo-overlay">
   <div id="nippo-ui-bar" style="position:fixed;top:calc(14px + env(safe-area-inset-top));left:0;right:0;z-index:901;display:flex;align-items:center;justify-content:space-between;padding:0 16px;">
     <button onclick="enterScreenshotMode()" style="background:rgba(201,168,76,0.2);border:1px solid rgba(201,168,76,0.4);color:#c9a84c;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;">📸 スクショモード</button>
@@ -340,6 +374,7 @@ html,body{min-height:100vh;background:#04040c;}
   <div class="nav-item" onclick="switchPage('logs')"><div class="nav-icon">📋</div><div class="nav-label">ログ</div></div>
   <div class="nav-item" onclick="switchPage('nippo')"><div class="nav-icon">📅</div><div class="nav-label">日報</div></div>
   <div class="nav-item" onclick="switchPage('ohayo')"><div class="nav-icon">🌅</div><div class="nav-label">朝投稿</div></div>
+  <div class="nav-item" onclick="switchPage('tekichu')"><div class="nav-icon">🏆</div><div class="nav-label">的中画像</div></div>
 </nav>
 <div class="toast" id="toast"></div>
 </div>
@@ -359,10 +394,11 @@ function switchPage(p){
   document.querySelectorAll('#tool-1 .page').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('#tool-1 .nav-item').forEach(el=>el.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
-  const pages=['input','analysis','logs','nippo','ohayo'];
+  const pages=['input','analysis','logs','nippo','ohayo','tekichu'];
   document.querySelectorAll('#tool-1 .nav-item')[pages.indexOf(p)].classList.add('active');
   if(p==='analysis')renderAnalysis();
   if(p==='logs')renderLogs();
+  if(p==='tekichu')tekichuInit();
   if(p==='nippo'){
     var today=new Date().toISOString().split('T')[0];
     var nd=document.getElementById('nippo-date');if(nd&&!nd.value)nd.value=today;
@@ -373,8 +409,9 @@ function switchPage(p){
 // 変更履歴:
 // v1 (〜2026-07-04): 初期版。差し・まくり実績スコア max8pt
 // v2 (2026-07-04〜): 差し・まくり実績スコアを8pt→12ptに引き上げ
-// v3 (2026-07-06〜): モーター10pt→13pt、合成ST8pt→10ptに引き上げ
-const SCORE_ENGINE_VERSION=3;
+// v3 (2026-07-06〜2026-07-08): モーター10pt→13pt、合成ST8pt→10ptに引き上げ
+// v4 (2026-07-08〜): n=269検証で悪化のためv2の重みに巻き戻し
+const SCORE_ENGINE_VERSION=4;
 function getLogs(){try{return JSON.parse(localStorage.getItem('kyotei_v2')||'[]');}catch{return[];}}
 function saveLogs(logs){localStorage.setItem('kyotei_v2',JSON.stringify(logs));}
 
@@ -1172,6 +1209,207 @@ applyPayFromUrl();
     b.classList.toggle('active', parseInt(b.dataset.val)===osaeeUnit);
   });
 })();
+
+// ===== 的中画像ジェネレーター =====
+let tekichuImg = null;
+let tekichuCanvas = null;
+let tekichuCtx = null;
+let tekichuLayers = [
+  {id:'race',   label:'場・R',  field:'tekichu-race',   x:0.05, y:0.06, size:5.5, color:'#ffffff', align:'left'},
+  {id:'date',   label:'日付',   field:'tekichu-date',   x:0.05, y:0.13, size:3.5, color:'#dddddd', align:'left'},
+  {id:'payout', label:'配当',   field:'tekichu-payout', x:0.5,  y:0.5,  size:10,  color:'#ffd54a', align:'center'},
+  {id:'kaime',  label:'買い目', field:'tekichu-kaime',  x:0.5,  y:0.65, size:4.5, color:'#ffffff', align:'center'}
+];
+// size はキャンバス高さに対する%で保持（画像サイズが変わっても比率維持のため）
+let tekichuDragId = null;
+let tekichuDragOffset = {x:0,y:0};
+
+function tekichuInit(){
+  tekichuCanvas = document.getElementById('tekichu-canvas');
+  tekichuCtx = tekichuCanvas.getContext('2d');
+  var savedLayers = localStorage.getItem('tekichu_layers');
+  if(savedLayers){
+    try{
+      var parsed = JSON.parse(savedLayers);
+      tekichuLayers.forEach(function(l){
+        if(parsed[l.id]) Object.assign(l, parsed[l.id]);
+      });
+    }catch(e){}
+  }
+  var savedImg = localStorage.getItem('tekichu_base_image');
+  if(savedImg){
+    var img = new Image();
+    img.onload = function(){
+      tekichuImg = img;
+      document.getElementById('tekichu-editor').style.display = 'block';
+      tekichuRenderLayerControls();
+      tekichuRender();
+    };
+    img.src = savedImg;
+  }
+  tekichuSetupDrag();
+}
+
+function tekichuLoadImage(event){
+  var file = event.target.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var img = new Image();
+    img.onload = function(){
+      tekichuImg = img;
+      try{ localStorage.setItem('tekichu_base_image', e.target.result); }
+      catch(err){ console.warn('画像の保存に失敗(容量超過の可能性):', err); }
+      document.getElementById('tekichu-editor').style.display = 'block';
+      tekichuRenderLayerControls();
+      tekichuRender();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function tekichuRenderLayerControls(){
+  var wrap = document.getElementById('tekichu-layer-controls');
+  wrap.innerHTML = tekichuLayers.map(function(l){
+    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+      + '<div style="width:52px;font-size:11px;color:var(--text2);flex-shrink:0;">'+l.label+'</div>'
+      + '<input type="range" min="2" max="16" step="0.5" value="'+l.size+'" style="flex:1;" oninput="tekichuUpdateSize(\''+l.id+'\',this.value)">'
+      + '<input type="color" value="'+l.color+'" style="width:32px;height:28px;border:none;border-radius:6px;flex-shrink:0;" oninput="tekichuUpdateColor(\''+l.id+'\',this.value)">'
+      + '</div>';
+  }).join('');
+}
+
+function tekichuUpdateSize(id, val){
+  var l = tekichuLayers.find(x=>x.id===id);
+  if(l){ l.size = parseFloat(val); tekichuSaveLayers(); tekichuRender(); }
+}
+function tekichuUpdateColor(id, val){
+  var l = tekichuLayers.find(x=>x.id===id);
+  if(l){ l.color = val; tekichuSaveLayers(); tekichuRender(); }
+}
+function tekichuSaveLayers(){
+  var obj = {};
+  tekichuLayers.forEach(function(l){ obj[l.id] = {x:l.x,y:l.y,size:l.size,color:l.color,align:l.align}; });
+  try{ localStorage.setItem('tekichu_layers', JSON.stringify(obj)); }catch(e){}
+}
+
+function tekichuGetText(l){
+  var el = document.getElementById(l.field);
+  return el ? el.value : '';
+}
+
+function tekichuRender(){
+  if(!tekichuImg || !tekichuCtx) return;
+  var w = tekichuImg.naturalWidth, h = tekichuImg.naturalHeight;
+  tekichuCanvas.width = w;
+  tekichuCanvas.height = h;
+  var ctx = tekichuCtx;
+  ctx.clearRect(0,0,w,h);
+  ctx.drawImage(tekichuImg, 0, 0, w, h);
+  tekichuLayers.forEach(function(l){
+    var text = tekichuGetText(l);
+    if(!text) return;
+    var fontPx = h * (l.size/100);
+    ctx.font = '800 ' + fontPx + 'px sans-serif';
+    ctx.fillStyle = l.color;
+    ctx.textBaseline = 'top';
+    ctx.textAlign = l.align;
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = fontPx*0.15;
+    ctx.fillText(text, l.x*w, l.y*h);
+    ctx.shadowBlur = 0;
+  });
+}
+
+function tekichuLayerBox(l, w, h){
+  var text = tekichuGetText(l);
+  var fontPx = h * (l.size/100);
+  tekichuCtx.font = '800 ' + fontPx + 'px sans-serif';
+  var textW = tekichuCtx.measureText(text || l.label).width;
+  var left = l.x*w;
+  if(l.align==='center') left -= textW/2;
+  else if(l.align==='right') left -= textW;
+  return {left:left, top:l.y*h, width:textW, height:fontPx*1.2};
+}
+
+function tekichuSetupDrag(){
+  var canvas = tekichuCanvas;
+  function getPos(evt){
+    var rect = canvas.getBoundingClientRect();
+    var clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+    var clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+    var scaleX = canvas.width / rect.width;
+    var scaleY = canvas.height / rect.height;
+    return {x:(clientX-rect.left)*scaleX, y:(clientY-rect.top)*scaleY};
+  }
+  function start(evt){
+    if(!tekichuImg) return;
+    var pos = getPos(evt);
+    var w = canvas.width, h = canvas.height;
+    for(var i=tekichuLayers.length-1;i>=0;i--){
+      var l = tekichuLayers[i];
+      var box = tekichuLayerBox(l, w, h);
+      if(pos.x>=box.left && pos.x<=box.left+box.width && pos.y>=box.top && pos.y<=box.top+box.height){
+        tekichuDragId = l.id;
+        tekichuDragOffset = {x:pos.x/w - l.x, y:pos.y/h - l.y};
+        evt.preventDefault();
+        break;
+      }
+    }
+  }
+  function move(evt){
+    if(!tekichuDragId) return;
+    evt.preventDefault();
+    var pos = getPos(evt);
+    var w = canvas.width, h = canvas.height;
+    var l = tekichuLayers.find(x=>x.id===tekichuDragId);
+    l.x = Math.max(0, Math.min(1, pos.x/w - tekichuDragOffset.x));
+    l.y = Math.max(0, Math.min(1, pos.y/h - tekichuDragOffset.y));
+    tekichuRender();
+  }
+  function end(){
+    if(tekichuDragId){ tekichuSaveLayers(); }
+    tekichuDragId = null;
+  }
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  canvas.addEventListener('mouseup', end);
+  canvas.addEventListener('mouseleave', end);
+  canvas.addEventListener('touchstart', start, {passive:false});
+  canvas.addEventListener('touchmove', move, {passive:false});
+  canvas.addEventListener('touchend', end);
+}
+
+function tekichuDownload(){
+  if(!tekichuCanvas || !tekichuImg){ alert('先にベース画像を選択してください'); return; }
+  tekichuCanvas.toBlob(function(blob){
+    if(!blob){ alert('画像の生成に失敗しました'); return; }
+    var fileName = '的中_' + (document.getElementById('tekichu-race').value||'race') + '.png';
+    var file = new File([blob], fileName, {type:'image/png'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      navigator.share({files:[file], title:fileName}).catch(function(){
+        tekichuFallbackOpen(blob);
+      });
+    } else {
+      tekichuFallbackOpen(blob);
+    }
+  }, 'image/png');
+}
+
+function tekichuFallbackOpen(blob){
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '的中画像.png';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  // iOS Safariでdownload属性が効かない場合のフォールバック（長押しで保存できるよう新規タブで開く）
+  setTimeout(function(){
+    window.open(url, '_blank');
+  }, 300);
+}
 </script>
 </body>
 </html>
