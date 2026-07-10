@@ -1925,11 +1925,18 @@ function buildXSummary(mode,withAmount){
   // 代表的なものだけ簡易リストで補正する。完全な精度が必要なら選手名鑑データが別途必要。
   const bd=(no)=>(currentParsedData&&currentParsedData.boats[no-1])||{};
   const ONE_CHAR_SURNAMES=['林','森','田','原','関','堀','進','辻','沢','岡'];
+  // 3文字苗字（先頭2文字だと途中で切れてしまう選手）。誤り報告があるたび随時追加。
+  const THREE_CHAR_SURNAMES=['濱野谷'];
+  // 完全一致の例外指定（フルネーム→苗字）。機械判定では対応しきれないケースをここで上書き。
+  const NAME_OVERRIDES={};
   const nm=(no)=>{
     const n=bd(no).name;
     if(!n) return '';
+    if(NAME_OVERRIDES[n]) return NAME_OVERRIDES[n];
     if(n.includes(' ')) return n.split(' ')[0];
     if(ONE_CHAR_SURNAMES.includes(n[0])) return n[0];
+    const three=THREE_CHAR_SURNAMES.find(s=>n.startsWith(s));
+    if(three) return three;
     return n.slice(0,2);
   };
   const label=(no)=>`${circled[no-1]||no+'号艇'}${nm(no)}`;
@@ -2321,11 +2328,18 @@ function computeTenkaiFacts(){
 
   const bd=(no)=>(currentParsedData&&currentParsedData.boats[no-1])||{};
   const ONE_CHAR_SURNAMES=['林','森','田','原','関','堀','進','辻','沢','岡'];
+  // 3文字苗字（先頭2文字だと途中で切れてしまう選手）。誤り報告があるたび随時追加。
+  const THREE_CHAR_SURNAMES=['濱野谷'];
+  // 完全一致の例外指定（フルネーム→苗字）。機械判定では対応しきれないケースをここで上書き。
+  const NAME_OVERRIDES={};
   const nm=(no)=>{
     const n=bd(no).name;
     if(!n) return '';
+    if(NAME_OVERRIDES[n]) return NAME_OVERRIDES[n];
     if(n.includes(' ')) return n.split(' ')[0];
     if(ONE_CHAR_SURNAMES.includes(n[0])) return n[0];
+    const three=THREE_CHAR_SURNAMES.find(s=>n.startsWith(s));
+    if(three) return three;
     return n.slice(0,2);
   };
   const circled=['❶','❷','❸','❹','❺','❻'];
