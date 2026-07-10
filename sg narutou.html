@@ -426,8 +426,9 @@
     <div class="canvas-wrap" id="overlay-canvas-wrap" style="position:relative;width:100%;border-radius:8px;overflow:hidden;border:1px solid var(--border);touch-action:none;background:#000;">
       <canvas id="overlay-canvas" style="display:block;width:100%;height:auto;"></canvas>
       <div id="overlay-empty" style="font-size:12px;color:var(--muted);text-align:center;padding:26px 10px;">まだ画像がありません。スクショを選んでください。</div>
-      <div id="overlay-notebox" style="display:none;position:absolute;background:#FFF3B0;color:#1a1408;border-radius:10px;padding:10px 12px;font-family:-apple-system,'Hiragino Sans',sans-serif;font-weight:700;white-space:pre-wrap;overflow:hidden;box-shadow:0 4px 10px rgba(0,0,0,.4);cursor:grab;">
-        <div id="overlay-resize-handle" style="position:absolute;right:0;bottom:0;width:20px;height:20px;cursor:nwse-resize;background:rgba(0,0,0,.15);border-radius:4px 0 10px 0;"></div>
+      <div id="overlay-notebox" style="display:none;position:absolute;background:linear-gradient(135deg,rgba(20,48,32,.97),rgba(9,22,15,.97));color:#eef5f0;border:1.5px solid #c9a84c;border-radius:14px;padding:12px 14px;font-family:-apple-system,'Hiragino Sans',sans-serif;white-space:normal;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.55);cursor:grab;">
+        <div id="overlay-notebox-content"></div>
+        <div id="overlay-resize-handle" style="position:absolute;right:0;bottom:0;width:20px;height:20px;cursor:nwse-resize;background:rgba(201,168,76,.35);border-radius:4px 0 12px 0;"></div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin:10px 0;">
@@ -3890,17 +3891,67 @@ window.addEventListener('DOMContentLoaded',function(){
   };
 
   // ---- テキスト・文字サイズをノートボックスに反映 ----
+  function ovEscapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  const OV_LANE_COLORS={1:{bg:'#f2f2f2',fg:'#111'},2:{bg:'#1a1a1a',fg:'#fff'},3:{bg:'#e5433a',fg:'#fff'},4:{bg:'#1f66d6',fg:'#fff'},5:{bg:'#f2c209',fg:'#111'},6:{bg:'#2e9e44',fg:'#fff'}};
+  function ovSymColor(s){
+    return {'◎':'#f0d080','○':'#8fd18f','▲':'#c7c7c7','△':'#9fae9f','▽':'#7f8f7f','×':'#e08a8a'}[s]||'#d8d8d8';
+  }
+  const OV_CIRCLED='①②③④⑤⑥';
+
+  // テキストを行ごとに解析し、装飾付きHTMLへ変換（自動生成フォーマットに対応。合わない行はそのまま表示）
+  function ovRenderBoxHtml(text){
+    const lines=text.split('\n');
+    let html='';
+    lines.forEach(raw=>{
+      const line=raw.trim();
+      if(line===''){ html+='<div style="height:.5em;"></div>'; return; }
+      if(/^[━\-=]{3,}$/.test(line)){ html+='<div style="border-top:2px solid #c9a84c;opacity:.75;margin:3px 0 7px;"></div>'; return; }
+      if(/^【.*】/.test(line)){
+        html+=`<div style="font-weight:900;color:#f0d080;font-size:1.18em;letter-spacing:.02em;">${ovEscapeHtml(line)}</div>`;
+        return;
+      }
+      if(/^枠\s*選手/.test(line)){
+        html+='<div style="display:flex;gap:6px;font-size:.7em;color:#8fae95;font-weight:700;margin:2px 0 4px;padding-left:26px;"><span style="flex:1;">選手</span><span style="width:2.1em;text-align:center;">展示</span><span style="width:2.1em;text-align:center;">機力</span><span style="width:3.4em;text-align:right;">連率</span></div>';
+        return;
+      }
+      const m=line.match(new RegExp('^(['+OV_CIRCLED+'])(\\S+)\\s+(\\S)\\s+(\\S)\\s+([\\d.]+%|-)\\s*(.*)$'));
+      if(m){
+        const laneNo=OV_CIRCLED.indexOf(m[1])+1;
+        const c=OV_LANE_COLORS[laneNo]||{bg:'#555',fg:'#fff'};
+        const name=m[2], s1=m[3], s2=m[4], pct=m[5], rest=m[6]?m[6].trim():'';
+        html+=`<div style="display:flex;align-items:center;gap:6px;padding:2.5px 0;">
+          <span style="flex-shrink:0;width:1.5em;height:1.5em;border-radius:50%;background:${c.bg};color:${c.fg};font-size:.68em;font-weight:900;display:flex;align-items:center;justify-content:center;">${laneNo}</span>
+          <span style="flex:1;font-weight:700;color:#fff;white-space:nowrap;">${ovEscapeHtml(name)}</span>
+          <span style="width:2.1em;text-align:center;font-weight:900;color:${ovSymColor(s1)};">${s1}</span>
+          <span style="width:2.1em;text-align:center;font-weight:900;color:${ovSymColor(s2)};">${s2}</span>
+          <span style="width:3.4em;text-align:right;font-weight:700;color:#a8d8ae;">${pct}</span>
+          ${rest?`<span style="margin-left:4px;font-size:.82em;color:#cfcfcf;white-space:nowrap;">${ovEscapeHtml(rest)}</span>`:''}
+        </div>`;
+        return;
+      }
+      if(/^◎本命/.test(line)){
+        html+=`<div style="margin-top:6px;font-weight:900;color:#f0d080;font-size:1.08em;">${ovEscapeHtml(line)}</div>`;
+        return;
+      }
+      if(/^展開[:：]/.test(line)){
+        html+=`<div style="margin-top:2px;color:#d8d8d8;font-size:.88em;">${ovEscapeHtml(line)}</div>`;
+        return;
+      }
+      html+=`<div style="color:#e8e8e8;">${ovEscapeHtml(line)}</div>`;
+    });
+    return html;
+  }
+
   window.overlaySyncNoteText=function(){
     const text=document.getElementById('overlay-text-input').value;
     const fs=parseInt(document.getElementById('overlay-fontsize').value,10);
     document.getElementById('overlay-fontsize-val').textContent=fs;
     const box=ovBoxEl();
     box.style.fontSize=fs+'px';
-    box.style.lineHeight='1.35';
-    // resizeハンドル以外を書き換え
-    let handle=document.getElementById('overlay-resize-handle');
-    box.textContent=text;
-    box.appendChild(handle);
+    box.style.lineHeight='1.4';
+    document.getElementById('overlay-notebox-content').innerHTML=ovRenderBoxHtml(text);
     if(ovBox) ovBox.fontSize=fs;
     ovSaveBox();
   };
@@ -4009,28 +4060,15 @@ window.addEventListener('DOMContentLoaded',function(){
     showToast('枠をリセットしました');
   };
 
-  // ---- 保存(画像出力): テキストを手動改行処理してcanvasに描画 ----
-  function ovWrapLines(ctx, text, maxWidth){
-    const outLines=[];
-    text.split('\n').forEach(rawLine=>{
-      if(rawLine==='') { outLines.push(''); return; }
-      let cur='';
-      for(const ch of rawLine){
-        const test=cur+ch;
-        if(ctx.measureText(test).width>maxWidth && cur!==''){
-          outLines.push(cur);
-          cur=ch;
-        } else {
-          cur=test;
-        }
-      }
-      if(cur) outLines.push(cur);
-    });
-    return outLines;
-  }
+  // ---- 保存(画像出力): 装飾済みノートボックスをhtml2canvasでキャプチャしてスクショに合成 ----
 
   window.overlaySaveImage=function(){
     if(!ovImg){ showToast('先に画像を選んでください'); return; }
+    const btn=document.getElementById('overlay-save-btn');
+    const origLabel='画像として保存';
+    btn.textContent='生成中...';
+    btn.disabled=true;
+
     const canvas=ovCanvas();
     const ctx=canvas.getContext('2d');
     ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -4040,67 +4078,46 @@ window.addEventListener('DOMContentLoaded',function(){
     const by=ovBox.y/100*canvas.height;
     const bw=ovBox.w/100*canvas.width;
     const bh=ovBox.h/100*canvas.height;
-    const scale=canvas.width/ovWrap().getBoundingClientRect().width;
-    const fontSize=(ovBox.fontSize||18)*scale;
-    const pad=Math.round(fontSize*0.5);
+    const boxEl=ovBoxEl();
+    const handle=document.getElementById('overlay-resize-handle');
+    const boxScale=bw/boxEl.offsetWidth; // 表示サイズ→貼り付け先解像度への拡大率
 
-    // 背景（角丸＋影っぽい濃い枠）
-    ctx.save();
-    ctx.shadowColor='rgba(0,0,0,.4)';
-    ctx.shadowBlur=fontSize*0.6;
-    ctx.fillStyle='#FFF3B0';
-    const r=Math.round(fontSize*0.5);
-    ctx.beginPath();
-    ctx.moveTo(bx+r,by);
-    ctx.arcTo(bx+bw,by,bx+bw,by+bh,r);
-    ctx.arcTo(bx+bw,by+bh,bx,by+bh,r);
-    ctx.arcTo(bx,by+bh,bx,by,r);
-    ctx.arcTo(bx,by,bx+bw,by,r);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-
-    // テキスト
-    ctx.fillStyle='#1a1408';
-    ctx.font=`700 ${fontSize}px -apple-system,'Hiragino Sans',sans-serif`;
-    ctx.textBaseline='top';
-    const text=document.getElementById('overlay-text-input').value;
-    const lineHeight=fontSize*1.35;
-    const lines=ovWrapLines(ctx, text, bw-pad*2);
-    let ty=by+pad;
-    for(const line of lines){
-      if(ty+lineHeight>by+bh) break; // 枠をはみ出す分は描画しない
-      ctx.fillText(line, bx+pad, ty);
-      ty+=lineHeight;
-    }
-
-    const btn=document.getElementById('overlay-save-btn');
-    const origLabel='画像として保存';
-    btn.textContent='生成中...';
-    btn.disabled=true;
-    canvas.toBlob(function(blob){
-      const racenumVal=(currentCalcData&&currentCalcData.racenum)||currentParsedData?.raceNum||'';
-      const fname=`race_comment_${racenumVal}R_${Date.now()}.png`;
-      const file=new File([blob],fname,{type:'image/png'});
-      if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-        navigator.share({files:[file],title:'レースコメント'}).then(function(){
-          btn.textContent='✅ 共有しました';
-          setTimeout(function(){btn.textContent=origLabel;btn.disabled=false;},2000);
-        }).catch(function(){
-          btn.textContent=origLabel;
-          btn.disabled=false;
-        });
-      } else {
-        const url=URL.createObjectURL(blob);
-        const a=document.createElement('a');
-        a.href=url;
-        a.download=fname;
-        a.click();
-        setTimeout(function(){URL.revokeObjectURL(url);},1000);
-        btn.textContent='✅ 保存しました';
-        setTimeout(function(){btn.textContent=origLabel;btn.disabled=false;},2000);
-      }
-    },'image/png');
+    const fontsReady=(document.fonts&&document.fonts.ready)?document.fonts.ready:Promise.resolve();
+    fontsReady.then(function(){
+      handle.style.display='none'; // キャプチャ時はリサイズハンドルを隠す
+      html2canvas(boxEl,{scale:boxScale,backgroundColor:null,useCORS:true,logging:false}).then(function(boxCanvas){
+        handle.style.display='';
+        ctx.drawImage(boxCanvas, bx, by, bw, bh);
+        canvas.toBlob(function(blob){
+          const racenumVal=(currentCalcData&&currentCalcData.racenum)||currentParsedData?.raceNum||'';
+          const fname=`race_comment_${racenumVal}R_${Date.now()}.png`;
+          const file=new File([blob],fname,{type:'image/png'});
+          if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+            navigator.share({files:[file],title:'レースコメント'}).then(function(){
+              btn.textContent='✅ 共有しました';
+              setTimeout(function(){btn.textContent=origLabel;btn.disabled=false;},2000);
+            }).catch(function(){
+              btn.textContent=origLabel;
+              btn.disabled=false;
+            });
+          } else {
+            const url=URL.createObjectURL(blob);
+            const a=document.createElement('a');
+            a.href=url;
+            a.download=fname;
+            a.click();
+            setTimeout(function(){URL.revokeObjectURL(url);},1000);
+            btn.textContent='✅ 保存しました';
+            setTimeout(function(){btn.textContent=origLabel;btn.disabled=false;},2000);
+          }
+        },'image/png');
+      }).catch(function(){
+        handle.style.display='';
+        btn.textContent=origLabel;
+        btn.disabled=false;
+        showToast('画像生成に失敗しました');
+      });
+    });
   };
 
   ovLoadBox();
