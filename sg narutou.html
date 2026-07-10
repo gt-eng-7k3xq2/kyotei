@@ -415,20 +415,29 @@
     <p class="eval-hint">または📱<span>スクリーンショット</span>でも保存できます</p>
   </div>
 
-  <!-- 記号書き込みツール（展示・機力をBMデータから自動取込） -->
+  <!-- コメント画像ツール（BMデータから叩き台テキストを自動生成→スクショに書き込み） -->
   <div class="card">
-    <div class="card-title">📝 記号書き込みツール</div>
-    <p class="eval-hint" style="margin-bottom:8px;">展示・機力は現在のBM解析結果から自動取込されます。公式サイトのスクショを選ぶだけでOK。</p>
-    <label class="file-btn" for="overlay-file-input" style="display:block;width:100%;padding:12px;border-radius:8px;font-size:14px;font-weight:700;border:1px dashed var(--gold);background:var(--surface2);color:#f0d080;text-align:center;-webkit-appearance:none;margin-bottom:10px;">画像を選択</label>
+    <div class="card-title">📝 コメント画像ツール</div>
+    <p class="eval-hint" style="margin-bottom:8px;">公式サイトのスクショに、コメント枠（テキストボックス）を重ねて画像化します。</p>
+    <button class="btn btn-ghost btn-sm" style="margin-bottom:8px;" onclick="overlayAutoGenerateText()">📋 BMデータから叩き台を生成</button>
+    <textarea id="overlay-text-input" rows="9" placeholder="ここにコメントを書く（自動生成後に自由に編集できます）" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:12px;font-family:monospace;padding:8px;border-radius:8px;box-sizing:border-box;resize:vertical;margin-bottom:10px;" oninput="overlaySyncNoteText()"></textarea>
+    <label class="file-btn" for="overlay-file-input" style="display:block;width:100%;padding:12px;border-radius:8px;font-size:14px;font-weight:700;border:1px dashed var(--gold);background:var(--surface2);color:#f0d080;text-align:center;-webkit-appearance:none;margin-bottom:10px;">スクショ画像を選択</label>
     <input type="file" id="overlay-file-input" accept="image/*" style="display:none;" onchange="overlayHandleFile(event)">
-    <div id="overlay-symtable" style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-bottom:10px;"></div>
     <div class="canvas-wrap" id="overlay-canvas-wrap" style="position:relative;width:100%;border-radius:8px;overflow:hidden;border:1px solid var(--border);touch-action:none;background:#000;">
       <canvas id="overlay-canvas" style="display:block;width:100%;height:auto;"></canvas>
       <div id="overlay-empty" style="font-size:12px;color:var(--muted);text-align:center;padding:26px 10px;">まだ画像がありません。スクショを選んでください。</div>
+      <div id="overlay-notebox" style="display:none;position:absolute;background:#FFF3B0;color:#1a1408;border-radius:10px;padding:10px 12px;font-family:-apple-system,'Hiragino Sans',sans-serif;font-weight:700;white-space:pre-wrap;overflow:hidden;box-shadow:0 4px 10px rgba(0,0,0,.4);cursor:grab;">
+        <div id="overlay-resize-handle" style="position:absolute;right:0;bottom:0;width:20px;height:20px;cursor:nwse-resize;background:rgba(0,0,0,.15);border-radius:4px 0 10px 0;"></div>
+      </div>
     </div>
-    <p class="eval-hint" style="margin:8px 0;">赤い記号を指でドラッグして選手の展示・機力欄に合わせてください。位置は自動保存され、次回も使えます。</p>
+    <div style="display:flex;align-items:center;gap:8px;margin:10px 0;">
+      <label style="font-size:11px;color:var(--muted);white-space:nowrap;">文字サイズ</label>
+      <input type="range" id="overlay-fontsize" min="10" max="40" value="18" style="flex:1;" oninput="overlaySyncNoteText()">
+      <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
+    </div>
+    <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
-    <button class="btn btn-ghost" onclick="overlayResetPositions()">記号の位置をリセット</button>
+    <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
 
   </div>
@@ -610,7 +619,6 @@ function generateBets(d, areScores, mode){
   recalcAlloc();
   updateXPreview();
   updateThumbCard();
-  if(typeof overlayRefreshTable==='function') overlayRefreshTable();
 
   // 保存ボタンを表示
   var sbw=document.getElementById('save-result-btn-wrap-bottom');
@@ -691,7 +699,7 @@ function refreshBetsForCount(){
 // ============================================================
 function parseData(text){
   const d={boats:[]};
-  for(let i=1;i<=6;i++) d.boats.push({no:i,name:'',regno:'',nigerate6m:0,nigerate1y:0,atchiNige:0,atchiNigeCount:0,sgNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sg1chakuRate:0,sg1chakuCount:0,ippan2ren:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,avgTenji:0,syukai:0,syukaiFoot:0,avgSyukaiFoot:0,chokusen:0,directST:0,isExhibitF:false,isF:false});
+  for(let i=1;i<=6;i++) d.boats.push({no:i,name:'',regno:'',nigerate6m:0,nigerate1y:0,atchiNige:0,atchiNigeCount:0,sgNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sg1chakuRate:0,sg1chakuCount:0,ippan2ren:0,konki2ren:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,avgTenji:0,syukai:0,syukaiFoot:0,avgSyukaiFoot:0,chokusen:0,directST:0,isExhibitF:false,isF:false});
 
   // 逃げ率パース（優先順位: SG/G1 → 当地 → 直近6ヶ月）
   // 直近6ヶ月
@@ -836,6 +844,12 @@ function parseData(text){
   const ippanRenSection=text.match(/一般戦\s+([\d.]+)%[\t ]+([\d.]+)%[\t ]+([\d.]+)%[\t ]+([\d.]+)%[\t ]+([\d.]+)%[\t ]+([\d.]+)%/);
   if(ippanRenSection){
     for(let i=0;i<6;i++) d.boats[i].ippan2ren=parseFloat(ippanRenSection[i+1])||0;
+  }
+
+  // 今期2連対率（枠別勝率セクション内・コメント画像ツールの表示用）
+  const konkiRenSection=text.match(/2連対率\s*\n今期[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)/);
+  if(konkiRenSection){
+    for(let i=0;i<6;i++) d.boats[i].konki2ren=parseFloat(konkiRenSection[i+1])||0;
   }
 
   // 直近6ヶ月勝率
@@ -3782,35 +3796,45 @@ window.addEventListener('DOMContentLoaded',function(){
 });
 
 // ============================================================
-// 記号書き込みツール（展示・機力をcurrentParsedDataから自動取込）
+// コメント画像ツール（BMデータから叩き台テキスト生成→スクショに書き込み）
 // ============================================================
 (function(){
-  const OV_SYMS=['◎','○','▲','△','▽','×'];
-  const OV_POS_KEY='overlay_badge_positions_v1';
-  let ovImg=null, ovPositions=null;
+  const OV_BOX_KEY='overlay_notebox_v2';
+  let ovImg=null, ovBox=null; // ovBox: {x%,y%,w%,h%,fontSize}
+
   const ovCanvas=()=>document.getElementById('overlay-canvas');
   const ovWrap=()=>document.getElementById('overlay-canvas-wrap');
+  const ovBoxEl=()=>document.getElementById('overlay-notebox');
 
-  function ovDefaultPositions(){
-    const p={};
-    for(let i=0;i<6;i++){
-      const y=30+i*11;
-      p['tenji_'+(i+1)]={x:70,y:y};
-      p['motor_'+(i+1)]={x:85,y:y};
-    }
-    return p;
+  function ovDefaultBox(){
+    return {x:8, y:8, w:60, h:40, fontSize:18};
   }
-  function ovLoadPositions(){
+  function ovLoadBox(){
     try{
-      const raw=localStorage.getItem(OV_POS_KEY);
-      ovPositions=raw?JSON.parse(raw):ovDefaultPositions();
-    }catch(e){ ovPositions=ovDefaultPositions(); }
+      const raw=localStorage.getItem(OV_BOX_KEY);
+      ovBox=raw?JSON.parse(raw):ovDefaultBox();
+    }catch(e){ ovBox=ovDefaultBox(); }
   }
-  function ovSavePositions(){
-    try{ localStorage.setItem(OV_POS_KEY, JSON.stringify(ovPositions)); }catch(e){}
+  function ovSaveBox(){
+    try{ localStorage.setItem(OV_BOX_KEY, JSON.stringify(ovBox)); }catch(e){}
   }
 
-  // 順位付け(同値は同じ記号)。ascending=true: 小さいほど良い(展示)。false: 大きいほど良い(機力)。
+  // ---- 選手名(苗字)推定。buildXSummaryと同じヒューリスティックをここでも使用 ----
+  const OV_ONE_CHAR_SURNAMES=['林','森','田','原','関','堀','進','辻','沢','岡'];
+  const OV_THREE_CHAR_SURNAMES=['濱野谷'];
+  function ovName(no){
+    const b=(currentParsedData&&currentParsedData.boats[no-1])||{};
+    const n=b.name;
+    if(!n) return '';
+    if(n.includes(' ')) return n.split(' ')[0];
+    if(OV_ONE_CHAR_SURNAMES.includes(n[0])) return n[0];
+    const three=OV_THREE_CHAR_SURNAMES.find(s=>n.startsWith(s));
+    if(three) return three;
+    return n.slice(0,2);
+  }
+
+  // ---- 展示・機力の記号（小さい/大きいほど◎、同値は同じ記号） ----
+  const OV_SYMS=['◎','○','▲','△','▽','×'];
   function ovAssignSymbols(values, ascending){
     const sorted=[...values].sort((a,b)=>ascending?a.val-b.val:b.val-a.val);
     const out={};
@@ -3823,13 +3847,29 @@ window.addEventListener('DOMContentLoaded',function(){
     return out;
   }
 
-  // currentParsedDataから展示・機力の記号を自動計算して表に表示
-  function ovComputeAndRenderTable(){
-    const tableEl=document.getElementById('overlay-symtable');
-    if(!tableEl) return null;
-    if(!currentParsedData || !currentParsedData.boats){
-      tableEl.innerHTML='<div style="grid-column:1/7;font-size:11px;color:var(--muted);text-align:center;padding:6px;">先にBMデータを解析してください</div>';
-      return null;
+  // ---- 決まり手（1号艇=逃げ、2〜6号艇=コース別の主要決まり手のうち実績最大のもの） ----
+  const OV_COURSE_KIMARITE={2:['差し'],3:['差し','まくり','まくり差し'],4:['まくり','まくり差し'],5:['まくり','まくり差し'],6:['まくり差し']};
+  function ovKimariteText(no){
+    const b=(currentParsedData&&currentParsedData.boats[no-1])||{};
+    if(no===1){
+      const atchiOK=b.atchiNige>0&&(b.atchiNigeCount||0)>=10;
+      const nige=b.sgNige>0?b.sgNige:(atchiOK?b.atchiNige:(b.nigerate6m||0));
+      return nige>0?`逃げ${nige.toFixed(0)}%`:'-';
+    }
+    const valid=OV_COURSE_KIMARITE[no]||[];
+    const cands=[];
+    if(valid.includes('差し')) cands.push(['差し',b.sashi6m||0]);
+    if(valid.includes('まくり')) cands.push(['まくり',b.makuri6m||0]);
+    if(valid.includes('まくり差し')) cands.push(['まくり差し',b.makurisashi6m||0]);
+    cands.sort((a,b2)=>b2[1]-a[1]);
+    return cands[0]&&cands[0][1]>0 ? `${cands[0][0]}${cands[0][1].toFixed(0)}%` : '-';
+  }
+
+  // ---- 叩き台テキストを自動生成 ----
+  window.overlayAutoGenerateText=function(){
+    if(!currentParsedData||!currentParsedData.boats){
+      showToast('先にBMデータを解析してください');
+      return;
     }
     const boats=currentParsedData.boats;
     const tenjiVals=boats.map((b,i)=>({no:i+1,val:(b.tenji||b.avgTenji||0)})).filter(x=>x.val>0);
@@ -3837,19 +3877,54 @@ window.addEventListener('DOMContentLoaded',function(){
     const tenjiSyms=ovAssignSymbols(tenjiVals,true);
     const motorSyms=ovAssignSymbols(motorVals,false);
     const circled=['①','②','③','④','⑤','⑥'];
-    let html='';
-    const result={};
-    for(let i=1;i<=6;i++){
-      const ts=tenjiSyms[i]||'';
-      const ms=motorSyms[i]||'';
-      result['tenji_'+i]=ts;
-      result['motor_'+i]=ms;
-      html+=`<div style="text-align:center;font-size:11px;color:var(--muted);background:var(--surface2);border-radius:6px;padding:4px 2px;">${circled[i-1]}<br><span style="color:#f0d080;font-weight:700;">${ts||'-'}</span> <span style="color:#f0d080;font-weight:700;">${ms||'-'}</span></div>`;
-    }
-    tableEl.innerHTML=html;
-    return result;
-  }
 
+    const venueEl=document.getElementById('inp-venue');
+    const venue=venueEl?venueEl.value:(currentParsedData.venue||'');
+    const racenum=(currentCalcData&&currentCalcData.racenum)||currentParsedData.raceNum||'?';
+    const shimekiri=currentParsedData.shimekiri?`締切${currentParsedData.shimekiri}`:'';
+
+    let lines=[];
+    lines.push(`【${venue}${racenum}R】${shimekiri}`);
+    lines.push('━━━━━━━━━━━━━━');
+    lines.push('枠 選手    展示 機力 連率  決まり手');
+    for(let i=1;i<=6;i++){
+      const name=ovName(i)||('選手'+i);
+      const ts=tenjiSyms[i]||'-';
+      const ms=motorSyms[i]||'-';
+      const konki=(boats[i-1].konki2ren||0)>0?boats[i-1].konki2ren.toFixed(1)+'%':'-';
+      const kimarite=ovKimariteText(i);
+      lines.push(`${circled[i-1]}${name}  ${ts}  ${ms}  ${konki}  ${kimarite}`);
+    }
+    lines.push('');
+    if(currentCalcData&&currentCalcData.ranking&&currentCalcData.ranking.length>=3){
+      const top3=currentCalcData.ranking.slice(0,3).map(r=>circled[r.boat-1]).join('-');
+      lines.push(`◎本命 ${top3}`);
+    }
+    if(typeof aiTenkaiLine!=='undefined'&&aiTenkaiLine){
+      lines.push(`展開: ${aiTenkaiLine}`);
+    }
+    document.getElementById('overlay-text-input').value=lines.join('\n');
+    overlaySyncNoteText();
+    showToast('叩き台を生成しました。自由に編集してください');
+  };
+
+  // ---- テキスト・文字サイズをノートボックスに反映 ----
+  window.overlaySyncNoteText=function(){
+    const text=document.getElementById('overlay-text-input').value;
+    const fs=parseInt(document.getElementById('overlay-fontsize').value,10);
+    document.getElementById('overlay-fontsize-val').textContent=fs;
+    const box=ovBoxEl();
+    box.style.fontSize=fs+'px';
+    box.style.lineHeight='1.35';
+    // resizeハンドル以外を書き換え
+    let handle=document.getElementById('overlay-resize-handle');
+    box.textContent=text;
+    box.appendChild(handle);
+    if(ovBox) ovBox.fontSize=fs;
+    ovSaveBox();
+  };
+
+  // ---- 画像読み込み ----
   window.overlayHandleFile=function(e){
     const file=e.target.files[0];
     if(!file) return;
@@ -3873,70 +3948,73 @@ window.addEventListener('DOMContentLoaded',function(){
     canvas.height=ovImg.naturalHeight;
     const ctx=canvas.getContext('2d');
     ctx.drawImage(ovImg,0,0);
-    if(!ovPositions) ovLoadPositions();
-    ovBuildBadges();
-    ovRedrawBadges();
-  }
-
-  function ovBuildBadges(){
-    const wrap=ovWrap();
-    wrap.querySelectorAll('.ov-badge').forEach(el=>el.remove());
-    for(let i=1;i<=6;i++){
-      ['tenji','motor'].forEach(kind=>{
-        const key=kind+'_'+i;
-        const el=document.createElement('div');
-        el.className='ov-badge';
-        el.dataset.key=key;
-        el.style.cssText='position:absolute;font-size:22px;line-height:1;font-weight:900;color:#ff3b30;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff,1px 1px 0 #fff;transform:translate(-50%,-50%);touch-action:none;cursor:grab;padding:4px;';
-        wrap.appendChild(el);
-        ovAttachDrag(el,key);
-      });
+    if(!ovBox) ovLoadBox();
+    ovApplyBoxStyle();
+    const box=ovBoxEl();
+    box.style.display='block';
+    if(!document.getElementById('overlay-text-input').value){
+      window.overlayAutoGenerateText();
+    } else {
+      overlaySyncNoteText();
     }
+    ovAttachHandlers();
   }
 
-  function ovRedrawBadges(){
-    const syms=ovComputeAndRenderTable();
-    if(!syms) return;
-    for(let i=1;i<=6;i++){
-      ovSetBadge('tenji_'+i, syms['tenji_'+i]);
-      ovSetBadge('motor_'+i, syms['motor_'+i]);
-    }
+  function ovApplyBoxStyle(){
+    const box=ovBoxEl();
+    box.style.left=ovBox.x+'%';
+    box.style.top=ovBox.y+'%';
+    box.style.width=ovBox.w+'%';
+    box.style.height=ovBox.h+'%';
+    box.style.fontSize=(ovBox.fontSize||18)+'px';
+    document.getElementById('overlay-fontsize').value=ovBox.fontSize||18;
+    document.getElementById('overlay-fontsize-val').textContent=ovBox.fontSize||18;
   }
 
-  function ovSetBadge(key, sym){
-    const wrap=ovWrap();
-    const el=wrap.querySelector(`.ov-badge[data-key="${key}"]`);
-    if(!el) return;
-    el.textContent=sym||'';
-    el.style.display=sym?'block':'none';
-    const pos=ovPositions[key]||{x:50,y:50};
-    el.style.left=pos.x+'%';
-    el.style.top=pos.y+'%';
-  }
+  let ovHandlersAttached=false;
+  function ovAttachHandlers(){
+    if(ovHandlersAttached) return;
+    ovHandlersAttached=true;
+    const box=ovBoxEl();
+    const handle=document.getElementById('overlay-resize-handle');
+    let dragging=false, resizing=false, startX=0, startY=0, startBox=null;
 
-  function ovAttachDrag(el,key){
-    let dragging=false;
-    const onDown=(e)=>{ dragging=true; el.style.cursor='grabbing'; e.preventDefault(); };
+    const onDown=(e)=>{
+      if(e.target===handle){
+        resizing=true;
+      } else {
+        dragging=true;
+        box.style.cursor='grabbing';
+      }
+      const point=e.touches?e.touches[0]:e;
+      startX=point.clientX; startY=point.clientY;
+      startBox={...ovBox};
+      e.preventDefault();
+      e.stopPropagation();
+    };
     const onMove=(e)=>{
-      if(!dragging) return;
+      if(!dragging&&!resizing) return;
       const rect=ovWrap().getBoundingClientRect();
       const point=e.touches?e.touches[0]:e;
-      let x=(point.clientX-rect.left)/rect.width*100;
-      let y=(point.clientY-rect.top)/rect.height*100;
-      x=Math.max(0,Math.min(100,x));
-      y=Math.max(0,Math.min(100,y));
-      ovPositions[key]={x,y};
-      el.style.left=x+'%';
-      el.style.top=y+'%';
+      const dxPct=(point.clientX-startX)/rect.width*100;
+      const dyPct=(point.clientY-startY)/rect.height*100;
+      if(dragging){
+        ovBox.x=Math.max(0,Math.min(100-ovBox.w,startBox.x+dxPct));
+        ovBox.y=Math.max(0,Math.min(100-ovBox.h,startBox.y+dyPct));
+      } else if(resizing){
+        ovBox.w=Math.max(10,Math.min(100-ovBox.x,startBox.w+dxPct));
+        ovBox.h=Math.max(8,Math.min(100-ovBox.y,startBox.h+dyPct));
+      }
+      ovApplyBoxStyle();
     };
     const onUp=()=>{
-      if(!dragging) return;
-      dragging=false;
-      el.style.cursor='grab';
-      ovSavePositions();
+      if(!dragging&&!resizing) return;
+      dragging=false; resizing=false;
+      box.style.cursor='grab';
+      ovSaveBox();
     };
-    el.addEventListener('mousedown',onDown);
-    el.addEventListener('touchstart',onDown,{passive:false});
+    box.addEventListener('mousedown',onDown);
+    box.addEventListener('touchstart',onDown,{passive:false});
     window.addEventListener('mousemove',onMove);
     window.addEventListener('touchmove',onMove,{passive:false});
     window.addEventListener('mouseup',onUp);
@@ -3944,11 +4022,31 @@ window.addEventListener('DOMContentLoaded',function(){
   }
 
   window.overlayResetPositions=function(){
-    ovPositions=ovDefaultPositions();
-    ovRedrawBadges();
-    ovSavePositions();
-    showToast('位置をリセットしました');
+    ovBox=ovDefaultBox();
+    if(ovImg) ovApplyBoxStyle();
+    ovSaveBox();
+    showToast('枠をリセットしました');
   };
+
+  // ---- 保存(画像出力): テキストを手動改行処理してcanvasに描画 ----
+  function ovWrapLines(ctx, text, maxWidth){
+    const outLines=[];
+    text.split('\n').forEach(rawLine=>{
+      if(rawLine==='') { outLines.push(''); return; }
+      let cur='';
+      for(const ch of rawLine){
+        const test=cur+ch;
+        if(ctx.measureText(test).width>maxWidth && cur!==''){
+          outLines.push(cur);
+          cur=ch;
+        } else {
+          cur=test;
+        }
+      }
+      if(cur) outLines.push(cur);
+    });
+    return outLines;
+  }
 
   window.overlaySaveImage=function(){
     if(!ovImg){ showToast('先に画像を選んでください'); return; }
@@ -3956,49 +4054,56 @@ window.addEventListener('DOMContentLoaded',function(){
     const ctx=canvas.getContext('2d');
     ctx.clearRect(0,0,canvas.width,canvas.height);
     ctx.drawImage(ovImg,0,0);
-    const syms=ovComputeAndRenderTable();
-    if(syms){
-      for(let i=1;i<=6;i++){
-        ovDrawSym(ctx,canvas,'tenji_'+i,syms['tenji_'+i]);
-        ovDrawSym(ctx,canvas,'motor_'+i,syms['motor_'+i]);
-      }
+
+    const bx=ovBox.x/100*canvas.width;
+    const by=ovBox.y/100*canvas.height;
+    const bw=ovBox.w/100*canvas.width;
+    const bh=ovBox.h/100*canvas.height;
+    const scale=canvas.width/ovWrap().getBoundingClientRect().width;
+    const fontSize=(ovBox.fontSize||18)*scale;
+    const pad=Math.round(fontSize*0.5);
+
+    // 背景（角丸＋影っぽい濃い枠）
+    ctx.save();
+    ctx.shadowColor='rgba(0,0,0,.4)';
+    ctx.shadowBlur=fontSize*0.6;
+    ctx.fillStyle='#FFF3B0';
+    const r=Math.round(fontSize*0.5);
+    ctx.beginPath();
+    ctx.moveTo(bx+r,by);
+    ctx.arcTo(bx+bw,by,bx+bw,by+bh,r);
+    ctx.arcTo(bx+bw,by+bh,bx,by+bh,r);
+    ctx.arcTo(bx,by+bh,bx,by,r);
+    ctx.arcTo(bx,by,bx+bw,by,r);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // テキスト
+    ctx.fillStyle='#1a1408';
+    ctx.font=`700 ${fontSize}px -apple-system,'Hiragino Sans',sans-serif`;
+    ctx.textBaseline='top';
+    const text=document.getElementById('overlay-text-input').value;
+    const lineHeight=fontSize*1.35;
+    const lines=ovWrapLines(ctx, text, bw-pad*2);
+    let ty=by+pad;
+    for(const line of lines){
+      if(ty+lineHeight>by+bh) break; // 枠をはみ出す分は描画しない
+      ctx.fillText(line, bx+pad, ty);
+      ty+=lineHeight;
     }
+
     const url=canvas.toDataURL('image/png');
     const a=document.createElement('a');
     a.href=url;
-    a.download='race_overlay_'+Date.now()+'.png';
+    a.download='race_comment_'+Date.now()+'.png';
     document.body.appendChild(a);
     a.click();
     a.remove();
     showToast('画像を保存しました');
   };
 
-  function ovDrawSym(ctx,canvas,key,sym){
-    if(!sym) return;
-    const pos=ovPositions[key]||{x:50,y:50};
-    const x=pos.x/100*canvas.width;
-    const y=pos.y/100*canvas.height;
-    const fontSize=Math.round(canvas.width*0.035);
-    ctx.font=`900 ${fontSize}px -apple-system,'Hiragino Sans',sans-serif`;
-    ctx.textAlign='center';
-    ctx.textBaseline='middle';
-    ctx.lineWidth=fontSize*0.18;
-    ctx.strokeStyle='#ffffff';
-    ctx.strokeText(sym,x,y);
-    ctx.fillStyle='#ff3b30';
-    ctx.fillText(sym,x,y);
-  }
-
-  window.overlayRefreshTable=function(){
-    ovComputeAndRenderTable();
-    if(ovImg) ovRedrawBadges();
-  };
-
-  // 初期化: 位置だけ先読み。予想実行後は自動でシンボル表を更新する。
-  ovLoadPositions();
-  window.addEventListener('DOMContentLoaded',function(){
-    ovComputeAndRenderTable();
-  });
+  ovLoadBox();
 })();
 
 </script>
