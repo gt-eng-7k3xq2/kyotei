@@ -3847,24 +3847,6 @@ window.addEventListener('DOMContentLoaded',function(){
     return out;
   }
 
-  // ---- 決まり手（1号艇=逃げ、2〜6号艇=コース別の主要決まり手のうち実績最大のもの） ----
-  const OV_COURSE_KIMARITE={2:['差し'],3:['差し','まくり','まくり差し'],4:['まくり','まくり差し'],5:['まくり','まくり差し'],6:['まくり差し']};
-  function ovKimariteText(no){
-    const b=(currentParsedData&&currentParsedData.boats[no-1])||{};
-    if(no===1){
-      const atchiOK=b.atchiNige>0&&(b.atchiNigeCount||0)>=10;
-      const nige=b.sgNige>0?b.sgNige:(atchiOK?b.atchiNige:(b.nigerate6m||0));
-      return nige>0?`逃げ${nige.toFixed(0)}%`:'-';
-    }
-    const valid=OV_COURSE_KIMARITE[no]||[];
-    const cands=[];
-    if(valid.includes('差し')) cands.push(['差し',b.sashi6m||0]);
-    if(valid.includes('まくり')) cands.push(['まくり',b.makuri6m||0]);
-    if(valid.includes('まくり差し')) cands.push(['まくり差し',b.makurisashi6m||0]);
-    cands.sort((a,b2)=>b2[1]-a[1]);
-    return cands[0]&&cands[0][1]>0 ? `${cands[0][0]}${cands[0][1].toFixed(0)}%` : '-';
-  }
-
   // ---- 叩き台テキストを自動生成 ----
   window.overlayAutoGenerateText=function(){
     if(!currentParsedData||!currentParsedData.boats){
@@ -3886,14 +3868,13 @@ window.addEventListener('DOMContentLoaded',function(){
     let lines=[];
     lines.push(`【${venue}${racenum}R】${shimekiri}`);
     lines.push('━━━━━━━━━━━━━━');
-    lines.push('枠 選手    展示 機力 連率  決まり手');
+    lines.push('枠 選手    展示 機力 連率');
     for(let i=1;i<=6;i++){
       const name=ovName(i)||('選手'+i);
       const ts=tenjiSyms[i]||'-';
       const ms=motorSyms[i]||'-';
       const konki=(boats[i-1].konki2ren||0)>0?boats[i-1].konki2ren.toFixed(1)+'%':'-';
-      const kimarite=ovKimariteText(i);
-      lines.push(`${circled[i-1]}${name}  ${ts}  ${ms}  ${konki}  ${kimarite}`);
+      lines.push(`${circled[i-1]}${name}  ${ts}  ${ms}  ${konki}`);
     }
     lines.push('');
     if(currentCalcData&&currentCalcData.ranking&&currentCalcData.ranking.length>=3){
@@ -4093,14 +4074,33 @@ window.addEventListener('DOMContentLoaded',function(){
       ty+=lineHeight;
     }
 
-    const url=canvas.toDataURL('image/png');
-    const a=document.createElement('a');
-    a.href=url;
-    a.download='race_comment_'+Date.now()+'.png';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    showToast('画像を保存しました');
+    const btn=document.getElementById('overlay-save-btn');
+    const origLabel='画像として保存';
+    btn.textContent='生成中...';
+    btn.disabled=true;
+    canvas.toBlob(function(blob){
+      const racenumVal=(currentCalcData&&currentCalcData.racenum)||currentParsedData?.raceNum||'';
+      const fname=`race_comment_${racenumVal}R_${Date.now()}.png`;
+      const file=new File([blob],fname,{type:'image/png'});
+      if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+        navigator.share({files:[file],title:'レースコメント'}).then(function(){
+          btn.textContent='✅ 共有しました';
+          setTimeout(function(){btn.textContent=origLabel;btn.disabled=false;},2000);
+        }).catch(function(){
+          btn.textContent=origLabel;
+          btn.disabled=false;
+        });
+      } else {
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');
+        a.href=url;
+        a.download=fname;
+        a.click();
+        setTimeout(function(){URL.revokeObjectURL(url);},1000);
+        btn.textContent='✅ 保存しました';
+        setTimeout(function(){btn.textContent=origLabel;btn.disabled=false;},2000);
+      }
+    },'image/png');
   };
 
   ovLoadBox();
