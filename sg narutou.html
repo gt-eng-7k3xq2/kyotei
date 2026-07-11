@@ -426,8 +426,8 @@
     <div class="canvas-wrap" id="overlay-canvas-wrap" style="position:relative;width:100%;border-radius:8px;overflow:hidden;border:1px solid var(--border);touch-action:none;background:#000;">
       <canvas id="overlay-canvas" style="display:block;width:100%;height:auto;"></canvas>
       <div id="overlay-empty" style="font-size:12px;color:var(--muted);text-align:center;padding:26px 10px;">まだ画像がありません。スクショを選んでください。</div>
-      <div id="overlay-ribbon" style="display:none;position:absolute;left:-14vw;top:4vw;width:42vw;padding:1.6vw 0;background:linear-gradient(135deg,#c9a84c,#f0d080);transform:rotate(-45deg);box-shadow:0 6px 14px rgba(0,0,0,.4);text-align:center;pointer-events:none;">
-        <span style="font-size:3.6vw;font-weight:900;color:#14301f;letter-spacing:.06em;">GARON DATA</span>
+      <div id="overlay-ribbon" style="display:none;position:absolute;background:linear-gradient(135deg,#c9a84c,#f0d080);box-shadow:0 6px 14px rgba(0,0,0,.4);text-align:center;pointer-events:none;white-space:nowrap;">
+        <span id="overlay-ribbon-text" style="font-weight:900;color:#14301f;letter-spacing:.06em;">GARON DATA</span>
       </div>
       <div id="overlay-notebox" style="display:none;position:absolute;background:linear-gradient(135deg,rgba(20,48,32,.97),rgba(9,22,15,.97));color:#eef5f0;border:1.5px solid #c9a84c;border-radius:14px;padding:12px 14px;font-family:-apple-system,'Hiragino Sans',sans-serif;white-space:normal;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.55);cursor:grab;">
         <div id="overlay-notebox-content"></div>
@@ -4046,6 +4046,7 @@ window.addEventListener('DOMContentLoaded',function(){
     box.style.display='block';
     const ribbonToggle=document.getElementById('overlay-ribbon-toggle');
     document.getElementById('overlay-ribbon').style.display=(ribbonToggle&&ribbonToggle.checked)?'block':'none';
+    ovSizeRibbon();
     if(!document.getElementById('overlay-text-input').value){
       window.overlayAutoGenerateText();
     } else {
@@ -4057,7 +4058,24 @@ window.addEventListener('DOMContentLoaded',function(){
   window.overlayToggleRibbon=function(){
     const checked=document.getElementById('overlay-ribbon-toggle').checked;
     document.getElementById('overlay-ribbon').style.display=(checked&&ovImg)?'block':'none';
+    if(checked) ovSizeRibbon();
   };
+
+  // リボンのサイズ・位置をラップの実ピクセル幅に対する比率で計算する（vw単位はビューポート基準でズレるため使わない）
+  function ovSizeRibbon(){
+    const wrapW=ovWrap().getBoundingClientRect().width;
+    if(!wrapW) return;
+    const scale=wrapW/1206; // 基準デザイン幅(1206px)に対する比率
+    const ribbon=document.getElementById('overlay-ribbon');
+    const w=380*scale, padV=12*scale, fontSize=26*scale;
+    const left=-90*scale, top=52*scale;
+    ribbon.style.width=w+'px';
+    ribbon.style.padding=padV+'px 0';
+    ribbon.style.left=left+'px';
+    ribbon.style.top=top+'px';
+    ribbon.style.transform='rotate(-45deg)';
+    document.getElementById('overlay-ribbon-text').style.fontSize=fontSize+'px';
+  }
 
   function ovApplyBoxStyle(){
     const box=ovBoxEl();
@@ -4227,6 +4245,8 @@ window.addEventListener('DOMContentLoaded',function(){
       });
     });
   };
+
+  window.addEventListener('resize',()=>{ if(ovImg) ovSizeRibbon(); });
 
   ovLoadBox();
 })();
