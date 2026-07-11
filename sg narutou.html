@@ -439,11 +439,11 @@
     </label>
     <div style="display:flex;align-items:center;gap:8px;margin:10px 0;">
       <label style="font-size:11px;color:var(--muted);white-space:nowrap;">文字サイズ</label>
-      <input type="range" id="overlay-fontsize" min="6" max="24" value="8" style="flex:1;" oninput="overlaySyncNoteText()">
+      <input type="range" id="overlay-fontsize" min="1" max="24" step="0.1" value="2.3" style="flex:1;" oninput="overlaySyncNoteText()">
       <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
     </div>
     <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
-    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260711-7 / box-key: overlay_notebox_v6 / default-font: 8px</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260711-9 / box-key: overlay_notebox_v8 / default-font: 2.3px</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
     <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
@@ -3826,7 +3826,7 @@ window.addEventListener('DOMContentLoaded',function(){
 // コメント画像ツール（BMデータから叩き台テキスト生成→スクショに書き込み）
 // ============================================================
 (function(){
-  const OV_BOX_KEY='overlay_notebox_v6';
+  const OV_BOX_KEY='overlay_notebox_v8';
   let ovImg=null, ovBox=null; // ovBox: {x%,y%,w%,h%,fontSize}
 
   const ovCanvas=()=>document.getElementById('overlay-canvas');
@@ -3834,7 +3834,7 @@ window.addEventListener('DOMContentLoaded',function(){
   const ovBoxEl=()=>document.getElementById('overlay-notebox');
 
   function ovDefaultBox(){
-    return {x:63, y:31, w:32, fontSize:8};
+    return {x:63, y:31, w:32, fontSize:2.3};
   }
   // 保存されている値がどんな内容でも、必ず正常な範囲に矯正する（過去のバグで壊れた値が残っていても自動修復される）
   function ovClampBox(b){
@@ -3842,7 +3842,7 @@ window.addEventListener('DOMContentLoaded',function(){
     let w=Math.max(35,Math.min(100,Number(b.w)||32));
     let x=Math.max(0,Math.min(100-w,Number(b.x)||0));
     let y=Math.max(0,Math.min(95,Number(b.y)||0));
-    let fontSize=Math.max(6,Math.min(24,Number(b.fontSize)||8));
+    let fontSize=Math.max(1,Math.min(24,Number(b.fontSize)||2.3));
     return {x,y,w,fontSize};
   }
   function ovLoadBox(){
@@ -4015,7 +4015,7 @@ window.addEventListener('DOMContentLoaded',function(){
 
   window.overlaySyncNoteText=function(){
     const text=document.getElementById('overlay-text-input').value;
-    const fs=parseInt(document.getElementById('overlay-fontsize').value,10);
+    const fs=parseFloat(document.getElementById('overlay-fontsize').value);
     document.getElementById('overlay-fontsize-val').textContent=fs;
     const box=ovBoxEl();
     box.style.fontSize=fs+'px';
@@ -4093,8 +4093,8 @@ window.addEventListener('DOMContentLoaded',function(){
     box.style.top=ovBox.y+'%';
     box.style.width=ovBox.w+'%';
     box.style.fontSize=(ovBox.fontSize||18)+'px';
-    document.getElementById('overlay-fontsize').value=ovBox.fontSize||18;
-    document.getElementById('overlay-fontsize-val').textContent=ovBox.fontSize||18;
+    document.getElementById('overlay-fontsize').value=ovBox.fontSize||2.3;
+    document.getElementById('overlay-fontsize-val').textContent=ovBox.fontSize||2.3;
   }
 
   // 中身のテキスト量に合わせて枠の高さを自動フィットさせる（余白だらけ/はみ出しを防ぐ）
