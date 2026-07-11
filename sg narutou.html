@@ -426,11 +426,17 @@
     <div class="canvas-wrap" id="overlay-canvas-wrap" style="position:relative;width:100%;border-radius:8px;overflow:hidden;border:1px solid var(--border);touch-action:none;background:#000;">
       <canvas id="overlay-canvas" style="display:block;width:100%;height:auto;"></canvas>
       <div id="overlay-empty" style="font-size:12px;color:var(--muted);text-align:center;padding:26px 10px;">まだ画像がありません。スクショを選んでください。</div>
+      <div id="overlay-ribbon" style="display:none;position:absolute;left:-14vw;top:4vw;width:42vw;padding:1.6vw 0;background:linear-gradient(135deg,#c9a84c,#f0d080);transform:rotate(-45deg);box-shadow:0 6px 14px rgba(0,0,0,.4);text-align:center;pointer-events:none;">
+        <span style="font-size:3.6vw;font-weight:900;color:#14301f;letter-spacing:.06em;">GARON DATA</span>
+      </div>
       <div id="overlay-notebox" style="display:none;position:absolute;background:linear-gradient(135deg,rgba(20,48,32,.97),rgba(9,22,15,.97));color:#eef5f0;border:1.5px solid #c9a84c;border-radius:14px;padding:12px 14px;font-family:-apple-system,'Hiragino Sans',sans-serif;white-space:normal;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.55);cursor:grab;">
         <div id="overlay-notebox-content"></div>
         <div id="overlay-resize-handle" style="position:absolute;right:0;bottom:0;width:20px;height:20px;cursor:nwse-resize;background:rgba(201,168,76,.35);border-radius:4px 0 12px 0;"></div>
       </div>
     </div>
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin:8px 0;">
+      <input type="checkbox" id="overlay-ribbon-toggle" checked onchange="overlayToggleRibbon()"> GARONロゴを表示する
+    </label>
     <div style="display:flex;align-items:center;gap:8px;margin:10px 0;">
       <label style="font-size:11px;color:var(--muted);white-space:nowrap;">文字サイズ</label>
       <input type="range" id="overlay-fontsize" min="10" max="40" value="18" style="flex:1;" oninput="overlaySyncNoteText()">
@@ -700,7 +706,7 @@ function refreshBetsForCount(){
 // ============================================================
 function parseData(text){
   const d={boats:[]};
-  for(let i=1;i<=6;i++) d.boats.push({no:i,name:'',regno:'',nigerate6m:0,nigerate1y:0,atchiNige:0,atchiNigeCount:0,sgNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sg1chakuRate:0,sg1chakuCount:0,ippan2ren:0,konki2ren:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,avgTenji:0,syukai:0,syukaiFoot:0,avgSyukaiFoot:0,chokusen:0,directST:0,isExhibitF:false,isF:false});
+  for(let i=1;i<=6;i++) d.boats.push({no:i,name:'',regno:'',nigerate6m:0,nigerate1y:0,atchiNige:0,atchiNigeCount:0,sgNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sg1chakuRate:0,sg1chakuCount:0,ippan2ren:0,konki2ren:0,konki3ren:0,konkiAvgST:0,fCount:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,avgTenji:0,syukai:0,syukaiFoot:0,avgSyukaiFoot:0,chokusen:0,directST:0,isExhibitF:false,isF:false});
 
   // 逃げ率パース（優先順位: SG/G1 → 当地 → 直近6ヶ月）
   // 直近6ヶ月
@@ -851,6 +857,25 @@ function parseData(text){
   const konkiRenSection=text.match(/2連対率\s*\n今期[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)/);
   if(konkiRenSection){
     for(let i=0;i<6;i++) d.boats[i].konki2ren=parseFloat(konkiRenSection[i+1])||0;
+  }
+
+  // 今期3連対率（枠別勝率セクション内・コメント画像ツールの表示用）
+  const konki3RenSection=text.match(/3連対率\s*\n今期[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)/);
+  if(konki3RenSection){
+    for(let i=0;i<6;i++) d.boats[i].konki3ren=parseFloat(konki3RenSection[i+1])||0;
+  }
+
+  // 今期平均ST（基本情報セクション内・選手個人の平均ST。枠別勝率セクションのコース別平均STとは別物なので、
+  // 必ず「基本情報」セクション以降を対象に検索する）
+  const konkiAvgSTSection=text.match(/基本情報[\s\S]*?平均ST\s*\n今期[\t ]+([\d.]+)[\t ]+([\d.]+)[\t ]+([\d.]+)[\t ]+([\d.]+)[\t ]+([\d.]+)[\t ]+([\d.]+)/);
+  if(konkiAvgSTSection){
+    for(let i=0;i<6;i++) d.boats[i].konkiAvgST=parseFloat(konkiAvgSTSection[i+1])||0;
+  }
+
+  // 今期フライング数（コメント画像ツールのF持ちバッジ表示用）
+  const fCountSection=text.match(/フライング\s*\n今期[\t ]+(\d+)[\t ]+(\d+)[\t ]+(\d+)[\t ]+(\d+)[\t ]+(\d+)[\t ]+(\d+)/);
+  if(fCountSection){
+    for(let i=0;i<6;i++) d.boats[i].fCount=parseInt(fCountSection[i+1],10)||0;
   }
 
   // 直近6ヶ月勝率
@@ -3800,7 +3825,7 @@ window.addEventListener('DOMContentLoaded',function(){
 // コメント画像ツール（BMデータから叩き台テキスト生成→スクショに書き込み）
 // ============================================================
 (function(){
-  const OV_BOX_KEY='overlay_notebox_v2';
+  const OV_BOX_KEY='overlay_notebox_v3';
   let ovImg=null, ovBox=null; // ovBox: {x%,y%,w%,h%,fontSize}
 
   const ovCanvas=()=>document.getElementById('overlay-canvas');
@@ -3808,7 +3833,7 @@ window.addEventListener('DOMContentLoaded',function(){
   const ovBoxEl=()=>document.getElementById('overlay-notebox');
 
   function ovDefaultBox(){
-    return {x:63, y:31, w:32, h:56, fontSize:14};
+    return {x:63, y:31, w:32, fontSize:14};
   }
   function ovLoadBox(){
     try{
@@ -3820,18 +3845,10 @@ window.addEventListener('DOMContentLoaded',function(){
     try{ localStorage.setItem(OV_BOX_KEY, JSON.stringify(ovBox)); }catch(e){}
   }
 
-  // ---- 選手名(苗字)推定。buildXSummaryと同じヒューリスティックをここでも使用 ----
-  const OV_ONE_CHAR_SURNAMES=['林','森','田','原','関','堀','進','辻','沢','岡'];
-  const OV_THREE_CHAR_SURNAMES=['濱野谷'];
+  // ---- 選手名はフルネーム表示（苗字だけの判定ロジックは廃止。誤判定の心配がなくなる） ----
   function ovName(no){
     const b=(currentParsedData&&currentParsedData.boats[no-1])||{};
-    const n=b.name;
-    if(!n) return '';
-    if(n.includes(' ')) return n.split(' ')[0];
-    if(OV_ONE_CHAR_SURNAMES.includes(n[0])) return n[0];
-    const three=OV_THREE_CHAR_SURNAMES.find(s=>n.startsWith(s));
-    if(three) return three;
-    return n.slice(0,2);
+    return b.name||'';
   }
 
   // ---- 展示・機力の記号（小さい/大きいほど◎、同値は同じ記号） ----
@@ -3848,6 +3865,12 @@ window.addEventListener('DOMContentLoaded',function(){
     return out;
   }
 
+  // 各列の上位2件(平均STのみ下位2件=速い2人)を判定して該当艇番号のSetを返す
+  function ovTop2Boats(values, ascending){
+    const sorted=[...values].sort((a,b)=>ascending?a.val-b.val:b.val-a.val);
+    return new Set(sorted.slice(0,2).map(x=>x.no));
+  }
+
   // ---- 叩き台テキストを自動生成 ----
   window.overlayAutoGenerateText=function(){
     if(!currentParsedData||!currentParsedData.boats){
@@ -3861,21 +3884,34 @@ window.addEventListener('DOMContentLoaded',function(){
     const motorSyms=ovAssignSymbols(motorVals,false);
     const circled=['①','②','③','④','⑤','⑥'];
 
+    const motor2=ovTop2Boats(motorVals,false);
+    const ren2vals=boats.map((b,i)=>({no:i+1,val:(b.konki2ren||0)})).filter(x=>x.val>0);
+    const ren3vals=boats.map((b,i)=>({no:i+1,val:(b.konki3ren||0)})).filter(x=>x.val>0);
+    const stVals=boats.map((b,i)=>({no:i+1,val:(b.konkiAvgST||0)})).filter(x=>x.val>0);
+    const ren2Top=ovTop2Boats(ren2vals,false);
+    const ren3Top=ovTop2Boats(ren3vals,false);
+    const stTop=ovTop2Boats(stVals,true); // STは小さい方が良い
+
     const venueEl=document.getElementById('inp-venue');
     const venue=venueEl?venueEl.value:(currentParsedData.venue||'');
-    const racenum=(currentCalcData&&currentCalcData.racenum)||currentParsedData.raceNum||'?';
+    const racenum=((currentCalcData&&currentCalcData.racenum)||(currentParsedData.raceNum||'').replace(/R$/,'')||'?');
     const shimekiri=currentParsedData.shimekiri?`締切${currentParsedData.shimekiri}`:'';
 
     let lines=[];
     lines.push(`【${venue}${racenum}R】${shimekiri}`);
     lines.push('━━━━━━━━━━━━━━');
-    lines.push('枠 選手    展示 機力 連率');
+    lines.push('枠 選手 展示 機力 2連率 3連率 平均ST');
     for(let i=1;i<=6;i++){
+      const b=boats[i-1];
       const name=ovName(i)||('選手'+i);
+      const fpart=(b.fCount>0)?` F${b.fCount}`:'';
       const ts=tenjiSyms[i]||'-';
       const ms=motorSyms[i]||'-';
-      const konki=(boats[i-1].konki2ren||0)>0?boats[i-1].konki2ren.toFixed(1)+'%':'-';
-      lines.push(`${circled[i-1]}${name}  ${ts}  ${ms}  ${konki}`);
+      const motorPct=(b.motor2ren||0)>0?b.motor2ren.toFixed(1)+'%'+(motor2.has(i)?'*':''):'-';
+      const ren2=(b.konki2ren||0)>0?b.konki2ren.toFixed(1)+'%'+(ren2Top.has(i)?'*':''):'-';
+      const ren3=(b.konki3ren||0)>0?b.konki3ren.toFixed(1)+'%'+(ren3Top.has(i)?'*':''):'-';
+      const st=(b.konkiAvgST||0)>0?b.konkiAvgST.toFixed(2)+(stTop.has(i)?'*':''):'-';
+      lines.push(`${circled[i-1]}${name}${fpart} ${ts} ${ms} ${motorPct} ${ren2} ${ren3} ${st}`);
     }
     lines.push('');
     if(currentCalcData&&currentCalcData.ranking&&currentCalcData.ranking.length>=3){
@@ -3899,44 +3935,67 @@ window.addEventListener('DOMContentLoaded',function(){
     return {'◎':'#f0d080','○':'#8fd18f','▲':'#c7c7c7','△':'#9fae9f','▽':'#7f8f7f','×':'#e08a8a'}[s]||'#d8d8d8';
   }
   const OV_CIRCLED='①②③④⑤⑥';
+  const OV_TOP2_COLOR='#ff5a4e';
+
+  // "88.0%*" のような値から末尾の*(上位2件マーク)を取り除いて表示用オブジェクトにする
+  function ovParseVal(str){
+    if(!str||str==='-') return {text:'-',top2:false};
+    const top2=str.endsWith('*');
+    return {text:top2?str.slice(0,-1):str, top2};
+  }
 
   // テキストを行ごとに解析し、装飾付きHTMLへ変換（自動生成フォーマットに対応。合わない行はそのまま表示）
   function ovRenderBoxHtml(text){
+    // 本命艇の艇番号を先に抜き出しておく（該当行を薄くハイライトするため）
+    let axisNo=null;
+    const honmeiMatch=text.match(/◎本命\s*([①②③④⑤⑥])/);
+    if(honmeiMatch) axisNo=OV_CIRCLED.indexOf(honmeiMatch[1])+1;
+
     const lines=text.split('\n');
     let html='';
+    const rowRe=new RegExp('^(['+OV_CIRCLED+'])(\\S+?)(?:\\s+F(\\d+))?\\s+(\\S)\\s+(\\S)\\s+([\\d.]+%\\*?|-)\\s+([\\d.]+%\\*?|-)\\s+([\\d.]+%\\*?|-)\\s+([\\d.]+\\*?|-)$');
+
     lines.forEach(raw=>{
       const line=raw.trim();
       if(line===''){ html+='<div style="height:.5em;"></div>'; return; }
       if(/^[━\-=]{3,}$/.test(line)){ html+='<div style="border-top:2px solid #c9a84c;opacity:.75;margin:3px 0 7px;"></div>'; return; }
       if(/^【.*】/.test(line)){
-        html+=`<div style="font-weight:900;color:#f0d080;font-size:1.18em;letter-spacing:.02em;">${ovEscapeHtml(line)}</div>`;
+        const dm=line.match(/^(【.*】)\s*(.*)$/);
+        html+=`<div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font-weight:900;color:#f0d080;font-size:1.2em;letter-spacing:.01em;">${ovEscapeHtml(dm[1])}</span><span style="font-size:.78em;color:#c8d8ca;font-weight:700;">${ovEscapeHtml(dm[2]||'')}</span></div>`;
         return;
       }
       if(/^枠\s*選手/.test(line)){
-        html+='<div style="display:flex;gap:6px;font-size:.7em;color:#8fae95;font-weight:700;margin:2px 0 4px;padding-left:26px;"><span style="flex:1;">選手</span><span style="width:2.1em;text-align:center;">展示</span><span style="width:2.1em;text-align:center;">機力</span><span style="width:3.4em;text-align:right;">連率</span></div>';
+        html+='<div style="display:flex;align-items:center;justify-content:space-between;font-size:.68em;color:#8fae95;font-weight:700;margin-bottom:4px;"><span style="flex:1;">選手</span><span style="width:2em;text-align:center;">展示</span><span style="width:4.6em;text-align:center;">機力</span><span style="width:3.2em;text-align:center;">2連率</span><span style="width:3.2em;text-align:center;">3連率</span><span style="width:2.6em;text-align:center;">平均ST</span></div>';
         return;
       }
-      const m=line.match(new RegExp('^(['+OV_CIRCLED+'])(\\S+)\\s+(\\S)\\s+(\\S)\\s+([\\d.]+%|-)\\s*(.*)$'));
+      const m=line.match(rowRe);
       if(m){
         const laneNo=OV_CIRCLED.indexOf(m[1])+1;
         const c=OV_LANE_COLORS[laneNo]||{bg:'#555',fg:'#fff'};
-        const name=m[2], s1=m[3], s2=m[4], pct=m[5], rest=m[6]?m[6].trim():'';
-        html+=`<div style="display:flex;align-items:center;gap:6px;padding:2.5px 0;">
-          <span style="flex-shrink:0;width:1.5em;height:1.5em;border-radius:50%;background:${c.bg};color:${c.fg};font-size:.68em;font-weight:900;display:flex;align-items:center;justify-content:center;">${laneNo}</span>
-          <span style="flex:1;font-weight:700;color:#fff;white-space:nowrap;">${ovEscapeHtml(name)}</span>
-          <span style="width:2.1em;text-align:center;font-weight:900;color:${ovSymColor(s1)};">${s1}</span>
-          <span style="width:2.1em;text-align:center;font-weight:900;color:${ovSymColor(s2)};">${s2}</span>
-          <span style="width:3.4em;text-align:right;font-weight:700;color:#a8d8ae;">${pct}</span>
-          ${rest?`<span style="margin-left:4px;font-size:.82em;color:#cfcfcf;white-space:nowrap;">${ovEscapeHtml(rest)}</span>`:''}
+        const name=m[2], fnum=m[3], s1=m[4], s2=m[5];
+        const motorPct=ovParseVal(m[6]), ren2=ovParseVal(m[7]), ren3=ovParseVal(m[8]), st=ovParseVal(m[9]);
+        const isAxis=axisNo===laneNo;
+        const top2Style=(v)=>v.top2?`color:${OV_TOP2_COLOR};`:'';
+        html+=`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 6px;border-bottom:1px solid rgba(255,255,255,.09);border-radius:6px;${isAxis?'background:rgba(240,208,128,.10);':''}">
+          <div style="flex:1;display:flex;align-items:center;min-width:0;">
+            <span style="flex-shrink:0;width:1.5em;height:1.5em;border-radius:50%;background:${c.bg};color:${c.fg};font-size:.68em;font-weight:900;display:flex;align-items:center;justify-content:center;margin-right:6px;">${laneNo}</span>
+            <span style="font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ovEscapeHtml(name)}</span>
+            ${fnum?`<span style="font-size:.6em;font-weight:900;color:#fff;background:#c0392b;border-radius:3px;padding:1px 3px;margin-left:4px;flex-shrink:0;">F${fnum}</span>`:''}
+          </div>
+          <span style="width:2em;text-align:center;font-weight:900;color:${ovSymColor(s1)};">${s1}</span>
+          <span style="width:4.6em;text-align:right;font-weight:700;font-size:.85em;color:#9fc2a3;">${motorPct.text}</span>
+          <span style="width:3.2em;text-align:right;font-weight:800;${top2Style(ren2)||'color:#a8d8ae;'}">${ren2.text}</span>
+          <span style="width:3.2em;text-align:right;font-weight:800;${top2Style(ren3)||'color:#a8d8ae;'}">${ren3.text}</span>
+          <span style="width:2.6em;text-align:right;font-weight:700;font-size:.85em;${top2Style(st)||'color:#d8cba8;'}">${st.text}</span>
         </div>`;
         return;
       }
       if(/^◎本命/.test(line)){
-        html+=`<div style="margin-top:6px;font-weight:900;color:#f0d080;font-size:1.08em;">${ovEscapeHtml(line)}</div>`;
+        html+=`<div style="margin-top:6px;font-weight:900;color:#f0d080;font-size:1.1em;">${ovEscapeHtml(line)}</div>`;
         return;
       }
       if(/^展開[:：]/.test(line)){
-        html+=`<div style="margin-top:2px;color:#d8d8d8;font-size:.88em;">${ovEscapeHtml(line)}</div>`;
+        html+=`<div style="margin-top:2px;color:#d8d8d8;font-size:.85em;">${ovEscapeHtml(line)}</div>`;
         return;
       }
       html+=`<div style="color:#e8e8e8;">${ovEscapeHtml(line)}</div>`;
@@ -3953,6 +4012,7 @@ window.addEventListener('DOMContentLoaded',function(){
     box.style.lineHeight='1.4';
     document.getElementById('overlay-notebox-content').innerHTML=ovRenderBoxHtml(text);
     if(ovBox) ovBox.fontSize=fs;
+    ovAutofitHeight();
     ovSaveBox();
   };
 
@@ -3984,6 +4044,8 @@ window.addEventListener('DOMContentLoaded',function(){
     ovApplyBoxStyle();
     const box=ovBoxEl();
     box.style.display='block';
+    const ribbonToggle=document.getElementById('overlay-ribbon-toggle');
+    document.getElementById('overlay-ribbon').style.display=(ribbonToggle&&ribbonToggle.checked)?'block':'none';
     if(!document.getElementById('overlay-text-input').value){
       window.overlayAutoGenerateText();
     } else {
@@ -3992,15 +4054,32 @@ window.addEventListener('DOMContentLoaded',function(){
     ovAttachHandlers();
   }
 
+  window.overlayToggleRibbon=function(){
+    const checked=document.getElementById('overlay-ribbon-toggle').checked;
+    document.getElementById('overlay-ribbon').style.display=(checked&&ovImg)?'block':'none';
+  };
+
   function ovApplyBoxStyle(){
     const box=ovBoxEl();
     box.style.left=ovBox.x+'%';
     box.style.top=ovBox.y+'%';
     box.style.width=ovBox.w+'%';
-    box.style.height=ovBox.h+'%';
     box.style.fontSize=(ovBox.fontSize||18)+'px';
     document.getElementById('overlay-fontsize').value=ovBox.fontSize||18;
     document.getElementById('overlay-fontsize-val').textContent=ovBox.fontSize||18;
+  }
+
+  // 中身のテキスト量に合わせて枠の高さを自動フィットさせる（余白だらけ/はみ出しを防ぐ）
+  function ovAutofitHeight(){
+    const box=ovBoxEl();
+    const wrapH=ovWrap().getBoundingClientRect().height;
+    if(!wrapH) return;
+    box.style.height='auto';
+    const contentH=box.offsetHeight;
+    let hPct=(contentH/wrapH*100);
+    hPct=Math.max(4,Math.min(100-ovBox.y,hPct));
+    ovBox.h=hPct;
+    box.style.height=hPct+'%';
   }
 
   let ovHandlersAttached=false;
@@ -4032,12 +4111,12 @@ window.addEventListener('DOMContentLoaded',function(){
       const dyPct=(point.clientY-startY)/rect.height*100;
       if(dragging){
         ovBox.x=Math.max(0,Math.min(100-ovBox.w,startBox.x+dxPct));
-        ovBox.y=Math.max(0,Math.min(100-ovBox.h,startBox.y+dyPct));
+        ovBox.y=Math.max(0,Math.min(100-(ovBox.h||10),startBox.y+dyPct));
       } else if(resizing){
-        ovBox.w=Math.max(10,Math.min(100-ovBox.x,startBox.w+dxPct));
-        ovBox.h=Math.max(8,Math.min(100-ovBox.y,startBox.h+dyPct));
+        ovBox.w=Math.max(15,Math.min(100-ovBox.x,startBox.w+dxPct));
       }
       ovApplyBoxStyle();
+      if(resizing) ovAutofitHeight(); // 幅が変わると折り返しが変わるため高さを再計算
     };
     const onUp=()=>{
       if(!dragging&&!resizing) return;
@@ -4062,6 +4141,30 @@ window.addEventListener('DOMContentLoaded',function(){
 
   // ---- 保存(画像出力): 装飾済みノートボックスをhtml2canvasでキャプチャしてスクショに合成 ----
 
+  // GARONリボンをcanvasに直接描画（html2canvasだとrotate+overflow:hiddenの扱いが不安定なため手描き）
+  function ovDrawRibbon(ctx,canvas){
+    const scale=canvas.width/1206; // 全モックアップの基準幅(1206px)に対する比率
+    const w=380*scale, h=58*scale;
+    const cx=(-90+380/2)*scale, cy=(52+55/2)*scale;
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.rotate(-45*Math.PI/180);
+    const grad=ctx.createLinearGradient(-w/2,-h/2,w/2,h/2);
+    grad.addColorStop(0,'#c9a84c');
+    grad.addColorStop(1,'#f0d080');
+    ctx.shadowColor='rgba(0,0,0,.4)';
+    ctx.shadowBlur=10*scale;
+    ctx.fillStyle=grad;
+    ctx.fillRect(-w/2,-h/2,w,h);
+    ctx.shadowBlur=0;
+    ctx.fillStyle='#14301f';
+    ctx.font=`900 ${26*scale}px -apple-system,'Hiragino Sans',sans-serif`;
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText('GARON DATA',0,0);
+    ctx.restore();
+  }
+
   window.overlaySaveImage=function(){
     if(!ovImg){ showToast('先に画像を選んでください'); return; }
     const btn=document.getElementById('overlay-save-btn');
@@ -4073,6 +4176,11 @@ window.addEventListener('DOMContentLoaded',function(){
     const ctx=canvas.getContext('2d');
     ctx.clearRect(0,0,canvas.width,canvas.height);
     ctx.drawImage(ovImg,0,0);
+
+    const ribbonToggle=document.getElementById('overlay-ribbon-toggle');
+    if(ribbonToggle&&ribbonToggle.checked){
+      ovDrawRibbon(ctx,canvas);
+    }
 
     const bx=ovBox.x/100*canvas.width;
     const by=ovBox.y/100*canvas.height;
