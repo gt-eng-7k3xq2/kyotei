@@ -443,7 +443,7 @@
       <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
     </div>
     <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
-    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260711-11 / header align fixed</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260711-14 / center-aligned columns (verified)</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
     <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
@@ -3975,7 +3975,18 @@ window.addEventListener('DOMContentLoaded',function(){
         return;
       }
       if(/^枠\s*選手/.test(line)){
-        html+='<div style="display:flex;align-items:center;justify-content:space-between;font-size:.68em;color:#8fae95;font-weight:700;margin-bottom:.35em;white-space:nowrap;"><span style="flex:1;padding-left:1.9em;white-space:nowrap;">選手</span><span style="width:2em;text-align:center;white-space:nowrap;">展示</span><span style="width:4.6em;text-align:right;white-space:nowrap;">機力</span><span style="width:3.2em;text-align:right;white-space:nowrap;">2連率</span><span style="width:3.2em;text-align:right;white-space:nowrap;">3連率</span><span style="width:2.6em;text-align:right;white-space:nowrap;">平均ST</span></div>';
+        const hl=(t)=>`<span style="font-size:.68em;color:#8fae95;font-weight:700;">${t}</span>`;
+        html+=`<div style="display:flex;align-items:center;justify-content:space-between;gap:.7em;padding:.4em .4em;white-space:nowrap;">
+          <div style="flex:1;display:flex;align-items:center;min-width:0;white-space:nowrap;overflow:hidden;">
+            <span style="visibility:hidden;flex-shrink:0;width:1.5em;height:1.5em;margin-right:.4em;">0</span>
+            ${hl('選手')}
+          </div>
+          <span style="width:2em;text-align:center;flex-shrink:0;white-space:nowrap;">${hl('展示')}</span>
+          <span style="width:4.6em;text-align:center;flex-shrink:0;white-space:nowrap;">${hl('機力')}</span>
+          <span style="width:3.8em;text-align:center;flex-shrink:0;white-space:nowrap;">${hl('2連率')}</span>
+          <span style="width:3.8em;text-align:center;flex-shrink:0;white-space:nowrap;">${hl('3連率')}</span>
+          <span style="width:2.6em;text-align:center;flex-shrink:0;white-space:nowrap;">${hl('平均ST')}</span>
+        </div>`;
         return;
       }
       const m=line.match(rowRe);
@@ -3993,10 +4004,10 @@ window.addEventListener('DOMContentLoaded',function(){
             ${fnum?`<span style="font-size:.6em;font-weight:900;color:#fff;background:#c0392b;border-radius:.2em;padding:.1em .25em;margin-left:.3em;flex-shrink:0;white-space:nowrap;">F${fnum}</span>`:''}
           </div>
           <span style="width:2em;text-align:center;font-weight:900;color:${ovSymColor(s1)};flex-shrink:0;white-space:nowrap;">${s1}</span>
-          <span style="width:4.6em;text-align:right;font-weight:700;font-size:.85em;color:#9fc2a3;flex-shrink:0;white-space:nowrap;">${motorPct.text}</span>
-          <span style="width:3.2em;text-align:right;font-weight:800;flex-shrink:0;white-space:nowrap;${top2Style(ren2)||'color:#a8d8ae;'}">${ren2.text}</span>
-          <span style="width:3.2em;text-align:right;font-weight:800;flex-shrink:0;white-space:nowrap;${top2Style(ren3)||'color:#a8d8ae;'}">${ren3.text}</span>
-          <span style="width:2.6em;text-align:right;font-weight:700;font-size:.85em;flex-shrink:0;white-space:nowrap;${top2Style(st)||'color:#d8cba8;'}">${st.text}</span>
+          <span style="width:4.6em;text-align:center;flex-shrink:0;white-space:nowrap;"><span style="font-weight:700;font-size:.85em;color:#9fc2a3;">${motorPct.text}</span></span>
+          <span style="width:3.8em;text-align:center;font-weight:800;flex-shrink:0;white-space:nowrap;${top2Style(ren2)||'color:#a8d8ae;'}">${ren2.text}</span>
+          <span style="width:3.8em;text-align:center;font-weight:800;flex-shrink:0;white-space:nowrap;${top2Style(ren3)||'color:#a8d8ae;'}">${ren3.text}</span>
+          <span style="width:2.6em;text-align:center;flex-shrink:0;white-space:nowrap;"><span style="font-weight:700;font-size:.85em;${top2Style(st)||'color:#d8cba8;'}">${st.text}</span></span>
         </div>`;
         return;
       }
