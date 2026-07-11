@@ -443,7 +443,7 @@
       <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
     </div>
     <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
-    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260711-4 / box-key: overlay_notebox_v4 / min-width: 35%</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260711-5 / box-key: overlay_notebox_v4 / clamp: on</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
     <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
@@ -3836,10 +3836,19 @@ window.addEventListener('DOMContentLoaded',function(){
   function ovDefaultBox(){
     return {x:63, y:31, w:32, fontSize:14};
   }
+  // 保存されている値がどんな内容でも、必ず正常な範囲に矯正する（過去のバグで壊れた値が残っていても自動修復される）
+  function ovClampBox(b){
+    if(!b||typeof b!=='object') return ovDefaultBox();
+    let w=Math.max(35,Math.min(100,Number(b.w)||32));
+    let x=Math.max(0,Math.min(100-w,Number(b.x)||0));
+    let y=Math.max(0,Math.min(95,Number(b.y)||0));
+    let fontSize=Math.max(10,Math.min(40,Number(b.fontSize)||14));
+    return {x,y,w,fontSize};
+  }
   function ovLoadBox(){
     try{
       const raw=localStorage.getItem(OV_BOX_KEY);
-      ovBox=raw?JSON.parse(raw):ovDefaultBox();
+      ovBox=ovClampBox(raw?JSON.parse(raw):ovDefaultBox());
     }catch(e){ ovBox=ovDefaultBox(); }
   }
   function ovSaveBox(){
