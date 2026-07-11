@@ -443,7 +443,7 @@
       <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
     </div>
     <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
-    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260711-3 / box-key: overlay_notebox_v4</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260711-4 / box-key: overlay_notebox_v4 / min-width: 35%</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
     <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
@@ -3962,11 +3962,11 @@ window.addEventListener('DOMContentLoaded',function(){
       if(/^[━\-=]{3,}$/.test(line)){ html+='<div style="border-top:2px solid #c9a84c;opacity:.75;margin:3px 0 7px;"></div>'; return; }
       if(/^【.*】/.test(line)){
         const dm=line.match(/^(【.*】)\s*(.*)$/);
-        html+=`<div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font-weight:900;color:#f0d080;font-size:1.2em;letter-spacing:.01em;">${ovEscapeHtml(dm[1])}</span><span style="font-size:.78em;color:#c8d8ca;font-weight:700;">${ovEscapeHtml(dm[2]||'')}</span></div>`;
+        html+=`<div style="display:flex;align-items:baseline;justify-content:space-between;white-space:nowrap;"><span style="font-weight:900;color:#f0d080;font-size:1.2em;letter-spacing:.01em;white-space:nowrap;">${ovEscapeHtml(dm[1])}</span><span style="font-size:.78em;color:#c8d8ca;font-weight:700;white-space:nowrap;">${ovEscapeHtml(dm[2]||'')}</span></div>`;
         return;
       }
       if(/^枠\s*選手/.test(line)){
-        html+='<div style="display:flex;align-items:center;justify-content:space-between;font-size:.68em;color:#8fae95;font-weight:700;margin-bottom:4px;"><span style="flex:1;">選手</span><span style="width:2em;text-align:center;">展示</span><span style="width:4.6em;text-align:center;">機力</span><span style="width:3.2em;text-align:center;">2連率</span><span style="width:3.2em;text-align:center;">3連率</span><span style="width:2.6em;text-align:center;">平均ST</span></div>';
+        html+='<div style="display:flex;align-items:center;justify-content:space-between;font-size:.68em;color:#8fae95;font-weight:700;margin-bottom:4px;white-space:nowrap;"><span style="flex:1;white-space:nowrap;">選手</span><span style="width:2em;text-align:center;white-space:nowrap;">展示</span><span style="width:4.6em;text-align:center;white-space:nowrap;">機力</span><span style="width:3.2em;text-align:center;white-space:nowrap;">2連率</span><span style="width:3.2em;text-align:center;white-space:nowrap;">3連率</span><span style="width:2.6em;text-align:center;white-space:nowrap;">平均ST</span></div>';
         return;
       }
       const m=line.match(rowRe);
@@ -3977,17 +3977,17 @@ window.addEventListener('DOMContentLoaded',function(){
         const motorPct=ovParseVal(m[6]), ren2=ovParseVal(m[7]), ren3=ovParseVal(m[8]), st=ovParseVal(m[9]);
         const isAxis=axisNo===laneNo;
         const top2Style=(v)=>v.top2?`color:${OV_TOP2_COLOR};`:'';
-        html+=`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 6px;border-bottom:1px solid rgba(255,255,255,.09);border-radius:6px;${isAxis?'background:rgba(240,208,128,.10);':''}">
-          <div style="flex:1;display:flex;align-items:center;min-width:0;">
+        html+=`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 6px;border-bottom:1px solid rgba(255,255,255,.09);border-radius:6px;white-space:nowrap;${isAxis?'background:rgba(240,208,128,.10);':''}">
+          <div style="flex:1;display:flex;align-items:center;min-width:0;white-space:nowrap;overflow:hidden;">
             <span style="flex-shrink:0;width:1.5em;height:1.5em;border-radius:50%;background:${c.bg};color:${c.fg};font-size:.68em;font-weight:900;display:flex;align-items:center;justify-content:center;margin-right:6px;">${laneNo}</span>
             <span style="font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ovEscapeHtml(name)}</span>
-            ${fnum?`<span style="font-size:.6em;font-weight:900;color:#fff;background:#c0392b;border-radius:3px;padding:1px 3px;margin-left:4px;flex-shrink:0;">F${fnum}</span>`:''}
+            ${fnum?`<span style="font-size:.6em;font-weight:900;color:#fff;background:#c0392b;border-radius:3px;padding:1px 3px;margin-left:4px;flex-shrink:0;white-space:nowrap;">F${fnum}</span>`:''}
           </div>
-          <span style="width:2em;text-align:center;font-weight:900;color:${ovSymColor(s1)};">${s1}</span>
-          <span style="width:4.6em;text-align:right;font-weight:700;font-size:.85em;color:#9fc2a3;">${motorPct.text}</span>
-          <span style="width:3.2em;text-align:right;font-weight:800;${top2Style(ren2)||'color:#a8d8ae;'}">${ren2.text}</span>
-          <span style="width:3.2em;text-align:right;font-weight:800;${top2Style(ren3)||'color:#a8d8ae;'}">${ren3.text}</span>
-          <span style="width:2.6em;text-align:right;font-weight:700;font-size:.85em;${top2Style(st)||'color:#d8cba8;'}">${st.text}</span>
+          <span style="width:2em;text-align:center;font-weight:900;color:${ovSymColor(s1)};flex-shrink:0;white-space:nowrap;">${s1}</span>
+          <span style="width:4.6em;text-align:right;font-weight:700;font-size:.85em;color:#9fc2a3;flex-shrink:0;white-space:nowrap;">${motorPct.text}</span>
+          <span style="width:3.2em;text-align:right;font-weight:800;flex-shrink:0;white-space:nowrap;${top2Style(ren2)||'color:#a8d8ae;'}">${ren2.text}</span>
+          <span style="width:3.2em;text-align:right;font-weight:800;flex-shrink:0;white-space:nowrap;${top2Style(ren3)||'color:#a8d8ae;'}">${ren3.text}</span>
+          <span style="width:2.6em;text-align:right;font-weight:700;font-size:.85em;flex-shrink:0;white-space:nowrap;${top2Style(st)||'color:#d8cba8;'}">${st.text}</span>
         </div>`;
         return;
       }
@@ -4132,7 +4132,7 @@ window.addEventListener('DOMContentLoaded',function(){
         ovBox.x=Math.max(0,Math.min(100-ovBox.w,startBox.x+dxPct));
         ovBox.y=Math.max(0,Math.min(100-(ovBox.h||10),startBox.y+dyPct));
       } else if(resizing){
-        ovBox.w=Math.max(15,Math.min(100-ovBox.x,startBox.w+dxPct));
+        ovBox.w=Math.max(35,Math.min(100-ovBox.x,startBox.w+dxPct));
       }
       ovApplyBoxStyle();
       if(resizing) ovAutofitHeight(); // 幅が変わると折り返しが変わるため高さを再計算
