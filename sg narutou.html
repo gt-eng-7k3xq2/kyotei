@@ -429,7 +429,7 @@
       <div id="overlay-ribbon" style="display:none;position:absolute;background:linear-gradient(135deg,#c9a84c,#f0d080);box-shadow:0 6px 14px rgba(0,0,0,.4);text-align:center;pointer-events:none;white-space:nowrap;">
         <span id="overlay-ribbon-text" style="font-weight:900;color:#14301f;letter-spacing:.06em;">GARON DATA</span>
       </div>
-      <div id="overlay-notebox" style="display:none;position:absolute;background:linear-gradient(135deg,rgba(20,48,32,.97),rgba(9,22,15,.97));color:#eef5f0;border:1.5px solid #c9a84c;border-radius:14px;padding:12px 14px;font-family:-apple-system,'Hiragino Sans',sans-serif;white-space:normal;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.55);cursor:grab;">
+      <div id="overlay-notebox" style="display:none;position:absolute;box-sizing:border-box;max-width:100%;background:linear-gradient(135deg,rgba(20,48,32,.97),rgba(9,22,15,.97));color:#eef5f0;border:1.5px solid #c9a84c;border-radius:14px;padding:12px 14px;font-family:-apple-system,'Hiragino Sans',sans-serif;white-space:normal;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.55);cursor:grab;">
         <div id="overlay-notebox-content"></div>
         <div id="overlay-resize-handle" style="position:absolute;right:0;bottom:0;width:20px;height:20px;cursor:nwse-resize;background:rgba(201,168,76,.35);border-radius:4px 0 12px 0;"></div>
       </div>
@@ -443,6 +443,7 @@
       <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
     </div>
     <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260711-3 / box-key: overlay_notebox_v4</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
     <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
