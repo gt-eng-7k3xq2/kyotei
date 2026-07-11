@@ -429,7 +429,7 @@
       <div id="overlay-ribbon" style="display:none;position:absolute;background:linear-gradient(135deg,#c9a84c,#f0d080);box-shadow:0 6px 14px rgba(0,0,0,.4);text-align:center;pointer-events:none;white-space:nowrap;">
         <span id="overlay-ribbon-text" style="font-weight:900;color:#14301f;letter-spacing:.06em;">GARON DATA</span>
       </div>
-      <div id="overlay-notebox" style="display:none;position:absolute;box-sizing:border-box;max-width:100%;background:linear-gradient(135deg,rgba(20,48,32,.97),rgba(9,22,15,.97));color:#eef5f0;border:1.5px solid #c9a84c;border-radius:14px;padding:12px 14px;font-family:-apple-system,'Hiragino Sans',sans-serif;white-space:normal;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.55);cursor:grab;">
+      <div id="overlay-notebox" style="display:none;position:absolute;box-sizing:border-box;max-width:100%;background:linear-gradient(135deg,rgba(20,48,32,.97),rgba(9,22,15,.97));color:#eef5f0;border:1.5px solid #c9a84c;border-radius:14px;padding:.9em 1em;font-family:-apple-system,'Hiragino Sans',sans-serif;white-space:normal;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.55);cursor:grab;">
         <div id="overlay-notebox-content"></div>
         <div id="overlay-resize-handle" style="position:absolute;right:0;bottom:0;width:20px;height:20px;cursor:nwse-resize;background:rgba(201,168,76,.35);border-radius:4px 0 12px 0;"></div>
       </div>
@@ -443,7 +443,7 @@
       <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
     </div>
     <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
-    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260711-9 / box-key: overlay_notebox_v8 / default-font: 2.3px</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260711-11 / header align fixed</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
     <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
@@ -3968,14 +3968,14 @@ window.addEventListener('DOMContentLoaded',function(){
     lines.forEach(raw=>{
       const line=raw.trim();
       if(line===''){ html+='<div style="height:.5em;"></div>'; return; }
-      if(/^[━\-=]{3,}$/.test(line)){ html+='<div style="border-top:2px solid #c9a84c;opacity:.75;margin:3px 0 7px;"></div>'; return; }
+      if(/^[━\-=]{3,}$/.test(line)){ html+='<div style="border-top:2px solid #c9a84c;opacity:.75;margin:.25em 0 .5em;"></div>'; return; }
       if(/^【.*】/.test(line)){
         const dm=line.match(/^(【.*】)\s*(.*)$/);
         html+=`<div style="display:flex;align-items:baseline;justify-content:space-between;white-space:nowrap;"><span style="font-weight:900;color:#f0d080;font-size:1.2em;letter-spacing:.01em;white-space:nowrap;">${ovEscapeHtml(dm[1])}</span><span style="font-size:.78em;color:#c8d8ca;font-weight:700;white-space:nowrap;">${ovEscapeHtml(dm[2]||'')}</span></div>`;
         return;
       }
       if(/^枠\s*選手/.test(line)){
-        html+='<div style="display:flex;align-items:center;justify-content:space-between;font-size:.68em;color:#8fae95;font-weight:700;margin-bottom:4px;white-space:nowrap;"><span style="flex:1;white-space:nowrap;">選手</span><span style="width:2em;text-align:center;white-space:nowrap;">展示</span><span style="width:4.6em;text-align:center;white-space:nowrap;">機力</span><span style="width:3.2em;text-align:center;white-space:nowrap;">2連率</span><span style="width:3.2em;text-align:center;white-space:nowrap;">3連率</span><span style="width:2.6em;text-align:center;white-space:nowrap;">平均ST</span></div>';
+        html+='<div style="display:flex;align-items:center;justify-content:space-between;font-size:.68em;color:#8fae95;font-weight:700;margin-bottom:.35em;white-space:nowrap;"><span style="flex:1;padding-left:1.9em;white-space:nowrap;">選手</span><span style="width:2em;text-align:center;white-space:nowrap;">展示</span><span style="width:4.6em;text-align:right;white-space:nowrap;">機力</span><span style="width:3.2em;text-align:right;white-space:nowrap;">2連率</span><span style="width:3.2em;text-align:right;white-space:nowrap;">3連率</span><span style="width:2.6em;text-align:right;white-space:nowrap;">平均ST</span></div>';
         return;
       }
       const m=line.match(rowRe);
@@ -3986,11 +3986,11 @@ window.addEventListener('DOMContentLoaded',function(){
         const motorPct=ovParseVal(m[6]), ren2=ovParseVal(m[7]), ren3=ovParseVal(m[8]), st=ovParseVal(m[9]);
         const isAxis=axisNo===laneNo;
         const top2Style=(v)=>v.top2?`color:${OV_TOP2_COLOR};`:'';
-        html+=`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 6px;border-bottom:1px solid rgba(255,255,255,.09);border-radius:6px;white-space:nowrap;${isAxis?'background:rgba(240,208,128,.10);':''}">
+        html+=`<div style="display:flex;align-items:center;justify-content:space-between;gap:.7em;padding:.4em .4em;border-bottom:1px solid rgba(255,255,255,.09);border-radius:.4em;white-space:nowrap;${isAxis?'background:rgba(240,208,128,.10);':''}">
           <div style="flex:1;display:flex;align-items:center;min-width:0;white-space:nowrap;overflow:hidden;">
-            <span style="flex-shrink:0;width:1.5em;height:1.5em;border-radius:50%;background:${c.bg};color:${c.fg};font-size:.68em;font-weight:900;display:flex;align-items:center;justify-content:center;margin-right:6px;">${laneNo}</span>
+            <span style="flex-shrink:0;width:1.5em;height:1.5em;border-radius:50%;background:${c.bg};color:${c.fg};font-size:.68em;font-weight:900;display:flex;align-items:center;justify-content:center;margin-right:.4em;">${laneNo}</span>
             <span style="font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ovEscapeHtml(name)}</span>
-            ${fnum?`<span style="font-size:.6em;font-weight:900;color:#fff;background:#c0392b;border-radius:3px;padding:1px 3px;margin-left:4px;flex-shrink:0;white-space:nowrap;">F${fnum}</span>`:''}
+            ${fnum?`<span style="font-size:.6em;font-weight:900;color:#fff;background:#c0392b;border-radius:.2em;padding:.1em .25em;margin-left:.3em;flex-shrink:0;white-space:nowrap;">F${fnum}</span>`:''}
           </div>
           <span style="width:2em;text-align:center;font-weight:900;color:${ovSymColor(s1)};flex-shrink:0;white-space:nowrap;">${s1}</span>
           <span style="width:4.6em;text-align:right;font-weight:700;font-size:.85em;color:#9fc2a3;flex-shrink:0;white-space:nowrap;">${motorPct.text}</span>
@@ -4001,11 +4001,11 @@ window.addEventListener('DOMContentLoaded',function(){
         return;
       }
       if(/^◎本命/.test(line)){
-        html+=`<div style="margin-top:6px;font-weight:900;color:#f0d080;font-size:1.1em;">${ovEscapeHtml(line)}</div>`;
+        html+=`<div style="margin-top:.5em;font-weight:900;color:#f0d080;font-size:1.1em;">${ovEscapeHtml(line)}</div>`;
         return;
       }
       if(/^展開[:：]/.test(line)){
-        html+=`<div style="margin-top:2px;color:#d8d8d8;font-size:.85em;">${ovEscapeHtml(line)}</div>`;
+        html+=`<div style="margin-top:.15em;color:#d8d8d8;font-size:.85em;">${ovEscapeHtml(line)}</div>`;
         return;
       }
       html+=`<div style="color:#e8e8e8;">${ovEscapeHtml(line)}</div>`;
