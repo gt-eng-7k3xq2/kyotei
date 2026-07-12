@@ -258,7 +258,7 @@ html,body{min-height:100vh;background:#04040c;}
       <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);padding:14px;white-space:pre-wrap;font-size:13px;line-height:1.8;color:var(--text1);" id="jiseki-post-text"></div>
       <button onclick="copyJisekiPost()" style="margin-top:10px;width:100%;padding:11px;background:var(--gold);color:#000;border:none;border-radius:var(--r2);font-size:13px;font-weight:700;-webkit-appearance:none;">📋 コピー</button>
     </div>
-    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:8px 0 0;">build: 20260712-2 / title-line: on</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:8px 0 0;">build: 20260712-3 / title-line: on / 結果ポスト:倍率表記</p>
   </div>
 
   <!-- 月次ポスト -->
@@ -797,7 +797,7 @@ function generatePost(){
       var p=parsePayout(l.payout);
       // 60倍以上は🔥で目立たせる
       var fireStr=p>=6000?'🔥':'';
-      lines.push('🎯 '+l.venue+(l.raceNum||'')+(p>0?('　'+fireStr+'¥'+p.toLocaleString()+fireStr):''));
+      lines.push('🎯 '+l.venue+(l.raceNum||'')+(p>0?('　'+fireStr+(p/100).toFixed(1)+'倍'+fireStr):''));
     });
   } else {
     lines.push('本日は的中なし…また明日💪');
@@ -868,7 +868,7 @@ function generateWeeklyPost(){
       // 上位5件を配当高い順に表示
       top5.forEach(function(l){
         var fireStr=l.pay>=6000?'🔥':'';
-        lines.push('🎯 '+l.venue+(l.raceNum||'')+'　'+fireStr+'¥'+l.pay.toLocaleString()+fireStr);
+        lines.push('🎯 '+l.venue+(l.raceNum||'')+'　'+fireStr+(l.pay/100).toFixed(1)+'倍'+fireStr);
       });
       if(hitsWithPay.length>5){
         lines.push('　…他 '+(hitsWithPay.length-5)+'件的中');
@@ -1034,7 +1034,7 @@ function generateMonthlyPost(){
     if(top5.length>0){
       top5.forEach(function(l){
         var fireStr=l.pay>=6000?'🔥':'';
-        lines.push('🎯 '+l.venue+(l.raceNum||'')+'　'+fireStr+'¥'+l.pay.toLocaleString()+fireStr);
+        lines.push('🎯 '+l.venue+(l.raceNum||'')+'　'+fireStr+(l.pay/100).toFixed(1)+'倍'+fireStr);
       });
       if(hitsWithPay.length>5){
         lines.push('　…他 '+(hitsWithPay.length-5)+'件的中');
