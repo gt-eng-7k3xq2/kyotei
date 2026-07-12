@@ -443,7 +443,7 @@
       <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
     </div>
     <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
-    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260712-1 / 展開欄は空欄デフォルト</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260712-3 / X投稿サマリーの展開も空欄デフォルト</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
     <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
@@ -2157,21 +2157,10 @@ function buildXSummary(mode,withAmount){
       pattern = `外枠${label(outerBoat)}の2着浮上に警戒`;
     }
 
-    if(pattern){
-      tenkaiLine=pattern;
-    } else {
-      // フォールバック: 評価順4位以下(△▽×)の伏兵の中だけで警戒艇を探す。
-      // ◎○▲は既に予想に入っている艇なので「まくり実績あり」等の当たり前の言及はしない。
-      const threats=currentAreScores
-        .filter(s=>isDarkHorse(s.no))
-        .map(s=>{const k=pickKimarite(s.no); return k?{no:s.no,word:k[0],val:k[1]}:null;})
-        .filter(Boolean)
-        .sort((a,b)=>b.val-a.val);
-      tenkaiLine = threats[0]
-        ? `2着は${label(threats[0].no)}の${threats[0].word}に伏兵警戒`
-        : `想定通りなら${maruStr}中心の決着`;
-    }
-    if(aiTenkaiLine) tenkaiLine=aiTenkaiLine; // AI生成があれば上書き
+    // ルールベースの自動文言生成はやめて、常に空欄からスタートする
+    // （ChatGPT等で書いた文章に差し替える運用のため、初期文言があると二度手間になる）
+    tenkaiLine='';
+    if(aiTenkaiLine) tenkaiLine=aiTenkaiLine; // 「展開をAIで書く」ボタンで生成した場合のみ使う
   }
 
   const venueVal=document.getElementById('inp-venue')?document.getElementById('inp-venue').value||'鳴門':'鳴門';
