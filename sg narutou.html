@@ -439,11 +439,11 @@
     </label>
     <div style="display:flex;align-items:center;gap:8px;margin:10px 0;">
       <label style="font-size:11px;color:var(--muted);white-space:nowrap;">文字サイズ</label>
-      <input type="range" id="overlay-fontsize" min="1" max="24" step="0.1" value="2.3" style="flex:1;" oninput="overlaySyncNoteText()">
+      <input type="range" id="overlay-fontsize" min="1" max="24" step="0.1" value="6" style="flex:1;" oninput="overlaySyncNoteText()">
       <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
     </div>
     <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
-    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260711-16 / GARONpt as integer (matches JSスコア表示)</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260711-17 / default-font:6 / ST:枠別平均</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
     <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
@@ -707,7 +707,7 @@ function refreshBetsForCount(){
 // ============================================================
 function parseData(text){
   const d={boats:[]};
-  for(let i=1;i<=6;i++) d.boats.push({no:i,name:'',regno:'',nigerate6m:0,nigerate1y:0,atchiNige:0,atchiNigeCount:0,sgNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sg1chakuRate:0,sg1chakuCount:0,ippan2ren:0,konki2ren:0,konki3ren:0,konkiAvgST:0,fCount:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,avgTenji:0,syukai:0,syukaiFoot:0,avgSyukaiFoot:0,chokusen:0,directST:0,isExhibitF:false,isF:false});
+  for(let i=1;i<=6;i++) d.boats.push({no:i,name:'',regno:'',nigerate6m:0,nigerate1y:0,atchiNige:0,atchiNigeCount:0,sgNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sg1chakuRate:0,sg1chakuCount:0,ippan2ren:0,konki2ren:0,konki3ren:0,konkiAvgST:0,wakuAvgST:0,fCount:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,avgTenji:0,syukai:0,syukaiFoot:0,avgSyukaiFoot:0,chokusen:0,directST:0,isExhibitF:false,isF:false});
 
   // 逃げ率パース（優先順位: SG/G1 → 当地 → 直近6ヶ月）
   // 直近6ヶ月
@@ -871,6 +871,12 @@ function parseData(text){
   const konkiAvgSTSection=text.match(/基本情報[\s\S]*?平均ST\s*\n今期[\t ]+([\d.]+)[\t ]+([\d.]+)[\t ]+([\d.]+)[\t ]+([\d.]+)[\t ]+([\d.]+)[\t ]+([\d.]+)/);
   if(konkiAvgSTSection){
     for(let i=0;i<6;i++) d.boats[i].konkiAvgST=parseFloat(konkiAvgSTSection[i+1])||0;
+  }
+
+  // 今期・枠別平均ST（枠別勝率セクション内・コース別の平均ST。コメント画像ツールの「平均ST」表示で使用）
+  const wakuAvgSTSection=text.match(/枠別勝率[\s\S]*?平均ST\s*\n今期[\t ]+([\d.]+)[\t ]+([\d.]+)[\t ]+([\d.]+)[\t ]+([\d.]+)[\t ]+([\d.]+)[\t ]+([\d.]+)/);
+  if(wakuAvgSTSection){
+    for(let i=0;i<6;i++) d.boats[i].wakuAvgST=parseFloat(wakuAvgSTSection[i+1])||0;
   }
 
   // 今期フライング数（コメント画像ツールのF持ちバッジ表示用）
@@ -3826,7 +3832,7 @@ window.addEventListener('DOMContentLoaded',function(){
 // コメント画像ツール（BMデータから叩き台テキスト生成→スクショに書き込み）
 // ============================================================
 (function(){
-  const OV_BOX_KEY='overlay_notebox_v8';
+  const OV_BOX_KEY='overlay_notebox_v9';
   let ovImg=null, ovBox=null; // ovBox: {x%,y%,w%,h%,fontSize}
 
   const ovCanvas=()=>document.getElementById('overlay-canvas');
@@ -3834,7 +3840,7 @@ window.addEventListener('DOMContentLoaded',function(){
   const ovBoxEl=()=>document.getElementById('overlay-notebox');
 
   function ovDefaultBox(){
-    return {x:63, y:31, w:32, fontSize:2.3};
+    return {x:63, y:31, w:32, fontSize:6};
   }
   // 保存されている値がどんな内容でも、必ず正常な範囲に矯正する（過去のバグで壊れた値が残っていても自動修復される）
   function ovClampBox(b){
@@ -3842,7 +3848,7 @@ window.addEventListener('DOMContentLoaded',function(){
     let w=Math.max(35,Math.min(100,Number(b.w)||32));
     let x=Math.max(0,Math.min(100-w,Number(b.x)||0));
     let y=Math.max(0,Math.min(95,Number(b.y)||0));
-    let fontSize=Math.max(1,Math.min(24,Number(b.fontSize)||2.3));
+    let fontSize=Math.max(1,Math.min(24,Number(b.fontSize)||6));
     return {x,y,w,fontSize};
   }
   function ovLoadBox(){
@@ -3896,7 +3902,7 @@ window.addEventListener('DOMContentLoaded',function(){
 
     const motor2=ovTop2Boats(motorVals,false);
     const gpVals=(currentAreScores||[]).map(s=>({no:parseInt(s.no),val:s.raw})).filter(x=>x.val>-990);
-    const stVals=boats.map((b,i)=>({no:i+1,val:(b.konkiAvgST||0)})).filter(x=>x.val>0);
+    const stVals=boats.map((b,i)=>({no:i+1,val:(b.wakuAvgST||0)})).filter(x=>x.val>0);
     const gpTop=ovTop2Boats(gpVals,false); // GARONポイントは高いほど良い
     const stTop=ovTop2Boats(stVals,true); // STは小さい方が良い
     const gpMap={};
@@ -3920,7 +3926,7 @@ window.addEventListener('DOMContentLoaded',function(){
       const ms=motorSyms[i]||'-';
       const motorPct=(b.motor2ren||0)>0?b.motor2ren.toFixed(1)+'%'+(motor2.has(i)?'*':''):'-';
       const gp=gpExcluded.has(i)?'除外':((gpMap[i]!=null)?gpMap[i].toFixed(0)+(gpTop.has(i)?'*':''):'-');
-      const st=(b.konkiAvgST||0)>0?b.konkiAvgST.toFixed(2)+(stTop.has(i)?'*':''):'-';
+      const st=(b.wakuAvgST||0)>0?b.wakuAvgST.toFixed(2)+(stTop.has(i)?'*':''):'-';
       lines.push(`${circled[i-1]}${name}${fpart} ${ts} ${ms} ${motorPct} ${gp} ${st}`);
     }
     lines.push('');
@@ -4102,8 +4108,8 @@ window.addEventListener('DOMContentLoaded',function(){
     box.style.top=ovBox.y+'%';
     box.style.width=ovBox.w+'%';
     box.style.fontSize=(ovBox.fontSize||18)+'px';
-    document.getElementById('overlay-fontsize').value=ovBox.fontSize||2.3;
-    document.getElementById('overlay-fontsize-val').textContent=ovBox.fontSize||2.3;
+    document.getElementById('overlay-fontsize').value=ovBox.fontSize||6;
+    document.getElementById('overlay-fontsize-val').textContent=ovBox.fontSize||6;
   }
 
   // 中身のテキスト量に合わせて枠の高さを自動フィットさせる（余白だらけ/はみ出しを防ぐ）
