@@ -258,6 +258,7 @@ html,body{min-height:100vh;background:#04040c;}
       <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);padding:14px;white-space:pre-wrap;font-size:13px;line-height:1.8;color:var(--text1);" id="jiseki-post-text"></div>
       <button onclick="copyJisekiPost()" style="margin-top:10px;width:100%;padding:11px;background:var(--gold);color:#000;border:none;border-radius:var(--r2);font-size:13px;font-weight:700;-webkit-appearance:none;">📋 コピー</button>
     </div>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:8px 0 0;">build: 20260712-2 / title-line: on</p>
   </div>
 
   <!-- 月次ポスト -->
@@ -950,6 +951,7 @@ function generateJisekiSummary(){
     }).filter(function(l){return l.odds>0;}).sort(function(a,b){return b.odds-a.odds;});
 
     var lines=[];
+    lines.push('【直近実績'+hitCount+'/'+total+'】');
     lines.push(hitCount+'本的中🎯→'+rateComment(rate));
     lines.push('回収率'+roi+'%→'+roiComment(roi));
     lines.push('');
