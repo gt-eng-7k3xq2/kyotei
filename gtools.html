@@ -248,6 +248,18 @@ html,body{min-height:100vh;background:#04040c;}
     </div>
   </div>
 
+  <!-- 実績まとめポスト（展開コメント用の「直近実績」差し込み文言） -->
+  <div class="card" style="margin-top:12px;position:relative;z-index:10;">
+    <div class="card-title">🎯 実績まとめポスト（直近実績・差し込み用）</div>
+    <div class="field"><label>開始日</label><input type="date" id="jiseki-start"></div>
+    <div class="field"><label>終了日</label><input type="date" id="jiseki-end"></div>
+    <button onclick="generateJisekiSummary()" style="width:100%;background:var(--gold);color:#080810;border:none;border-radius:var(--r);font-size:15px;font-weight:800;padding:14px;margin-top:8px;-webkit-appearance:none;cursor:pointer;">🎯 実績まとめを生成</button>
+    <div id="jiseki-post-result" style="margin-top:12px;display:none;">
+      <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);padding:14px;white-space:pre-wrap;font-size:13px;line-height:1.8;color:var(--text1);" id="jiseki-post-text"></div>
+      <button onclick="copyJisekiPost()" style="margin-top:10px;width:100%;padding:11px;background:var(--gold);color:#000;border:none;border-radius:var(--r2);font-size:13px;font-weight:700;-webkit-appearance:none;">📋 コピー</button>
+    </div>
+  </div>
+
   <!-- 月次ポスト -->
   <div class="card" style="margin-top:12px;position:relative;z-index:10;">
     <div class="card-title">𝕏 月次結果ポスト（毎月末）</div>
@@ -880,6 +892,88 @@ function generateWeeklyPost(){
 function copyWeeklyPost(){
   var pt=document.getElementById('weekly-post-text');
   if(!pt||!pt.textContent){showToast('先にポストを生成してください');return;}
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(pt.textContent).then(function(){showToast('📋 コピーしました');});
+  }else{
+    var ta=document.createElement('textarea');
+    ta.value=pt.textContent;
+    document.body.appendChild(ta);ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('📋 コピーしました');
+  }
+}
+
+// ===== 実績まとめポスト（展開コメントの「直近実績」差し込み文言を自動生成） =====
+function generateJisekiSummary(){
+  try{
+    var startVal=document.getElementById('jiseki-start').value;
+    var endVal=document.getElementById('jiseki-end').value;
+    if(!startVal||!endVal){showToast('期間を選択してください');return;}
+
+    function normDate(s){return (s||'').replace(/\//g,'-');}
+    var startStr=normDate(startVal), endStr=normDate(endVal);
+    var v2logs=getLogs();
+    var allLogs=v2logs.filter(function(l){
+      if(!l.date) return false;
+      var nd=normDate(l.date);
+      return nd>=startStr && nd<=endStr && !(l.miss||[]).includes('miseru');
+    });
+    if(!allLogs.length){showToast('この期間の記録がありません');return;}
+
+    var hits=allLogs.filter(function(l){return (l.miss||[]).includes('hit');});
+    var total=allLogs.length, hitCount=hits.length;
+    var rate=total?Math.round(hitCount/total*100):0;
+
+    // 回収率計算（日報カードと同じロジック：本線/抑えの賭け単価を使う）
+    var hMult=honsenUnit/100, oMult=osaeeUnit/100;
+    function getHitMult(log){
+      if(!log.result||!log.bets||!log.bets.length) return hMult;
+      var matched=log.bets.find(function(b){return b.val===log.result;});
+      if(!matched) return hMult;
+      return matched.type==='honsen'?hMult:oMult;
+    }
+    function calcInvest(log){
+      if(!log.bets||!log.bets.length) return 0;
+      return log.bets.reduce(function(s,b){return s+(b.type==='honsen'?honsenUnit:osaeeUnit);},0);
+    }
+    var totalPayout=hits.reduce(function(sum,l){return sum+Math.round(parsePayout(l.payout)*getHitMult(l));},0);
+    var totalInvest=allLogs.reduce(function(sum,l){return sum+calcInvest(l);},0);
+    var roi=totalInvest>0?Math.round(totalPayout/totalInvest*100):0;
+
+    function rateComment(r){return r>=40?'絶好調◎':r>=25?'好調○':r>=15?'普通△':'不調×';}
+    function roiComment(r){return r>=150?'絶好調◎':r>=100?'好調○':r>=70?'普通△':'不調×';}
+
+    // 配当を倍率(100円あたり)に変換して高い順に
+    var hitsWithOdds=hits.map(function(l){
+      return {venue:l.venue, raceNum:l.raceNum, odds:parsePayout(l.payout)/100};
+    }).filter(function(l){return l.odds>0;}).sort(function(a,b){return b.odds-a.odds;});
+
+    var lines=[];
+    lines.push(hitCount+'本的中🎯→'+rateComment(rate));
+    lines.push('回収率'+roi+'%→'+roiComment(roi));
+    lines.push('');
+    var top=hitsWithOdds.slice(0,3);
+    top.forEach(function(l,i){
+      var oddsStr=l.odds.toFixed(1)+'倍';
+      var fireStr=(i===0&&l.odds>=50)?'🔥':'';
+      lines.push(l.venue+(l.raceNum||'')+'　'+fireStr+oddsStr+fireStr);
+    });
+    if(hitsWithOdds.length>3){
+      lines.push('他'+(hitsWithOdds.length-3)+'本');
+    }
+
+    var postText=document.getElementById('jiseki-post-text');
+    var postResult=document.getElementById('jiseki-post-result');
+    if(!postText||!postResult){showToast('表示エラー');return;}
+    postText.textContent=lines.join('\n');
+    postResult.style.display='block';
+  }catch(e){showToast('エラー: '+e.message);}
+}
+
+function copyJisekiPost(){
+  var pt=document.getElementById('jiseki-post-text');
+  if(!pt||!pt.textContent){showToast('先に実績まとめを生成してください');return;}
   if(navigator.clipboard){
     navigator.clipboard.writeText(pt.textContent).then(function(){showToast('📋 コピーしました');});
   }else{
