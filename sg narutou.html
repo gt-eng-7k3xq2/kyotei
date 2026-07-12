@@ -443,7 +443,7 @@
       <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
     </div>
     <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
-    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260711-18 / ST regex handles "-" (missing data)</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260712-1 / 展開欄は空欄デフォルト</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
     <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
@@ -3934,9 +3934,7 @@ window.addEventListener('DOMContentLoaded',function(){
       const top3=currentCalcData.ranking.slice(0,3).map(r=>circled[r.boat-1]).join('-');
       lines.push(`◎本命 ${top3}`);
     }
-    if(typeof aiTenkaiLine!=='undefined'&&aiTenkaiLine){
-      lines.push(`展開: ${aiTenkaiLine}`);
-    }
+    lines.push('展開: ');
     document.getElementById('overlay-text-input').value=lines.join('\n');
     overlaySyncNoteText();
     showToast('叩き台を生成しました。自由に編集してください');
