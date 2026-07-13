@@ -1131,6 +1131,12 @@ function splitBulkPaste(){
   processBatch();
 }
 
+// 場・レース番号だけを取り出す軽量抽出（結果の自動マッチング用。parseDataのフル解析は使わない）
+function extractVenueRaceNumFast(text){
+  const m=text.match(/=== レース情報 ===\n([^\t\n]+)\t(\d+R)/);
+  return m ? {venue:m[1].trim(), raceNum:m[2].trim()} : {venue:'', raceNum:''};
+}
+
 function applyBulkResults(){
   const raw=document.getElementById('result-bulk-paste').value.trim();
   if(!raw){showToast('結果データを貼り付けてください');return;}
@@ -1143,10 +1149,13 @@ function applyBulkResults(){
     return;
   }
 
-  const entries=document.querySelectorAll('#entries > div');
+  const entries=Array.from(document.querySelectorAll('#entries > div'));
   let filled=0, noMatch=0;
+  const total=entries.length;
+  const BATCH=25;
+  let idx=0;
 
-  entries.forEach(entryEl=>{
+  function processOne(entryEl){
     const idMatch=entryEl.id.match(/entry-(\d+)/);
     if(!idMatch) return;
     const id=idMatch[1];
@@ -1158,11 +1167,10 @@ function applyBulkResults(){
 
     const rawData=dataEl.value.trim();
     if(!rawData) return;
-    let d;
-    try{ d=parseData(rawData); }catch(e){ return; }
-    if(!d.venue||!d.raceNum) return;
+    const {venue,raceNum}=extractVenueRaceNumFast(rawData);
+    if(!venue||!raceNum) return;
 
-    const match=results.find(r=>r.v===d.venue&&r.r===d.raceNum);
+    const match=results.find(r=>r.v===venue&&r.r===raceNum);
     if(match&&match.c){
       resultEl.value=match.c;
       if(payoutEl&&match.p) payoutEl.value=match.p;
@@ -1170,19 +1178,33 @@ function applyBulkResults(){
     } else {
       noMatch++;
     }
-  });
+  }
 
-  showToast(`✅ ${filled}件に結果を自動入力しました（未一致${noMatch}件）`);
+  function processBatch(){
+    const end=Math.min(idx+BATCH, total);
+    for(; idx<end; idx++){
+      processOne(entries[idx]);
+    }
+    if(idx<total){
+      setTimeout(processBatch, 20);
+    } else {
+      showToast(`✅ ${filled}件に結果を自動入力しました（未一致${noMatch}件）`);
+    }
+  }
+  processBatch();
 }
 
 function runAll(){
-  const entries=document.querySelectorAll('#entries > div');
+  const entries=Array.from(document.querySelectorAll('#entries > div'));
   if(!entries.length){showToast('レースを追加してください');return;}
 
   const logs=getBacktestLogs();
   let processed=0, hitCount=0, errorCount=0;
+  const total=entries.length;
+  const BATCH=10; // 一度に処理する件数。多すぎるとスマホSafariが固まる/落ちるため小分けにする
+  let idx=0;
 
-  entries.forEach(entryEl=>{
+  function processOne(entryEl){
     const idMatch=entryEl.id.match(/entry-(\d+)/);
     if(!idMatch) return;
     const id=idMatch[1];
@@ -1285,26 +1307,42 @@ function runAll(){
       errorCount++;
       if(statusEl) statusEl.innerHTML=`<span style="color:var(--red);">エラー: ${e.message}</span>`;
     }
-  });
+  }
 
-  saveBacktestLogs(logs);
-  currentParsedData=null;
+  function finish(){
+    saveBacktestLogs(logs);
+    currentParsedData=null;
 
-  const rate=processed?Math.round(hitCount/processed*100):0;
-  document.getElementById('summary').innerHTML=`
-    <div class="card">
-      <div class="section-title">今回の一括処理結果</div>
-      <div class="stat-grid">
-        <div class="stat-card"><div class="stat-val">${processed}</div><div class="stat-label">処理件数</div></div>
-        <div class="stat-card"><div class="stat-val">${hitCount}</div><div class="stat-label">的中</div></div>
-        <div class="stat-card"><div class="stat-val">${rate}%</div><div class="stat-label">的中率</div></div>
+    const rate=processed?Math.round(hitCount/processed*100):0;
+    document.getElementById('summary').innerHTML=`
+      <div class="card">
+        <div class="section-title">今回の一括処理結果</div>
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-val">${processed}</div><div class="stat-label">処理件数</div></div>
+          <div class="stat-card"><div class="stat-val">${hitCount}</div><div class="stat-label">的中</div></div>
+          <div class="stat-card"><div class="stat-val">${rate}%</div><div class="stat-label">的中率</div></div>
+        </div>
+        ${errorCount?`<div style="font-size:11px;color:var(--red);margin-top:8px;">エラー ${errorCount}件</div>`:''}
       </div>
-      ${errorCount?`<div style="font-size:11px;color:var(--red);margin-top:8px;">エラー ${errorCount}件</div>`:''}
-    </div>
-  `;
-  showToast(`✅ ${processed}件処理完了（的中${hitCount}件）`);
-  renderScoreDiagnosis();
-  updateLogCount();
+    `;
+    showToast(`✅ ${processed}件処理完了（的中${hitCount}件）`);
+    renderScoreDiagnosis();
+    updateLogCount();
+  }
+
+  function processBatch(){
+    const end=Math.min(idx+BATCH, total);
+    for(; idx<end; idx++){
+      processOne(entries[idx]);
+    }
+    if(idx<total){
+      showToast(`処理中… ${idx}/${total}件`);
+      setTimeout(processBatch, 30); // 他の処理に一瞬譲ってから続行（フリーズ防止）
+    } else {
+      finish();
+    }
+  }
+  processBatch();
 }
 
 // ============================================================
