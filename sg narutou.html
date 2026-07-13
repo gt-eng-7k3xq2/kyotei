@@ -305,6 +305,17 @@
       <div class="sum-row"><span class="sum-label">最小回収（1点的中）</span><span class="sum-val green" id="sum-return">—</span></div>
       <div class="sum-row"><span class="sum-label">回収率目安</span><span class="sum-val" id="sum-rate">—</span></div>
       <div id="sum-gosei" style="display:none;"></div>
+      <button class="btn btn-gold" style="width:100%;margin-top:10px;" onclick="logSelection()">📌 このレースを投稿記録に残す</button>
+      <p class="eval-hint" style="margin:6px 0 0;">実際にXへ投稿すると決めたレースだけ押す。荒れ指数・nigeRate・合成オッズなどをまとめて記録し、後で「選んだレース」と「選ばなかったレース」を比較検証できるようにする。</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📌 投稿選定ログ</div>
+      <div id="selection-log-summary" style="font-size:12px;color:var(--muted);margin-bottom:8px;">記録: 0件</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="exportSelectionLog()">📥 選定ログを書き出す</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="clearSelectionLog()">🗑 クリア</button>
+      </div>
     </div>
 
     <div class="card">
@@ -3292,6 +3303,95 @@ function renderTsudoi(){}
 function saveSettings(){showToast('設定保存しました');}
 function resetAll(){if(!confirm('全データをリセットしますか？')) return;localStorage.removeItem(STORE_KEY);updateLogSummary();showToast('リセットしました');}
 
+// ===== 投稿選定ログ =====
+// 実際にXへ投稿すると決めたレースだけを記録する。夜間検証エンジンの「全レース」ログとは別物で、
+// 「選んだレース」と「選ばなかった残り」を後で比較検証するためのもの。
+const SELECTION_LOG_KEY='sg_selection_log';
+
+function getSelectionLog(){
+  try{ return JSON.parse(localStorage.getItem(SELECTION_LOG_KEY)||'[]'); }catch(e){ return []; }
+}
+function saveSelectionLog(arr){
+  try{ localStorage.setItem(SELECTION_LOG_KEY, JSON.stringify(arr)); }catch(e){}
+}
+
+function logSelection(){
+  if(!currentParsedData||!currentAreScores||!currentCalcData){
+    showToast('先に予想を実行してください');
+    return;
+  }
+  const oddsMap=extractOddsMap(document.getElementById('inp-data').value);
+  const betVals=(currentCalcData.betsRaw||[]).map(b=>b.val);
+  const gosei=calcGoseiOdds(betVals,oddsMap);
+  const scoresSorted=[...currentAreScores].sort((a,b)=>b.raw-a.raw);
+  const gap=scoresSorted.length>=2?Math.round((scoresSorted[0].raw-scoresSorted[1].raw)*10)/10:null;
+  const venueEl=document.getElementById('inp-venue');
+  const venue=venueEl?venueEl.value:(currentParsedData.venue||'');
+  const racenum=(currentCalcData.racenum||currentParsedData.raceNum||'').toString().replace(/R$/,'');
+
+  const entry={
+    id:Date.now(),
+    timestamp:new Date().toISOString(),
+    date:new Date().toISOString().slice(0,10),
+    venue, racenum,
+    mode:currentCalcData.mode||null,
+    areIndex:currentCalcData.areIndex??null,
+    nigeRate:currentCalcData.nigeRate??null,
+    scoreVersion:SCORE_ENGINE_VERSION,
+    goseiOdds:gosei?parseFloat(gosei):null,
+    betcount:betVals.length,
+    axisGap:gap,
+    axis:scoresSorted[0]?parseInt(scoresSorted[0].no):null,
+    runnerUp:scoresSorted[1]?parseInt(scoresSorted[1].no):null
+  };
+
+  const arr=getSelectionLog();
+  arr.push(entry);
+  saveSelectionLog(arr);
+  updateSelectionLogSummary();
+  showToast(`📌 記録しました（${venue}${racenum}R / 合成${gosei||'?'}倍）`);
+}
+
+function updateSelectionLogSummary(){
+  const el=document.getElementById('selection-log-summary');
+  if(!el) return;
+  const arr=getSelectionLog();
+  if(!arr.length){ el.textContent='記録: 0件'; return; }
+  const dates=new Set(arr.map(e=>e.date));
+  el.textContent=`記録: ${arr.length}件（${dates.size}日分）`;
+}
+
+function exportSelectionLog(){
+  const arr=getSelectionLog();
+  if(!arr.length){ showToast('選定ログがありません'); return; }
+  const json=JSON.stringify(arr,null,2);
+  try{
+    const blob=new Blob([json],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    const ts=new Date().toISOString().slice(0,10);
+    a.href=url;
+    a.download=`sg_selection_log_${ts}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }catch(e){}
+  navigator.clipboard.writeText(json).then(()=>showToast('選定ログをダウンロード＆コピーしました')).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=json;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('選定ログをコピーしました');
+  });
+}
+
+function clearSelectionLog(){
+  const arr=getSelectionLog();
+  if(!arr.length){ showToast('選定ログは空です'); return; }
+  if(confirm(`選定ログ${arr.length}件を削除しますか？（書き出してから消すのを推奨）`)){
+    saveSelectionLog([]);
+    updateSelectionLogSummary();
+    showToast('選定ログをクリアしました');
+  }
+}
+
 function exportSgJSON(){
   const logs=getLogs();
   if(!logs.length){showToast('ログがありません');return;}
@@ -3815,6 +3915,7 @@ function loadVenueRace(){
 window.addEventListener('DOMContentLoaded',function(){
   loadVenueRace();
   updateLogSummary();
+  updateSelectionLogSummary();
 });
 
 // ============================================================
