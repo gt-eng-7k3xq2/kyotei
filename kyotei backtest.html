@@ -1046,16 +1046,20 @@ function showToast(msg){
 }
 
 let entryId=0;
+// ラベル表示用の軽量抽出（parseDataのフル解析は使わない。大量一括追加時の負荷を避けるため）
+function extractLabelFast(text){
+  const m=text.match(/=== レース情報 ===\n([^\t\n]+)\t(\d+R)/);
+  return m ? (m[1].trim()+m[2].trim()) : '';
+}
+
 function addEntry(prefillData){
   entryId++;
   const id=entryId;
   // 場・レース番号をラベルとして自動抽出（失敗しても無視）
   let label='レース '+id;
   if(prefillData){
-    try{
-      const tmp=parseData(prefillData);
-      if(tmp.venue||tmp.raceNum) label=`${tmp.venue||''}${tmp.raceNum||''}`;
-    }catch(e){}
+    const fast=extractLabelFast(prefillData);
+    if(fast) label=fast;
   }
   // 一括貼り付け欄で選ばれてる点数・種別を新規レースの初期値にする
   const defaultPts=(document.getElementById('bulk-default-pts')||{}).value||'12';
@@ -1106,9 +1110,25 @@ function splitBulkPaste(){
   if(!raw.trim()){showToast('データを貼り付けてください');return;}
   const chunks=raw.split(/^\s*###\s*$/m).map(c=>c.trim()).filter(c=>c.length>0);
   if(!chunks.length){showToast('分割できるデータがありません');return;}
-  chunks.forEach(chunk=>addEntry(chunk));
+
   document.getElementById('bulk-paste').value='';
-  showToast(`${chunks.length}レース分を追加しました`);
+  const total=chunks.length;
+  const BATCH=15; // 一度に処理する件数。多すぎるとスマホSafariが固まる/落ちるため小分けにする
+  let idx=0;
+
+  function processBatch(){
+    const end=Math.min(idx+BATCH, total);
+    for(; idx<end; idx++){
+      addEntry(chunks[idx]);
+    }
+    showToast(`追加中… ${idx}/${total}件`);
+    if(idx<total){
+      setTimeout(processBatch, 30); // 他の処理に一瞬譲ってから続行（フリーズ防止）
+    } else {
+      showToast(`✅ ${total}レース分を追加しました`);
+    }
+  }
+  processBatch();
 }
 
 function applyBulkResults(){
