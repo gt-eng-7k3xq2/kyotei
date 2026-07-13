@@ -90,6 +90,10 @@ textarea{resize:vertical;}
   <div class="section-title">レース入力</div>
   <div id="entries"></div>
   <button class="btn" style="width:100%;margin-top:6px;" onclick="addEntry()">＋ レース追加</button>
+  <div class="btn-row" style="margin-top:6px;">
+    <button class="btn" style="flex:1;font-size:12px;" onclick="setAllEntriesCollapsed(true)">▸ 全部閉じる</button>
+    <button class="btn" style="flex:1;font-size:12px;" onclick="setAllEntriesCollapsed(false)">▾ 全部開く</button>
+  </div>
   <button class="btn btn-gold" style="width:100%;margin-top:10px;padding:14px;" onclick="runAll()">🚀 一括検証実行</button>
 </div>
 
@@ -1069,23 +1073,48 @@ function addEntry(prefillData){
   const wrap=document.createElement('div');
   wrap.className='entry-card';
   wrap.id='entry-'+id;
+  // 一括貼り付け(既にデータあり)は折りたたんで追加。手動の「＋レース追加」(空)は開いたまま。
+  const startCollapsed=!!prefillData;
   wrap.innerHTML=`
-    <div class="entry-hdr">
-      <span>${label}</span>
-      <button class="btn" style="padding:4px 10px;font-size:11px;" onclick="document.getElementById('entry-${id}').remove()">✕ 削除</button>
+    <div class="entry-hdr" style="cursor:pointer;" onclick="toggleEntryBody(${id})">
+      <span><span id="chev-${id}" style="display:inline-block;transition:transform .15s;transform:rotate(${startCollapsed?'-90':'0'}deg);margin-right:4px;">▾</span>${label}</span>
+      <button class="btn" style="padding:4px 10px;font-size:11px;" onclick="event.stopPropagation();document.getElementById('entry-${id}').remove()">✕ 削除</button>
     </div>
-    <textarea id="data-${id}" rows="4" placeholder="競艇日和データを貼り付け">${prefillData?prefillData.replace(/</g,'&lt;'):''}</textarea>
-    <div class="btn-row" style="margin-top:8px;">
-      <input id="result-${id}" type="text" placeholder="結果 例: 3-1-5">
-      <input id="payout-${id}" type="text" placeholder="配当 例: ¥1,200" style="width:110px;">
+    <div class="entry-body" id="body-${id}" style="${startCollapsed?'display:none;':''}">
+      <textarea id="data-${id}" rows="4" placeholder="競艇日和データを貼り付け">${prefillData?prefillData.replace(/</g,'&lt;'):''}</textarea>
+      <div class="btn-row" style="margin-top:8px;">
+        <input id="result-${id}" type="text" placeholder="結果 例: 3-1-5">
+        <input id="payout-${id}" type="text" placeholder="配当 例: ¥1,200" style="width:110px;">
+      </div>
+      <div class="btn-row" style="margin-top:8px;">
+        <select id="pts-${id}" style="width:80px;">${ptsOptions}</select>
+        <select id="rtype-${id}" style="width:90px;">${rtypeOptions}</select>
+      </div>
+      <div class="status-line" id="status-${id}"></div>
     </div>
-    <div class="btn-row" style="margin-top:8px;">
-      <select id="pts-${id}" style="width:80px;">${ptsOptions}</select>
-      <select id="rtype-${id}" style="width:90px;">${rtypeOptions}</select>
-    </div>
-    <div class="status-line" id="status-${id}"></div>
   `;
   document.getElementById('entries').appendChild(wrap);
+}
+
+function toggleEntryBody(id){
+  const body=document.getElementById('body-'+id);
+  const chev=document.getElementById('chev-'+id);
+  if(!body) return;
+  const isHidden=body.style.display==='none';
+  body.style.display=isHidden?'':'none';
+  if(chev) chev.style.transform=isHidden?'rotate(0deg)':'rotate(-90deg)';
+}
+
+// 全件まとめて開閉するためのヘルパー（結果確認や一括操作の前後で使う）
+function setAllEntriesCollapsed(collapsed){
+  document.querySelectorAll('.entry-card').forEach(card=>{
+    const idMatch=card.id.match(/entry-(\d+)/);
+    if(!idMatch) return;
+    const body=document.getElementById('body-'+idMatch[1]);
+    const chev=document.getElementById('chev-'+idMatch[1]);
+    if(body) body.style.display=collapsed?'none':'';
+    if(chev) chev.style.transform=collapsed?'rotate(-90deg)':'rotate(0deg)';
+  });
 }
 
 function applyPtsToAll(){
