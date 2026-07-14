@@ -3769,6 +3769,7 @@ function renderEvalCard(xText, venue, racenum){
   var title='G.の総合評価🚤';
   if(venue&&venue!=='?'&&racenum&&racenum!=='?') title='G.の総合評価🚤　'+venue+racenum+'R';
   document.getElementById('evalCardTitle').textContent=title;
+  applyEvalCardTitleSizing();
 
   var container=document.getElementById('evalBoats');
   var ctr=container.querySelector('.eval-corner-tr');
@@ -3814,12 +3815,28 @@ function renderEvalCard(xText, venue, racenum){
   if(thumbWrapEl) thumbWrapEl.classList.add('show');
 }
 
+// vw依存を排除（thumb-venueと同じ理由）。評価カードタイトルの実ピクセル幅から計算。
+function applyEvalCardTitleSizing(){
+  var card=document.getElementById('evalCard');
+  var titleEl=document.getElementById('evalCardTitle');
+  if(!card||!titleEl) return;
+  var w=card.getBoundingClientRect().width||card.offsetWidth;
+  if(!w) return;
+  var fs=Math.min(32,Math.max(20,w*0.05));
+  titleEl.style.fontSize=fs+'px';
+}
+window.addEventListener('resize',function(){
+  clearTimeout(window._evalTitleResizeT);
+  window._evalTitleResizeT=setTimeout(applyEvalCardTitleSizing,150);
+});
+
 function saveEvalCard(){
   var card=document.getElementById('evalCard');
   if(!card)return;
   var btn=document.querySelector('.eval-save-btn');
   btn.textContent='生成中...';
   btn.disabled=true;
+  applyEvalCardTitleSizing();
   html2canvas(card,{
     scale:3,
     useCORS:true,
