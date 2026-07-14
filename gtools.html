@@ -916,14 +916,15 @@ function generateJisekiSummary(){
     if(!startVal||!endVal){showToast('期間を選択してください');return;}
 
     function normDate(s){return (s||'').replace(/\//g,'-');}
-    var startStr=normDate(startVal), endStr=normDate(endVal);
+    var endStr=normDate(endVal);
     var v2logs=getLogs();
+    // 上段（的中率・回収率）は、開始日〜終了日を範囲選択していても「終了日=当日」1日分だけを見る。
+    // 開始日は下段（配当リスト）のためではなく、複数日選んだ場合の意図しない合算を避けるための単日固定。
     var allLogs=v2logs.filter(function(l){
       if(!l.date) return false;
-      var nd=normDate(l.date);
-      return nd>=startStr && nd<=endStr && !(l.miss||[]).includes('miseru');
+      return normDate(l.date)===endStr && !(l.miss||[]).includes('miseru');
     });
-    if(!allLogs.length){showToast('この期間の記録がありません');return;}
+    if(!allLogs.length){showToast('終了日に記録がありません');return;}
 
     var hits=allLogs.filter(function(l){return (l.miss||[]).includes('hit');});
     var total=allLogs.length, hitCount=hits.length;
@@ -946,7 +947,8 @@ function generateJisekiSummary(){
     var roi=totalInvest>0?Math.round(totalPayout/totalInvest*100):0;
 
     function rateTier(r){return r>=40?3:r>=25?2:r>=15?1:0;}
-    function roiTier(r){return r>=150?3:r>=100?2:r>=70?1:0;}
+    // 回収率は100%未満＝実質マイナス収支なので「普通△」扱いにはせず、100%未満は一律非表示扱い(tier0)にする
+    function roiTier(r){return r>=150?3:r>=100?2:0;}
     var tierLabel=['','普通△','好調○','絶好調◎'];
     var rt=rateTier(rate), ot=roiTier(roi);
 
@@ -955,9 +957,8 @@ function generateJisekiSummary(){
     var leadTier = leadIsRate?rt:ot;
     var subTier  = leadIsRate?ot:rt;
 
-    // 配当リストは「今日/選択期間」に縛らず、直近14日間の実績全体から高配当を拾う
-    // （上段の的中率・回収率の判定は選択期間のまま変更しない。日数を絞るのは「他50本」のような
-    //   大袈裟な表示や、何ヶ月も前の的中を「直近」のように見せてしまうのを防ぐため）
+    // 配当リストは上段(終了日=当日)に縛らず、直近14日間の実績全体から高配当を拾う
+    // （日数を絞るのは「他50本」のような大袈裟な表示や、何ヶ月も前の的中を「直近」のように見せてしまうのを防ぐため）
     var endDateObj=new Date(endStr+'T00:00:00');
     var cutoffObj=new Date(endDateObj.getTime()-13*24*60*60*1000);
     var cutoffStr=cutoffObj.toISOString().slice(0,10);
