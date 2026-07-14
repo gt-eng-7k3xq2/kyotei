@@ -2248,6 +2248,7 @@ function updateThumbCard(){
   dtEl.textContent=shimekiri?`${dateStr}締切 ${shimekiri}`:dateStr;
 
   updateThumbComment();
+  applyThumbSizing();
 }
 
 function updateThumbComment(){
@@ -2256,6 +2257,78 @@ function updateThumbComment(){
   if(!input||!disp) return;
   disp.textContent=input.value;
 }
+
+// vw依存を排除し、カードの実ピクセル幅から全サイズをJSで計算してinline styleで強制する。
+// （GARONリボンの時と同じ原因＝html2canvasのキャプチャ時にvwの解決値がプレビューとズレるバグ対策）
+function applyThumbSizing(){
+  const cv=document.getElementById('thumb-cv');
+  if(!cv) return;
+  const w=cv.getBoundingClientRect().width||cv.offsetWidth;
+  if(!w) return;
+  const px=v=>v+'px';
+  const c=(ratio,mn,mx)=>Math.min(mx,Math.max(mn,w*ratio));
+
+  const hex=cv.querySelector('.thumb-hex-svg');
+  if(hex){
+    hex.style.width=px(c(0.19,100,176));
+    const b1=c(0.015,8,16),b2=c(0.05,24,56),b3=c(0.08,40,90);
+    hex.style.filter=`drop-shadow(0 0 ${px(b1)} rgba(200,153,60,0.7)) drop-shadow(0 0 ${px(b2)} rgba(200,153,60,0.25)) drop-shadow(0 0 ${px(b3)} rgba(200,153,60,0.1))`;
+  }
+  const logoSub=cv.querySelector('.thumb-logo-sub');
+  if(logoSub){logoSub.style.fontSize=px(c(0.011,8,11));logoSub.style.marginTop=px(c(0.015,8,16));}
+
+  const right=cv.querySelector('.thumb-right');
+  if(right){right.style.paddingRight=px(c(0.03,16,36));right.style.paddingBottom=px(c(0.035,20,34));}
+
+  const eyebrow=cv.querySelector('.thumb-eyebrow');
+  if(eyebrow){eyebrow.style.fontSize=px(c(0.011,8,11));eyebrow.style.marginBottom=px(c(0.014,8,16));}
+
+  const venue=document.getElementById('thumb-venue');
+  if(venue){
+    venue.style.fontSize=px(c(0.095,46,108));
+    const ts1=c(0.025,12,30),ts2=c(0.004,2,4),ts3=c(0.015,8,18);
+    venue.style.textShadow=`0 0 ${px(ts1)} rgba(200,153,60,0.2), 0 ${px(ts2)} ${px(ts3)} rgba(0,0,0,0.5)`;
+    venue.style.marginBottom=px(c(0.011,6,12));
+  }
+
+  const raceRow=cv.querySelector('.thumb-race-row');
+  if(raceRow){raceRow.style.gap=px(c(0.0035,2,4));raceRow.style.marginBottom=px(c(0.022,12,26));}
+
+  const raceN=document.getElementById('thumb-rn');
+  if(raceN){
+    raceN.style.fontSize=px(c(0.054,26,64));
+    raceN.style.textShadow=`0 0 ${px(c(0.02,10,24))} rgba(200,153,60,0.6)`;
+  }
+  const raceR=cv.querySelector('.thumb-race-r');
+  if(raceR){raceR.style.fontSize=px(c(0.026,14,30));raceR.style.paddingBottom=px(c(0.003,2,4));}
+
+  const rule=cv.querySelector('.thumb-rule');
+  if(rule){rule.style.width=px(c(0.055,28,64));rule.style.marginBottom=px(c(0.02,10,24));}
+
+  const deadline=document.getElementById('thumb-dt');
+  if(deadline){
+    deadline.style.fontSize=px(c(0.023,12,22));
+    deadline.style.marginBottom=px(c(0.013,7,14));
+    deadline.style.borderLeftWidth=px(c(0.003,2,3));
+    deadline.style.paddingLeft=px(c(0.012,7,14));
+  }
+
+  const comment=document.getElementById('thumb-comment');
+  if(comment){comment.style.fontSize=px(c(0.015,10,14));comment.style.paddingLeft=px(c(0.015,9,17));}
+
+  const bot=cv.querySelector('.thumb-bot');
+  if(bot){
+    bot.style.height=px(c(0.042,24,38));
+    const padLR=px(c(0.025,14,30));
+    bot.style.paddingLeft=padLR;bot.style.paddingRight=padLR;
+  }
+  const botL=cv.querySelector('.thumb-bot-l'),botR=cv.querySelector('.thumb-bot-r');
+  [botL,botR].forEach(function(el){if(el)el.style.fontSize=px(c(0.011,8,11));});
+}
+window.addEventListener('resize',function(){
+  clearTimeout(window._thumbResizeT);
+  window._thumbResizeT=setTimeout(applyThumbSizing,150);
+});
 
 function saveThumbCard(){
   const card=document.getElementById('thumb-cv');
@@ -2268,6 +2341,9 @@ function saveThumbCard(){
   // 待たずに実行すると、フォールバックの太字ゴシックで描画されてしまう。
   const fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
   fontsReady.then(function(){
+  // キャプチャ直前に実ピクセル幅から再計算・強制適用（vwのズレを完全に排除）
+  applyThumbSizing();
+  requestAnimationFrame(function(){requestAnimationFrame(function(){
   html2canvas(card,{
     scale:3,
     useCORS:true,
@@ -2303,6 +2379,7 @@ function saveThumbCard(){
     btn.disabled=false;
     showToast('生成失敗。スクリーンショットで保存してください。');
   });
+  });});
   });
 }
 
