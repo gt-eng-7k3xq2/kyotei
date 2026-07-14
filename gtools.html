@@ -957,10 +957,9 @@ function generateJisekiSummary(){
     var leadTier = leadIsRate?rt:ot;
     var subTier  = leadIsRate?ot:rt;
 
-    // 配当リストは上段(終了日=当日)に縛らず、直近14日間の実績全体から高配当を拾う
-    // （日数を絞るのは「他50本」のような大袈裟な表示や、何ヶ月も前の的中を「直近」のように見せてしまうのを防ぐため）
+    // 配当リストは上段(終了日=当日)に縛らず、直近3日間の実績から高配当を拾う
     var endDateObj=new Date(endStr+'T00:00:00');
-    var cutoffObj=new Date(endDateObj.getTime()-13*24*60*60*1000);
+    var cutoffObj=new Date(endDateObj.getTime()-2*24*60*60*1000);
     var cutoffStr=cutoffObj.toISOString().slice(0,10);
     var widerHits=v2logs.filter(function(l){
       if(!l.date) return false;
@@ -992,15 +991,15 @@ function generateJisekiSummary(){
     }
     if(showcase.length){
       lines.push('');
-      lines.push('🎯直近14日の的中');
       var top=showcase.slice(0,3);
       top.forEach(function(l,i){
         var oddsStr=l.odds.toFixed(1)+'倍';
         var fireStr=(i===0&&l.odds>=50)?'🔥':'';
-        lines.push(fmtDate(l.date)+' '+l.venue+(l.raceNum||'')+'　'+fireStr+oddsStr+fireStr);
+        lines.push(l.venue+(l.raceNum||'')+'（'+fmtDate(l.date)+'）　'+fireStr+oddsStr+fireStr);
       });
       if(showcase.length>3){
-        lines.push('他'+(showcase.length-3)+'本');
+        lines.push('');
+        lines.push('など');
       }
     }
 
