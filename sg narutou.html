@@ -2805,7 +2805,6 @@ function saveResult(resultType){
   const dupIdx=logs.findIndex(l=>l.venue===venue&&l.racenum===racenumRaw&&l.date===dateStr&&!l.result);
   if(dupIdx>=0) logs.splice(dupIdx,1);
   logs.push(entry);
-  if(logs.length>200) logs.splice(0,logs.length-200);
   saveLogs(logs);
 
   // kyotei_v2にも書き込み（gtools連携）
@@ -2849,7 +2848,6 @@ function writeToV2(entry){
     // 重複除去
     v2logs=v2logs.filter(l=>!(l.venue===v2entry.venue&&l.raceNum===v2entry.raceNum&&l.date===v2entry.date&&!l.result));
     v2logs.unshift(v2entry);
-    if(v2logs.length>300) v2logs=v2logs.slice(0,300);
     localStorage.setItem('kyotei_v2',JSON.stringify(v2logs));
   }catch(e){console.error('writeToV2 error:',e);}
 }
