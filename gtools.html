@@ -945,28 +945,70 @@ function generateJisekiSummary(){
     var totalInvest=allLogs.reduce(function(sum,l){return sum+calcInvest(l);},0);
     var roi=totalInvest>0?Math.round(totalPayout/totalInvest*100):0;
 
-    function rateComment(r){return r>=40?'絶好調◎':r>=25?'好調○':r>=15?'普通△':'不調×';}
-    function roiComment(r){return r>=150?'絶好調◎':r>=100?'好調○':r>=70?'普通△':'不調×';}
+    function rateTier(r){return r>=40?3:r>=25?2:r>=15?1:0;}
+    function roiTier(r){return r>=150?3:r>=100?2:r>=70?1:0;}
+    var tierLabel=['','普通△','好調○','絶好調◎'];
+    var rt=rateTier(rate), ot=roiTier(roi);
 
-    // 配当を倍率(100円あたり)に変換して高い順に
+    // 良い方の指標をメインに採用（同点なら的中率を優先）。悪い方は「不調×」を出さずそもそも省く。
+    var leadIsRate = rt>=ot;
+    var leadTier = leadIsRate?rt:ot;
+    var subTier  = leadIsRate?ot:rt;
+
+    // 配当を倍率(100円あたり)に変換して高い順に（期間内）
     var hitsWithOdds=hits.map(function(l){
-      return {venue:l.venue, raceNum:l.raceNum, odds:parsePayout(l.payout)/100};
+      return {venue:l.venue, raceNum:l.raceNum, odds:parsePayout(l.payout)/100, date:l.date};
     }).filter(function(l){return l.odds>0;}).sort(function(a,b){return b.odds-a.odds;});
+
+    // 期間内に目立つ配当がなければ、直近の実績全体から拾って補う（「（直近）」と明記し実績を偽らない）
+    var showcase=hitsWithOdds.slice();
+    if(!showcase.length || showcase[0].odds<10){
+      var periodKeys={};
+      hits.forEach(function(l){periodKeys[l.date+'_'+l.venue+'_'+l.raceNum]=true;});
+      var widerHits=v2logs.filter(function(l){
+        if(!l.date) return false;
+        var nd=normDate(l.date);
+        return nd<=endStr && !(l.miss||[]).includes('miseru') && (l.miss||[]).includes('hit');
+      }).sort(function(a,b){return normDate(b.date)<normDate(a.date)?-1:1;}).slice(0,60);
+      var extra=widerHits.map(function(l){
+        return {venue:l.venue, raceNum:l.raceNum, odds:parsePayout(l.payout)/100, date:l.date, extra:true};
+      }).filter(function(l){return l.odds>0 && !periodKeys[l.date+'_'+l.venue+'_'+l.raceNum];});
+      showcase=showcase.concat(extra).sort(function(a,b){return b.odds-a.odds;});
+    }
 
     var lines=[];
     lines.push('【直近実績'+hitCount+'/'+total+'】');
-    lines.push(hitCount+'本的中🎯→'+rateComment(rate));
-    lines.push('回収率'+roi+'%→'+roiComment(roi));
+    if(leadTier>0){
+      if(leadIsRate){
+        lines.push(hitCount+'本的中🎯→'+tierLabel[leadTier]);
+        if(subTier>0) lines.push('回収率'+roi+'%→'+tierLabel[subTier]);
+      }else{
+        lines.push('回収率'+roi+'%→'+tierLabel[leadTier]);
+        if(subTier>0) lines.push(hitCount+'本的中🎯→'+tierLabel[subTier]);
+      }
+    }else{
+      // 両指標とも不調圏：評価コメントは付けず数字だけ淡々と提示
+      lines.push(hitCount+'本的中🎯（的中率'+rate+'%）');
+    }
     lines.push('');
-    var top=hitsWithOdds.slice(0,3);
+    var top=showcase.slice(0,3);
     top.forEach(function(l,i){
       var oddsStr=l.odds.toFixed(1)+'倍';
       var fireStr=(i===0&&l.odds>=50)?'🔥':'';
-      lines.push(l.venue+(l.raceNum||'')+'　'+fireStr+oddsStr+fireStr);
+      var tag=l.extra?'（直近）':'';
+      lines.push(l.venue+(l.raceNum||'')+tag+'　'+fireStr+oddsStr+fireStr);
     });
-    if(hitsWithOdds.length>3){
-      lines.push('他'+(hitsWithOdds.length-3)+'本');
+    if(showcase.length>3){
+      lines.push('他'+(showcase.length-3)+'本');
     }
+
+    // 累計の検証実績（短期の好不調に関わらず、地道に積み上げている感を出す）
+    var allTimeLogs=v2logs.filter(function(l){return !(l.miss||[]).includes('miseru');});
+    var trackDates={};
+    allTimeLogs.forEach(function(l){if(l.date) trackDates[l.date]=true;});
+    var trackDayCount=Object.keys(trackDates).length;
+    lines.push('');
+    lines.push('検証累計'+allTimeLogs.length+'予想・'+trackDayCount+'日目');
 
     var postText=document.getElementById('jiseki-post-text');
     var postResult=document.getElementById('jiseki-post-result');
