@@ -975,6 +975,44 @@ function buildBetsNormal(ranking, pts, parsedData){
   return bets.slice(0,pts);
 }
 
+// ============================================================
+// 逃げなしモード（sg_narutou.htmlと完全に同一のロジック。必ず同期を保つこと）
+// 最下位評価艇を除外、非1号艇上位2艇を頭に、本線=2着1号艇固定、抑え=2着⇔3着入替
+// ============================================================
+function buildBetsNigeNashi(ranking, pts){
+  if(ranking.length<6) return [];
+  const boatsOrder=ranking.map(r=>String(r.boat));
+  const survivors=boatsOrder.slice(0,5);
+  if(!survivors.includes('1')) return [];
+  const nonIchiSurvivors=survivors.filter(b=>b!=='1');
+  if(nonIchiSurvivors.length<2) return [];
+  const atamaList=nonIchiSurvivors.slice(0,2);
+  const thirdCands=(atama)=>survivors.filter(b=>b!==atama&&b!=='1');
+
+  const honsen=[];
+  for(const atama of atamaList){
+    for(const third of thirdCands(atama)){
+      honsen.push({val:`${atama}-1-${third}`,type:'honsen'});
+    }
+  }
+  if(pts<=6) return honsen.slice(0,pts);
+
+  const osaee=[];
+  if(pts<=8){
+    const cands=thirdCands(atamaList[0]).slice(0,2);
+    for(const second of cands){
+      osaee.push({val:`${atamaList[0]}-${second}-1`,type:'osaee'});
+    }
+  } else {
+    for(const atama of atamaList){
+      for(const second of thirdCands(atama)){
+        osaee.push({val:`${atama}-${second}-1`,type:'osaee'});
+      }
+    }
+  }
+  return honsen.concat(osaee).slice(0,pts);
+}
+
 function buildBetsAre(ranking, pts, nigeRate){
   // 荒れエンジン: 実ログ分析(2026-07-03)に基づく再設計版。
   // ◎が1着に来る確率31.1%、○が1着に来る確率16.4%（比率約2:1）。
@@ -1262,12 +1300,17 @@ function runAll(){
       const d=parseData(rawData);
       const areScores=calcAreScore(d);
       const{areIndex,nigeRate}=calcAreIndex(d);
-      const mode=judgeMode(areIndex,nigeRate);
+      let mode=judgeMode(areIndex,nigeRate);
+      // 逃げなしモード自動判定: 軸(◎)が1号艇 かつ 逃げ率50%未満（sg_narutou.htmlと必ず同期させること）
+      const axisBoat=areScores[0]?String(areScores[0].no):null;
+      if(axisBoat==='1' && nigeRate<50){
+        mode='nigenashi';
+      }
       const marks=['◎','○','▲','△','▽','×'];
       const ranking=areScores.map((s,i)=>({rank:i+1,boat:parseInt(s.no),mark:marks[i]||'×',score:s.raw}));
 
       currentParsedData=d; // buildBetsNormal内部が参照するため一時設定
-      const betsRaw=mode==='are'?buildBetsAre(ranking,pts,nigeRate):buildBetsNormal(ranking,pts,d);
+      const betsRaw=mode==='are'?buildBetsAre(ranking,pts,nigeRate):mode==='nigenashi'?buildBetsNigeNashi(ranking,pts):buildBetsNormal(ranking,pts,d);
 
       const allBets=betsRaw.map(b=>b.val);
       const maruBoat=ranking[0]?ranking[0].boat:null;
