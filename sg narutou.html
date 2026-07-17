@@ -268,6 +268,7 @@
       <div style="display:flex;gap:8px;">
         <button class="alloc-btn active" id="mode-btn-normal" onclick="setMode('normal')" style="flex:1;padding:10px;">🔒 通常</button>
         <button class="alloc-btn" id="mode-btn-are" onclick="setMode('are')" style="flex:1;padding:10px;">⚡ 荒れ</button>
+        <button class="alloc-btn" id="mode-btn-nigenashi" onclick="setMode('nigenashi')" style="flex:1;padding:10px;">🚫 逃げなし</button>
         <button class="alloc-btn" id="mode-btn-skip" onclick="setMode('skip')" style="display:none;">⏭ SKIP</button>
       </div>
       <div style="margin-top:10px;position:relative;z-index:10;">
@@ -305,6 +306,7 @@
       <div class="sum-row"><span class="sum-label">最小回収（1点的中）</span><span class="sum-val green" id="sum-return">—</span></div>
       <div class="sum-row"><span class="sum-label">回収率目安</span><span class="sum-val" id="sum-rate">—</span></div>
       <div id="sum-gosei" style="display:none;"></div>
+      <div id="manshu-flag" style="display:none;"></div>
       <button class="btn btn-gold" style="width:100%;margin-top:10px;" onclick="logSelection()">📌 このレースを投稿記録に残す</button>
       <p class="eval-hint" style="margin:6px 0 0;">実際にXへ投稿すると決めたレースだけ押す。荒れ指数・nigeRate・合成オッズなどをまとめて記録し、後で「選んだレース」と「選ばなかったレース」を比較検証できるようにする。</p>
     </div>
@@ -531,7 +533,7 @@ function setApiKey(k){localStorage.setItem(GEMINI_KEY,k);}
 // ============================================================
 function setMode(mode){
   selectedMode=mode;
-  ['normal','are','skip'].forEach(m=>{
+  ['normal','are','nigenashi','skip'].forEach(m=>{
     const el=document.getElementById('mode-btn-'+m);
     if(el) el.classList.toggle('active',m===mode);
   });
@@ -560,6 +562,35 @@ function applyMode(){
   generateBets(currentParsedData, currentAreScores, selectedMode);
 }
 
+// ============================================================
+// 逃げなしモード（1号艇を頭から完全除外。将来の万舟モードの土台）
+// 根拠: バックテストで「団子度<16 かつ 対抗馬が展示/ST/モーターで軸超え」の
+// レースで実際に万舟が出た10件中9件が1号艇以外の1着だった(2026-07-16分析)。
+// まだ点数配分は最適化しきれていないv1。今後データが増え次第、精度を検証・改善する。
+// ============================================================
+function buildBetsNigeNashi(ranking, pts){
+  if(ranking.length<5) return [];
+  const nonIchi=ranking.filter(r=>String(r.boat)!=='1').map(r=>String(r.boat));
+  if(nonIchi.length<2) return []; // 1号艇以外が2艇未満なら組めない
+  const atamaBoats=nonIchi.slice(0,2); // 評価上位の非1号艇2艇を頭に
+  const allBoats=ranking.map(r=>String(r.boat));
+  const perAtama=Math.floor(pts/atamaBoats.length);
+  const bets=[];
+  atamaBoats.forEach((atama,idx)=>{
+    const rest=allBoats.filter(b=>b!==atama); // 1号艇も2着3着候補には残す
+    const combos=[];
+    for(const b of rest){
+      for(const c of rest){
+        if(b===c) continue;
+        combos.push(`${atama}-${b}-${c}`);
+      }
+    }
+    const picks=combos.slice(0,perAtama);
+    picks.forEach(v=>bets.push({val:v,type:idx===0?'honsen':'osaee'}));
+  });
+  return bets.slice(0,pts);
+}
+
 function generateBets(d, areScores, mode){
   const racenum=document.getElementById('inp-racenum').value||'?';
   const honme='1';
@@ -578,7 +609,7 @@ function generateBets(d, areScores, mode){
                  _rtype==='g2g3'?(_atchiValid?_b1.atchiNige:_b1.nigerate6m):
                  /* ippan */(_atchiValid?_b1.atchiNige:_b1.nigerate6m);
   const{areIndex}=calcAreIndex(d);
-  const betsRaw=mode==='are'?buildBetsAre(ranking,selectedBetCount,nigeRate):buildBetsNormal(ranking,selectedBetCount,currentParsedData);
+  const betsRaw=mode==='are'?buildBetsAre(ranking,selectedBetCount,nigeRate):mode==='nigenashi'?buildBetsNigeNashi(ranking,selectedBetCount):buildBetsNormal(ranking,selectedBetCount,currentParsedData);
 
   // 自信度計算（ログ分析ベース・9段階）
   function calcConfidence(mode, nigeRate, areIndex){
@@ -612,8 +643,8 @@ function generateBets(d, areScores, mode){
   const confBadge=`<span class="info-chip" style="color:${conf.color};font-weight:700;">自信度 ${conf.grade}/9</span>`;
 
   // バッジ更新
-  const modeLabel=mode==='are'?'⚡ 荒れ':'🔒 通常';
-  const modeCls=mode==='are'?'mode-are':'mode-normal';
+  const modeLabel=mode==='are'?'⚡ 荒れ':mode==='nigenashi'?'🚫 逃げなし':'🔒 通常';
+  const modeCls=mode==='are'?'mode-are':mode==='nigenashi'?'mode-are':'mode-normal';
   document.getElementById('race-info-strip').innerHTML=`
     <span class="mode-badge ${modeCls}" style="font-size:11px;padding:3px 10px;">${modeLabel}</span>
     <span class="info-chip">荒れ指数 <span>${areIndex}点</span></span>
@@ -1757,6 +1788,35 @@ function recalcAlloc(){
       }
     }
   }
+  updateManshuFlag();
+}
+
+// 万舟注意フラグ（表示のみ・買い目には一切影響しない）
+// 判定条件: ①全艇のスコアが団子(標準偏差<16) ②評価2〜4位に、展示・ST・モーターの
+// 3項目全部で軸(◎)を上回る対抗馬がいる。バックテストn=110で万舟率23.6%(ベース16.5%)を確認済み。
+function updateManshuFlag(){
+  const el=document.getElementById('manshu-flag');
+  if(!el) return;
+  const scores=currentAreScores;
+  if(!scores||scores.length<4){ el.style.display='none'; return; }
+  const ranking=[...scores].sort((a,b)=>(b.raw||0)-(a.raw||0));
+  const vals=ranking.map(s=>s.raw||0);
+  const mean=vals.reduce((a,b)=>a+b,0)/vals.length;
+  const variance=vals.reduce((a,b)=>a+(b-mean)**2,0)/vals.length;
+  const std=Math.sqrt(variance);
+  const axis=ranking[0];
+  let flaggedBoat=null;
+  for(const r of ranking.slice(1,4)){
+    if((r._ex||0)>(axis._ex||0) && (r._st||0)>(axis._st||0) && (r._motor||0)>(axis._motor||0)){
+      flaggedBoat=r.no; break;
+    }
+  }
+  if(std<16 && flaggedBoat){
+    el.innerHTML='⚠️ 万舟注意：'+flaggedBoat+'号艇が展示・ST・モーターで軸超え（団子レース）';
+    el.style.cssText='display:block;margin-top:8px;padding:8px 10px;background:rgba(200,60,60,0.15);border:1px solid rgba(200,60,60,0.4);border-radius:6px;font-size:12px;color:#e8a0a0;';
+  } else {
+    el.style.display='none';
+  }
 }
 
 function setAllocMode(mode){
@@ -1819,8 +1879,8 @@ async function runYoso(){
     const parseLines=d.boats.map(b=>`${b.no}号${b.name?'('+b.name+')':''}: 得点${b.isJogai?'除外':b.sessonPt} 直前ST${b.directST}${b.isExhibitF?'(展示F)':''} F休${b.isF?'✓':'-'} 展示${b.tenji} 周足${b.syukaiFoot||0} 直線${b.chokusen||0} 周回${b.syukai} Motor${b.motor2ren}%`).join('\n');
     scoreEl.innerHTML+=`<details style="margin-top:8px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">📋 スコア内訳</summary><pre style="font-size:10px;color:var(--muted);margin-top:6px;overflow-x:auto;">${debugLines}\n\n【パース値】\n${parseLines}</pre></details>`;
     const modeEl=document.getElementById('mode-result');
-    const modeCls=mode==='are'?'mode-are':mode==='skip'?'mode-skip':'mode-normal';
-    const modeLabel=mode==='are'?'⚡ 荒れモード':mode==='skip'?'⏭ スキップ':'🔒 通常モード';
+    const modeCls=mode==='are'?'mode-are':mode==='skip'?'mode-skip':mode==='nigenashi'?'mode-are':'mode-normal';
+    const modeLabel=mode==='are'?'⚡ 荒れモード':mode==='skip'?'⏭ スキップ':mode==='nigenashi'?'🚫 逃げなしモード':'🔒 通常モード';
     const _maru1=d.boats[0]&&String(d.boats[0].no)==='1';
     const _autoNige=(_maru1&&nigeRate>=65)?'high':(_maru1&&nigeRate>=50)?'mid':'low';
     const nigeLabel={'high':'逃げ固定','mid':'2艇頭','low':'通常'}[_autoNige];
@@ -2750,7 +2810,11 @@ function saveResult(resultType){
   const id=Date.now();
   // 通常モードにも荒モードと同じ形式でスコア内訳を記録する。
   // これが無いと「なぜ軸を外したか」を後から診断できないため必須。
-  const scoresDetail=(currentAreScores||[]).map(s=>({
+  const scoresDetail=(currentAreScores||[]).map(s=>{
+    // 生データも一緒に残す（将来エンジンを変えた時に過去レースを再評価できるようにするため。
+    // 買い目・スコア計算には一切影響しない、記録のみの追加）
+    const rawBoat=(currentParsedData&&currentParsedData.boats||[]).find(b=>String(b.no)===String(s.no))||{};
+    return{
     n:String(s.no),
     score:Math.round((s.raw||0)*10)/10,
     detail:{
@@ -2763,8 +2827,27 @@ function saveResult(resultType){
       motor:Math.round((s._motor||0)*10)/10,
       pen1:s._pen1||0,
       penF:s._penF||0
+    },
+    raw:{
+      tenji:rawBoat.tenji||null,
+      avgTenji:rawBoat.avgTenji||null,
+      syukaiFoot:rawBoat.syukaiFoot||null,
+      avgSyukaiFoot:rawBoat.avgSyukaiFoot||null,
+      chokusen:rawBoat.chokusen||null,
+      syukai:rawBoat.syukai||null,
+      avgSyukai:rawBoat.avgSyukai||null,
+      directST:rawBoat.directST||null,
+      sgAvgST:rawBoat.sgAvgST||null,
+      atchiAvgST:rawBoat.atchiAvgST||null,
+      sessonPt:rawBoat.sessonPt??null,
+      sessonRaces:rawBoat.sessonRaces??null,
+      motor2ren:rawBoat.motor2ren||null,
+      isF:!!rawBoat.isF,
+      isExhibitF:!!rawBoat.isExhibitF,
+      isJogai:!!rawBoat.isJogai
     }
-  }));
+  };
+  });
   const entry={
     id,
     date:dateStr,
@@ -2829,7 +2912,7 @@ function writeToV2(entry){
       venue:entry.venue||'鳴門',
       raceNum:racenumV2,
       ver:'sg-v1',
-      shinkido:entry.mode==='are'?'荒':'通',
+      shinkido:entry.mode==='are'?'荒':entry.mode==='nigenashi'?'逃':'通',
       nigeRate:entry.nigeRate,
       areScore:entry.areIndex,
       pts:entry.betcount,
@@ -2897,7 +2980,7 @@ function openResultModal(id){
   const entry=logs.find(l=>l.id===id);
   if(!entry) return;
   document.getElementById('modal-race-label').textContent=
-    (entry.venue||'鳴門')+' '+entry.racenum+'R　'+entry.date+'　'+(entry.mode==='are'?'⚡荒れ':'🔒通常');
+    (entry.venue||'鳴門')+' '+entry.racenum+'R　'+entry.date+'　'+(entry.mode==='are'?'⚡荒れ':entry.mode==='nigenashi'?'🚫逃げなし':'🔒通常');
   _renderModalBody();
   const modal=document.getElementById('result-modal');
   modal.style.visibility='visible';
@@ -3349,7 +3432,7 @@ function renderHaraiSel(){
   for(const l of logs){
     const opt=document.createElement('option');
     opt.value=l.id;
-    const label=`${l.date} ${l.venue||''}${l.racenum}R [${l.result||'未入力'}] (${l.mode==='are'?'荒れ':'通常'})`;
+    const label=`${l.date} ${l.venue||''}${l.racenum}R [${l.result||'未入力'}] (${l.mode==='are'?'荒れ':l.mode==='nigenashi'?'逃げなし':'通常'})`;
     opt.textContent=label;
     sel.appendChild(opt);
   }
@@ -3537,7 +3620,7 @@ function renderLog(){
     return`<div class="log-item">
       <div class="log-left">
         <div class="log-race">${l.date} ${l.venue||'鳴門'} ${l.racenum}R</div>
-        <div class="log-meta">${l.mode==='are'?'⚡荒れ':'🔒通常'} 荒れ${l.areIndex||'?'}点 逃${l.nigeRate?l.nigeRate.toFixed(1):'?'}% ${l.betcount||'?'}点</div>
+        <div class="log-meta">${l.mode==='are'?'⚡荒れ':l.mode==='nigenashi'?'🚫逃げなし':'🔒通常'} 荒れ${l.areIndex||'?'}点 逃${l.nigeRate?l.nigeRate.toFixed(1):'?'}% ${l.betcount||'?'}点</div>
         <div class="log-bets">${bets}</div>
         ${missLabel&&!isHit&&!isSkip?`<div style="font-size:10px;color:var(--red);margin-top:2px;">${missLabel}</div>`:''}
         ${pendingBtn}
