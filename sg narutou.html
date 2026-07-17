@@ -566,29 +566,46 @@ function applyMode(){
 // 逃げなしモード（1号艇を頭から完全除外。将来の万舟モードの土台）
 // 根拠: バックテストで「団子度<16 かつ 対抗馬が展示/ST/モーターで軸超え」の
 // レースで実際に万舟が出た10件中9件が1号艇以外の1着だった(2026-07-16分析)。
-// まだ点数配分は最適化しきれていないv1。今後データが増え次第、精度を検証・改善する。
+// 構成(雄大さん指定): 最下位評価艇はレース全体から除外。残り5艇のうち非1号艇上位2艇を頭に。
+// 本線6点=頭×2着1号艇固定×3着残り3艇。抑え=2着⇔3着を入れ替え(1号艇を3着に回す)。
+// 8点なら頭1艇のみ・上位2艇に絞って+2点。12点なら頭2艇とも全部で+6点。
 // ============================================================
 function buildBetsNigeNashi(ranking, pts){
-  if(ranking.length<5) return [];
-  const nonIchi=ranking.filter(r=>String(r.boat)!=='1').map(r=>String(r.boat));
-  if(nonIchi.length<2) return []; // 1号艇以外が2艇未満なら組めない
-  const atamaBoats=nonIchi.slice(0,2); // 評価上位の非1号艇2艇を頭に
-  const allBoats=ranking.map(r=>String(r.boat));
-  const perAtama=Math.floor(pts/atamaBoats.length);
-  const bets=[];
-  atamaBoats.forEach((atama,idx)=>{
-    const rest=allBoats.filter(b=>b!==atama); // 1号艇も2着3着候補には残す
-    const combos=[];
-    for(const b of rest){
-      for(const c of rest){
-        if(b===c) continue;
-        combos.push(`${atama}-${b}-${c}`);
+  if(ranking.length<6) return []; // 6艇揃っていないと最下位切りができない
+  const boatsOrder=ranking.map(r=>String(r.boat)); // 評価順(良い順)
+  const survivors=boatsOrder.slice(0,5); // 最下位評価艇を除外した残り5艇
+  if(!survivors.includes('1')) return []; // 1号艇自体が最下位評価で切られていたら組めない
+  const nonIchiSurvivors=survivors.filter(b=>b!=='1');
+  if(nonIchiSurvivors.length<2) return [];
+  const atamaList=nonIchiSurvivors.slice(0,2); // 非1号艇の評価上位2艇
+  const thirdCands=(atama)=>survivors.filter(b=>b!==atama&&b!=='1');
+
+  // 本線6点: 頭×2着1号艇固定×3着=残り
+  const honsen=[];
+  for(const atama of atamaList){
+    for(const third of thirdCands(atama)){
+      honsen.push({val:`${atama}-1-${third}`,type:'honsen'});
+    }
+  }
+  if(pts<=6) return honsen.slice(0,pts);
+
+  // 抑え: 2着⇔3着を入れ替え(1号艇を3着に回す)
+  const osaee=[];
+  if(pts<=8){
+    // 頭1艇(評価最上位)のみ、2着候補は上位2艇に絞る
+    const cands=thirdCands(atamaList[0]).slice(0,2);
+    for(const second of cands){
+      osaee.push({val:`${atamaList[0]}-${second}-1`,type:'osaee'});
+    }
+  } else {
+    // 頭2艇とも、2着候補は全部
+    for(const atama of atamaList){
+      for(const second of thirdCands(atama)){
+        osaee.push({val:`${atama}-${second}-1`,type:'osaee'});
       }
     }
-    const picks=combos.slice(0,perAtama);
-    picks.forEach(v=>bets.push({val:v,type:idx===0?'honsen':'osaee'}));
-  });
-  return bets.slice(0,pts);
+  }
+  return honsen.concat(osaee).slice(0,pts);
 }
 
 function generateBets(d, areScores, mode){
