@@ -1301,9 +1301,9 @@ function runAll(){
       const areScores=calcAreScore(d);
       const{areIndex,nigeRate}=calcAreIndex(d);
       let mode=judgeMode(areIndex,nigeRate);
-      // 逃げなしモード自動判定: 軸(◎)が1号艇 かつ 逃げ率50%未満（sg_narutou.htmlと必ず同期させること）
-      const axisBoat=areScores[0]?String(areScores[0].no):null;
-      if(axisBoat==='1' && nigeRate<50){
+      // 逃げなしモード自動判定: 1号艇自体の逃げ率が50%未満（軸が誰かは無関係。sg_narutou.htmlと必ず同期させること）
+      const boat1Rank=areScores.findIndex(s=>String(s.no)==='1');
+      if(nigeRate<50 && boat1Rank>=0 && boat1Rank<5){
         mode='nigenashi';
       }
       const marks=['◎','○','▲','△','▽','×'];

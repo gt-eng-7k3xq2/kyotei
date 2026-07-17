@@ -1869,11 +1869,12 @@ async function runYoso(){
     // 3. 荒れ指数・逃げ率・モード判定（全部JS）
     const{areIndex,nigeRate}=calcAreIndex(d);
     let mode=judgeMode(areIndex,nigeRate);
-    // 逃げなしモード自動提案: 軸(◎)が1号艇 かつ 逃げ率50%未満の時（データ検証済み、2026-07-16）
+    // 逃げなしモード自動提案: 1号艇自体の逃げ率が50%未満の時（軸が誰かは無関係。データ検証済み、2026-07-16）
     // 実際の1号艇1着率が逃げ率50%未満で34.8〜55.8%まで落ちるため、荒れ/通常の判定より優先する
+    // ただし1号艇が最下位評価(survivorsから切られる)の場合はフォーメーションが組めないため対象外
     const sortedForAxis=[...areScores].sort((a,b)=>(b.raw||0)-(a.raw||0));
-    const axisBoat=sortedForAxis[0]?String(sortedForAxis[0].no):null;
-    if(axisBoat==='1' && nigeRate<50){
+    const boat1Rank=sortedForAxis.findIndex(s=>String(s.no)==='1');
+    if(nigeRate<50 && boat1Rank>=0 && boat1Rank<5){
       mode='nigenashi';
     }
 
