@@ -457,7 +457,7 @@
       <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
     </div>
     <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
-    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260718-7 / 「構成auto」表示ラベルが古い閾値(65%)のままだったのを実ロジック(85%+ST脅威なし)に同期</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260718-8 / 抑えの表示を本線と同じ書式(ハイフンのみ)でまとめられるように追加</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
     <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
@@ -2000,6 +2000,22 @@ function compressBetsSG(bets){
   }
 
   // 折り返し版（ハブ検出＋1・2着入れ替え検出）
+  // 1着-3着固定で2着をまとめる版（本線と同じ書式・ハイフンのみ、=は使わない）
+  // 例: 4-6-1/4-3-1/4-5-1 → 4-356-1
+  function compressByFirstThird(vals){
+    const g={},order=[];
+    for(const v of vals){
+      const p=v.split('-');if(p.length!==3)continue;
+      const key=p[0]+'|'+p[2];
+      if(!g[key]){g[key]=[];order.push(key);}
+      if(!g[key].includes(p[1]))g[key].push(p[1]);
+    }
+    return order.map(key=>{
+      const[head,tail]=key.split('|');
+      return head+'-'+g[key].sort((a,b)=>parseInt(a)-parseInt(b)).join('')+'-'+tail;
+    });
+  }
+
   function compressWithFold(vals){
     const valSet=new Set(vals);
     const used=new Set();
@@ -2073,15 +2089,20 @@ function compressBetsSG(bets){
       }
     }
 
-    // ステップ3: 残りは1着-2着固定で3着をグループ化して個別表示
+    // ステップ3: 残りは1着-2着固定(3着可変)と1着-3着固定(2着可変)の両方を試し、より圧縮できた方を採用
     const remaining=vals.filter(v=>!used.has(v));
-    return [...swapResults, ...compressNatural(remaining)];
+    const remNatural=compressNatural(remaining);
+    const remByFirstThird=compressByFirstThird(remaining);
+    const remBest=remByFirstThird.length<remNatural.length?remByFirstThird:remNatural;
+    return [...swapResults, ...remBest];
   }
 
   const natural=compressNatural(vals);
+  const byFirstThird=compressByFirstThird(vals);
+  const naturalBest=byFirstThird.length<natural.length?byFirstThird:natural;
   const folded=compressWithFold(vals);
   // セグメント数が少ない方を採用（同数なら折り返し無しを優先=見やすさ重視）
-  const best = folded.length < natural.length ? folded : natural;
+  const best = folded.length < naturalBest.length ? folded : naturalBest;
   return best.join('/');
 }
 
