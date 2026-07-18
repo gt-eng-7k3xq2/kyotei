@@ -457,7 +457,7 @@
       <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
     </div>
     <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
-    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260718-2 / 逃げなしモード抑え表示の圧縮バグ修正(3=5-1問題)</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260718-4 / 逃げ固定の閾値を85%+ST脅威なしに厳格化、2艇頭の適用範囲を拡大</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
     <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
@@ -1479,7 +1479,14 @@ function buildBetsNormal(ranking, pts, parsedData){
   const nigeR = b1?(b1.sgNige>0?b1.sgNige:(_atchiValidBN?b1.atchiNige:b1.nigerate6m)):0;
   // 逃げ率で買い目モードを3段階に分類（手動指定があれば優先）
   const maru1 = String(ranking[0].boat) === '1';
-  const _autoNigeMode = (maru1 && nigeR >= 65) ? 'high'
+  // 逃げ固定(high)の閾値を厳格化: 逃げ率85%以上 かつ 1号艇よりSTが良い対抗馬がいない場合のみ。
+  // （データ検証済み、2026-07-18）逃げ率だけだと95-101%でも脅威あり64.4%/脅威なし78.6%とブレが大きく、
+  // STの脅威有無を組み合わせた方が「本当に安全」を見分けられる。それ以外は2艇頭(mid)に回す。
+  const _stScores=(typeof currentAreScores!=='undefined'&&currentAreScores)||[];
+  const _boat1Score=_stScores.find(s=>String(s.no)==='1');
+  const _boat1St=_boat1Score?(_boat1Score._st||0):0;
+  const _hasSTThreat=_stScores.some(s=>String(s.no)!=='1' && (s._st||0)>_boat1St);
+  const _autoNigeMode = (maru1 && nigeR >= 85 && !_hasSTThreat) ? 'high'
                       : (maru1 && nigeR >= 50) ? 'mid'
                       : 'low';
   const nigeMode = (typeof selectedNigeMode !== 'undefined' && selectedNigeMode !== 'auto')

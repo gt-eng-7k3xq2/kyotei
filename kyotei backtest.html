@@ -800,7 +800,12 @@ function buildBetsNormal(ranking, pts, parsedData){
   const nigeR = b1?(b1.sgNige>0?b1.sgNige:(_atchiValidBN?b1.atchiNige:b1.nigerate6m)):0;
   // 逃げ率で買い目モードを3段階に分類（手動指定があれば優先）
   const maru1 = String(ranking[0].boat) === '1';
-  const _autoNigeMode = (maru1 && nigeR >= 65) ? 'high'
+  // 逃げ固定(high)の閾値を厳格化: 逃げ率85%以上 かつ 1号艇よりSTが良い対抗馬がいない場合のみ。
+  // （sg_narutou.htmlと必ず同期させること。2026-07-18検証済み）それ以外は2艇頭(mid)に回す。
+  const _boat1Rank=ranking.find(r=>String(r.boat)==='1');
+  const _boat1St=_boat1Rank?(_boat1Rank._st||0):0;
+  const _hasSTThreat=ranking.some(r=>String(r.boat)!=='1' && (r._st||0)>_boat1St);
+  const _autoNigeMode = (maru1 && nigeR >= 85 && !_hasSTThreat) ? 'high'
                       : (maru1 && nigeR >= 50) ? 'mid'
                       : 'low';
   const nigeMode = (typeof selectedNigeMode !== 'undefined' && selectedNigeMode !== 'auto')
@@ -992,7 +997,7 @@ function buildBetsNigeNashi(ranking, pts){
   const honsen=[];
   for(const atama of atamaList){
     for(const third of thirdCands(atama)){
-      honsen.push({val:`${atama}-1-${third}`,type:'honsen'});
+      honsen.push({val:`${atama}-1-${third}`,type:'本線'});
     }
   }
   if(pts<=6) return honsen.slice(0,pts);
@@ -1001,12 +1006,12 @@ function buildBetsNigeNashi(ranking, pts){
   if(pts<=8){
     const cands=thirdCands(atamaList[0]).slice(0,2);
     for(const second of cands){
-      osaee.push({val:`${atamaList[0]}-${second}-1`,type:'osaee'});
+      osaee.push({val:`${atamaList[0]}-${second}-1`,type:'抑え'});
     }
   } else {
     for(const atama of atamaList){
       for(const second of thirdCands(atama)){
-        osaee.push({val:`${atama}-${second}-1`,type:'osaee'});
+        osaee.push({val:`${atama}-${second}-1`,type:'抑え'});
       }
     }
   }
@@ -1301,13 +1306,13 @@ function runAll(){
       const areScores=calcAreScore(d);
       const{areIndex,nigeRate}=calcAreIndex(d);
       let mode=judgeMode(areIndex,nigeRate);
-      // 逃げなしモード自動判定: 1号艇自体の逃げ率が50%未満（軸が誰かは無関係。sg_narutou.htmlと必ず同期させること）
+      // 逃げなしモード自動判定: 1号艇自体の逃げ率が30%未満（sg_narutou.htmlと必ず同期させること。2026-07-17検証で30%が最良と確定）
       const boat1Rank=areScores.findIndex(s=>String(s.no)==='1');
-      if(nigeRate<50 && boat1Rank>=0 && boat1Rank<5){
+      if(nigeRate<30 && boat1Rank>=0 && boat1Rank<5){
         mode='nigenashi';
       }
       const marks=['◎','○','▲','△','▽','×'];
-      const ranking=areScores.map((s,i)=>({rank:i+1,boat:parseInt(s.no),mark:marks[i]||'×',score:s.raw}));
+      const ranking=areScores.map((s,i)=>({rank:i+1,boat:parseInt(s.no),mark:marks[i]||'×',score:s.raw,_st:s._st}));
 
       currentParsedData=d; // buildBetsNormal内部が参照するため一時設定
       const betsRaw=mode==='are'?buildBetsAre(ranking,pts,nigeRate):mode==='nigenashi'?buildBetsNigeNashi(ranking,pts):buildBetsNormal(ranking,pts,d);
