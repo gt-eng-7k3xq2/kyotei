@@ -307,6 +307,7 @@
       <div class="sum-row"><span class="sum-label">回収率目安</span><span class="sum-val" id="sum-rate">—</span></div>
       <div id="sum-gosei" style="display:none;"></div>
       <div id="manshu-flag" style="display:none;"></div>
+      <div id="dango-flag" style="display:none;"></div>
       <button class="btn btn-gold" style="width:100%;margin-top:10px;" onclick="logSelection()">📌 このレースを投稿記録に残す</button>
       <p class="eval-hint" style="margin:6px 0 0;">実際にXへ投稿すると決めたレースだけ押す。荒れ指数・nigeRate・合成オッズなどをまとめて記録し、後で「選んだレース」と「選ばなかったレース」を比較検証できるようにする。</p>
     </div>
@@ -456,7 +457,7 @@
       <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
     </div>
     <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
-    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260712-3 / X投稿サマリーの展開も空欄デフォルト</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260718-1 / 逃げなしモード追加・本線抑えラベル修正・万舟/中途半端ゾーン注意表示・合成オッズ自動保存</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
     <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
@@ -584,7 +585,7 @@ function buildBetsNigeNashi(ranking, pts){
   const honsen=[];
   for(const atama of atamaList){
     for(const third of thirdCands(atama)){
-      honsen.push({val:`${atama}-1-${third}`,type:'honsen'});
+      honsen.push({val:`${atama}-1-${third}`,type:'本線'});
     }
   }
   if(pts<=6) return honsen.slice(0,pts);
@@ -595,13 +596,13 @@ function buildBetsNigeNashi(ranking, pts){
     // 頭1艇(評価最上位)のみ、2着候補は上位2艇に絞る
     const cands=thirdCands(atamaList[0]).slice(0,2);
     for(const second of cands){
-      osaee.push({val:`${atamaList[0]}-${second}-1`,type:'osaee'});
+      osaee.push({val:`${atamaList[0]}-${second}-1`,type:'抑え'});
     }
   } else {
     // 頭2艇とも、2着候補は全部
     for(const atama of atamaList){
       for(const second of thirdCands(atama)){
-        osaee.push({val:`${atama}-${second}-1`,type:'osaee'});
+        osaee.push({val:`${atama}-${second}-1`,type:'抑え'});
       }
     }
   }
@@ -1834,6 +1835,21 @@ function updateManshuFlag(){
   } else {
     el.style.display='none';
   }
+  updateDangoFlag(std);
+}
+
+// 通常判定・団子度14〜22の「中途半端ゾーン」注意表示(表示のみ・買い目には影響なし)
+// バックテストで通常判定内のstd帯別ROIを見ると、両端(<14, >22)はROI84〜90%、
+// 真ん中(14〜22)だけROI52〜54%と明確に悪い(2026-07-17分析)。見送り検討の目安として表示する。
+function updateDangoFlag(std){
+  const el=document.getElementById('dango-flag');
+  if(!el) return;
+  if(currentCalcData && currentCalcData.mode==='normal' && std>=14 && std<22){
+    el.innerHTML='🤔 中途半端ゾーン：団子度'+std.toFixed(1)+'（通常判定でROIが弱い帯。見送り検討）';
+    el.style.cssText='display:block;margin-top:8px;padding:8px 10px;background:rgba(180,140,40,0.15);border:1px solid rgba(180,140,40,0.4);border-radius:6px;font-size:12px;color:#d8b870;';
+  } else {
+    el.style.display='none';
+  }
 }
 
 function setAllocMode(mode){
@@ -1869,12 +1885,12 @@ async function runYoso(){
     // 3. 荒れ指数・逃げ率・モード判定（全部JS）
     const{areIndex,nigeRate}=calcAreIndex(d);
     let mode=judgeMode(areIndex,nigeRate);
-    // 逃げなしモード自動提案: 1号艇自体の逃げ率が50%未満の時（軸が誰かは無関係。データ検証済み、2026-07-16）
-    // 実際の1号艇1着率が逃げ率50%未満で34.8〜55.8%まで落ちるため、荒れ/通常の判定より優先する
+    // 逃げなしモード自動提案: 1号艇自体の逃げ率が30%未満の時（軸が誰かは無関係。データ検証済み、2026-07-17）
+    // 逃げ率30%を境に1号艇の実勝率が31.8%→48.8%に跳ね上がるため、30%を閾値とする（50%だと的中率19.4%/ROI82.4%だったが、30%では的中率27.2%/ROI104.3%と黒字化）
     // ただし1号艇が最下位評価(survivorsから切られる)の場合はフォーメーションが組めないため対象外
     const sortedForAxis=[...areScores].sort((a,b)=>(b.raw||0)-(a.raw||0));
     const boat1Rank=sortedForAxis.findIndex(s=>String(s.no)==='1');
-    if(nigeRate<50 && boat1Rank>=0 && boat1Rank<5){
+    if(nigeRate<30 && boat1Rank>=0 && boat1Rank<5){
       mode='nigenashi';
     }
 
@@ -2823,6 +2839,9 @@ function saveResult(resultType){
     return{val:b.val,type:b.type,amount:parseInt((amtCell?.textContent||'0').replace(/[¥,]/g,''))||0,odds:parseFloat(oddsInp?.value)||0};
   });
   const totalInvest=betsWithAmt.reduce((s,b)=>s+b.amount,0);
+  // 合成オッズをメインログにも保存(今まで選定ログだけだったが、通常判定の足切り検証に使うため全件保存に変更)
+  const validOddsForGosei=betsWithAmt.map(b=>b.odds).filter(o=>o>0);
+  const goseiOddsMain=validOddsForGosei.length?parseFloat((1/validOddsForGosei.reduce((s,o)=>s+1/o,0)).toFixed(1)):null;
   const today=new Date();
   const dateStr=today.toISOString().slice(0,10);
   const venue=document.getElementById('inp-venue').value||'鳴門';
@@ -2890,6 +2909,7 @@ function saveResult(resultType){
     sankaku:sankakuBoat,
     scores:scoresDetail,
     scoreVersion:SCORE_ENGINE_VERSION,
+    goseiOdds:goseiOddsMain,
     // 的中画像生成用に6艇分のフルネームをスナップショット保存（結果入力時には
     // currentParsedDataが別レースのものに変わっている場合があるため、保存時点で確保する）
     boatNames:(currentParsedData&&currentParsedData.boats||[]).map(b=>b&&b.name||''),
@@ -2946,6 +2966,7 @@ function writeToV2(entry){
       sankaku:entry.sankaku,
       scores:entry.scores||[],
       scoreVersion:entry.scoreVersion,
+      goseiOdds:entry.goseiOdds??null,
       result:'',
       payout:'',
       bets:betsV2,
