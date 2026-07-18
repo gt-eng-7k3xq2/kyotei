@@ -457,7 +457,7 @@
       <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
     </div>
     <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
-    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260718-6 / 抑え表示、独自の圧縮ロジックを撤回し元の折り返し(=)ロジックに統一</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260718-7 / 「構成auto」表示ラベルが古い閾値(65%)のままだったのを実ロジック(85%+ST脅威なし)に同期</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
     <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
@@ -1929,8 +1929,11 @@ async function runYoso(){
     const modeEl=document.getElementById('mode-result');
     const modeCls=mode==='are'?'mode-are':mode==='skip'?'mode-skip':mode==='nigenashi'?'mode-are':'mode-normal';
     const modeLabel=mode==='are'?'⚡ 荒れモード':mode==='skip'?'⏭ スキップ':mode==='nigenashi'?'🚫 逃げなしモード':'🔒 通常モード';
-    const _maru1=d.boats[0]&&String(d.boats[0].no)==='1';
-    const _autoNige=(_maru1&&nigeRate>=65)?'high':(_maru1&&nigeRate>=50)?'mid':'low';
+    // 表示ラベルもbuildBetsNormal内部の実ロジック(逃げ率85%+STの脅威なし)と一致させる(2026-07-18修正、以前は古い65%閾値のままでズレていた)
+    const _isAxisBoat1=String(areScores[0].no)==='1';
+    const _axisBoat1St=_isAxisBoat1?(areScores[0]._st||0):0;
+    const _labelSTThreat=_isAxisBoat1&&areScores.some(s=>String(s.no)!=='1'&&(s._st||0)>_axisBoat1St);
+    const _autoNige=(_isAxisBoat1&&nigeRate>=85&&!_labelSTThreat)?'high':(_isAxisBoat1&&nigeRate>=50)?'mid':'low';
     const nigeLabel={'high':'逃げ固定','mid':'2艇頭','low':'通常'}[_autoNige];
     modeEl.innerHTML=`<span class="mode-badge ${modeCls}">${modeLabel}</span> <span style="font-size:12px;color:var(--muted);">荒れ指数 <strong style="color:var(--text);">${areIndex}点</strong> / 逃げ率 <strong style="color:var(--text);">${nigeRate.toFixed(1)}%</strong> / 構成auto: <strong style="color:var(--gold);">${nigeLabel}</strong></span>`;
 
