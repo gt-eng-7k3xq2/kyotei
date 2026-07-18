@@ -457,7 +457,7 @@
       <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
     </div>
     <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
-    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260718-8 / 抑えの表示を本線と同じ書式(ハイフンのみ)でまとめられるように追加</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260718-9 / 自動提案モードと実使用モードのズレを診断できるよう記録・警告を追加</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
     <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
@@ -491,6 +491,7 @@ const GEMINI_KEY='kyotei_gemini_key';
 let selectedBetCount=12;
 let allocMode='equal';
 let selectedMode='normal'; // ユーザー手動選択
+let lastSuggestedMode=null; // 自動判定の提案(診断用、実際に使われたモードとズレがないか後から確認できるように)
 let selectedRaceType='sg'; // 'ippan','g2g3','g1','sg'
 let currentCalcData=null;
 let currentParsedData=null; // パース済みデータ保持
@@ -616,6 +617,10 @@ function generateBets(d, areScores, mode){
   const oddsMap=extractOddsMap(document.getElementById('inp-data').value);
   const ranking=parseRanking(document.getElementById('ai-raw').textContent||'');
   if(!ranking.length){showToast('AIランキングがありません');return;}
+  // 診断: 自動提案と実際に使うモードが違う場合は警告(手動で変えた時は正常なので黄色い注意のみ、エラーではない)
+  if(lastSuggestedMode && mode!==lastSuggestedMode){
+    showToast(`⚠️ 自動提案は「${lastSuggestedMode}」でしたが「${mode}」を使用します`);
+  }
 
   // レース種別に応じて逃げ率ソースを切り替え
   // 当地は10走以上あるときのみ信頼性あり
@@ -682,7 +687,7 @@ function generateBets(d, areScores, mode){
   }
 
   document.getElementById('bet-section').style.display='block';
-  currentCalcData={racenum,honme,nigeRate,areIndex,mode,betcount:betsRaw.length,shikin,ranking,betsRaw};
+  currentCalcData={racenum,honme,nigeRate,areIndex,mode,suggestedMode:lastSuggestedMode,betcount:betsRaw.length,shikin,ranking,betsRaw};
   aiTenkaiLine=null; // 新しいレースの予想なので前のAI展開文は破棄
   recalcAlloc();
   updateXPreview();
@@ -1900,6 +1905,7 @@ async function runYoso(){
     if(nigeRate<30 && boat1Rank>=0 && boat1Rank<5){
       mode='nigenashi';
     }
+    lastSuggestedMode=mode; // 診断用: この時点の自動提案を記録(手動でボタンを変えても診断ログには残る)
 
     // 場所・レース番号を自動セット
     if(d.venue){
@@ -2930,6 +2936,7 @@ function saveResult(resultType){
     racenum:racenumRaw,
     honme:currentCalcData.honme,
     mode:currentCalcData.mode,
+    suggestedMode:currentCalcData.suggestedMode||null,
     nigeRate:currentCalcData.nigeRate,
     areIndex:currentCalcData.areIndex,
     betcount:currentCalcData.betcount,
@@ -2989,6 +2996,7 @@ function writeToV2(entry){
       raceNum:racenumV2,
       ver:'sg-v1',
       shinkido:entry.mode==='are'?'荒':entry.mode==='nigenashi'?'逃':'通',
+      suggestedShinkido:entry.suggestedMode==='are'?'荒':entry.suggestedMode==='nigenashi'?'逃':entry.suggestedMode==='normal'?'通':null,
       nigeRate:entry.nigeRate,
       areScore:entry.areIndex,
       pts:entry.betcount,
