@@ -95,10 +95,11 @@ textarea{resize:vertical;}
     <button class="btn" style="flex:1;font-size:12px;" onclick="setAllEntriesCollapsed(false)">▾ 全部開く</button>
   </div>
   <button class="btn btn-gold" style="width:100%;margin-top:10px;padding:14px;" onclick="runAll()">🚀 一括検証実行</button>
-  <p style="font-size:9px;color:#4a6b52;text-align:right;margin:6px 0 0;">build: 20260718-5 / 明細保持期間を7日→14日に変更</p>
+  <p style="font-size:9px;color:#4a6b52;text-align:right;margin:6px 0 0;">build: 20260719-1 / 点数を自動選択(2艇頭=8点/逃げ固定・荒れ・逃げなし=12点、入力欄が初期値のままの時のみ)</p>
 </div>
 
 <div id="summary"></div>
+<div id="overall-stats"></div>
 
 <div class="card">
   <div class="section-title">軸ミス時のスコア診断</div>
@@ -1112,6 +1113,7 @@ function manualCompactOldLogs(){
     localStorage.setItem(BACKTEST_STORE_KEY,JSON.stringify(compacted));
     showToast(`✅ 軽量化しました（明細あり: ${beforeCount}件→${afterCount}件、結果は全件保持）`);
     updateLogCount();
+    updateTodayStats();
     renderScoreDiagnosis();
   }catch(e){
     showToast('⚠️ 軽量化しても保存できませんでした。エクスポート後に「全削除」をご検討ください');
@@ -1354,7 +1356,8 @@ function runAll(){
     const rawData=(document.getElementById('data-'+id)||{}).value?.trim();
     const resultStr=(document.getElementById('result-'+id)||{}).value?.trim();
     const payoutStr=(document.getElementById('payout-'+id)||{}).value?.trim()||'';
-    const pts=parseInt((document.getElementById('pts-'+id)||{}).value)||12;
+    const pts_manual=(document.getElementById('pts-'+id)||{}).value;
+    let pts=parseInt(pts_manual)||12;
     const rtype=(document.getElementById('rtype-'+id)||{}).value||'ippan';
     const statusEl=document.getElementById('status-'+id);
 
@@ -1378,6 +1381,18 @@ function runAll(){
       const boat1Rank=areScores.findIndex(s=>String(s.no)==='1');
       if(nigeRate<30 && boat1Rank>=0 && boat1Rank<5){
         mode='nigenashi';
+      }
+      // 点数の自動選択: 入力欄が初期値(12)のまま手動で変更されていなければ、
+      // 2艇頭(mid)は8点、逃げ固定(high)・荒れ・逃げなしは12点に自動調整する
+      // (sg_narutou.htmlと必ず同期させること。2026-07-19検証済み)
+      if(pts_manual==='12'){
+        if(mode==='normal'){
+          const boat1St=boat1Rank>=0?(areScores[boat1Rank]._st||0):0;
+          const isHighMode=boat1Rank===0 && nigeRate>=85 && !areScores.some(s=>String(s.no)!=='1' && (s._st||0)>boat1St);
+          pts=isHighMode?12:8;
+        }
+        const ptsEl=document.getElementById('pts-'+id);
+        if(ptsEl) ptsEl.value=String(pts);
       }
       const marks=['◎','○','▲','△','▽','×'];
       const ranking=areScores.map((s,i)=>({rank:i+1,boat:parseInt(s.no),mark:marks[i]||'×',score:s.raw,_st:s._st}));
@@ -1473,6 +1488,7 @@ function runAll(){
     showToast(`✅ ${processed}件処理完了（的中${hitCount}件）`);
     renderScoreDiagnosis();
     updateLogCount();
+    updateTodayStats();
   }
 
   function processBatch(){
@@ -1500,6 +1516,7 @@ function runAll(){
       try{ saveBacktestLogs(logs); }catch(saveErr){}
       showToast(`⚠️ エラーで停止しましたが、${processed}件までは保存しました: ${outerErr.message}`);
       updateLogCount();
+      updateTodayStats();
     }
   }
   processBatch();
@@ -1598,7 +1615,35 @@ function clearBacktestData(){
   localStorage.removeItem(BACKTEST_STORE_KEY);
   showToast('検証ログを削除しました');
   updateLogCount();
+  updateTodayStats();
   renderScoreDiagnosis();
+}
+
+function updateTodayStats(){
+  const logs=getBacktestLogs();
+  const dates=logs.map(l=>l.date).filter(Boolean).sort();
+  if(!dates.length){ document.getElementById('overall-stats').innerHTML=''; return; }
+  const latestDate=dates[dates.length-1];
+  const todayLogs=logs.filter(l=>l.date===latestDate);
+  const n=todayLogs.length;
+  const hit=todayLogs.filter(l=>l.miss==='hit').length;
+  const ichaku=todayLogs.filter(l=>l.miss==='ichaku').length;
+  const nichaku=todayLogs.filter(l=>l.miss==='nichaku').length;
+  const rate=n?Math.round(hit/n*100):0;
+  const modeCounts={};
+  todayLogs.forEach(l=>{const m=l.mode||'?';modeCounts[m]=(modeCounts[m]||0)+1;});
+  const modeSummary=Object.entries(modeCounts).map(([m,c])=>`${m}:${c}`).join(' / ');
+  document.getElementById('overall-stats').innerHTML=`
+    <div class="card">
+      <div class="section-title">${latestDate} の実績（保存済み全レース）</div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-val">${n}</div><div class="stat-label">対象件数</div></div>
+        <div class="stat-card"><div class="stat-val">${hit}</div><div class="stat-label">的中</div></div>
+        <div class="stat-card"><div class="stat-val">${rate}%</div><div class="stat-label">的中率</div></div>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-top:8px;">軸ミス${ichaku}件 / 紐ズレ${nichaku}件｜モード内訳: ${modeSummary}</div>
+    </div>
+  `;
 }
 
 function updateLogCount(){
@@ -1613,6 +1658,7 @@ window.addEventListener('DOMContentLoaded',function(){
   addEntry();
   renderScoreDiagnosis();
   updateLogCount();
+  updateTodayStats();
 });
 </script>
 </body>

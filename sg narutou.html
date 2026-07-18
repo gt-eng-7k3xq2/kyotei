@@ -457,7 +457,7 @@
       <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
     </div>
     <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
-    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260718-9 / 自動提案モードと実使用モードのズレを診断できるよう記録・警告を追加</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260719-1 / 点数を自動選択(2艇頭=8点/逃げ固定・荒れ・逃げなし=12点)、手動上書き可</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
     <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
@@ -724,6 +724,17 @@ function switchTab(name){
   document.getElementById('page-'+name).classList.add('active');
 
 
+}
+// モード判定に応じて点数を自動選択する(ボタンのクリックと同じ状態にする。手動で後から変更可能)
+function autoSetBetCount(pts){
+  const btns=document.querySelectorAll('.bc-btn');
+  let target=null;
+  btns.forEach(b=>{ if(b.textContent.trim()===String(pts)) target=b; });
+  if(target){
+    selectedBetCount=pts;
+    btns.forEach(b=>b.classList.remove('active'));
+    target.classList.add('active');
+  }
 }
 function setBetCount(n,btn){
   selectedBetCount=n;
@@ -1906,6 +1917,17 @@ async function runYoso(){
       mode='nigenashi';
     }
     lastSuggestedMode=mode; // 診断用: この時点の自動提案を記録(手動でボタンを変えても診断ログには残る)
+
+    // 点数の自動選択: 2艇頭(mid)は8点、逃げ固定(high)・荒れ・逃げなしは12点
+    // （2026-07-19検証: mid n=846でROI73.9%>71.8%(8点優位)、high n=20でROI124.3%>64.7%(12点優位)）
+    // 手動でボタンを押せばいつでも上書きできる
+    let autoPts=12;
+    if(mode==='normal'){
+      const boat1St=boat1Rank>=0?(sortedForAxis[boat1Rank]._st||0):0;
+      const isHighMode=boat1Rank===0 && nigeRate>=85 && !sortedForAxis.some(s=>String(s.no)!=='1' && (s._st||0)>boat1St);
+      autoPts=isHighMode?12:8;
+    }
+    autoSetBetCount(autoPts);
 
     // 場所・レース番号を自動セット
     if(d.venue){
