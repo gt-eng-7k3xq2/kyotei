@@ -95,6 +95,7 @@ textarea{resize:vertical;}
     <button class="btn" style="flex:1;font-size:12px;" onclick="setAllEntriesCollapsed(false)">▾ 全部開く</button>
   </div>
   <button class="btn btn-gold" style="width:100%;margin-top:10px;padding:14px;" onclick="runAll()">🚀 一括検証実行</button>
+  <p style="font-size:9px;color:#4a6b52;text-align:right;margin:6px 0 0;">build: 20260718-1 / 保存・書き出しの経路を確認するためビルド番号を追加</p>
 </div>
 
 <div id="summary"></div>
@@ -1520,7 +1521,9 @@ function clearBacktestData(){
 
 function updateLogCount(){
   const logs=getBacktestLogs();
-  document.getElementById('log-count').textContent=`保存済み検証ログ: ${logs.length}件`;
+  const dates=logs.map(l=>l.date).filter(Boolean).sort();
+  const latest=dates.length?dates[dates.length-1]:'なし';
+  document.getElementById('log-count').textContent=`保存済み検証ログ: ${logs.length}件（最新日付: ${latest}）`;
 }
 
 window.addEventListener('DOMContentLoaded',function(){
