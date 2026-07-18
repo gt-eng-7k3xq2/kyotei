@@ -95,7 +95,7 @@ textarea{resize:vertical;}
     <button class="btn" style="flex:1;font-size:12px;" onclick="setAllEntriesCollapsed(false)">▾ 全部開く</button>
   </div>
   <button class="btn btn-gold" style="width:100%;margin-top:10px;padding:14px;" onclick="runAll()">🚀 一括検証実行</button>
-  <p style="font-size:9px;color:#4a6b52;text-align:right;margin:6px 0 0;">build: 20260718-1 / 保存・書き出しの経路を確認するためビルド番号を追加</p>
+  <p style="font-size:9px;color:#4a6b52;text-align:right;margin:6px 0 0;">build: 20260718-2 / 一括検証中の例外で保存が飛ぶ可能性に対応(途中経過も逐次保存・エラー時も保存)</p>
 </div>
 
 <div id="summary"></div>
@@ -1409,15 +1409,30 @@ function runAll(){
   }
 
   function processBatch(){
-    const end=Math.min(idx+BATCH, total);
-    for(; idx<end; idx++){
-      processOne(entries[idx]);
-    }
-    if(idx<total){
-      showToast(`処理中… ${idx}/${total}件`);
-      setTimeout(processBatch, 30); // 他の処理に一瞬譲ってから続行（フリーズ防止）
-    } else {
-      finish();
+    try{
+      const end=Math.min(idx+BATCH, total);
+      for(; idx<end; idx++){
+        try{
+          processOne(entries[idx]);
+        }catch(innerErr){
+          errorCount++;
+          console.error('processOne内で予期しないエラー:', innerErr);
+        }
+      }
+      if(idx<total){
+        saveBacktestLogs(logs); // 途中経過も毎回保存する(最後まで到達しなくてもここまでの分は残る)
+        showToast(`処理中… ${idx}/${total}件`);
+        setTimeout(processBatch, 30); // 他の処理に一瞬譲ってから続行（フリーズ防止）
+      } else {
+        finish();
+      }
+    }catch(outerErr){
+      // ここに来た場合、保存(saveBacktestLogs)が一度も呼ばれず処理結果が消えてしまうため、
+      // 必ず保存だけは実行してからエラーを表示する
+      console.error('processBatch全体で予期しないエラー:', outerErr);
+      try{ saveBacktestLogs(logs); }catch(saveErr){}
+      showToast(`⚠️ エラーで停止しましたが、${processed}件までは保存しました: ${outerErr.message}`);
+      updateLogCount();
     }
   }
   processBatch();
