@@ -457,7 +457,7 @@
       <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
     </div>
     <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
-    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260718-4 / 逃げ固定の閾値を85%+ST脅威なしに厳格化、2艇頭の適用範囲を拡大</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260718-6 / 抑え表示、独自の圧縮ロジックを撤回し元の折り返し(=)ロジックに統一</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
     <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
@@ -1980,7 +1980,7 @@ function clearYoso(){
 // 買い目を圧縮: 1着固定で2着・3着それぞれ集約
 // 例: 1-2-4/1-4-2 → 1-24-24
 //     4-2-1/4-2-3/4-1-2/4-3-1 → 4-123-123
-function compressBetsSG(bets, skipSwapFold){
+function compressBetsSG(bets){
   const vals=bets.map(b=>typeof b==='string'?b:b.val);
   if(!vals.length) return '';
 
@@ -1994,13 +1994,6 @@ function compressBetsSG(bets, skipSwapFold){
       if(!g12[key].includes(p[2]))g12[key].push(p[2]);
     }
     return order12.map(key=>key+'-'+g12[key].sort((a,b)=>parseInt(a)-parseInt(b)).join(''));
-  }
-
-  if(skipSwapFold){
-    // 逃げなしモード用: 頭違いの抑えチケット同士が偶然「1・2着入れ替え」パターンに
-    // 誤反応して読みにくくなる(例:3-5-1と5-3-1が"3=5-1"にまとまる)ため、
-    // 折り返し圧縮を使わず素のグループ化のみ行う
-    return compressNatural(vals).join('/');
   }
 
   // 折り返し版（ハブ検出＋1・2着入れ替え検出）
@@ -2149,7 +2142,6 @@ function buildXSummary(mode,withAmount){
     });
   };
 
-  const isNigeNashi=currentCalcData&&currentCalcData.mode==='nigenashi';
   const fmtBets=(arr)=>{
     if(withAmount){
       // 金額が同じものをまとめて圧縮表示
@@ -2164,11 +2156,11 @@ function buildXSummary(mode,withAmount){
       // 金額降順でグループを並べる
       return Object.entries(amtGroups)
         .sort((a,b)=>parseInt(b[0])-parseInt(a[0]))
-        .map(([amt,vals])=>compressBetsSG(vals.map(v=>({val:v})),isNigeNashi)+`　¥${parseInt(amt).toLocaleString()}`)
+        .map(([amt,vals])=>compressBetsSG(vals.map(v=>({val:v})))+`　¥${parseInt(amt).toLocaleString()}`)
         .join('\n　　　');
     }
     // 圧縮表示
-    return compressBetsSG(arr,isNigeNashi);
+    return compressBetsSG(arr);
   };
 
   // 展示・機力・展開：スコア内訳(currentAreScores)から各項目トップ艇を抽出してヒント文を自動生成
@@ -2544,9 +2536,8 @@ function buildClaudeCommentData(){
 
   const honsen=betsRaw.filter(b=>b.type==='本線');
   const osaee=betsRaw.filter(b=>b.type!=='本線');
-  const isNigeNashi2=currentCalcData&&currentCalcData.mode==='nigenashi';
-  if(honsen.length) lines.push(`本線: ${compressBetsSG(honsen,isNigeNashi2)}`);
-  if(osaee.length) lines.push(`抑え: ${compressBetsSG(osaee,isNigeNashi2)}`);
+  if(honsen.length) lines.push(`本線: ${compressBetsSG(honsen)}`);
+  if(osaee.length) lines.push(`抑え: ${compressBetsSG(osaee)}`);
   lines.push('');
 
   lines.push('→ 上記を踏まえて、的中画像の「根拠」欄用に100字程度の展開コメントを作って');
