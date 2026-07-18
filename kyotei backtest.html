@@ -95,7 +95,7 @@ textarea{resize:vertical;}
     <button class="btn" style="flex:1;font-size:12px;" onclick="setAllEntriesCollapsed(false)">▾ 全部開く</button>
   </div>
   <button class="btn btn-gold" style="width:100%;margin-top:10px;padding:14px;" onclick="runAll()">🚀 一括検証実行</button>
-  <p style="font-size:9px;color:#4a6b52;text-align:right;margin:6px 0 0;">build: 20260718-2 / 一括検証中の例外で保存が飛ぶ可能性に対応(途中経過も逐次保存・エラー時も保存)</p>
+  <p style="font-size:9px;color:#4a6b52;text-align:right;margin:6px 0 0;">build: 20260718-5 / 明細保持期間を7日→14日に変更</p>
 </div>
 
 <div id="summary"></div>
@@ -111,6 +111,7 @@ textarea{resize:vertical;}
     <button class="btn" style="flex:1;" onclick="exportBacktestData()">📥 検証ログをエクスポート</button>
     <button class="btn" style="flex:1;" onclick="if(confirm('検証ログを全部消しますか？'))clearBacktestData()">🗑 全削除</button>
   </div>
+  <button class="btn" style="width:100%;margin-top:8px;" onclick="manualCompactOldLogs()">🗜 古いログの明細を軽量化（結果は保持）</button>
   <div id="log-count" style="font-size:11px;color:var(--text2);margin-top:8px;"></div>
 </div>
 
@@ -1084,7 +1085,73 @@ function buildBetsAre(ranking, pts, nigeRate){
 // ============================================================
 const BACKTEST_STORE_KEY='kyotei_backtest_v1';
 function getBacktestLogs(){try{return JSON.parse(localStorage.getItem(BACKTEST_STORE_KEY)||'[]');}catch{return[];}}
-function saveBacktestLogs(l){localStorage.setItem(BACKTEST_STORE_KEY,JSON.stringify(l));}
+// 古いログの「scores」(スコア明細、容量の大半を占める)だけ間引き、日付・会場・結果・miss等の基本情報は残す
+// keepDetailDays: 直近何日分は明細を残すか(軸ミス診断で使うため)
+function compactOldLogs(l, keepDetailDays){
+  keepDetailDays = keepDetailDays || 14;
+  const dates=l.map(x=>x.date).filter(Boolean).sort();
+  if(!dates.length) return l;
+  const latest=new Date(dates[dates.length-1]);
+  const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-keepDetailDays);
+  return l.map(entry=>{
+    if(!entry.date) return entry;
+    if(new Date(entry.date) < cutoff && entry.scores){
+      const {scores, ...rest} = entry;
+      return rest; // scoresフィールドだけ除いて残りはそのまま保持
+    }
+    return entry;
+  });
+}
+
+function manualCompactOldLogs(){
+  const logs=getBacktestLogs();
+  const beforeCount=logs.filter(l=>l.scores).length;
+  const compacted=compactOldLogs(logs, 14); // 直近14日分は明細を残し、それより古い分だけ軽量化
+  const afterCount=compacted.filter(l=>l.scores).length;
+  try{
+    localStorage.setItem(BACKTEST_STORE_KEY,JSON.stringify(compacted));
+    showToast(`✅ 軽量化しました（明細あり: ${beforeCount}件→${afterCount}件、結果は全件保持）`);
+    updateLogCount();
+    renderScoreDiagnosis();
+  }catch(e){
+    showToast('⚠️ 軽量化しても保存できませんでした。エクスポート後に「全削除」をご検討ください');
+  }
+}
+
+function saveBacktestLogs(l){
+  try{
+    localStorage.setItem(BACKTEST_STORE_KEY,JSON.stringify(l));
+  }catch(e){
+    // 容量超過(QuotaExceededError)の場合、まず古いログのscores(明細)だけ間引いて再試行する
+    // (結果・日付・会場・軸ミス種別などの基本情報はそのまま残す)
+    if(e && (e.name==='QuotaExceededError' || /quota/i.test(e.message||''))){
+      let compacted=compactOldLogs(l, 14);
+      let saved=false;
+      try{
+        localStorage.setItem(BACKTEST_STORE_KEY,JSON.stringify(compacted));
+        saved=true;
+      }catch(e2){
+        // それでも超過する場合は、直近日数を段階的に狭めながら明細を間引く
+        for(const days of [3,1,0]){
+          compacted=compactOldLogs(l, days);
+          try{
+            localStorage.setItem(BACKTEST_STORE_KEY,JSON.stringify(compacted));
+            saved=true;
+            break;
+          }catch(e3){ /* まだ超過。さらに絞る */ }
+        }
+      }
+      if(saved){
+        showToast(`⚠️ 容量超過のため古いログの明細(スコア内訳)だけ間引きました。結果・日付は保持されています`);
+      }else{
+        showToast('⚠️ 容量超過で保存できませんでした。エクスポート後に「全削除」してください');
+      }
+    } else {
+      console.error('saveBacktestLogs失敗:', e);
+      showToast('⚠️ 保存に失敗しました: '+(e&&e.message||'不明なエラー'));
+    }
+  }
+}
 
 function showToast(msg){
   const t=document.getElementById('toast');
@@ -1538,7 +1605,8 @@ function updateLogCount(){
   const logs=getBacktestLogs();
   const dates=logs.map(l=>l.date).filter(Boolean).sort();
   const latest=dates.length?dates[dates.length-1]:'なし';
-  document.getElementById('log-count').textContent=`保存済み検証ログ: ${logs.length}件（最新日付: ${latest}）`;
+  const withDetail=logs.filter(l=>l.scores).length;
+  document.getElementById('log-count').textContent=`保存済み検証ログ: ${logs.length}件（最新日付: ${latest}、うち明細あり: ${withDetail}件）`;
 }
 
 window.addEventListener('DOMContentLoaded',function(){
