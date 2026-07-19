@@ -457,7 +457,7 @@
       <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
     </div>
     <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
-    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260719-4 / 保存失敗を成功トーストで上書きしないよう修正、軽量化ボタンを追加</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260719-5 / 軽量化を段階的(14→7→3→1→0日)に強化</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
     <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
@@ -532,20 +532,28 @@ function manualCompactSgLogs(){
   const beforeCount=logs.filter(l=>l.scores).length;
   const dates=logs.map(l=>l.date).filter(Boolean).sort();
   const latest=dates.length?new Date(dates[dates.length-1]):new Date();
-  const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-14);
-  const compacted=logs.map(entry=>{
-    if(entry.date && new Date(entry.date)<cutoff && entry.scores){
-      const {scores, ...rest}=entry;
-      return rest;
-    }
-    return entry;
-  });
-  const afterCount=compacted.filter(l=>l.scores).length;
-  try{
-    localStorage.setItem(STORE_KEY,JSON.stringify(compacted));
-    showToast(`✅ 軽量化しました（明細あり: ${beforeCount}件→${afterCount}件、結果は全件保持）`);
-  }catch(e){
-    showToast('⚠️ 軽量化しても保存できませんでした。バックアップ後、ログの整理をご検討ください');
+  let saved=false, afterCount=beforeCount, usedDays=null;
+  for(const keepDays of [14,7,3,1,0]){
+    const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-keepDays);
+    const compacted=logs.map(entry=>{
+      if(entry.date && new Date(entry.date)<cutoff && entry.scores){
+        const {scores, ...rest}=entry;
+        return rest;
+      }
+      return entry;
+    });
+    try{
+      localStorage.setItem(STORE_KEY,JSON.stringify(compacted));
+      afterCount=compacted.filter(l=>l.scores).length;
+      usedDays=keepDays;
+      saved=true;
+      break;
+    }catch(e){ /* まだ超過。さらに絞る */ }
+  }
+  if(saved){
+    showToast(`✅ 軽量化しました（明細あり: ${beforeCount}件→${afterCount}件、直近${usedDays}日分保持、結果は全件保持）`);
+  }else{
+    showToast('⚠️ 全ログの明細を削っても保存できません。kyotei_v2(gtools側)も含めた容量整理が必要です');
   }
 }
 
@@ -556,23 +564,25 @@ function saveLogs(l){
   }catch(e){
     if(e && (e.name==='QuotaExceededError' || /quota/i.test(e.message||''))){
       // 古いログのscores明細だけ間引いて再試行する(結果・買い目などの基本情報は保持)
+      // 14日で足りなければ7→3→1→0日と段階的に絞り込む
       const dates=l.map(x=>x.date).filter(Boolean).sort();
       const latest=dates.length?new Date(dates[dates.length-1]):new Date();
-      const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-14);
-      const compacted=l.map(entry=>{
-        if(entry.date && new Date(entry.date)<cutoff && entry.scores){
-          const {scores, ...rest}=entry;
-          return rest;
-        }
-        return entry;
-      });
-      try{
-        localStorage.setItem(STORE_KEY,JSON.stringify(compacted));
-        return true; // 間引いて保存できたので、結果自体は保持されている
-      }catch(e2){
-        console.error('saveLogs 容量超過・保存失敗:',e2);
-        return false;
+      for(const keepDays of [14,7,3,1,0]){
+        const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-keepDays);
+        const compacted=l.map(entry=>{
+          if(entry.date && new Date(entry.date)<cutoff && entry.scores){
+            const {scores, ...rest}=entry;
+            return rest;
+          }
+          return entry;
+        });
+        try{
+          localStorage.setItem(STORE_KEY,JSON.stringify(compacted));
+          return true; // 間引いて保存できたので、結果自体は保持されている
+        }catch(e2){ /* まだ超過。さらに絞る */ }
       }
+      console.error('saveLogs 容量超過・全明細間引いても保存失敗');
+      return false;
     } else {
       console.error('saveLogs error:',e);
       return false;
