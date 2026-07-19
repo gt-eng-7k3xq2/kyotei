@@ -457,7 +457,7 @@
       <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
     </div>
     <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
-    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260719-2 / kyotei_v2保存が容量超過で静かに失敗してた可能性に対応(可視化+自動間引き)</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260719-3 / 「この予想を保存する」ボタンが無反応になる根本原因(saveLogsの無防備な例外)を修正、全体を二重に保護</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
     <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
@@ -524,7 +524,36 @@ const TEKICHU_BG_DATAURI="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAAAAYA
 
 
 function getLogs(){try{return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');}catch{return[];}}
-function saveLogs(l){localStorage.setItem(STORE_KEY,JSON.stringify(l));}
+function saveLogs(l){
+  try{
+    localStorage.setItem(STORE_KEY,JSON.stringify(l));
+  }catch(e){
+    if(e && (e.name==='QuotaExceededError' || /quota/i.test(e.message||''))){
+      // 古いログのscores明細だけ間引いて再試行する(結果・買い目などの基本情報は保持)
+      const dates=l.map(x=>x.date).filter(Boolean).sort();
+      const latest=dates.length?new Date(dates[dates.length-1]):new Date();
+      const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-14);
+      const compacted=l.map(entry=>{
+        if(entry.date && new Date(entry.date)<cutoff && entry.scores){
+          const {scores, ...rest}=entry;
+          return rest;
+        }
+        return entry;
+      });
+      try{
+        localStorage.setItem(STORE_KEY,JSON.stringify(compacted));
+        showToast('⚠️ 容量超過のため古いログの明細だけ間引いて保存しました（結果は保持）');
+      }catch(e2){
+        showToast('⚠️ 容量超過で保存できませんでした。ログを整理してください');
+        // ここでは投げない: この後のwriteToV2やclearYosoが動かなくなるのを防ぐため
+      }
+    } else {
+      console.error('saveLogs error:',e);
+      showToast('⚠️ 保存に失敗しました: '+(e&&e.message||'不明なエラー'));
+      // ここでも投げない: 同上
+    }
+  }
+}
 function getSettings(){try{return JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{"maxrace":3}');}catch{return{maxrace:3};}}
 function saveSettingsData(s){localStorage.setItem(SETTINGS_KEY,JSON.stringify(s));}
 function getApiKey(){return localStorage.getItem(GEMINI_KEY)||'';}
@@ -2891,6 +2920,14 @@ function copyXSummary(mode){
 // ============================================================
 function saveResult(resultType){
   if(!currentCalcData){showToast('予想を実行してください');return;}
+  try{
+    saveResultInner(resultType);
+  }catch(e){
+    console.error('saveResult error:',e);
+    showToast('⚠️ 保存中に予期しないエラーが発生しました: '+(e&&e.message||'不明なエラー'));
+  }
+}
+function saveResultInner(resultType){
   const rows=document.querySelectorAll('#bet-tbody tr');
   const betsWithAmt=currentCalcData.betsRaw.map((b,i)=>{
     const amtCell=rows[i]?.querySelector('.amt-cell');
