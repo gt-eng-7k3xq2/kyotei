@@ -457,7 +457,7 @@
       <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
     </div>
     <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
-    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260719-1 / 点数を自動選択(2艇頭=8点/逃げ固定・荒れ・逃げなし=12点)、手動上書き可</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260719-2 / kyotei_v2保存が容量超過で静かに失敗してた可能性に対応(可視化+自動間引き)</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
     <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
@@ -3038,8 +3038,40 @@ function writeToV2(entry){
     // 重複除去
     v2logs=v2logs.filter(l=>!(l.venue===v2entry.venue&&l.raceNum===v2entry.raceNum&&l.date===v2entry.date&&!l.result));
     v2logs.unshift(v2entry);
+    saveV2Logs(v2logs);
+  }catch(e){
+    console.error('writeToV2 error:',e);
+    showToast('⚠️ 保存に失敗しました: '+(e&&e.message||'不明なエラー'));
+  }
+}
+
+// kyotei_v2の保存(容量超過に対応。古いログのscores明細だけ間引いて再試行する。結果自体は保持)
+function saveV2Logs(v2logs){
+  try{
     localStorage.setItem('kyotei_v2',JSON.stringify(v2logs));
-  }catch(e){console.error('writeToV2 error:',e);}
+  }catch(e){
+    if(e && (e.name==='QuotaExceededError' || /quota/i.test(e.message||''))){
+      const dates=v2logs.map(l=>l.date).filter(Boolean).sort();
+      const latest=dates.length?new Date(dates[dates.length-1]):new Date();
+      const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-14);
+      const compacted=v2logs.map(l=>{
+        if(l.date && new Date(l.date)<cutoff && l.scores){
+          const {scores, ...rest}=l;
+          return rest;
+        }
+        return l;
+      });
+      try{
+        localStorage.setItem('kyotei_v2',JSON.stringify(compacted));
+        showToast('⚠️ 容量超過のため古いログの明細だけ間引いて保存しました（結果は保持）');
+      }catch(e2){
+        showToast('⚠️ 容量超過で保存できませんでした。gtoolsで書き出し後、ログを整理してください');
+      }
+    } else {
+      console.error('saveV2Logs error:',e);
+      showToast('⚠️ 保存に失敗しました: '+(e&&e.message||'不明なエラー'));
+    }
+  }
 }
 
 // kyotei_v2の結果更新（commitResultから呼ぶ）
@@ -3070,7 +3102,7 @@ function updateV2Result(entryId, chakuju, payout, isHit, maruBoat){
         l.miss=['tensu']; // 点数外
       }
     }
-    localStorage.setItem('kyotei_v2',JSON.stringify(v2logs));
+    saveV2Logs(v2logs);
   }catch(e){console.error('updateV2Result error:',e);}
 }
 
