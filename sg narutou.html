@@ -457,7 +457,7 @@
       <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
     </div>
     <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
-    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260719-3 / 「この予想を保存する」ボタンが無反応になる根本原因(saveLogsの無防備な例外)を修正、全体を二重に保護</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260719-4 / 保存失敗を成功トーストで上書きしないよう修正、軽量化ボタンを追加</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
     <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
@@ -469,6 +469,9 @@
 <div style="display:flex;gap:8px;margin:12px 0 8px;">
   <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="exportSgJSON()">📥 ログをバックアップ</button>
   <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="document.getElementById('sg-import-file-input').click()">📤 ログを復元</button>
+</div>
+<div style="margin:0 0 8px;">
+  <button class="btn btn-ghost btn-sm" style="width:100%;" onclick="manualCompactSgLogs()">🗜 古いログの明細を軽量化（結果は保持）</button>
 </div>
 <input type="file" id="sg-import-file-input" accept=".json,application/json" style="display:none;" onchange="importSgJSONFile(event)">
 <div id="yosoLogSummary" style="margin-top:12px;padding:0 0 20px;"></div>
@@ -524,9 +527,32 @@ const TEKICHU_BG_DATAURI="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAAAAYA
 
 
 function getLogs(){try{return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');}catch{return[];}}
+function manualCompactSgLogs(){
+  const logs=getLogs();
+  const beforeCount=logs.filter(l=>l.scores).length;
+  const dates=logs.map(l=>l.date).filter(Boolean).sort();
+  const latest=dates.length?new Date(dates[dates.length-1]):new Date();
+  const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-14);
+  const compacted=logs.map(entry=>{
+    if(entry.date && new Date(entry.date)<cutoff && entry.scores){
+      const {scores, ...rest}=entry;
+      return rest;
+    }
+    return entry;
+  });
+  const afterCount=compacted.filter(l=>l.scores).length;
+  try{
+    localStorage.setItem(STORE_KEY,JSON.stringify(compacted));
+    showToast(`✅ 軽量化しました（明細あり: ${beforeCount}件→${afterCount}件、結果は全件保持）`);
+  }catch(e){
+    showToast('⚠️ 軽量化しても保存できませんでした。バックアップ後、ログの整理をご検討ください');
+  }
+}
+
 function saveLogs(l){
   try{
     localStorage.setItem(STORE_KEY,JSON.stringify(l));
+    return true;
   }catch(e){
     if(e && (e.name==='QuotaExceededError' || /quota/i.test(e.message||''))){
       // 古いログのscores明細だけ間引いて再試行する(結果・買い目などの基本情報は保持)
@@ -542,15 +568,14 @@ function saveLogs(l){
       });
       try{
         localStorage.setItem(STORE_KEY,JSON.stringify(compacted));
-        showToast('⚠️ 容量超過のため古いログの明細だけ間引いて保存しました（結果は保持）');
+        return true; // 間引いて保存できたので、結果自体は保持されている
       }catch(e2){
-        showToast('⚠️ 容量超過で保存できませんでした。ログを整理してください');
-        // ここでは投げない: この後のwriteToV2やclearYosoが動かなくなるのを防ぐため
+        console.error('saveLogs 容量超過・保存失敗:',e2);
+        return false;
       }
     } else {
       console.error('saveLogs error:',e);
-      showToast('⚠️ 保存に失敗しました: '+(e&&e.message||'不明なエラー'));
-      // ここでも投げない: 同上
+      return false;
     }
   }
 }
@@ -3030,11 +3055,17 @@ function saveResultInner(resultType){
   const dupIdx=logs.findIndex(l=>l.venue===venue&&l.racenum===racenumRaw&&l.date===dateStr&&!l.result);
   if(dupIdx>=0) logs.splice(dupIdx,1);
   logs.push(entry);
-  saveLogs(logs);
+  const saveOk=saveLogs(logs);
 
   // kyotei_v2にも書き込み（gtools連携）
   writeToV2(entry);
 
+  if(!saveOk){
+    // ここで失敗を握りつぶすと「保存できたのに結果入力に出てこない」という今回の不具合を繰り返すため、
+    // 成功トーストで上書きせず、失敗を明確に伝える
+    showToast('⚠️ 容量超過等で保存できませんでした。ログを整理してから再度お試しください');
+    return;
+  }
   showToast(resultType==='skip'?'⏭ スキップ登録':'💾 予想保存 → 結果は後で入力');
   clearYoso();
   // clearYoso後にupdateLogSummaryを呼ぶ（DOMが確実に存在する状態で）
