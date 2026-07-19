@@ -95,7 +95,7 @@ textarea{resize:vertical;}
     <button class="btn" style="flex:1;font-size:12px;" onclick="setAllEntriesCollapsed(false)">▾ 全部開く</button>
   </div>
   <button class="btn btn-gold" style="width:100%;margin-top:10px;padding:14px;" onclick="runAll()">🚀 一括検証実行</button>
-  <p style="font-size:9px;color:#4a6b52;text-align:right;margin:6px 0 0;">build: 20260719-1 / 点数を自動選択(2艇頭=8点/逃げ固定・荒れ・逃げなし=12点、入力欄が初期値のままの時のみ)</p>
+  <p style="font-size:9px;color:#4a6b52;text-align:right;margin:6px 0 0;">build: 20260719-2 / 荒れ閾値をareIndex6/9に緩和(sg_narutou.htmlと同期)</p>
 </div>
 
 <div id="summary"></div>
@@ -707,10 +707,11 @@ function judgeMode(areIndex, nigeRate){
   // calcAreIndexの最大スコアは約15〜18点
   // 逃げ率70%以上は通常固定
   if(nigeRate>=70) return 'normal';
-  // areIndex10以上で荒れ推奨（逃げ率50%未満）※50〜60%帯は通常に変更
-  if(areIndex>=10&&nigeRate<50) return 'are';
-  // areIndex13以上でも逃げ率60%未満のみ荒れ
-  if(areIndex>=13&&nigeRate<60) return 'are';
+  // areIndex6以上で荒れ推奨（逃げ率50%未満）※50〜60%帯は通常に変更
+  // （sg_narutou.htmlと必ず同期させること。2026-07-19検証済み）
+  if(areIndex>=6&&nigeRate<50) return 'are';
+  // areIndex9以上でも逃げ率60%未満のみ荒れ
+  if(areIndex>=9&&nigeRate<60) return 'are';
   return 'normal';
 }
 
