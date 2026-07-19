@@ -458,7 +458,7 @@
       <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
     </div>
     <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
-    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260719-7 / 参入推奨バッジを会場ベースからレース内容(◎○スコア差)ベースに変更</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260719-8 / 参入バッジを良し悪しの判断なし・事実提示のみの中立表示に変更</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
     <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
@@ -1928,9 +1928,9 @@ function updateManshuFlag(){
   updateEntryFlag();
 }
 
-// 参入推奨バッジ（表示のみ・買い目には影響なし）
-// レース内容（◎○のスコア差）で判定。差が開くほど◎の的中率が高く、差が小さいほど信頼度が低い
-// （データ検証済み: 差<5ptで的中率36.9%、差20pt以上で49-53%程度）
+// 参入傾向バッジ（表示のみ・買い目には影響なし・良し悪しの判断はしない）
+// ◎○のスコア差は「差が大きい→的中率は高いが配当は小さめ」「差が小さい→的中率は低いが配当は大きめ」
+// という傾向があり、ROIで見るとどちらが良いとも言い切れない。事実だけ提示し、判断は委ねる。
 function updateEntryFlag(){
   const el=document.getElementById('entry-flag');
   if(!el) return;
@@ -1939,11 +1939,11 @@ function updateEntryFlag(){
   const sorted=[...scores].sort((a,b)=>(b.raw||0)-(a.raw||0));
   const gap=(sorted[0].raw||0)-(sorted[1].raw||0);
   if(gap>=20){
-    el.innerHTML='🟢 積極参入：◎○のスコア差'+gap.toFixed(1)+'pt（軸の信頼度が高いレース）';
-    el.style.cssText='display:block;margin-top:8px;padding:8px 10px;background:rgba(60,160,90,0.15);border:1px solid rgba(60,160,90,0.4);border-radius:6px;font-size:12px;color:#a8e0b8;';
+    el.innerHTML='📊 ◎○差'+gap.toFixed(1)+'pt：軸が堅いレース傾向（的中率高め・配当小さめの傾向）';
+    el.style.cssText='display:block;margin-top:8px;padding:8px 10px;background:rgba(80,110,160,0.15);border:1px solid rgba(80,110,160,0.4);border-radius:6px;font-size:12px;color:#a8c0e0;';
   } else if(gap<5){
-    el.innerHTML='🔴 慎重に：◎○のスコア差'+gap.toFixed(1)+'pt（軸の信頼度が低いレース。点数を絞る/見送りも検討）';
-    el.style.cssText='display:block;margin-top:8px;padding:8px 10px;background:rgba(200,60,60,0.15);border:1px solid rgba(200,60,60,0.4);border-radius:6px;font-size:12px;color:#e8a0a0;';
+    el.innerHTML='📊 ◎○差'+gap.toFixed(1)+'pt：混戦レース傾向（的中率低め・配当大きめの傾向）';
+    el.style.cssText='display:block;margin-top:8px;padding:8px 10px;background:rgba(80,110,160,0.15);border:1px solid rgba(80,110,160,0.4);border-radius:6px;font-size:12px;color:#a8c0e0;';
   } else {
     el.style.display='none';
   }
