@@ -308,6 +308,7 @@
       <div id="sum-gosei" style="display:none;"></div>
       <div id="manshu-flag" style="display:none;"></div>
       <div id="dango-flag" style="display:none;"></div>
+      <div id="entry-flag" style="display:none;"></div>
       <button class="btn btn-gold" style="width:100%;margin-top:10px;" onclick="logSelection()">📌 このレースを投稿記録に残す</button>
       <p class="eval-hint" style="margin:6px 0 0;">実際にXへ投稿すると決めたレースだけ押す。荒れ指数・nigeRate・合成オッズなどをまとめて記録し、後で「選んだレース」と「選ばなかったレース」を比較検証できるようにする。</p>
     </div>
@@ -457,7 +458,7 @@
       <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
     </div>
     <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
-    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260719-5 / 軽量化を段階的(14→7→3→1→0日)に強化</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260719-7 / 参入推奨バッジを会場ベースからレース内容(◎○スコア差)ベースに変更</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
     <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
@@ -1463,10 +1464,11 @@ function judgeMode(areIndex, nigeRate){
   // calcAreIndexの最大スコアは約15〜18点
   // 逃げ率70%以上は通常固定
   if(nigeRate>=70) return 'normal';
-  // areIndex10以上で荒れ推奨（逃げ率50%未満）※50〜60%帯は通常に変更
-  if(areIndex>=10&&nigeRate<50) return 'are';
-  // areIndex13以上でも逃げ率60%未満のみ荒れ
-  if(areIndex>=13&&nigeRate<60) return 'are';
+  // areIndex6以上で荒れ推奨（逃げ率50%未満）※50〜60%帯は通常に変更
+  // （2026-07-19検証: 10/13→6/9に緩和で荒れ発動率6.0%→25.5%、的中率28.9%→31.8%、ROI71.5%→78.2%と両方改善）
+  if(areIndex>=6&&nigeRate<50) return 'are';
+  // areIndex9以上でも逃げ率60%未満のみ荒れ
+  if(areIndex>=9&&nigeRate<60) return 'are';
   return 'normal';
 }
 
@@ -1923,6 +1925,28 @@ function updateManshuFlag(){
     el.style.display='none';
   }
   updateDangoFlag(std);
+  updateEntryFlag();
+}
+
+// 参入推奨バッジ（表示のみ・買い目には影響なし）
+// レース内容（◎○のスコア差）で判定。差が開くほど◎の的中率が高く、差が小さいほど信頼度が低い
+// （データ検証済み: 差<5ptで的中率36.9%、差20pt以上で49-53%程度）
+function updateEntryFlag(){
+  const el=document.getElementById('entry-flag');
+  if(!el) return;
+  const scores=currentAreScores;
+  if(!scores||scores.length<2){ el.style.display='none'; return; }
+  const sorted=[...scores].sort((a,b)=>(b.raw||0)-(a.raw||0));
+  const gap=(sorted[0].raw||0)-(sorted[1].raw||0);
+  if(gap>=20){
+    el.innerHTML='🟢 積極参入：◎○のスコア差'+gap.toFixed(1)+'pt（軸の信頼度が高いレース）';
+    el.style.cssText='display:block;margin-top:8px;padding:8px 10px;background:rgba(60,160,90,0.15);border:1px solid rgba(60,160,90,0.4);border-radius:6px;font-size:12px;color:#a8e0b8;';
+  } else if(gap<5){
+    el.innerHTML='🔴 慎重に：◎○のスコア差'+gap.toFixed(1)+'pt（軸の信頼度が低いレース。点数を絞る/見送りも検討）';
+    el.style.cssText='display:block;margin-top:8px;padding:8px 10px;background:rgba(200,60,60,0.15);border:1px solid rgba(200,60,60,0.4);border-radius:6px;font-size:12px;color:#e8a0a0;';
+  } else {
+    el.style.display='none';
+  }
 }
 
 // 通常判定・団子度14〜22の「中途半端ゾーン」注意表示(表示のみ・買い目には影響なし)
