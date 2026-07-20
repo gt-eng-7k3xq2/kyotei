@@ -95,7 +95,7 @@ textarea{resize:vertical;}
     <button class="btn" style="flex:1;font-size:12px;" onclick="setAllEntriesCollapsed(false)">▾ 全部開く</button>
   </div>
   <button class="btn btn-gold" style="width:100%;margin-top:10px;padding:14px;" onclick="runAll()">🚀 一括検証実行</button>
-  <p style="font-size:9px;color:#4a6b52;text-align:right;margin:6px 0 0;">build: 20260719-2 / 荒れ閾値をareIndex6/9に緩和(sg_narutou.htmlと同期)</p>
+  <p style="font-size:9px;color:#4a6b52;text-align:right;margin:6px 0 0;">build: 20260719-3 / 逃げ固定も8点に統一(sg_narutou.htmlと同期)</p>
 </div>
 
 <div id="summary"></div>
@@ -1384,13 +1384,11 @@ function runAll(){
         mode='nigenashi';
       }
       // 点数の自動選択: 入力欄が初期値(12)のまま手動で変更されていなければ、
-      // 2艇頭(mid)は8点、逃げ固定(high)・荒れ・逃げなしは12点に自動調整する
-      // (sg_narutou.htmlと必ず同期させること。2026-07-19検証済み)
+      // 通常モード(逃げ固定・2艇頭とも)は8点、荒れ・逃げなしは12点に自動調整する
+      // (sg_narutou.htmlと必ず同期させること。2026-07-19: 逃げ固定も8点に統一)
       if(pts_manual==='12'){
         if(mode==='normal'){
-          const boat1St=boat1Rank>=0?(areScores[boat1Rank]._st||0):0;
-          const isHighMode=boat1Rank===0 && nigeRate>=85 && !areScores.some(s=>String(s.no)!=='1' && (s._st||0)>boat1St);
-          pts=isHighMode?12:8;
+          pts=8;
         }
         const ptsEl=document.getElementById('pts-'+id);
         if(ptsEl) ptsEl.value=String(pts);
