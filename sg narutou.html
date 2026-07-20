@@ -458,7 +458,7 @@
       <span id="overlay-fontsize-val" style="font-size:11px;color:var(--muted);width:28px;">18</span>
     </div>
     <p class="eval-hint" style="margin:0 0 8px;">枠をドラッグで移動、右下の角をドラッグでサイズ変更できます。位置・サイズは自動保存されます。</p>
-    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260719-9 / 参入バッジを常時表示に変更、予想実行直後に表示されるようタイミングも修正</p>
+    <p style="font-size:9px;color:#4a6b52;text-align:right;margin:0 0 8px;">build: 20260719-10 / 逃げ固定も8点に統一（通常モードは逃げ固定/2艇頭とも8点、荒れ・逃げなしは12点）</p>
     <button class="btn btn-gold" id="overlay-save-btn" onclick="overlaySaveImage()" disabled>画像として保存</button>
     <button class="btn btn-ghost" onclick="overlayResetPositions()">枠の位置・サイズをリセット</button>
   </div>
@@ -2003,15 +2003,12 @@ async function runYoso(){
     }
     lastSuggestedMode=mode; // 診断用: この時点の自動提案を記録(手動でボタンを変えても診断ログには残る)
 
-    // 点数の自動選択: 2艇頭(mid)は8点、逃げ固定(high)・荒れ・逃げなしは12点
-    // （2026-07-19検証: mid n=846でROI73.9%>71.8%(8点優位)、high n=20でROI124.3%>64.7%(12点優位)）
+    // 点数の自動選択: 通常モード(逃げ固定・2艇頭とも)は8点、荒れ・逃げなしは12点
+    // （2026-07-19: 逃げ固定はn=20/n=7でROIの結果が逆転するほど不安定だったため、
+    // 実運用の判断で逃げ固定も8点に統一。逃げが堅いレースほど合成オッズが薄く、
+    // 点数を増やしても実質的な上乗せが少ないため）
     // 手動でボタンを押せばいつでも上書きできる
-    let autoPts=12;
-    if(mode==='normal'){
-      const boat1St=boat1Rank>=0?(sortedForAxis[boat1Rank]._st||0):0;
-      const isHighMode=boat1Rank===0 && nigeRate>=85 && !sortedForAxis.some(s=>String(s.no)!=='1' && (s._st||0)>boat1St);
-      autoPts=isHighMode?12:8;
-    }
+    let autoPts=(mode==='normal')?8:12;
     autoSetBetCount(autoPts);
 
     // 場所・レース番号を自動セット
