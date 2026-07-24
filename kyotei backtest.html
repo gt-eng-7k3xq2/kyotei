@@ -131,6 +131,25 @@ const SCORE_ENGINE_VERSION=4;
 let selectedNigeMode='auto';
 let selectedRaceType='ippan'; // 'ippan','g2g3','g1','sg'（既定は一般戦。レースごとにUIから変更）
 
+// モーター履歴セクションのパース（ログ記録専用。calcAreScore等のスコア計算には一切使用しない）
+function parseMotorHistory(text){
+  const section=text.match(/=== モーター履歴 ===([\s\S]*?)(?:\n===|$)/);
+  if(!section) return null;
+  const body=section[1];
+  const re=/(\d)号艇:\s*使用選手数(\d+)\s*2連率delta平均(-?[\d.]+)pt\s*勝率delta平均(-?[\d.]+)/g;
+  const out=[];
+  let m;
+  while((m=re.exec(body))!==null){
+    out.push({
+      no:parseInt(m[1]),
+      n:parseInt(m[2]),
+      rate2Delta:parseFloat(m[3]),
+      winRateDelta:parseFloat(m[4])
+    });
+  }
+  return out.length?out:null;
+}
+
 function parseData(text){
   const d={boats:[]};
   for(let i=1;i<=6;i++) d.boats.push({no:i,name:'',regno:'',nigerate6m:0,nigerate1y:0,atchiNige:0,atchiNigeCount:0,sgNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sg1chakuRate:0,sg1chakuCount:0,ippan2ren:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,avgTenji:0,syukai:0,syukaiFoot:0,avgSyukaiFoot:0,chokusen:0,directST:0,isExhibitF:false,isF:false});
@@ -1375,6 +1394,7 @@ function runAll(){
     try{
       selectedRaceType=rtype; // calcAreScore内部が参照するグローバル変数を一時設定
       const d=parseData(rawData);
+      const motorHistory=parseMotorHistory(rawData); // ログ記録専用。スコア計算(calcAreScore)には渡さない
       const areScores=calcAreScore(d);
       const{areIndex,nigeRate}=calcAreIndex(d);
       let mode=judgeMode(areIndex,nigeRate);
@@ -1453,7 +1473,8 @@ function runAll(){
         scoreVersion:SCORE_ENGINE_VERSION,
         chakuju:resultStr,
         payout:payoutStr,
-        miss
+        miss,
+        motorHistory // {no,n,rate2Delta,winRateDelta}[] または null（未収集レース）。検証専用、買い目には未使用
       });
 
       processed++;
