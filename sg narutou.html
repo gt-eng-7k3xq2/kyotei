@@ -528,6 +528,11 @@ const TEKICHU_BG_DATAURI="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAAAAYA
 
 
 function getLogs(){try{return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');}catch{return[];}}
+// 圧縮対象から除外するレアケース判定（逃げ固定：軸1号艇かつ逃げ率85%以上。厳密な条件はSTも見るが、
+// ログ圧縮の判定では近似で十分——多少余分に残っても実害はなく、逆に消えると分析不能になるため）
+function isRareCase(entry){
+  return entry.mode==='normal' && String(entry.maru)==='1' && (entry.nigeRate||0)>=85;
+}
 function manualCompactSgLogs(){
   const logs=getLogs();
   const beforeCount=logs.filter(l=>l.scores).length;
@@ -537,7 +542,7 @@ function manualCompactSgLogs(){
   for(const keepDays of [14,7,3,1,0]){
     const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-keepDays);
     const compacted=logs.map(entry=>{
-      if(entry.date && new Date(entry.date)<cutoff && entry.scores){
+      if(entry.date && new Date(entry.date)<cutoff && entry.scores && !isRareCase(entry)){
         const {scores, ...rest}=entry;
         return rest;
       }
@@ -552,7 +557,7 @@ function manualCompactSgLogs(){
     }catch(e){ /* まだ超過。さらに絞る */ }
   }
   if(saved){
-    showToast(`✅ 軽量化しました（明細あり: ${beforeCount}件→${afterCount}件、直近${usedDays}日分保持、結果は全件保持）`);
+    showToast(`✅ 軽量化しました（明細あり: ${beforeCount}件→${afterCount}件、直近${usedDays}日分保持＋逃げ固定は無期限保持、結果は全件保持）`);
   }else{
     showToast('⚠️ 全ログの明細を削っても保存できません。kyotei_v2(gtools側)も含めた容量整理が必要です');
   }
@@ -571,7 +576,7 @@ function saveLogs(l){
       for(const keepDays of [14,7,3,1,0]){
         const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-keepDays);
         const compacted=l.map(entry=>{
-          if(entry.date && new Date(entry.date)<cutoff && entry.scores){
+          if(entry.date && new Date(entry.date)<cutoff && entry.scores && !isRareCase(entry)){
             const {scores, ...rest}=entry;
             return rest;
           }
@@ -699,36 +704,35 @@ function generateBets(d, areScores, mode){
   const{areIndex}=calcAreIndex(d);
   const betsRaw=mode==='are'?buildBetsAre(ranking,selectedBetCount,nigeRate):mode==='nigenashi'?buildBetsNigeNashi(ranking,selectedBetCount):buildBetsNormal(ranking,selectedBetCount,currentParsedData);
 
-  // 自信度計算（ログ分析ベース・9段階）
-  function calcConfidence(mode, nigeRate, areIndex){
-    let grade;
-    if(mode==='are'){
-      if(nigeRate>=70)      grade=1;
-      else if(nigeRate>=50) grade=5;
-      else                  grade=3;
-    } else {
-      if(nigeRate<50){
-        grade=1;
-      } else if(nigeRate<65){
-        if(areIndex<=4)      grade=6;
-        else if(areIndex<=7) grade=2;
-        else                 grade=1;
-      } else if(nigeRate<70){
-        if(areIndex<=4)      grade=8;
-        else if(areIndex<=7) grade=1;
-        else                 grade=1;
-      } else {
-        // nigeRate70%以上
-        if(areIndex<=4)      grade=4;
-        else if(areIndex<=7) grade=7;
-        else                 grade=9;
-      }
-    }
-    const colors=['','#e05566','#e07855','#e09944','#c9a84c','#a8b040','#7ab54c','#4caf87','#3db876','#2dc96a'];
-    return {grade, color:colors[grade]};
+  // 自信度計算（2026-07-24: 過去ログの実績的中率から逆算した校正テーブルに刷新。
+  // 以前の9段階グレードはnigeRate/areIndexのしきい値を手動で割り振っただけで、
+  // 「ログ分析ベース」と称しながら実際の的中率には基づいていなかったため置き換え）
+  // 校正テーブルは通常・荒れモードのみ（軸と2番手の点差を3段階に分け、標本が薄いバケツは
+  // モード全体平均に縮小推定：n=79/187、2026-07-24時点のスナップショット。データが増えたら再計算要）
+  // 逃げ固定・逃げなしは出現頻度が低くバケツ単位の検証に耐えるnがないため、数字は出さない
+  const CONF_TABLE = {
+    '通': {low:30.7, mid:35.4, high:42.2},
+    '荒': {low:31.6, mid:41.0, high:38.3}
+  };
+  function calcConfidence(mode, areScores, ranking){
+    if(mode==='nigenashi') return null; // データ不足のため非表示
+    const axisEntry = (ranking||[]).find(r=>r.mark==='◎');
+    if(!axisEntry || !areScores || !areScores.length) return null;
+    const axisScore = areScores.find(s=>parseInt(s.no)===axisEntry.boat);
+    if(!axisScore) return null;
+    const others = areScores.filter(s=>parseInt(s.no)!==axisEntry.boat).map(s=>s.raw||0);
+    if(!others.length) return null;
+    const gap = (axisScore.raw||0) - Math.max(...others);
+    const key = mode==='are' ? '荒' : '通'; // 通常モードは逃げ固定サブケースを含む
+    const t = CONF_TABLE[key];
+    const pct = gap<8 ? t.low : gap<18 ? t.mid : t.high;
+    const color = pct<30?'#e05566':pct<35?'#e09944':pct<40?'#c9a84c':pct<45?'#7ab54c':'#2dc96a';
+    return {pct:Math.round(pct*10)/10, color};
   }
-  const conf=calcConfidence(mode, nigeRate, areIndex);
-  const confBadge=`<span class="info-chip" style="color:${conf.color};font-weight:700;">自信度 ${conf.grade}/9</span>`;
+  const conf=calcConfidence(mode, areScores, ranking);
+  const confBadge = conf
+    ? `<span class="info-chip" style="color:${conf.color};font-weight:700;">自信度 ${conf.pct}%</span>`
+    : `<span class="info-chip" style="color:#888;">自信度 データ不足</span>`;
 
   // バッジ更新
   const modeLabel=mode==='are'?'⚡ 荒れ':mode==='nigenashi'?'🚫 逃げなし':'🔒 通常';
@@ -2012,6 +2016,10 @@ async function runYoso(){
     // 実運用の判断で逃げ固定も8点に統一。逃げが堅いレースほど合成オッズが薄く、
     // 点数を増やしても実質的な上乗せが少ないため）
     // 手動でボタンを押せばいつでも上書きできる
+    // 2026-07-24: 逃げ固定は全体の2.5%程度しか出現せずn=300到達に約2年かかる試算のため、
+    // 「データで裏付けを取る」対象から正式に除外することを確定。今後この8点は
+    // 実務判断ベースの固定値として扱い、小サンプルのバックテスト結果だけを理由に
+    // 変更しないこと（ログ収集自体（isRareCase圧縮除外）はそのまま継続する）
     let autoPts=(mode==='normal')?8:12;
     autoSetBetCount(autoPts);
 
@@ -3147,6 +3155,10 @@ function writeToV2(entry){
 }
 
 // kyotei_v2の保存(容量超過に対応。古いログのscores明細だけ間引いて再試行する。結果自体は保持)
+// 逃げ固定（レアケース、n=8で頭打ちの構造的課題）はsg_narutou側と同じ理由で圧縮対象から除外する
+function isRareCaseV2(l){
+  return l.shinkido==='通' && String(l.maru)==='1' && (l.nigeRate||0)>=85;
+}
 function saveV2Logs(v2logs){
   try{
     localStorage.setItem('kyotei_v2',JSON.stringify(v2logs));
@@ -3156,7 +3168,7 @@ function saveV2Logs(v2logs){
       const latest=dates.length?new Date(dates[dates.length-1]):new Date();
       const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-14);
       const compacted=v2logs.map(l=>{
-        if(l.date && new Date(l.date)<cutoff && l.scores){
+        if(l.date && new Date(l.date)<cutoff && l.scores && !isRareCaseV2(l)){
           const {scores, ...rest}=l;
           return rest;
         }
@@ -3164,7 +3176,7 @@ function saveV2Logs(v2logs){
       });
       try{
         localStorage.setItem('kyotei_v2',JSON.stringify(compacted));
-        showToast('⚠️ 容量超過のため古いログの明細だけ間引いて保存しました（結果は保持）');
+        showToast('⚠️ 容量超過のため古いログの明細だけ間引いて保存しました（結果・逃げ固定の明細は保持）');
       }catch(e2){
         showToast('⚠️ 容量超過で保存できませんでした。gtoolsで書き出し後、ログを整理してください');
       }
