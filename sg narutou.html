@@ -680,6 +680,32 @@ function buildBetsNigeNashi(ranking, pts){
   return honsen.concat(osaee).slice(0,pts);
 }
 
+// 自信度計算（2026-07-24: 過去ログの実績的中率から逆算した校正テーブルに刷新。
+// 以前の9段階グレードはnigeRate/areIndexのしきい値を手動で割り振っただけで、
+// 「ログ分析ベース」と称しながら実際の的中率には基づいていなかったため置き換え）
+// 校正テーブルは通常・荒れモードのみ（軸と2番手の点差を3段階に分け、標本が薄いバケツは
+// モード全体平均に縮小推定：n=79/187、2026-07-24時点のスナップショット。データが増えたら再計算要）
+// 逃げ固定・逃げなしは出現頻度が低くバケツ単位の検証に耐えるnがないため、数字は出さない
+const CONF_TABLE = {
+  '通': {low:30.7, mid:35.4, high:42.2},
+  '荒': {low:31.6, mid:41.0, high:38.3}
+};
+function calcConfidence(mode, areScores, ranking){
+  if(mode==='nigenashi') return null; // データ不足のため非表示
+  const axisEntry = (ranking||[]).find(r=>r.mark==='◎');
+  if(!axisEntry || !areScores || !areScores.length) return null;
+  const axisScore = areScores.find(s=>parseInt(s.no)===axisEntry.boat);
+  if(!axisScore) return null;
+  const others = areScores.filter(s=>parseInt(s.no)!==axisEntry.boat).map(s=>s.raw||0);
+  if(!others.length) return null;
+  const gap = (axisScore.raw||0) - Math.max(...others);
+  const key = mode==='are' ? '荒' : '通'; // 通常モードは逃げ固定サブケースを含む
+  const t = CONF_TABLE[key];
+  const pct = gap<8 ? t.low : gap<18 ? t.mid : t.high;
+  const color = pct<30?'#e05566':pct<35?'#e09944':pct<40?'#c9a84c':pct<45?'#7ab54c':'#2dc96a';
+  return {pct:Math.round(pct*10)/10, color};
+}
+
 function generateBets(d, areScores, mode){
   const racenum=document.getElementById('inp-racenum').value||'?';
   const honme='1';
@@ -704,31 +730,7 @@ function generateBets(d, areScores, mode){
   const{areIndex}=calcAreIndex(d);
   const betsRaw=mode==='are'?buildBetsAre(ranking,selectedBetCount,nigeRate):mode==='nigenashi'?buildBetsNigeNashi(ranking,selectedBetCount):buildBetsNormal(ranking,selectedBetCount,currentParsedData);
 
-  // 自信度計算（2026-07-24: 過去ログの実績的中率から逆算した校正テーブルに刷新。
-  // 以前の9段階グレードはnigeRate/areIndexのしきい値を手動で割り振っただけで、
-  // 「ログ分析ベース」と称しながら実際の的中率には基づいていなかったため置き換え）
-  // 校正テーブルは通常・荒れモードのみ（軸と2番手の点差を3段階に分け、標本が薄いバケツは
-  // モード全体平均に縮小推定：n=79/187、2026-07-24時点のスナップショット。データが増えたら再計算要）
-  // 逃げ固定・逃げなしは出現頻度が低くバケツ単位の検証に耐えるnがないため、数字は出さない
-  const CONF_TABLE = {
-    '通': {low:30.7, mid:35.4, high:42.2},
-    '荒': {low:31.6, mid:41.0, high:38.3}
-  };
-  function calcConfidence(mode, areScores, ranking){
-    if(mode==='nigenashi') return null; // データ不足のため非表示
-    const axisEntry = (ranking||[]).find(r=>r.mark==='◎');
-    if(!axisEntry || !areScores || !areScores.length) return null;
-    const axisScore = areScores.find(s=>parseInt(s.no)===axisEntry.boat);
-    if(!axisScore) return null;
-    const others = areScores.filter(s=>parseInt(s.no)!==axisEntry.boat).map(s=>s.raw||0);
-    if(!others.length) return null;
-    const gap = (axisScore.raw||0) - Math.max(...others);
-    const key = mode==='are' ? '荒' : '通'; // 通常モードは逃げ固定サブケースを含む
-    const t = CONF_TABLE[key];
-    const pct = gap<8 ? t.low : gap<18 ? t.mid : t.high;
-    const color = pct<30?'#e05566':pct<35?'#e09944':pct<40?'#c9a84c':pct<45?'#7ab54c':'#2dc96a';
-    return {pct:Math.round(pct*10)/10, color};
-  }
+  // 自信度計算（2026-07-24: 実績ベースの校正テーブルに刷新済み。定義はトップレベルのcalcConfidence参照）
   const conf=calcConfidence(mode, areScores, ranking);
   const confBadge = conf
     ? `<span class="info-chip" style="color:${conf.color};font-weight:700;">自信度 ${conf.pct}%</span>`
@@ -2432,20 +2434,26 @@ function buildXSummary(mode,withAmount){
   const venueVal=document.getElementById('inp-venue')?document.getElementById('inp-venue').value||'鳴門':'鳴門';
   const shimekiri=currentParsedData&&currentParsedData.shimekiri?` 締切${currentParsedData.shimekiri}`:'';
 
-  // 共通ヘッダー（展示/機力/展開/総合分析）はX用・ノート用・全部用で共通
-  const headerLines=[
+  // G.rate（自信度%）: 軸と2番手の点差から算出した実績ベースの校正値。calcConfidenceはトップレベル定義を使用
+  const conf=calcConfidence(currentCalcData?currentCalcData.mode:mode, currentAreScores, currentCalcData?currentCalcData.ranking:ranking);
+  const gRateLine = conf ? `🎯G.rate：${conf.pct}%` : `🎯G.rate：データ不足`;
+
+  // 共通ヘッダー（評価順を除く部分）はX用・ノート用・全部用で共通
+  const baseLines=[
     `【${venueVal}${racenum}R】${shimekiri}`,
-    `展示：${tenjiLine}`,
-    `機力：${kiryokuLine}`,
-    `展開：${tenkaiLine}`,
     ``,
-    `【総合分析】`,
-    `軸は：${maruStr}`,
-    `評価順：${hyokaOrder}`,
+    gRateLine,
+    ``,
+    `展示　${tenjiLine}`,
+    `機力　${kiryokuLine}`,
+    `展開　${tenkaiLine||'─'}`,
+    ``,
+    `総合分析`,
+    `軸：${maruStr}`,
   ];
 
-  // X投稿用: 買い目は出さず、プロフィール(note)へ誘導
-  const xLines=[...headerLines, ``, `最終予想・買い目はプロフィールから。`, ``, `G.`];
+  // X投稿用: 評価順は出さず、買い目も出さない。プロフィール(note)へ誘導
+  const xLines=[...baseLines, ``, `最終予想・買い目はプロフィール（note）から。`, ``, `G.`];
   if(mode==='x'){
     return xLines.join('\n');
   }
@@ -2454,8 +2462,9 @@ function buildXSummary(mode,withAmount){
   const betLines=[`本線`, `${fmtBets(honsen)}`];
   if(osaee.length) betLines.push(``, `抑え`, `${fmtBets(osaee)}`);
 
-  // note用: 展示/機力/展開/総合分析＋本線・抑え（賭け金は出さない）
-  const noteLines=[...headerLines, ``, ...betLines, ``, `G.`];
+  // note用: 評価順あり＋展示/機力/展開/総合分析＋本線・抑え（賭け金は出さない）
+  const noteHeaderLines=[...baseLines, `評価順：${hyokaOrder}`];
+  const noteLines=[...noteHeaderLines, ``, ...betLines, ``, `G.`];
   if(mode==='note'){
     return noteLines.join('\n');
   }
