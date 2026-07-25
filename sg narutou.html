@@ -680,18 +680,12 @@ function buildBetsNigeNashi(ranking, pts){
   return honsen.concat(osaee).slice(0,pts);
 }
 
-// 自信度計算（2026-07-24: 過去ログの実績的中率から逆算した校正テーブルに刷新。
-// 以前の9段階グレードはnigeRate/areIndexのしきい値を手動で割り振っただけで、
-// 「ログ分析ベース」と称しながら実際の的中率には基づいていなかったため置き換え）
-// 校正テーブルは通常・荒れモードのみ（軸と2番手の点差を3段階に分け、標本が薄いバケツは
-// モード全体平均に縮小推定：n=79/187、2026-07-24時点のスナップショット。データが増えたら再計算要）
-// 逃げ固定・逃げなしは出現頻度が低くバケツ単位の検証に耐えるnがないため、数字は出さない
-const CONF_TABLE = {
-  '通': {low:30.7, mid:35.4, high:42.2},
-  '荒': {low:31.6, mid:41.0, high:38.3}
-};
+// G.rate（勝負度%）: 2026-07-24、当初は「過去ログの実績的中率」をそのまま校正テーブル化していたが、
+// これは実際の予想的中率(20〜40%台)の話ではなく、読者に見せる「この予想の勝負度」を表す展示用指標だと
+// 判明したため設計変更。中身は引き続き軸と2番手の点差（点差が大きいほど読み切れている＝勝負度が高い）を
+// 使うが、表示レンジは的中率の実データレンジに縛られず40〜96%へ引き伸ばす。数字の大小関係（点差が大きい
+// レースほど高い）だけは実データと一致させ、全モードで表示する（モードによる非表示は廃止）
 function calcConfidence(mode, areScores, ranking){
-  if(mode==='nigenashi') return null; // データ不足のため非表示
   const axisEntry = (ranking||[]).find(r=>r.mark==='◎');
   if(!axisEntry || !areScores || !areScores.length) return null;
   const axisScore = areScores.find(s=>parseInt(s.no)===axisEntry.boat);
@@ -699,11 +693,11 @@ function calcConfidence(mode, areScores, ranking){
   const others = areScores.filter(s=>parseInt(s.no)!==axisEntry.boat).map(s=>s.raw||0);
   if(!others.length) return null;
   const gap = (axisScore.raw||0) - Math.max(...others);
-  const key = mode==='are' ? '荒' : '通'; // 通常モードは逃げ固定サブケースを含む
-  const t = CONF_TABLE[key];
-  const pct = gap<8 ? t.low : gap<18 ? t.mid : t.high;
-  const color = pct<30?'#e05566':pct<35?'#e09944':pct<40?'#c9a84c':pct<45?'#7ab54c':'#2dc96a';
-  return {pct:Math.round(pct*10)/10, color};
+  let pct = 50 + gap*1.3;
+  pct = Math.max(40, Math.min(96, pct));
+  pct = Math.round(pct);
+  const color = pct<55?'#e05566':pct<65?'#e09944':pct<75?'#c9a84c':pct<85?'#7ab54c':'#2dc96a';
+  return {pct, color};
 }
 
 function generateBets(d, areScores, mode){
@@ -949,12 +943,14 @@ function parseData(text){
   })();
 
   // レース情報（BMデータ冒頭から取得）
-  // フォーマット: "=== レース情報 ===\n場所\tXR\t日付"
-  const raceMeta=text.match(/=== レース情報 ===\n([^\t\n]+)\t(\d+R)(?:\t(\d+))?(?:\t締切(\d{1,2}:\d{2}))?/);
+  // フォーマット: "=== レース情報 ===\n場所\tXR\t日付\t締切HH:MM\t開催日目\tレース種別"
+  const raceMeta=text.match(/=== レース情報 ===\n([^\t\n]+)\t(\d+R)(?:\t(\d+))?(?:\t締切(\d{1,2}:\d{2}))?(?:\t([^\t\n]+))?(?:\t([^\t\n]+))?/);
   if(raceMeta){
     d.venue=raceMeta[1].trim();
     d.raceNum=raceMeta[2].trim();
     if(raceMeta[4]) d.shimekiri=raceMeta[4].trim();
+    if(raceMeta[5]) d.day=raceMeta[5].trim(); // 開催日目（初日/2日目/.../最終日）
+    if(raceMeta[6]) d.raceCategory=raceMeta[6].trim(); // レース種別（予選/優勝戦等）
   }
 
   // 選手名（漢字）・登録番号パース
@@ -2444,9 +2440,9 @@ function buildXSummary(mode,withAmount){
     ``,
     gRateLine,
     ``,
-    `展示　${tenjiLine}`,
-    `機力　${kiryokuLine}`,
-    `展開　${tenkaiLine||'─'}`,
+    `展示：${tenjiLine}`,
+    `機力：${kiryokuLine}`,
+    `展開：${tenkaiLine||'─'}`,
     ``,
     `総合分析`,
     `軸：${maruStr}`,
@@ -2662,11 +2658,13 @@ function buildClaudeCommentData(){
   const venue=document.getElementById('inp-venue')?document.getElementById('inp-venue').value||'':'';
   const racenum=currentCalcData.racenum||'';
   const shimekiri=currentParsedData.shimekiri?`　締切${currentParsedData.shimekiri}`:'';
+  const dayTag=currentParsedData.day?`　${currentParsedData.day}`:'';
+  const categoryTag=currentParsedData.raceCategory?`　${currentParsedData.raceCategory}`:'';
 
   const maruBoat=ranking[0]?.boat;
 
   const lines=[];
-  lines.push(`【${venue} ${racenum}R】${shimekiri}`);
+  lines.push(`【${venue} ${racenum}R】${shimekiri}${dayTag}${categoryTag}`);
   lines.push('');
 
   for(let no=1;no<=6;no++){
