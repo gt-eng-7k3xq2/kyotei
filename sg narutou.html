@@ -2985,15 +2985,17 @@ function resetAiTenkai(){
 function copyXSummary(mode){
   // プレビュー欄(x-summary-preview)はnote用の内容(見出し＋本線・抑え)を表示。手動編集はどちらのコピーにも反映する。
   // mode='note': プレビューの内容をそのままコピー
-  // mode='x': プレビューから見出し部分(「本線」より前)だけを抜き出し、買い目の代わりに固定の誘導文を付ける
+  // mode='x': プレビューから見出し部分(「本線」より前)だけを抜き出し、評価順の行を取り除いた上で
+  //           買い目の代わりに固定の誘導文を付ける（buildXSummaryのX用ロジックと同じ体裁に揃える）
   const previewText = document.getElementById('x-summary-preview')?.value || buildXSummary('note');
   let text;
   if(mode==='note'){
     text = previewText;
   } else {
     const honsenIdx = previewText.indexOf('\n本線');
-    const headerPart = (honsenIdx>=0 ? previewText.slice(0, honsenIdx) : previewText).replace(/\n+$/,'');
-    text = `${headerPart}\n\n最終予想・買い目はプロフィールから。\n\nG.`;
+    let headerPart = (honsenIdx>=0 ? previewText.slice(0, honsenIdx) : previewText).replace(/\n+$/,'');
+    headerPart = headerPart.split('\n').filter(line => !/^評価順：/.test(line)).join('\n').replace(/\n+$/,'');
+    text = `${headerPart}\n\n最終予想・買い目はプロフィール（note）から。\n\nG.`;
   }
   if(!text){showToast('買い目を生成してください');return;}
   const label = mode==='x'?'𝕏 X用':'📝 note用';
