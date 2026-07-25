@@ -2452,7 +2452,10 @@ function buildXSummary(mode,withAmount){
 
   // G.rate（自信度%）: 軸と2番手の点差から算出した実績ベースの校正値。calcConfidenceはトップレベル定義を使用
   const conf=calcConfidence(currentCalcData?currentCalcData.mode:mode, currentAreScores, currentCalcData?currentCalcData.ranking:ranking);
-  const gRateLine = conf ? `🎯G.rate：${conf.pct}%` : `🎯G.rate：データ不足`;
+  // 合成オッズ（既存のcalcGoseiOdds/extractOddsMapをそのまま流用。本線・抑え全体の合成、UI上の表示と同じ計算方式）
+  const oddsMapForGosei=extractOddsMap(document.getElementById('inp-data').value);
+  const goseiForPost=calcGoseiOdds(betsRaw.map(b=>b.val), oddsMapForGosei);
+  const gRateLine = (conf ? `G.RATE ${conf.pct}%` : `G.RATE データ不足`) + `　|　合成 約${goseiForPost||'?'}倍`;
 
   // 共通ヘッダー（評価順を除く部分）はX用・ノート用・全部用で共通
   const baseLines=[
