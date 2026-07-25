@@ -442,7 +442,7 @@
     <div class="canvas-wrap" id="overlay-canvas-wrap" style="position:relative;width:100%;border-radius:8px;overflow:hidden;border:1px solid var(--border);touch-action:none;background:#000;">
       <canvas id="overlay-canvas" style="display:block;width:100%;height:auto;"></canvas>
       <div id="overlay-empty" style="font-size:12px;color:var(--muted);text-align:center;padding:26px 10px;">まだ画像がありません。スクショを選んでください。</div>
-      <div id="overlay-ribbon" style="display:none;position:absolute;background:linear-gradient(135deg,#c9a84c,#f0d080);box-shadow:0 6px 14px rgba(0,0,0,.4);text-align:center;pointer-events:none;white-space:nowrap;">
+      <div id="overlay-ribbon" style="display:none;position:absolute;background:linear-gradient(135deg,#c9a84c,#f0d080);box-shadow:0 6px 14px rgba(0,0,0,.4);text-align:center;pointer-events:none;white-space:nowrap;border-radius:999px;">
         <span id="overlay-ribbon-text" style="font-weight:900;color:#14301f;letter-spacing:.06em;">GARON DATA</span>
       </div>
       <div id="overlay-notebox" style="display:none;position:absolute;box-sizing:border-box;max-width:100%;background:linear-gradient(135deg,rgba(20,48,32,.97),rgba(9,22,15,.97));color:#eef5f0;border:1.5px solid #c9a84c;border-radius:14px;padding:.9em 1em;font-family:-apple-system,'Hiragino Sans',sans-serif;white-space:normal;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.55);cursor:grab;">
@@ -4633,18 +4633,19 @@ window.addEventListener('DOMContentLoaded',function(){
   };
 
   // リボンのサイズ・位置をラップの実ピクセル幅に対する比率で計算する（vw単位はビューポート基準でズレるため使わない）
+  // 2026-07-25: 左上の斜めコーナーリボンだと本文にかぶるため、上部中央の水平バナーに変更
   function ovSizeRibbon(){
     const wrapW=ovWrap().getBoundingClientRect().width;
     if(!wrapW) return;
     const scale=wrapW/1206; // 基準デザイン幅(1206px)に対する比率
     const ribbon=document.getElementById('overlay-ribbon');
-    const w=380*scale, padV=12*scale, fontSize=26*scale;
-    const left=-90*scale, top=52*scale;
+    const w=340*scale, padV=10*scale, fontSize=24*scale;
+    const left=(1206-340)/2*scale, top=12*scale;
     ribbon.style.width=w+'px';
     ribbon.style.padding=padV+'px 0';
     ribbon.style.left=left+'px';
     ribbon.style.top=top+'px';
-    ribbon.style.transform='rotate(-45deg)';
+    ribbon.style.transform='none';
     document.getElementById('overlay-ribbon-text').style.fontSize=fontSize+'px';
   }
 
@@ -4730,21 +4731,29 @@ window.addEventListener('DOMContentLoaded',function(){
 
   // ---- 保存(画像出力): 装飾済みノートボックスをhtml2canvasでキャプチャしてスクショに合成 ----
 
-  // GARONリボンをcanvasに直接描画（html2canvasだとrotate+overflow:hiddenの扱いが不安定なため手描き）
+  // GARONバナーをcanvasに直接描画（html2canvasだと角丸+グラデの扱いが不安定なため手描き）
+  // 2026-07-25: 左上の斜めコーナーリボンだと本文にかぶるため、上部中央の水平バナーに変更
   function ovDrawRibbon(ctx,canvas){
     const scale=canvas.width/1206; // 全モックアップの基準幅(1206px)に対する比率
-    const w=380*scale, h=58*scale;
-    const cx=(-90+380/2)*scale, cy=(52+55/2)*scale;
+    const w=340*scale, h=54*scale;
+    const cx=canvas.width/2, cy=(12+54/2)*scale;
+    const r=h/2; // 角丸(ピル形状)
     ctx.save();
     ctx.translate(cx,cy);
-    ctx.rotate(-45*Math.PI/180);
     const grad=ctx.createLinearGradient(-w/2,-h/2,w/2,h/2);
     grad.addColorStop(0,'#c9a84c');
     grad.addColorStop(1,'#f0d080');
     ctx.shadowColor='rgba(0,0,0,.4)';
     ctx.shadowBlur=10*scale;
     ctx.fillStyle=grad;
-    ctx.fillRect(-w/2,-h/2,w,h);
+    ctx.beginPath();
+    ctx.moveTo(-w/2+r,-h/2);
+    ctx.arcTo(w/2,-h/2,w/2,h/2,r);
+    ctx.arcTo(w/2,h/2,-w/2,h/2,r);
+    ctx.arcTo(-w/2,h/2,-w/2,-h/2,r);
+    ctx.arcTo(-w/2,-h/2,w/2,-h/2,r);
+    ctx.closePath();
+    ctx.fill();
     ctx.shadowBlur=0;
     ctx.fillStyle='#14301f';
     ctx.font=`900 ${26*scale}px -apple-system,'Hiragino Sans',sans-serif`;
