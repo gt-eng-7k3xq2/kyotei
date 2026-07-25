@@ -289,6 +289,7 @@
     </div>
     <div class="card">
       <div class="info-strip" id="race-info-strip"></div>
+      <button onclick="openOfficialRaceList()" class="btn btn-ghost" style="width:100%;margin-top:6px;">🌐 公式出走表を開く</button>
       <div class="card-title">🎯 買い目・資金配分</div>
       <div class="alloc-row">
         <button class="alloc-btn active" id="alloc-equal" onclick="setAllocMode('equal')">均等割</button>
@@ -948,6 +949,7 @@ function parseData(text){
   if(raceMeta){
     d.venue=raceMeta[1].trim();
     d.raceNum=raceMeta[2].trim();
+    if(raceMeta[3]) d.hiduke=raceMeta[3].trim(); // 日付（YYYYMMDD）。公式サイトのURL組み立てに使う
     if(raceMeta[4]) d.shimekiri=raceMeta[4].trim();
     if(raceMeta[5]) d.day=raceMeta[5].trim(); // 開催日目（初日/2日目/.../最終日）
     if(raceMeta[6]) d.raceCategory=raceMeta[6].trim(); // レース種別（予選/優勝戦等）
@@ -1528,6 +1530,24 @@ function extractOddsMap(text){
 // ============================================================
 // ランキングパース
 // ============================================================
+// 公式サイト(boatrace.jp)の場コード。ブックマークレット側のvenueMapと対応させること
+const OFFICIAL_VENUE_CODE={
+  "桐生":"01","戸田":"02","江戸川":"03","平和島":"04","多摩川":"05","浜名湖":"06",
+  "蒲郡":"07","常滑":"08","津":"09","三国":"10","びわこ":"11","住之江":"12",
+  "尼崎":"13","鳴門":"14","丸亀":"15","児島":"16","宮島":"17","徳山":"18",
+  "下関":"19","若松":"20","芦屋":"21","福岡":"22","唐津":"23","大村":"24"
+};
+function openOfficialRaceList(){
+  if(!currentParsedData || !currentParsedData.venue){ showToast('⚠️ 先に予想データを読み込んでください'); return; }
+  const code=OFFICIAL_VENUE_CODE[currentParsedData.venue];
+  if(!code){ showToast('⚠️ 会場コードが分かりません（会場名: '+currentParsedData.venue+'）'); return; }
+  const rno=(currentParsedData.raceNum||'').replace(/R$/,'');
+  const hd=currentParsedData.hiduke;
+  if(!rno || !hd){ showToast('⚠️ レース番号または日付が取得できていません'); return; }
+  const url=`https://www.boatrace.jp/owpc/pc/race/racelist?rno=${rno}&jcd=${code}&hd=${hd}`;
+  window.open(url, '_blank');
+}
+
 function parseRanking(text){
   const r=[];
   for(const line of text.split('\n')){
