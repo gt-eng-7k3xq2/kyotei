@@ -289,7 +289,6 @@
     </div>
     <div class="card">
       <div class="info-strip" id="race-info-strip"></div>
-      <button onclick="openOfficialRaceList()" class="btn btn-ghost" style="width:100%;margin-top:6px;">🌐 公式出走表を開く</button>
       <div class="card-title">🎯 買い目・資金配分</div>
       <div class="alloc-row">
         <button class="alloc-btn active" id="alloc-equal" onclick="setAllocMode('equal')">均等割</button>
@@ -436,6 +435,7 @@
     <div class="card-title">📝 コメント画像ツール</div>
     <p class="eval-hint" style="margin-bottom:8px;">公式サイトのスクショに、コメント枠（テキストボックス）を重ねて画像化します。</p>
     <button class="btn btn-ghost btn-sm" style="margin-bottom:8px;" onclick="overlayAutoGenerateText()">📋 BMデータから叩き台を生成</button>
+    <button onclick="openOfficialRaceList()" class="btn btn-ghost btn-sm" style="margin-bottom:8px;">🌐 公式出走表を開く</button>
     <textarea id="overlay-text-input" rows="9" placeholder="ここにコメントを書く（自動生成後に自由に編集できます）" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:12px;font-family:monospace;padding:8px;border-radius:8px;box-sizing:border-box;resize:vertical;margin-bottom:10px;" oninput="overlaySyncNoteText()"></textarea>
     <label class="file-btn" for="overlay-file-input" style="display:block;width:100%;padding:12px;border-radius:8px;font-size:14px;font-weight:700;border:1px dashed var(--gold);background:var(--surface2);color:#f0d080;text-align:center;-webkit-appearance:none;margin-bottom:10px;">スクショ画像を選択</label>
     <input type="file" id="overlay-file-input" accept="image/*" style="display:none;" onchange="overlayHandleFile(event)">
