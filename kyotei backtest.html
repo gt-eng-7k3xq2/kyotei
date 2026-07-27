@@ -113,6 +113,10 @@ textarea{resize:vertical;}
     <button class="btn" style="flex:1;" onclick="if(confirm('検証ログを全部消しますか？'))clearBacktestData()">🗑 全削除</button>
   </div>
   <button class="btn" style="width:100%;margin-top:8px;" onclick="manualCompactOldLogs()">🗜 古いログの明細を軽量化（結果は保持）</button>
+  <div class="btn-row" style="margin-top:8px;">
+    <input id="delete-date" type="text" placeholder="YYYY-MM-DD" value="2026-07-24" style="flex:1;">
+    <button class="btn" style="flex:1;" onclick="deleteLogsByDate()">🗑 指定日のログを削除</button>
+  </div>
   <div id="log-count" style="font-size:11px;color:var(--text2);margin-top:8px;"></div>
 </div>
 
@@ -1634,6 +1638,29 @@ function exportBacktestData(){
 function clearBacktestData(){
   localStorage.removeItem(BACKTEST_STORE_KEY);
   showToast('検証ログを削除しました');
+  updateLogCount();
+  updateTodayStats();
+  renderScoreDiagnosis();
+}
+
+// 指定日のログだけをまとめて削除する（BM抽出ミス等で誤登録された日を消したい時用）
+function deleteLogsByDate(){
+  const dateEl=document.getElementById('delete-date');
+  const target=(dateEl&&dateEl.value||'').trim();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(target)){
+    showToast('日付はYYYY-MM-DD形式で入力してください');
+    return;
+  }
+  const logs=getBacktestLogs();
+  const matchCount=logs.filter(l=>l.date===target).length;
+  if(!matchCount){
+    showToast(`${target}のログは見つかりませんでした`);
+    return;
+  }
+  if(!confirm(`${target}のログを${matchCount}件削除します。よろしいですか？`)) return;
+  const remaining=logs.filter(l=>l.date!==target);
+  saveBacktestLogs(remaining);
+  showToast(`${target}のログ${matchCount}件を削除しました`);
   updateLogCount();
   updateTodayStats();
   renderScoreDiagnosis();
