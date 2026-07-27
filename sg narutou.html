@@ -527,7 +527,9 @@ function getLogs(){try{return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');
 // 圧縮対象から除外するレアケース判定（逃げ固定：軸1号艇かつ逃げ率85%以上。厳密な条件はSTも見るが、
 // ログ圧縮の判定では近似で十分——多少余分に残っても実害はなく、逆に消えると分析不能になるため）
 function isRareCase(entry){
-  return entry.mode==='normal' && String(entry.maru)==='1' && (entry.nigeRate||0)>=85;
+  // 2026-07-27修正: 逃げ固定が独立モード'nigekotei'になったため、新しいログはそちらで判定する。
+  // 過去ログ(mode==='normal'のまま逃げ固定相当だったもの)との互換のため旧条件も残す。
+  return entry.mode==='nigekotei' || (entry.mode==='normal' && String(entry.maru)==='1' && (entry.nigeRate||0)>=85);
 }
 function manualCompactSgLogs(){
   const logs=getLogs();
@@ -604,18 +606,27 @@ function setApiKey(k){localStorage.setItem(GEMINI_KEY,k);}
 var selectedNigeMode = 'auto'; // buildBetsNormal内部が参照。モードごとにsetMode側で確定させる
 var selectedHimoMode = 'standard'; // buildBetsNormal内部が参照（'standard'|'adjusted'）
 
-function setMode(mode){
+function setMode(mode, isManualOverride){
+  if(isManualOverride===undefined) isManualOverride=true; // ボタンクリック(onclick)はデフォルトで手動上書き扱い
   selectedMode=mode;
   ['normal','himo_adjust','nito','nigekotei','are_weak','are_strong','nigenashi','skip'].forEach(m=>{
     const el=document.getElementById('mode-btn-'+m);
     if(el) el.classList.toggle('active',m===mode);
   });
-  // モードごとにbuildBetsNormal側のnigeMode/himoModeを直接確定させる（auto検出を上書き）
-  if(mode==='normal'){ selectedNigeMode='low'; selectedHimoMode='standard'; }
-  else if(mode==='himo_adjust'){ selectedNigeMode='low'; selectedHimoMode='adjusted'; }
+  // モードごとにbuildBetsNormal側のnigeMode/himoModeを確定させる。
+  // 2026-07-27バグ修正1: 予想実行直後の自動提案(isManualOverride=false)では、
+  // 「通常」を選んでもnigeModeを'low'に固定してはいけない（2艇頭/逃げ固定の自動判定が効かなくなる）。
+  // 自動提案時は'auto'のままにして、buildBetsNormal内部のnigeRate/ST判定に任せる。
+  // ユーザーが「通常」ボタンを手動で押した時だけ、明示的に'low'へ固定する。
+  // 2026-07-27バグ修正2: are_weak/are_strong/nigenashi/skipに切り替えても、
+  // 直前に選んでいた「2艇頭」「逃げ固定」等のnigeModeがそのまま残ってしまい、
+  // 逃げなしモードのはずが逃げ固定相当の買い目が出るバグがあったため、
+  // これらのモードでは必ずnigeMode/himoModeを'auto'/'standard'にリセットする。
+  if(mode==='normal'){ selectedNigeMode=isManualOverride?'low':'auto'; selectedHimoMode='standard'; }
+  else if(mode==='himo_adjust'){ selectedNigeMode=isManualOverride?'low':'auto'; selectedHimoMode='adjusted'; }
   else if(mode==='nito'){ selectedNigeMode='mid'; selectedHimoMode='standard'; }
   else if(mode==='nigekotei'){ selectedNigeMode='high'; selectedHimoMode='standard'; }
-  // are_weak/are_strong/nigenashi/skipはnigeMode/himoModeを使わないため変更しない
+  else { selectedNigeMode='auto'; selectedHimoMode='standard'; } // are_weak/are_strong/nigenashi/skip
 }
 
 function applyMode(){
@@ -1990,7 +2001,8 @@ function updateEntryFlag(){
 function updateDangoFlag(std){
   const el=document.getElementById('dango-flag');
   if(!el) return;
-  if(currentCalcData && currentCalcData.mode==='normal' && std>=14 && std<22){
+  const _normalFamily=currentCalcData&&(currentCalcData.mode==='normal'||currentCalcData.mode==='himo_adjust'||currentCalcData.mode==='nito'||currentCalcData.mode==='nigekotei');
+  if(_normalFamily && std>=14 && std<22){
     el.innerHTML='🤔 中途半端ゾーン：団子度'+std.toFixed(1)+'（通常判定でROIが弱い帯。見送り検討）';
     el.style.cssText='display:block;margin-top:8px;padding:8px 10px;background:rgba(180,140,40,0.15);border:1px solid rgba(180,140,40,0.4);border-radius:6px;font-size:12px;color:#d8b870;';
   } else {
@@ -2110,7 +2122,7 @@ async function runYoso(){
     currentAreScores=areScores;
     updateEntryFlag(); // 予想実行直後にすぐ表示（買い目生成を待たない）
 
-    setMode(mode);
+    setMode(mode, false); // 自動提案なのでnigeMode/himoModeは強制しない
 
     // bet-sectionは非表示のまま（ユーザーがモード選択後に生成）
     document.getElementById('bet-section').style.display='none';
@@ -2130,7 +2142,7 @@ function clearYoso(){
   currentCalcData=null;
   currentParsedData=null;
   currentAreScores=null;
-  setMode('normal');
+  setMode('normal', false);
 }
 
 // ============================================================
@@ -3205,7 +3217,9 @@ function writeToV2(entry){
 // kyotei_v2の保存(容量超過に対応。古いログのscores明細だけ間引いて再試行する。結果自体は保持)
 // 逃げ固定（レアケース、n=8で頭打ちの構造的課題）はsg_narutou側と同じ理由で圧縮対象から除外する
 function isRareCaseV2(l){
-  return l.shinkido==='通' && String(l.maru)==='1' && (l.nigeRate||0)>=85;
+  // 2026-07-27修正: 逃げ固定が独立モードになり、shinkidoラベルが'通'ではなく'固'になったため対応。
+  // 過去ログ(shinkido==='通'のまま逃げ固定相当だったもの)との互換のため旧条件も残す。
+  return l.shinkido==='固' || (l.shinkido==='通' && String(l.maru)==='1' && (l.nigeRate||0)>=85);
 }
 function saveV2Logs(v2logs){
   try{
@@ -4017,7 +4031,7 @@ function showHitAnalysis(){
   // モード別
   const modeStat={normal:{hit:0,total:0},are:{hit:0,total:0}};
   done.forEach(l=>{
-    const m=l.shinkido==='荒'?'are':'normal';
+    const m=(l.shinkido==='荒'||l.shinkido==='強'||l.shinkido==='弱')?'are':'normal';
     modeStat[m].total++;
     if(l.miss.includes('hit')) modeStat[m].hit++;
   });
@@ -4107,7 +4121,7 @@ function showMissDetail(){
     const inBet=allBets.includes(combo);
     const mLabel=MISS_LABELS[((l.miss||[])[0])||'']||'外れ';
     const mColor=((l.miss||[])[0])==='ichaku'?'var(--red)':((l.miss||[])[0])==='nichaku'?'var(--blue)':'var(--muted)';
-    const modeLabel=l.shinkido==='荒'?'荒れ':'通常';
+    const modeLabel=l.shinkido==='荒'?'荒れ':l.shinkido==='強'?'荒れ・強':l.shinkido==='弱'?'荒れ・弱':l.shinkido==='逃'?'逃げなし':l.shinkido==='2'?'2艇頭':l.shinkido==='固'?'逃げ固定':'通常';
     html+=`<div style="background:var(--surface2);border-radius:6px;padding:10px;margin-bottom:6px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
         <span style="font-size:13px;font-weight:700;">${l.venue||'鳴門'} ${l.raceNum} <span style="font-size:10px;color:var(--muted);">[${modeLabel}]</span></span>
