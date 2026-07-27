@@ -1387,9 +1387,9 @@ function runScreening(){
       const estRoi=estimateROI(mode, venue);
       const estHit=estimateHitRate(mode, venue);
 
-      results.push({venue, raceNum:(d.raceNum||'?').replace('R','').trim(), mode, nigeHint, areIndex, nigeRate, isGoodVenue, estRoi, estHit});
+      results.push({venue, raceNum:(d.raceNum||'?').replace('R','').trim(), shimekiri:d.shimekiri||'', mode, nigeHint, areIndex, nigeRate, isGoodVenue, estRoi, estHit});
     }catch(e){
-      results.push({venue:'(解析失敗)', raceNum:'?', mode:'error', nigeHint:'', areIndex:0, nigeRate:0, isGoodVenue:false, estRoi:-999, estHit:0, error:e.message});
+      results.push({venue:'(解析失敗)', raceNum:'?', shimekiri:'', mode:'error', nigeHint:'', areIndex:0, nigeRate:0, isGoodVenue:false, estRoi:-999, estHit:0, error:e.message});
     }
   }
 
@@ -1417,8 +1417,9 @@ function runScreening(){
     const ml=modeLabel[r.mode]||{text:r.mode,color:'var(--text2)'};
     const venueBadge=r.isGoodVenue?'<span style="color:var(--gold);font-weight:700;">◎優良会場</span> ':'';
     const hintText=r.nigeHint?` / ${r.nigeHint}`:'';
+    const shimekiriText=r.shimekiri?` / 締切${r.shimekiri}`:'';
     html+=`<div style="padding:8px 10px;margin-bottom:6px;border-radius:6px;background:rgba(255,255,255,0.03);border-left:3px solid ${judge.color};font-size:12px;">
-      <b>${r.venue}${r.raceNum}R</b> <span style="color:${judge.color};font-weight:700;">${judge.text}</span><br>
+      <b>${r.venue}${r.raceNum}R</b> <span style="color:${judge.color};font-weight:700;">${judge.text}</span>${shimekiriText}<br>
       <span style="color:var(--text2);">推定的中率 ${r.estHit.toFixed(1)}% / 推定ROI ${r.estRoi.toFixed(1)}%</span><br>
       ${venueBadge}<span style="color:${ml.color};font-weight:700;">${ml.text}</span>${hintText}<br>
       荒れ指数${r.areIndex}点 / 逃げ率${r.nigeRate.toFixed(1)}%
