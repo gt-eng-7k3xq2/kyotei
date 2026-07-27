@@ -262,6 +262,7 @@
     <div class="card">
       <div class="card-title">📊 JSスコア計算結果</div>
       <div id="score-display"></div>
+      <div id="data-gap-alert" style="display:none;"></div>
       <div id="mode-result" style="margin-top:8px;"></div>
       <hr class="divider">
       <label style="margin-bottom:8px;">モード選択</label>
@@ -854,6 +855,46 @@ function refreshBetsForCount(){
 // ============================================================
 // データパース（競艇日和テキスト → 構造化）
 // ============================================================
+// ============================================================
+// BM抽出データの抜け・漏れチェック（2026-07-27追加）
+// オッズ・直前情報（展示/周り足/直線/周回/直前ST）が貼り付けデータに含まれていない場合に警告する。
+// 各項目は6艇分すべてが初期値0(=未検出)のときだけ「セクションごと無い」と判定する
+// （1艇だけ実測0という現実的なケースはほぼ無いため、この判定で十分）。
+// ============================================================
+function validateExtractedData(d, rawText){
+  const warnings=[];
+  try{
+    const oddsMap=extractOddsMap(rawText||'');
+    if(!oddsMap || !Object.keys(oddsMap).length){
+      warnings.push('オッズ');
+    }
+  }catch(e){ warnings.push('オッズ'); }
+
+  const checkAllZero=(key,label)=>{
+    const allZero=(d.boats||[]).every(b=>!b || !b[key]);
+    if(allZero) warnings.push(label);
+  };
+  checkAllZero('tenji','展示タイム');
+  checkAllZero('syukaiFoot','周り足');
+  checkAllZero('chokusen','直線');
+  checkAllZero('syukai','周回');
+  checkAllZero('directST','直前ST');
+
+  return warnings;
+}
+
+function renderDataGapAlert(warnings){
+  const el=document.getElementById('data-gap-alert');
+  if(!el) return;
+  if(!warnings || !warnings.length){
+    el.style.display='none';
+    el.innerHTML='';
+    return;
+  }
+  el.style.cssText='display:block;margin-top:8px;padding:8px 10px;background:rgba(200,60,60,0.15);border:1px solid rgba(200,60,60,0.5);border-radius:6px;font-size:12px;color:#f0a0a0;';
+  el.innerHTML='⚠️ データ抜け疑い: '+warnings.join('・')+' が検出できませんでした（BM貼り付け漏れの可能性。手元のデータを確認してください）';
+}
+
 function parseData(text){
   const d={boats:[]};
   for(let i=1;i<=6;i++) d.boats.push({no:i,name:'',regno:'',nigerate6m:0,nigerate1y:0,atchiNige:0,atchiNigeCount:0,sgNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sg1chakuRate:0,sg1chakuCount:0,ippan2ren:0,konki2ren:0,konki3ren:0,konkiAvgST:0,wakuAvgST:0,fCount:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,avgTenji:0,syukai:0,syukaiFoot:0,avgSyukaiFoot:0,chokusen:0,directST:0,isExhibitF:false,isF:false});
@@ -2037,6 +2078,9 @@ async function runYoso(){
     // 1. データパース
     const d=parseData(data);
 
+    // 1.5 抜け・漏れチェック（オッズ・直前情報）
+    renderDataGapAlert(validateExtractedData(d, data));
+
     // 2. 荒れスコア計算
     const areScores=calcAreScore(d);
 
@@ -2142,6 +2186,7 @@ function clearYoso(){
   currentCalcData=null;
   currentParsedData=null;
   currentAreScores=null;
+  renderDataGapAlert([]);
   setMode('normal', false);
 }
 
