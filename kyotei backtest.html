@@ -77,6 +77,21 @@ textarea{resize:vertical;}
 </div>
 
 <div class="card">
+  <div class="section-title">📋 前日スクリーニング</div>
+  <p style="font-size:11px;color:var(--text2);margin-bottom:8px;">
+    前日時点のBMデータ（複数レース、###区切り）を貼ると、荒れ指数・逃げ率・モード判定だけを計算して一覧表示します。
+    展示・直線・周り足・直前ST・オッズはまだ無い前提なので、結果登録やスコア計算には使いません。参入レースの絞り込み専用です。
+  </p>
+  <textarea id="screening-paste" rows="6" placeholder="1レース目のデータ
+###
+2レース目のデータ
+###
+3レース目のデータ"></textarea>
+  <button class="btn btn-gold" style="width:100%;margin-top:8px;" onclick="runScreening()">🔎 スクリーニング実行</button>
+  <div id="screening-results" style="margin-top:10px;"></div>
+</div>
+
+<div class="card">
   <div class="section-title">結果を一括入力</div>
   <p style="font-size:11px;color:var(--text2);margin-bottom:8px;">
     払戻データ収集用ブックマークレットでコピーしたJSON（[{"v":場,"r":レース,"c":結果,"p":払戻,...}]形式）を貼ると、
@@ -904,8 +919,8 @@ function buildBetsNormal(ranking, pts, parsedData){
   } else if(nigeMode === 'mid'){
     // ===== 2艇頭モード =====
     // 2026-07-27改訂: 887件の実績分析で◎が実際に1着だった割合66.5%に対し○は13.0%と、
-    // 前提だった「五分五分」から大きくズレていたことが判明。◎頭側の3着候補を6位評価まで広げ、
-    // ○頭側は3着候補を2つに絞ることで、実績比に近い配分(◎頭4点:○頭2点)に変更。
+    // 前提だった「五分五分」から大きくズレていたことが判明。◎頭側を手厚く、○頭側を1点まで絞ることで
+    // 実績比に近い配分(◎頭5点:○頭1点)に変更。6位評価艇は「キリがない」ため対象外、5位評価までで組む。
     // （sg_narutou.htmlと必ず同期させること）
     // スジ補正適用: 2着候補の並び順をスジで補正
     let rankOrder2 = activeBoats.slice().sort((a,b)=>{
@@ -917,20 +932,23 @@ function buildBetsNormal(ranking, pts, parsedData){
     if(parseInt(maru)>=4 && activeBoats.includes(1)){
       rankOrder2 = [1, ...rankOrder2.filter(b=>b!==1)];
     }
-    // ◎頭側の3着候補: 6位評価まで広げる（4点）
-    const thirdAllMaruFirst = rankOrder2.filter(b=>b!==maru&&b!==shiro&&(rankMap[b]||9)<=6).slice(0,4);
-    // ○頭側の3着候補: 上位2つに絞る（2点、実績上○が1着になる比率は低いため縮小）
-    const thirdAllShiroFirst = rankOrder2.filter(b=>b!==maru&&b!==shiro&&(rankMap[b]||9)<=5).slice(0,2);
+    // 3着候補は5位評価まで（6位は対象外）
+    const thirdAll2 = rankOrder2.filter(b=>b!==maru&&b!==shiro&&(rankMap[b]||9)<=5);
 
-    // ◎頭・2着=○・3着=残り（評価順、6位まで）
-    for(const c of thirdAllMaruFirst){
+    // ◎頭・2着=○・3着=残り（評価順、5位まで。3点）
+    for(const c of thirdAll2){
       honsen.push({val:`${maru}-${shiro}-${c}`, score:10+(rankMap[c]||9)});
     }
-    // ○頭・2着=◎・3着=残り（評価順、上位2つのみ）
-    for(const c of thirdAllShiroFirst){
+    // ◎頭・2着=▲以下・3着=上位評価（実績上○が2着に来るケースの取りこぼしを補う。2点）
+    const outerCandidates2=rankOrder2.filter(b=>b!==maru&&b!==shiro&&(rankMap[b]||9)<=5);
+    for(const b of outerCandidates2.slice(0,2)){
+      honsen.push({val:`${maru}-${b}-${shiro}`, score:100+(rankMap[b]||9)});
+    }
+    // ○頭・2着=◎・3着=残り（評価順、上位1つのみ。実績上○が1着になる比率は低いため最小限に）
+    for(const c of thirdAll2.slice(0,1)){
       honsen.push({val:`${shiro}-${maru}-${c}`, score:200+(rankMap[c]||9)});
     }
-    // 抑え: ◎頭・2着=▲以下
+    // 抑え: ◎頭・2着=▲以下・3着=▲以下（5位評価まで）
     const osaee2nd2=rankOrder2.filter(b=>b!==maru&&b!==shiro&&(rankMap[b]||9)<=5);
     for(const b of osaee2nd2){
       const thirds2=rankOrder2.filter(c=>c!==maru&&c!==b&&(rankMap[c]||9)<=5);
@@ -1296,6 +1314,114 @@ function applyPtsToAll(){
     if(rtypeEl){rtypeEl.value=rtype;}
   });
   showToast(`${count}件のレースに${pts}点・${({ippan:'一般戦',g2g3:'G2/G3',g1:'G1',sg:'SG'})[rtype]}を適用しました`);
+}
+
+// ============================================================
+// 前日スクリーニング（2026-07-27追加）
+// calcAreIndex/judgeModeは展示・直線・周り足・直前ST・オッズを一切使わないため、
+// 前日時点のBM（夜間検証と同じもの）だけで荒れ指数・逃げ率・モード判定が可能。
+// スコア計算(calcAreScore)自体は◎○▲の判定とhasSTThreat判定に必要なので呼ぶが、
+// directSTは前日データでは検出できず0.20固定フォールバックになるため、
+// 2艇頭/逃げ固定の境界(STの脅威判定)は前日時点では参考値扱いとする。
+// ============================================================
+const GOOD_VENUES=['唐津','丸亀','江戸川','多摩川','児島']; // n≥40でROI上位が安定して確認できた会場（2026-07-27分析、江戸川106.5%・唐津91.8%・丸亀91.3%・多摩川86.1%・児島82.9%）
+// 実測ROI(%)。2026-07-27時点、3025件のログ分析より（n≥40の会場のみ採用）
+const VENUE_ROI={'唐津':91.8,'丸亀':91.3,'江戸川':106.5,'多摩川':86.1,'児島':82.9};
+const OVERALL_AVG_ROI=65.4; // 全体平均ROI（2026-07-24分の抽出バグ分除く2845件、venue補正の基準値）
+const MODE_ROI_BASE={
+  are_strong:79.0,  // n=304、実測
+  normal:62.9,      // n=2120、実測（2艇頭/逃げ固定/通常/紐調整版すべて込みの平均）
+  are_weak:45.1,    // n=50、実測
+  nigenashi:65.0    // 参考値。旧設計（1号艇固定）でのROIで、2026-07-27の再設計後はまだ実績なし
+};
+// 的中率(%)。ROIと同じ2026-07-27時点のログ分析より（n≥40の会場のみ採用）
+const VENUE_HITRATE={'唐津':56.0,'丸亀':40.0,'江戸川':46.3,'多摩川':38.6,'児島':42.7};
+const OVERALL_AVG_HITRATE=36.6; // 全体平均的中率
+const MODE_HITRATE_BASE={
+  are_strong:39.9,  // n=271、実測
+  normal:39.1,      // n=1540、実測
+  are_weak:32.6,    // n=43、実測
+  nigenashi:21.7    // 参考値。旧設計（1号艇固定）での的中率で、再設計後はまだ実績なし。新設計はもっと高くなる想定だが未検証
+};
+
+function estimateROI(mode, venue){
+  const base=MODE_ROI_BASE[mode]!==undefined?MODE_ROI_BASE[mode]:OVERALL_AVG_ROI;
+  const venueDelta=VENUE_ROI[venue]!==undefined?(VENUE_ROI[venue]-OVERALL_AVG_ROI):0;
+  return base+venueDelta;
+}
+
+function estimateHitRate(mode, venue){
+  const base=MODE_HITRATE_BASE[mode]!==undefined?MODE_HITRATE_BASE[mode]:OVERALL_AVG_HITRATE;
+  const venueDelta=VENUE_HITRATE[venue]!==undefined?(VENUE_HITRATE[venue]-OVERALL_AVG_HITRATE):0;
+  return base+venueDelta;
+}
+
+function runScreening(){
+  const raw=document.getElementById('screening-paste').value;
+  if(!raw.trim()){showToast('データを貼り付けてください');return;}
+  const chunks=raw.split(/^\s*###\s*$/m).map(c=>c.trim()).filter(c=>c.length>0);
+  if(!chunks.length){showToast('分割できるデータがありません');return;}
+
+  const results=[];
+  for(const chunk of chunks){
+    try{
+      const d=parseData(chunk);
+      const areScores=calcAreScore(d);
+      const{areIndex,nigeRate}=calcAreIndex(d);
+      let mode=judgeMode(areIndex,nigeRate);
+      const boat1Rank=areScores.findIndex(s=>String(s.no)==='1');
+      if(nigeRate<30 && boat1Rank>0 && boat1Rank<5){
+        mode='nigenashi';
+      }
+      // 通常系のみ、2艇頭/逃げ固定の参考区分もついでに出す（前日時点なのでSTは未反映の参考値）
+      let nigeHint='';
+      if(mode==='normal'){
+        const maru1=boat1Rank===0;
+        if(maru1 && nigeRate>=85) nigeHint='逃げ固定候補';
+        else if(maru1 && nigeRate>=50) nigeHint='2艇頭候補';
+      }
+      const venue=d.venue||'不明';
+      const isGoodVenue=GOOD_VENUES.includes(venue);
+      const estRoi=estimateROI(mode, venue);
+      const estHit=estimateHitRate(mode, venue);
+
+      results.push({venue, raceNum:(d.raceNum||'?').replace('R','').trim(), mode, nigeHint, areIndex, nigeRate, isGoodVenue, estRoi, estHit});
+    }catch(e){
+      results.push({venue:'(解析失敗)', raceNum:'?', mode:'error', nigeHint:'', areIndex:0, nigeRate:0, isGoodVenue:false, estRoi:-999, estHit:0, error:e.message});
+    }
+  }
+
+  results.sort((a,b)=>b.estRoi-a.estRoi);
+
+  const modeLabel={
+    are_strong:{text:'⚡荒れ・強', color:'var(--gold)'},
+    are_weak:{text:'🌊荒れ・弱', color:'#7ec8e3'},
+    nigenashi:{text:'🚫逃げなし', color:'#e37e7e'},
+    normal:{text:'🔒通常', color:'var(--text2)'},
+    error:{text:'⚠️解析失敗', color:'var(--red)'}
+  };
+
+  let html=`<p style="font-size:11px;color:var(--text2);margin-bottom:6px;">${results.length}レース中、推定ROIが高い順に表示（過去実績ベースの目安。直前ST・オッズは未反映）</p>`;
+  for(const r of results){
+    if(r.mode==='error'){
+      html+=`<div style="padding:8px;margin-bottom:6px;border-radius:6px;background:rgba(200,60,60,0.1);border:1px solid rgba(200,60,60,0.4);font-size:12px;">⚠️ 解析失敗: ${r.error||''}</div>`;
+      continue;
+    }
+    // 参入判定: 推定ROI 80%以上=◎参入、65〜80%=△様子見、65%未満=✗見送り
+    // （65%は全体平均ROI、80%は荒れ・強単体の実測値79.0%が目安）
+    const judge=r.estRoi>=80?{text:'◎参入',color:'var(--green)'}:r.estRoi>=65?{text:'△様子見',color:'var(--gold)'}:{text:'✗見送り',color:'var(--red)'};
+    const ml=modeLabel[r.mode]||{text:r.mode,color:'var(--text2)'};
+    const venueBadge=r.isGoodVenue?'<span style="color:var(--gold);font-weight:700;">◎優良会場</span> ':'';
+    const hintText=r.nigeHint?` / ${r.nigeHint}`:'';
+    html+=`<div style="padding:8px 10px;margin-bottom:6px;border-radius:6px;background:rgba(255,255,255,0.03);border-left:3px solid ${judge.color};font-size:12px;">
+      <b>${r.venue}${r.raceNum}R</b> <span style="color:${judge.color};font-weight:700;">${judge.text}</span><br>
+      <span style="color:var(--text2);">推定的中率 ${r.estHit.toFixed(1)}% / 推定ROI ${r.estRoi.toFixed(1)}%</span><br>
+      ${venueBadge}<span style="color:${ml.color};font-weight:700;">${ml.text}</span>${hintText}<br>
+      荒れ指数${r.areIndex}点 / 逃げ率${r.nigeRate.toFixed(1)}%
+    </div>`;
+  }
+  document.getElementById('screening-results').innerHTML=html;
+  showToast(`✅ ${results.length}レースをスクリーニングしました`);
 }
 
 function splitBulkPaste(){
