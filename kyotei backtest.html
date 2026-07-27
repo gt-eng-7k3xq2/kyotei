@@ -89,6 +89,7 @@ textarea{resize:vertical;}
 3レース目のデータ"></textarea>
   <button class="btn btn-gold" style="width:100%;margin-top:8px;" onclick="runScreening()">🔎 スクリーニング実行</button>
   <div id="screening-results" style="margin-top:10px;"></div>
+  <button class="btn" id="screening-copy-btn" style="width:100%;margin-top:8px;display:none;" onclick="copyScreeningResults()">📋 結果をコピー（Claudeに貼り付け用）</button>
 </div>
 
 <div class="card">
@@ -1426,7 +1427,34 @@ function runScreening(){
     </div>`;
   }
   document.getElementById('screening-results').innerHTML=html;
+  lastScreeningResults=topResults;
+  const copyBtn=document.getElementById('screening-copy-btn');
+  if(copyBtn) copyBtn.style.display=topResults.length?'block':'none';
   showToast(`✅ ${results.length}レースをスクリーニングしました`);
+}
+
+let lastScreeningResults=[]; // コピー用に直近のスクリーニング結果を保持
+
+function copyScreeningResults(){
+  if(!lastScreeningResults||!lastScreeningResults.length){showToast('コピーする結果がありません');return;}
+  const modeLabelText={
+    are_strong:'荒れ・強', are_weak:'荒れ・弱', nigenashi:'逃げなし', normal:'通常'
+  };
+  const lines=lastScreeningResults.map(r=>{
+    const ml=modeLabelText[r.mode]||r.mode;
+    const shime=r.shimekiri?`締切${r.shimekiri}`:'締切不明';
+    return `${r.venue}${r.raceNum}R ${shime} 推定ROI${r.estRoi.toFixed(1)}% ${ml}${r.isGoodVenue?'(優良会場)':''}`;
+  });
+  const text='【前日スクリーニング結果】\n'+lines.join('\n');
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>{
+      showToast('✅ コピーしました。Claudeに貼り付けてください');
+    }).catch(()=>{
+      showToast('⚠️ コピーに失敗しました');
+    });
+  } else {
+    showToast('⚠️ このブラウザはコピー機能に対応していません');
+  }
 }
 
 function splitBulkPaste(){
