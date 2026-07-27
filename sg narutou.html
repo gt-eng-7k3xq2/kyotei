@@ -606,6 +606,7 @@ function setApiKey(k){localStorage.setItem(GEMINI_KEY,k);}
 // ============================================================
 var selectedNigeMode = 'auto'; // buildBetsNormal内部が参照。モードごとにsetMode側で確定させる
 var selectedHimoMode = 'standard'; // buildBetsNormal内部が参照（'standard'|'adjusted'）
+var lastResolvedNigeMode = null; // buildBetsNormalが実際に使ったnigeMode(low/mid/high)。ログ記録用（2026-07-27追加）
 
 function setMode(mode, isManualOverride){
   if(isManualOverride===undefined) isManualOverride=true; // ボタンクリック(onclick)はデフォルトで手動上書き扱い
@@ -729,6 +730,7 @@ function generateBets(d, areScores, mode){
   // 1号艇も他5艇と対等にスコア順で扱う（買い目構成はbuildBetsNormalと共通化）。
   // 旧buildBetsNigeNashiは使用しなくなったが、過去ログとの互換確認用に関数自体は残す。
   // （kyotei_backtest.htmlと必ず同期させること）
+  if(mode==='are_weak'||mode==='are_strong') lastResolvedNigeMode=null; // buildBetsNormalを通らないので明示的にリセット
   const betsRaw=(mode==='are_weak'||mode==='are_strong')?buildBetsAre(ranking,selectedBetCount,nigeRate):buildBetsNormal(ranking,selectedBetCount,currentParsedData);
 
   // 自信度計算（2026-07-24: 実績ベースの校正テーブルに刷新済み。定義はトップレベルのcalcConfidence参照）
@@ -759,7 +761,7 @@ function generateBets(d, areScores, mode){
   }
 
   document.getElementById('bet-section').style.display='block';
-  currentCalcData={racenum,honme,nigeRate,areIndex,mode,suggestedMode:lastSuggestedMode,betcount:betsRaw.length,shikin,ranking,betsRaw};
+  currentCalcData={racenum,honme,nigeRate,areIndex,mode,suggestedMode:lastSuggestedMode,nigeMode:lastResolvedNigeMode,betcount:betsRaw.length,shikin,ranking,betsRaw};
   aiTenkaiLine=null; // 新しいレースの予想なので前のAI展開文は破棄
   recalcAlloc();
   updateXPreview();
@@ -823,6 +825,7 @@ function refreshBetsForCount(){
   const ranking=currentAreScores.map((s,i)=>({rank:i+1,boat:parseInt(s.no),mark:marks[i]||'×',score:s.raw}));
   const nigeRate=currentCalcData.nigeRate||0;
   const oddsMap=extractOddsMap(document.getElementById('inp-data').value);
+  if(currentCalcData.mode==='are_weak'||currentCalcData.mode==='are_strong') lastResolvedNigeMode=null;
   const newBets=(currentCalcData.mode==='are_weak'||currentCalcData.mode==='are_strong')
     ?buildBetsAre(ranking,selectedBetCount,nigeRate)
     :buildBetsNormal(ranking,selectedBetCount,currentParsedData);
@@ -1646,6 +1649,7 @@ function buildBetsNormal(ranking, pts, parsedData){
   const nigeMode = (typeof selectedNigeMode !== 'undefined' && selectedNigeMode !== 'auto')
                  ? selectedNigeMode
                  : _autoNigeMode;
+  lastResolvedNigeMode = nigeMode; // ログ記録用（2026-07-27追加）。呼ぶたびに必ず上書きされるので古い値が残る心配はない
   const isNigeRace = nigeMode !== 'low';
 
   if(ranking.length<4) return [];
@@ -3169,6 +3173,7 @@ function saveResultInner(resultType){
     honme:currentCalcData.honme,
     mode:currentCalcData.mode,
     suggestedMode:currentCalcData.suggestedMode||null,
+    nigeMode:currentCalcData.nigeMode||null, // 通常モード内の実際の買い目構成(low/mid/high)。are_weak/are_strongの時はnull。2艇頭リバランス等の効果検証用（2026-07-27追加）
     himoMode:(typeof selectedHimoMode!=='undefined')?selectedHimoMode:'standard', // 通常モードの紐ロジック（標準/調整版）
     nigeRate:currentCalcData.nigeRate,
     areIndex:currentCalcData.areIndex,
@@ -3855,6 +3860,8 @@ function logSelection(){
     date:new Date().toISOString().slice(0,10),
     venue, racenum,
     mode:currentCalcData.mode||null,
+    nigeMode:currentCalcData.nigeMode||null, // 通常モード内の実際の買い目構成(low/mid/high)。2026-07-27追加
+    himoMode:(typeof selectedHimoMode!=='undefined')?selectedHimoMode:'standard',
     areIndex:currentCalcData.areIndex??null,
     nigeRate:currentCalcData.nigeRate??null,
     scoreVersion:SCORE_ENGINE_VERSION,
@@ -4371,6 +4378,7 @@ function regenerateBets(){
   // 買い目再生成
   const nigeRate=currentCalcData?currentCalcData.nigeRate:0;
   const oddsMap=extractOddsMap(document.getElementById('inp-data').value);
+  if(selectedMode==='are_weak'||selectedMode==='are_strong') lastResolvedNigeMode=null;
   const newBets=(selectedMode==='are_weak'||selectedMode==='are_strong')
     ?buildBetsAre(newRanking,selectedBetCount,nigeRate)
     :buildBetsNormal(newRanking,selectedBetCount,currentParsedData);

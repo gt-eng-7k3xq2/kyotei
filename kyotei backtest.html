@@ -151,6 +151,7 @@ let selectedNigeMode='auto';
 // 紐調整版: 通常モード(low)の抑え2点のうち「◎-5位-○固定」を「◎-4位-5位」に差し替えるバリエーション。
 // 'standard'=現行, 'adjusted'=調整版。84件分析で最も効率的だった入替（sg_narutou.htmlと必ず同期させること）
 let selectedHimoMode='standard';
+let lastResolvedNigeMode=null; // buildBetsNormalが実際に使ったnigeMode(low/mid/high)。ログ記録用（2026-07-27追加）
 let selectedRaceType='ippan'; // 'ippan','g2g3','g1','sg'（既定は一般戦。レースごとにUIから変更）
 
 // モーター履歴セクションのパース（ログ記録専用。calcAreScore等のスコア計算には一切使用しない）
@@ -858,6 +859,7 @@ function buildBetsNormal(ranking, pts, parsedData){
   const nigeMode = (typeof selectedNigeMode !== 'undefined' && selectedNigeMode !== 'auto')
                  ? selectedNigeMode
                  : _autoNigeMode;
+  lastResolvedNigeMode = nigeMode; // ログ記録用（2026-07-27追加）。呼ぶたびに必ず上書きされるので古い値が残る心配はない
   const isNigeRace = nigeMode !== 'low';
 
   if(ranking.length<4) return [];
@@ -1391,7 +1393,10 @@ function runScreening(){
     }
   }
 
-  results.sort((a,b)=>b.estRoi-a.estRoi);
+  const errorResults=results.filter(r=>r.mode==='error');
+  const validResults=results.filter(r=>r.mode!=='error').sort((a,b)=>b.estRoi-a.estRoi);
+  const TOP_N=10;
+  const topResults=validResults.slice(0,TOP_N);
 
   const modeLabel={
     are_strong:{text:'⚡荒れ・強', color:'var(--gold)'},
@@ -1401,12 +1406,11 @@ function runScreening(){
     error:{text:'⚠️解析失敗', color:'var(--red)'}
   };
 
-  let html=`<p style="font-size:11px;color:var(--text2);margin-bottom:6px;">${results.length}レース中、推定ROIが高い順に表示（過去実績ベースの目安。直前ST・オッズは未反映）</p>`;
-  for(const r of results){
-    if(r.mode==='error'){
-      html+=`<div style="padding:8px;margin-bottom:6px;border-radius:6px;background:rgba(200,60,60,0.1);border:1px solid rgba(200,60,60,0.4);font-size:12px;">⚠️ 解析失敗: ${r.error||''}</div>`;
-      continue;
-    }
+  let html=`<p style="font-size:11px;color:var(--text2);margin-bottom:6px;">${results.length}レース中、推定ROI上位${topResults.length}件を表示（過去実績ベースの目安。直前ST・オッズは未反映）</p>`;
+  for(const r of errorResults){
+    html+=`<div style="padding:8px;margin-bottom:6px;border-radius:6px;background:rgba(200,60,60,0.1);border:1px solid rgba(200,60,60,0.4);font-size:12px;">⚠️ 解析失敗: ${r.error||''}</div>`;
+  }
+  for(const r of topResults){
     // 参入判定: 推定ROI 80%以上=◎参入、65〜80%=△様子見、65%未満=✗見送り
     // （65%は全体平均ROI、80%は荒れ・強単体の実測値79.0%が目安）
     const judge=r.estRoi>=80?{text:'◎参入',color:'var(--green)'}:r.estRoi>=65?{text:'△様子見',color:'var(--gold)'}:{text:'✗見送り',color:'var(--red)'};
@@ -1585,6 +1589,7 @@ function runAll(){
       // 1号艇も他5艇と対等にスコア順で扱う（買い目構成はbuildBetsNormalと共通化）。
       // 旧buildBetsNigeNashiは使用しなくなったが、過去ログとの互換確認用に関数自体は残す。
       // （sg_narutou.htmlと必ず同期させること）
+      if(mode==='are_weak'||mode==='are_strong') lastResolvedNigeMode=null; // buildBetsNormalを通らないので明示的にリセット（古い値の残留防止）
       const betsRaw=(mode==='are_weak'||mode==='are_strong')?buildBetsAre(ranking,pts,nigeRate):buildBetsNormal(ranking,pts,d);
 
       const allBets=betsRaw.map(b=>b.val);
@@ -1632,6 +1637,7 @@ function runAll(){
         racenum:(d.raceNum||'?').replace('R','').trim(),
         mode,
         himoMode:(typeof selectedHimoMode!=='undefined')?selectedHimoMode:'standard', // 通常モードの紐ロジック（標準/調整版）。今後の比較検証用
+        nigeMode:lastResolvedNigeMode, // 通常モード内の実際の買い目構成(low/mid/high)。are_weak/are_strongの時はnull。2艇頭リバランス等の効果検証用（2026-07-27追加）
         nigeRate,
         areIndex,
         betcount:betsRaw.length,
