@@ -1707,8 +1707,8 @@ function buildBetsNormal(ranking, pts, parsedData){
   } else if(nigeMode === 'mid'){
     // ===== 2艇頭モード =====
     // 2026-07-27改訂: 887件の実績分析で◎が実際に1着だった割合66.5%に対し○は13.0%と、
-    // 前提だった「五分五分」から大きくズレていたことが判明。◎頭側の3着候補を6位評価まで広げ、
-    // ○頭側は3着候補を2つに絞ることで、実績比に近い配分(◎頭4点:○頭2点)に変更。
+    // 前提だった「五分五分」から大きくズレていたことが判明。◎頭側を手厚く、○頭側を1点まで絞ることで
+    // 実績比に近い配分(◎頭5点:○頭1点)に変更。6位評価艇は「キリがない」ため対象外、5位評価までで組む。
     // （kyotei_backtest.htmlと必ず同期させること）
     // スジ補正適用: 2着候補の並び順をスジで補正
     let rankOrder2 = activeBoats.slice().sort((a,b)=>{
@@ -1720,20 +1720,23 @@ function buildBetsNormal(ranking, pts, parsedData){
     if(parseInt(maru)>=4 && activeBoats.includes(1)){
       rankOrder2 = [1, ...rankOrder2.filter(b=>b!==1)];
     }
-    // ◎頭側の3着候補: 6位評価まで広げる（4点）
-    const thirdAllMaruFirst = rankOrder2.filter(b=>b!==maru&&b!==shiro&&(rankMap[b]||9)<=6).slice(0,4);
-    // ○頭側の3着候補: 上位2つに絞る（2点、実績上○が1着になる比率は低いため縮小）
-    const thirdAllShiroFirst = rankOrder2.filter(b=>b!==maru&&b!==shiro&&(rankMap[b]||9)<=5).slice(0,2);
+    // 3着候補は5位評価まで（6位は対象外）
+    const thirdAll2 = rankOrder2.filter(b=>b!==maru&&b!==shiro&&(rankMap[b]||9)<=5);
 
-    // ◎頭・2着=○・3着=残り（評価順、6位まで）
-    for(const c of thirdAllMaruFirst){
+    // ◎頭・2着=○・3着=残り（評価順、5位まで。3点）
+    for(const c of thirdAll2){
       honsen.push({val:`${maru}-${shiro}-${c}`, score:10+(rankMap[c]||9)});
     }
-    // ○頭・2着=◎・3着=残り（評価順、上位2つのみ）
-    for(const c of thirdAllShiroFirst){
+    // ◎頭・2着=▲以下・3着=上位評価（実績上○が2着に来るケースの取りこぼしを補う。2点）
+    const outerCandidates2=rankOrder2.filter(b=>b!==maru&&b!==shiro&&(rankMap[b]||9)<=5);
+    for(const b of outerCandidates2.slice(0,2)){
+      honsen.push({val:`${maru}-${b}-${shiro}`, score:100+(rankMap[b]||9)});
+    }
+    // ○頭・2着=◎・3着=残り（評価順、上位1つのみ。実績上○が1着になる比率は低いため最小限に）
+    for(const c of thirdAll2.slice(0,1)){
       honsen.push({val:`${shiro}-${maru}-${c}`, score:200+(rankMap[c]||9)});
     }
-    // 抑え: ◎頭・2着=▲以下
+    // 抑え: ◎頭・2着=▲以下・3着=▲以下（5位評価まで）
     const osaee2nd2=rankOrder2.filter(b=>b!==maru&&b!==shiro&&(rankMap[b]||9)<=5);
     for(const b of osaee2nd2){
       const thirds2=rankOrder2.filter(c=>c!==maru&&c!==b&&(rankMap[c]||9)<=5);
