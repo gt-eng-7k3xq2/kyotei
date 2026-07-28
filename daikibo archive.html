@@ -21,6 +21,10 @@ textarea,input,select{width:100%;background:var(--surface2);border:1px solid var
 .stat-label{font-size:10px;color:var(--text2);margin-top:2px;}
 .entry-row{padding:8px;border-bottom:1px solid var(--border);font-size:12px;}
 .entry-row:last-child{border-bottom:none;}
+.entry-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;}
+.entry-hdr{padding:10px;display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:600;}
+.entry-body{padding:10px;padding-top:0;}
+.status-line{font-size:11px;color:var(--text2);margin-top:6px;}
 p.note{font-size:11px;color:var(--text2);margin:0 0 8px;}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:10px 18px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;max-width:90vw;text-align:center;}
 #toast.show{opacity:1;}
@@ -44,23 +48,30 @@ p.note{font-size:11px;color:var(--text2);margin:0 0 8px;}
 </div>
 
 <div class="card">
-  <div class="section-title">① レースデータ一括登録</div>
-  <p class="note">BM抽出データを###区切りで何レース分でも貼り付けてください（日付が異なる過去分をまとめてOK。スコアは計算せず、生データのみ保存します）。</p>
-  <textarea id="input-races" rows="8" placeholder="1レース目のデータ
+  <div class="section-title">① レースデータ・結果まとめて貼り付け</div>
+  <p class="note">夜間検証(kyotei_backtest.html)と同じ形式です。BM抽出データを###区切りで貼り付けて「分割して追加」を押すと、下に1レースずつカードが並びます。各カードで結果・配当を入力してから「全件登録」を押してください。</p>
+  <textarea id="bulk-paste" rows="6" placeholder="1レース目のデータ
 ###
 2レース目のデータ
 ###
 3レース目のデータ"></textarea>
-  <button class="btn btn-gold" style="width:100%;margin-top:8px;" onclick="registerRaces()">📥 登録（生データのみ保存）</button>
+  <button class="btn" style="width:100%;margin-top:8px;" onclick="splitBulkPaste()">🔀 分割して追加</button>
 </div>
 
 <div class="card">
-  <div class="section-title">② 結果を一括入力</div>
+  <div class="section-title">📝 レース一覧（結果・配当を入力してから登録）</div>
+  <p class="note">結果が未入力のカードは登録時にスキップされます（後で追加登録できます）。</p>
+  <div id="entries"></div>
+  <button class="btn btn-gold" style="width:100%;margin-top:8px;" onclick="registerAllEntries()">📥 全件登録（生データのみ保存）</button>
+</div>
+
+<div class="card">
+  <div class="section-title">📋 結果を一括入力（会場・レース番号・日付が一致するカードに自動反映）</div>
   <p class="note">
-    形式: [{"v":"桐生","r":"1R","d":"2026-07-04","c":"3-1-5","p":"¥1,200"}, ...]（会場・レース番号・日付が一致するものに結果と配当を反映します。pは3連単の払戻金額）
+    形式: [{"v":"桐生","r":"1R","d":"2026-07-04","c":"3-1-5","p":"¥1,200"}, ...]
   </p>
   <textarea id="input-results" rows="5" placeholder='[{"v":"桐生","r":"1R","d":"2026-07-04","c":"3-1-5","p":"¥1,200"}, ...]'></textarea>
-  <button class="btn btn-gold" style="width:100%;margin-top:8px;" onclick="applyResults()">✅ 結果を反映</button>
+  <button class="btn" style="width:100%;margin-top:8px;" onclick="applyBulkResultsToEntries()">✅ カードに結果を自動入力</button>
 </div>
 
 <div class="card">
@@ -70,6 +81,8 @@ p.note{font-size:11px;color:var(--text2);margin:0 0 8px;}
     <button class="btn" onclick="exportData()">📤 JSONエクスポート</button>
     <button class="btn" onclick="if(confirm('アーカイブのデータを全部消しますか？（エクスポート推奨）'))clearData()">🗑 全削除</button>
   </div>
+  <button class="btn" style="width:100%;margin-top:8px;" onclick="checkStorageUsage()">📊 このドメインの使用容量を確認</button>
+  <div id="storage-info" style="margin-top:8px;font-size:11px;color:var(--text2);"></div>
 </div>
 
 <div class="card">
@@ -444,58 +457,69 @@ function getArchiveLogs(){
 function saveArchiveLogs(logs){
   try{
     localStorage.setItem(ARCHIVE_STORE_KEY, JSON.stringify(logs));
+    return true;
   }catch(e){
-    showToast('⚠️ 保存に失敗しました（容量超過の可能性）。エクスポートして全削除を検討してください: '+(e&&e.message||''));
+    showToast('⚠️ 保存に失敗しました（容量超過の可能性。他のツール(夜間検証・本番予想)と同じ端末内ストレージを共有しています）: '+(e&&e.message||''));
+    return false;
   }
 }
 
-function registerRaces(){
-  const raw=document.getElementById('input-races').value;
+let entryId=0;
+
+function extractLabelFast(text){
+  const m=text.match(/=== レース情報 ===\n([^\t\n]+)\t(\d+R)/);
+  return m ? (m[1].trim()+m[2].trim()) : '';
+}
+
+function splitBulkPaste(){
+  const raw=document.getElementById('bulk-paste').value;
   if(!raw.trim()){ showToast('データを貼り付けてください'); return; }
   const chunks=raw.split(/^\s*###\s*$/m).map(c=>c.trim()).filter(c=>c.length>0);
   if(!chunks.length){ showToast('分割できるデータがありません'); return; }
-
-  const logs=getArchiveLogs();
-  let added=0, failed=0, dup=0, noDate=0;
-
-  for(const chunk of chunks){
-    try{
-      const d=parseData(chunk); // スコア計算は一切呼ばない。生データのみ取得
-      const venue=d.venue||'不明';
-      const racenum=(d.raceNum||'?').replace('R','').trim();
-      const raceDate=d.raceDate||'';
-      if(!raceDate){
-        noDate++;
-        continue; // 日付が取れないものは保存しない（過去分再登録の性質上、今日の日付にフォールバックすると誤爆するため）
-      }
-      const dupIdx=logs.findIndex(l=>l.venue===venue&&l.racenum===racenum&&l.date===raceDate);
-      if(dupIdx>=0){ dup++; continue; }
-
-      logs.push({
-        id:Date.now()+Math.floor(Math.random()*100000),
-        date:raceDate,
-        venue,
-        racenum,
-        shimekiri:d.shimekiri||null,
-        boats:d.boats, // 生データそのまま（逃げ率・モーター・展示・直線・直前ST等、全フィールド）
-        chakuju:null,
-        resulted:false,
-        archivedAt:new Date().toISOString()
-      });
-      added++;
-    }catch(e){
-      failed++;
-    }
-  }
-
-  saveArchiveLogs(logs);
-  document.getElementById('input-races').value='';
-  showToast(`✅ ${added}件登録（重複${dup}件・日付不明${noDate}件・失敗${failed}件）`);
-  renderStats();
-  renderList();
+  document.getElementById('bulk-paste').value='';
+  chunks.forEach(c=>addEntry(c));
+  showToast(`✅ ${chunks.length}件をカードに追加しました`);
 }
 
-function applyResults(){
+function addEntry(prefillData){
+  entryId++;
+  const id=entryId;
+  let label='レース '+id;
+  if(prefillData){
+    const fast=extractLabelFast(prefillData);
+    if(fast) label=fast;
+  }
+  const wrap=document.createElement('div');
+  wrap.className='entry-card';
+  wrap.id='entry-'+id;
+  const startCollapsed=!!prefillData;
+  wrap.innerHTML=`
+    <div class="entry-hdr" style="cursor:pointer;" onclick="toggleEntryBody(${id})">
+      <span><span id="chev-${id}" style="display:inline-block;transition:transform .15s;transform:rotate(${startCollapsed?'-90':'0'}deg);margin-right:4px;">▾</span>${label}</span>
+      <button class="btn" style="padding:4px 10px;font-size:11px;" onclick="event.stopPropagation();document.getElementById('entry-${id}').remove()">✕ 削除</button>
+    </div>
+    <div class="entry-body" id="body-${id}" style="${startCollapsed?'display:none;':''}">
+      <textarea id="data-${id}" rows="4" placeholder="BM抽出データを貼り付け">${prefillData?prefillData.replace(/</g,'&lt;'):''}</textarea>
+      <div class="btn-row" style="margin-top:8px;">
+        <input id="result-${id}" type="text" placeholder="結果 例: 3-1-5">
+        <input id="payout-${id}" type="text" placeholder="配当 例: ¥1,200" style="width:110px;">
+      </div>
+      <div class="status-line" id="status-${id}"></div>
+    </div>
+  `;
+  document.getElementById('entries').appendChild(wrap);
+}
+
+function toggleEntryBody(id){
+  const body=document.getElementById('body-'+id);
+  const chev=document.getElementById('chev-'+id);
+  if(!body) return;
+  const isHidden=body.style.display==='none';
+  body.style.display=isHidden?'':'none';
+  if(chev) chev.style.transform=isHidden?'rotate(0deg)':'rotate(-90deg)';
+}
+
+function applyBulkResultsToEntries(){
   const raw=document.getElementById('input-results').value.trim();
   if(!raw){ showToast('結果データを貼り付けてください'); return; }
   let arr;
@@ -507,24 +531,88 @@ function applyResults(){
   }
   if(!Array.isArray(arr)){ showToast('配列形式で貼り付けてください'); return; }
 
-  const logs=getArchiveLogs();
+  const cards=Array.from(document.querySelectorAll('.entry-card'));
   let filled=0, noMatch=0;
-  for(const r of arr){
-    const v=r.v, rNum=(r.r||'').replace('R','').trim(), dt=r.d, c=r.c, p=r.p||null;
-    if(!v||!rNum||!dt||!c) { noMatch++; continue; }
-    const idx=logs.findIndex(l=>l.venue===v&&l.racenum===rNum&&l.date===dt&&!l.resulted);
-    if(idx>=0){
-      logs[idx].chakuju=c;
-      logs[idx].payout=p; // 3連単の払戻金額（文字列、例:"¥1,200"）。無ければnullのまま
-      logs[idx].resulted=true;
+  for(const card of cards){
+    const idMatch=card.id.match(/entry-(\d+)/);
+    if(!idMatch) continue;
+    const id=idMatch[1];
+    const resultEl=document.getElementById('result-'+id);
+    const dataEl=document.getElementById('data-'+id);
+    const payoutEl=document.getElementById('payout-'+id);
+    if(!resultEl||!dataEl) continue;
+    if(resultEl.value.trim()) continue; // 既に入力済みは上書きしない
+    const rawData=dataEl.value.trim();
+    if(!rawData) continue;
+    let d;
+    try{ d=parseData(rawData); }catch(e){ continue; }
+    const venue=d.venue||'', racenum=(d.raceNum||'').replace('R','').trim(), date=d.raceDate||'';
+    const match=arr.find(r=>r.v===venue&&(r.r||'').replace('R','').trim()===racenum&&(!r.d||r.d===date));
+    if(match&&match.c){
+      resultEl.value=match.c;
+      if(payoutEl&&match.p) payoutEl.value=match.p;
       filled++;
     } else {
       noMatch++;
     }
   }
-  saveArchiveLogs(logs);
   document.getElementById('input-results').value='';
-  showToast(`✅ ${filled}件に結果を反映（未一致${noMatch}件）`);
+  showToast(`✅ ${filled}件のカードに反映（未一致${noMatch}件）`);
+}
+
+function registerAllEntries(){
+  const cards=Array.from(document.querySelectorAll('.entry-card'));
+  if(!cards.length){ showToast('登録するレースがありません。先に「分割して追加」してください'); return; }
+
+  const logs=getArchiveLogs();
+  let added=0, failed=0, dup=0, noDate=0, skipped=0, registeredIds=[];
+
+  for(const card of cards){
+    const idMatch=card.id.match(/entry-(\d+)/);
+    if(!idMatch) continue;
+    const id=idMatch[1];
+    const dataEl=document.getElementById('data-'+id);
+    const resultEl=document.getElementById('result-'+id);
+    const payoutEl=document.getElementById('payout-'+id);
+    if(!dataEl||!resultEl) continue;
+    const rawData=dataEl.value.trim();
+    if(!rawData){ skipped++; continue; }
+    if(!resultEl.value.trim()){ skipped++; continue; } // 結果未入力はスキップ（後で追加登録できる）
+
+    try{
+      const d=parseData(rawData); // スコア計算は一切呼ばない。生データのみ取得
+      const venue=d.venue||'不明';
+      const racenum=(d.raceNum||'?').replace('R','').trim();
+      const raceDate=d.raceDate||'';
+      if(!raceDate){ noDate++; continue; }
+      const dupIdx=logs.findIndex(l=>l.venue===venue&&l.racenum===racenum&&l.date===raceDate);
+      if(dupIdx>=0){ dup++; registeredIds.push(id); continue; }
+
+      logs.push({
+        id:Date.now()+Math.floor(Math.random()*100000),
+        date:raceDate,
+        venue,
+        racenum,
+        shimekiri:d.shimekiri||null,
+        boats:d.boats,
+        chakuju:resultEl.value.trim(),
+        payout:(payoutEl&&payoutEl.value.trim())||null,
+        resulted:true,
+        archivedAt:new Date().toISOString()
+      });
+      added++;
+      registeredIds.push(id);
+    }catch(e){
+      failed++;
+    }
+  }
+
+  const saveOk=saveArchiveLogs(logs);
+  if(saveOk){
+    // 登録できたカードだけ画面から取り除く（未入力・失敗分は残して再確認できるように）
+    registeredIds.forEach(id=>{ const el=document.getElementById('entry-'+id); if(el) el.remove(); });
+    showToast(`✅ ${added}件登録（重複${dup}件・日付不明${noDate}件・結果未入力${skipped}件・失敗${failed}件）`);
+  }
   renderStats();
   renderList();
 }
@@ -550,6 +638,26 @@ function clearData(){
   showToast('削除しました');
   renderStats();
   renderList();
+}
+
+function checkStorageUsage(){
+  let total=0;
+  const perKey=[];
+  for(let i=0;i<localStorage.length;i++){
+    const key=localStorage.key(i);
+    const val=localStorage.getItem(key)||'';
+    const bytes=key.length+val.length; // UTF-16の概算（日本語混じりのため厳密ではないが目安として十分）
+    perKey.push({key, bytes});
+    total+=bytes;
+  }
+  perKey.sort((a,b)=>b.bytes-a.bytes);
+  const lines=perKey.map(p=>`${p.key}: ${(p.bytes/1024).toFixed(0)}KB`).join('<br>');
+  const totalKB=(total/1024).toFixed(0);
+  const totalMB=(total/1024/1024).toFixed(2);
+  document.getElementById('storage-info').innerHTML=
+    `<b>このドメイン(gt-eng-7k3xq2.github.io)全体で ${totalKB}KB(約${totalMB}MB)使用中</b><br>` +
+    `Safariの上限は端末により異なりますが、目安は5〜10MBです。内訳(大きい順):<br>${lines}`;
+  showToast('📊 使用容量を確認しました');
 }
 
 function renderStats(){
