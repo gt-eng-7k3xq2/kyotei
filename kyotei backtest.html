@@ -150,7 +150,7 @@ let currentParsedData=null;
 const SCORE_ENGINE_VERSION=4;
 let selectedNigeMode='auto';
 // 紐調整版: 通常モード(low)の抑え2点のうち「◎-5位-○固定」を「◎-4位-5位」に差し替えるバリエーション。
-// 'standard'=現行, 'adjusted'=調整版。84件分析で最も効率的だった入替（sg_narutou.htmlと必ず同期させること）
+// 2026-07-28: 紐調整版はn=3146の大規模検証(daikibo_replay.html)でROI悪化(71%→68.5%)が確認されたため撤回。標準のみ使用
 let selectedHimoMode='standard';
 let lastResolvedNigeMode=null; // buildBetsNormalが実際に使ったnigeMode(low/mid/high)。ログ記録用（2026-07-27追加）
 let selectedRaceType='ippan'; // 'ippan','g2g3','g1','sg'（既定は一般戦。レースごとにUIから変更）
@@ -849,12 +849,10 @@ function buildBetsNormal(ranking, pts, parsedData){
   const nigeR = b1?(b1.sgNige>0?b1.sgNige:(_atchiValidBN?b1.atchiNige:b1.nigerate6m)):0;
   // 逃げ率で買い目モードを3段階に分類（手動指定があれば優先）
   const maru1 = String(ranking[0].boat) === '1';
-  // 逃げ固定(high)の閾値を厳格化: 逃げ率85%以上 かつ 1号艇よりSTが良い対抗馬がいない場合のみ。
-  // （sg_narutou.htmlと必ず同期させること。2026-07-18検証済み）それ以外は2艇頭(mid)に回す。
-  const _boat1Rank=ranking.find(r=>String(r.boat)==='1');
-  const _boat1St=_boat1Rank?(_boat1Rank._st||0):0;
-  const _hasSTThreat=ranking.some(r=>String(r.boat)!=='1' && (r._st||0)>_boat1St);
-  const _autoNigeMode = (maru1 && nigeR >= 85 && !_hasSTThreat) ? 'high'
+  // 逃げ固定(high)の閾値: 逃げ率85%以上（1号艇のみ）
+  // 2026-07-28: ST脅威判定を廃止。n=3146の大規模検証で、ST脅威ありでも1号艇勝率70.6%あり、
+  // 判定を外した方が的中率・ROIとも微増したため（sg_narutou.htmlと必ず同期させること）
+  const _autoNigeMode = (maru1 && nigeR >= 85) ? 'high'
                       : (maru1 && nigeR >= 50) ? 'mid'
                       : 'low';
   const nigeMode = (typeof selectedNigeMode !== 'undefined' && selectedNigeMode !== 'auto')
@@ -977,19 +975,8 @@ function buildBetsNormal(ranking, pts, parsedData){
       }
     }
     // 抑え: 各2着軸ごとに3着=○固定（2位評価が必ず絡む構成）
-    // 2026-07-27: 紐調整版(selectedHimoMode='adjusted')の場合、904件分析で「実3着が○▲以外(圏外)」が49.0%と
-    // 判明したため、一番弱かった「◎-5位-○固定」を「◎-4位-5位」に差し替える（sg_narutou.htmlと必ず同期させること）
-    const himoMode=(typeof selectedHimoMode!=='undefined')?selectedHimoMode:'standard';
-    const yonIBoat=rankOrder.find(x=>x!==maru&&(rankMap[x]||9)===4);
-    const goIBoat =rankOrder.find(x=>x!==maru&&(rankMap[x]||9)===5);
+    // 2026-07-28: 紐調整版はn=3146の大規模検証でROI悪化(71%→68.5%)が確認されたため撤回し、標準のみに戻した
     for(const b of osaee2nd){
-      if(himoMode==='adjusted' && goIBoat && b===goIBoat){
-        // ◎-5位-○固定 → ◎-4位-5位 に差し替え
-        if(yonIBoat){
-          osaee.push({val:`${maru}-${yonIBoat}-${goIBoat}`, score:(rankMap[yonIBoat]||9)*10+(rankMap[goIBoat]||9)});
-        }
-        continue;
-      }
       const thirds = [shiro].filter(c=>c!==b); // ○固定
       for(const c of thirds){
         osaee.push({val:`${maru}-${b}-${c}`, score:(rankMap[b]||9)*10+(rankMap[c]||9)});
@@ -1270,10 +1257,6 @@ function addEntry(prefillData){
       <div class="btn-row" style="margin-top:8px;">
         <select id="pts-${id}" style="width:80px;">${ptsOptions}</select>
         <select id="rtype-${id}" style="width:90px;">${rtypeOptions}</select>
-        <select id="himo-${id}" style="width:90px;">
-          <option value="standard">紐:標準</option>
-          <option value="adjusted">紐:調整版</option>
-        </select>
       </div>
       <div class="status-line" id="status-${id}"></div>
     </div>
@@ -1327,24 +1310,24 @@ function applyPtsToAll(){
 // directSTは前日データでは検出できず0.20固定フォールバックになるため、
 // 2艇頭/逃げ固定の境界(STの脅威判定)は前日時点では参考値扱いとする。
 // ============================================================
-const GOOD_VENUES=['唐津','丸亀','江戸川','多摩川','児島']; // n≥40でROI上位が安定して確認できた会場（2026-07-27分析、江戸川106.5%・唐津91.8%・丸亀91.3%・多摩川86.1%・児島82.9%）
-// 実測ROI(%)。2026-07-27時点、3025件のログ分析より（n≥40の会場のみ採用）
-const VENUE_ROI={'唐津':91.8,'丸亀':91.3,'江戸川':106.5,'多摩川':86.1,'児島':82.9};
-const OVERALL_AVG_ROI=65.4; // 全体平均ROI（2026-07-24分の抽出バグ分除く2845件、venue補正の基準値）
+const GOOD_VENUES=['芦屋','江戸川','住之江','平和島','津']; // n≥40でROI上位が安定して確認できた会場（2026-07-28、新エンジン適用後の再計算）
+// 実測ROI(%)。2026-07-28、daikibo_archive n=3146の全件検証より（n≥40の会場のみ採用、新エンジン適用後）
+const VENUE_ROI={'戸田':59.3,'多摩川':77.3,'浜名湖':73.6,'蒲郡':61.8,'常滑':75.9,'三国':73.9,'びわこ':82.2,'児島':59.2,'宮島':46.8,'下関':61.6,'若松':72.0,'福岡':79.7,'唐津':74.4,'大村':73.7,'平和島':91.1,'芦屋':97.8,'津':90.0,'住之江':94.4,'尼崎':54.0,'桐生':65.7,'徳山':59.2,'鳴門':65.4,'丸亀':65.5,'江戸川':95.0};
+const OVERALL_AVG_ROI=73.5; // 全体平均ROI（2026-07-28、daikibo_archive n=3146の全件検証、新エンジン適用後）
 const MODE_ROI_BASE={
-  are_strong:79.0,  // n=304、実測
-  normal:62.9,      // n=2120、実測（2艇頭/逃げ固定/通常/紐調整版すべて込みの平均）
-  are_weak:45.1,    // n=50、実測
-  nigenashi:65.0    // 参考値。旧設計（1号艇固定）でのROIで、2026-07-27の再設計後はまだ実績なし
+  are_strong:75.3,  // n=831、実測（新エンジン: 荒れ弱強統合・12点）
+  normal:74.2,      // n=1814、実測（新エンジン: 1号艇ルール込み、2艇頭/逃げ固定/通常すべて込みの平均）
+  are_weak:69.0,    // n=291、実測（新エンジン: 荒れ弱強統合・12点。旧来の6点構成より大幅改善）
+  nigenashi:64.1    // n=210、実測（新エンジン: 「対等」設計、1号艇ルール適用後）
 };
-// 的中率(%)。ROIと同じ2026-07-27時点のログ分析より（n≥40の会場のみ採用）
-const VENUE_HITRATE={'唐津':56.0,'丸亀':40.0,'江戸川':46.3,'多摩川':38.6,'児島':42.7};
-const OVERALL_AVG_HITRATE=36.6; // 全体平均的中率
+// 的中率(%)。ROIと同じ2026-07-28時点、daikibo_archive n=3146の全件検証より（n≥40の会場のみ採用）
+const VENUE_HITRATE={'戸田':34.8,'多摩川':38.7,'浜名湖':41.7,'蒲郡':36.1,'常滑':43.3,'三国':39.2,'びわこ':41.1,'児島':35.9,'宮島':38.9,'下関':36.7,'若松':48.5,'福岡':51.7,'唐津':43.3,'大村':47.7,'平和島':41.7,'芦屋':40.7,'津':35.7,'住之江':43.8,'尼崎':41.7,'桐生':38.7,'徳山':43.8,'鳴門':30.0,'丸亀':45.2,'江戸川':54.2};
+const OVERALL_AVG_HITRATE=41.4; // 全体平均的中率（2026-07-28、新エンジン適用後）
 const MODE_HITRATE_BASE={
-  are_strong:39.9,  // n=271、実測
-  normal:39.1,      // n=1540、実測
-  are_weak:32.6,    // n=43、実測
-  nigenashi:21.7    // 参考値。旧設計（1号艇固定）での的中率で、再設計後はまだ実績なし。新設計はもっと高くなる想定だが未検証
+  are_strong:39.0,  // n=831、実測
+  normal:44.5,      // n=1814、実測
+  are_weak:41.2,    // n=291、実測
+  nigenashi:23.3    // n=210、実測
 };
 
 function estimateROI(mode, venue){
@@ -1370,6 +1353,11 @@ function runScreening(){
     try{
       const d=parseData(chunk);
       const areScores=calcAreScore(d);
+      // 2026-07-28: 1号艇スコア2位→軸昇格ルール（本体と同期）
+      const _b1RankBeforeFix=areScores.findIndex(s=>String(s.no)==='1');
+      if(_b1RankBeforeFix===1){
+        const _tmp=areScores[0]; areScores[0]=areScores[1]; areScores[1]=_tmp;
+      }
       const{areIndex,nigeRate}=calcAreIndex(d);
       let mode=judgeMode(areIndex,nigeRate);
       const boat1Rank=areScores.findIndex(s=>String(s.no)==='1');
@@ -1412,9 +1400,9 @@ function runScreening(){
     html+=`<div style="padding:8px;margin-bottom:6px;border-radius:6px;background:rgba(200,60,60,0.1);border:1px solid rgba(200,60,60,0.4);font-size:12px;">⚠️ 解析失敗: ${r.error||''}</div>`;
   }
   for(const r of topResults){
-    // 参入判定: 推定ROI 80%以上=◎参入、65〜80%=△様子見、65%未満=✗見送り
-    // （65%は全体平均ROI、80%は荒れ・強単体の実測値79.0%が目安）
-    const judge=r.estRoi>=80?{text:'◎参入',color:'var(--green)'}:r.estRoi>=65?{text:'△様子見',color:'var(--gold)'}:{text:'✗見送り',color:'var(--red)'};
+    // 参入判定: 推定ROI 85%以上=◎参入、70〜85%=△様子見、70%未満=✗見送り
+    // 2026-07-28: 新エンジンで全体平均ROIが65.4%→73.5%に上がったため、閾値も同じ分だけ引き上げ
+    const judge=r.estRoi>=85?{text:'◎参入',color:'var(--green)'}:r.estRoi>=70?{text:'△様子見',color:'var(--gold)'}:{text:'✗見送り',color:'var(--red)'};
     const ml=modeLabel[r.mode]||{text:r.mode,color:'var(--text2)'};
     const venueBadge=r.isGoodVenue?'<span style="color:var(--gold);font-weight:700;">◎優良会場</span> ':'';
     const hintText=r.nigeHint?` / ${r.nigeHint}`:'';
@@ -1569,7 +1557,6 @@ function runAll(){
     const pts_manual=(document.getElementById('pts-'+id)||{}).value;
     let pts=parseInt(pts_manual)||12;
     const rtype=(document.getElementById('rtype-'+id)||{}).value||'ippan';
-    const himoSel=(document.getElementById('himo-'+id)||{}).value||'standard';
     const statusEl=document.getElementById('status-'+id);
 
     if(!rawData||!resultStr){
@@ -1584,10 +1571,16 @@ function runAll(){
 
     try{
       selectedRaceType=rtype; // calcAreScore内部が参照するグローバル変数を一時設定
-      selectedHimoMode=himoSel; // buildBetsNormal内部が参照するグローバル変数を一時設定
       const d=parseData(rawData);
       const motorHistory=parseMotorHistory(rawData); // ログ記録専用。スコア計算(calcAreScore)には渡さない
       const areScores=calcAreScore(d);
+      // 2026-07-28: 1号艇がスコア2位の時は1号艇を軸に昇格
+      // n=508で明確な逆転現象を確認（1号艇46.3% vs スコア1位艇27.0%）。他艇では起きない1号艇固有の構造的過小評価。
+      // 3位以下は逆転が確認できなかったため対象外（sg_narutou.htmlと必ず同期させること）
+      const _b1RankBeforeFix=areScores.findIndex(s=>String(s.no)==='1');
+      if(_b1RankBeforeFix===1){
+        const _tmp=areScores[0]; areScores[0]=areScores[1]; areScores[1]=_tmp;
+      }
       const{areIndex,nigeRate}=calcAreIndex(d);
       let mode=judgeMode(areIndex,nigeRate);
       // 逃げなしモード自動判定: 1号艇自体の逃げ率が30%未満、かつ「1号艇自身が総合スコア1位(◎)ではない」場合のみ発動。
@@ -1599,13 +1592,19 @@ function runAll(){
       if(nigeRate<30 && boat1Rank>0 && boat1Rank<5){
         mode='nigenashi';
       }
+      // 逃げモード(low/mid/high)を先に判定（点数選択に使うため）。ST脅威判定は2026-07-28廃止
+      const _isAxisBoat1=String(areScores[0].no)==='1';
+      const _autoNige=(_isAxisBoat1&&nigeRate>=85)?'high':(_isAxisBoat1&&nigeRate>=50)?'mid':'low';
       // 点数の自動選択: 入力欄が初期値(12)のまま手動で変更されていなければ、モードごとに自動調整する
-      // (sg_narutou.htmlと必ず同期させること。2026-07-27: 荒れ・弱は6点に縮小)
+      // (sg_narutou.htmlと必ず同期させること。2026-07-28: n=3146の大規模検証により全面改訂)
+      // 通常(2艇頭/low)・逃げなし: 10点 / 逃げ固定: 6点 / 荒れ(弱強統合): 12点
       if(pts_manual==='12'){
-        if(mode==='normal'||mode==='nigenashi'){
-          pts=8;
-        } else if(mode==='are_weak'){
+        if(mode==='are_weak'||mode==='are_strong'){
+          pts=12;
+        } else if(mode==='normal'&&_autoNige==='high'){
           pts=6;
+        } else {
+          pts=10; // 通常(2艇頭含む)・逃げなし
         }
         const ptsEl=document.getElementById('pts-'+id);
         if(ptsEl) ptsEl.value=String(pts);
@@ -1665,7 +1664,6 @@ function runAll(){
         venue:d.venue||'不明',
         racenum:(d.raceNum||'?').replace('R','').trim(),
         mode,
-        himoMode:(typeof selectedHimoMode!=='undefined')?selectedHimoMode:'standard', // 通常モードの紐ロジック（標準/調整版）。今後の比較検証用
         nigeMode:lastResolvedNigeMode, // 通常モード内の実際の買い目構成(low/mid/high)。are_weak/are_strongの時はnull。2艇頭リバランス等の効果検証用（2026-07-27追加）
         nigeRate,
         areIndex,
