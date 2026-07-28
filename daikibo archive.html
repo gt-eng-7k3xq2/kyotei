@@ -623,14 +623,21 @@ function exportData(){
   const blob=new Blob([JSON.stringify(logs)], {type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  const today=new Date().toISOString().slice(0,10);
+  // ファイル名は「今日の日付」ではなく、中身のレース日付の範囲から自動生成する
+  // （このツールは過去分の再登録が主目的なので、エクスポートした日ではなく対象レースの日付が分からないと後で識別できないため）
+  const dates=logs.map(l=>l.date).filter(Boolean).sort();
+  let dateLabel='unknown';
+  if(dates.length){
+    const first=dates[0], last=dates[dates.length-1];
+    dateLabel=(first===last)?first:`${first}_to_${last}`;
+  }
   a.href=url;
-  a.download=`daikibo_archive_${today}.json`;
+  a.download=`daikibo_archive_${dateLabel}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  showToast(`📤 ${logs.length}件エクスポートしました`);
+  showToast(`📤 ${logs.length}件エクスポートしました（${dateLabel}）`);
 }
 
 function clearData(){
