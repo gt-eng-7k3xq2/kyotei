@@ -268,7 +268,6 @@
       <label style="margin-bottom:8px;">モード選択</label>
       <div style="display:flex;flex-wrap:wrap;gap:6px;">
         <button class="alloc-btn active" id="mode-btn-normal" onclick="setMode('normal')" style="flex:1 1 30%;padding:10px 4px;font-size:12px;">🔒 通常</button>
-        <button class="alloc-btn" id="mode-btn-himo_adjust" onclick="setMode('himo_adjust')" style="flex:1 1 30%;padding:10px 4px;font-size:12px;">🧵 紐調整版</button>
         <button class="alloc-btn" id="mode-btn-nito" onclick="setMode('nito')" style="flex:1 1 30%;padding:10px 4px;font-size:12px;">⚖️ 2艇頭</button>
         <button class="alloc-btn" id="mode-btn-nigekotei" onclick="setMode('nigekotei')" style="flex:1 1 30%;padding:10px 4px;font-size:12px;">🔐 逃げ固定</button>
         <button class="alloc-btn" id="mode-btn-are_strong" onclick="setMode('are_strong')" style="flex:1 1 30%;padding:10px 4px;font-size:12px;">⚡ 荒れ・強</button>
@@ -611,7 +610,7 @@ var lastResolvedNigeMode = null; // buildBetsNormalが実際に使ったnigeMode
 function setMode(mode, isManualOverride){
   if(isManualOverride===undefined) isManualOverride=true; // ボタンクリック(onclick)はデフォルトで手動上書き扱い
   selectedMode=mode;
-  ['normal','himo_adjust','nito','nigekotei','are_weak','are_strong','nigenashi','skip'].forEach(m=>{
+  ['normal','nito','nigekotei','are_weak','are_strong','nigenashi','skip'].forEach(m=>{
     const el=document.getElementById('mode-btn-'+m);
     if(el) el.classList.toggle('active',m===mode);
   });
@@ -625,7 +624,6 @@ function setMode(mode, isManualOverride){
   // 逃げなしモードのはずが逃げ固定相当の買い目が出るバグがあったため、
   // これらのモードでは必ずnigeMode/himoModeを'auto'/'standard'にリセットする。
   if(mode==='normal'){ selectedNigeMode=isManualOverride?'low':'auto'; selectedHimoMode='standard'; }
-  else if(mode==='himo_adjust'){ selectedNigeMode=isManualOverride?'low':'auto'; selectedHimoMode='adjusted'; }
   else if(mode==='nito'){ selectedNigeMode='mid'; selectedHimoMode='standard'; }
   else if(mode==='nigekotei'){ selectedNigeMode='high'; selectedHimoMode='standard'; }
   else { selectedNigeMode='auto'; selectedHimoMode='standard'; } // are_weak/are_strong/nigenashi/skip
@@ -740,7 +738,7 @@ function generateBets(d, areScores, mode){
     : `<span class="info-chip" style="color:#888;">自信度 データ不足</span>`;
 
   // バッジ更新
-  const modeLabel=mode==='are_strong'?'⚡ 荒れ・強':mode==='are_weak'?'🌊 荒れ・弱':mode==='nigenashi'?'🚫 逃げなし':mode==='himo_adjust'?'🧵 紐調整版':mode==='nito'?'⚖️ 2艇頭':mode==='nigekotei'?'🔐 逃げ固定':'🔒 通常';
+  const modeLabel=mode==='are_strong'?'⚡ 荒れ・強':mode==='are_weak'?'🌊 荒れ・弱':mode==='nigenashi'?'🚫 逃げなし':mode==='nito'?'⚖️ 2艇頭':mode==='nigekotei'?'🔐 逃げ固定':'🔒 通常';
   const modeCls=(mode==='are_weak'||mode==='are_strong')?'mode-are':mode==='nigenashi'?'mode-are':'mode-normal';
   document.getElementById('race-info-strip').innerHTML=`
     <span class="mode-badge ${modeCls}" style="font-size:11px;padding:3px 10px;">${modeLabel}</span>
@@ -1636,14 +1634,10 @@ function buildBetsNormal(ranking, pts, parsedData){
   const nigeR = b1?(b1.sgNige>0?b1.sgNige:(_atchiValidBN?b1.atchiNige:b1.nigerate6m)):0;
   // 逃げ率で買い目モードを3段階に分類（手動指定があれば優先）
   const maru1 = String(ranking[0].boat) === '1';
-  // 逃げ固定(high)の閾値を厳格化: 逃げ率85%以上 かつ 1号艇よりSTが良い対抗馬がいない場合のみ。
-  // （データ検証済み、2026-07-18）逃げ率だけだと95-101%でも脅威あり64.4%/脅威なし78.6%とブレが大きく、
-  // STの脅威有無を組み合わせた方が「本当に安全」を見分けられる。それ以外は2艇頭(mid)に回す。
-  const _stScores=(typeof currentAreScores!=='undefined'&&currentAreScores)||[];
-  const _boat1Score=_stScores.find(s=>String(s.no)==='1');
-  const _boat1St=_boat1Score?(_boat1Score._st||0):0;
-  const _hasSTThreat=_stScores.some(s=>String(s.no)!=='1' && (s._st||0)>_boat1St);
-  const _autoNigeMode = (maru1 && nigeR >= 85 && !_hasSTThreat) ? 'high'
+  // 逃げ固定(high)の閾値: 逃げ率85%以上（1号艇のみ）
+  // 2026-07-28: ST脅威判定を廃止。n=3146の大規模検証で、ST脅威ありでも1号艇勝率70.6%あり、
+  // 判定を外した方が的中率・ROIとも微増したため（kyotei_backtest.htmlと必ず同期させること）
+  const _autoNigeMode = (maru1 && nigeR >= 85) ? 'high'
                       : (maru1 && nigeR >= 50) ? 'mid'
                       : 'low';
   const nigeMode = (typeof selectedNigeMode !== 'undefined' && selectedNigeMode !== 'auto')
@@ -1766,19 +1760,8 @@ function buildBetsNormal(ranking, pts, parsedData){
       }
     }
     // 抑え: 各2着軸ごとに3着=○固定（2位評価が必ず絡む構成）
-    // 2026-07-27: 紐調整版(selectedHimoMode='adjusted')の場合、904件分析で「実3着が○▲以外(圏外)」が49.0%と
-    // 判明したため、一番弱かった「◎-5位-○固定」を「◎-4位-5位」に差し替える（kyotei_backtest.htmlと必ず同期させること）
-    const himoMode=(typeof selectedHimoMode!=='undefined')?selectedHimoMode:'standard';
-    const yonIBoat=rankOrder.find(x=>x!==maru&&(rankMap[x]||9)===4);
-    const goIBoat =rankOrder.find(x=>x!==maru&&(rankMap[x]||9)===5);
+    // 2026-07-28: 紐調整版はn=3146の大規模検証でROI悪化(71%→68.5%)が確認されたため撤回し、標準のみに戻した
     for(const b of osaee2nd){
-      if(himoMode==='adjusted' && goIBoat && b===goIBoat){
-        // ◎-5位-○固定 → ◎-4位-5位 に差し替え
-        if(yonIBoat){
-          osaee.push({val:`${maru}-${yonIBoat}-${goIBoat}`, score:(rankMap[yonIBoat]||9)*10+(rankMap[goIBoat]||9)});
-        }
-        continue;
-      }
       const thirds = [shiro].filter(c=>c!==b); // ○固定
       for(const c of thirds){
         osaee.push({val:`${maru}-${b}-${c}`, score:(rankMap[b]||9)*10+(rankMap[c]||9)});
@@ -2049,7 +2032,7 @@ function updateEntryFlag(){
 function updateDangoFlag(std){
   const el=document.getElementById('dango-flag');
   if(!el) return;
-  const _normalFamily=currentCalcData&&(currentCalcData.mode==='normal'||currentCalcData.mode==='himo_adjust'||currentCalcData.mode==='nito'||currentCalcData.mode==='nigekotei');
+  const _normalFamily=currentCalcData&&(currentCalcData.mode==='normal'||currentCalcData.mode==='nito'||currentCalcData.mode==='nigekotei');
   if(_normalFamily && std>=14 && std<22){
     el.innerHTML='🤔 中途半端ゾーン：団子度'+std.toFixed(1)+'（通常判定でROIが弱い帯。見送り検討）';
     el.style.cssText='display:block;margin-top:8px;padding:8px 10px;background:rgba(180,140,40,0.15);border:1px solid rgba(180,140,40,0.4);border-radius:6px;font-size:12px;color:#d8b870;';
@@ -2091,6 +2074,14 @@ async function runYoso(){
     // 2. 荒れスコア計算
     const areScores=calcAreScore(d);
 
+    // 2026-07-28: 1号艇がスコア2位の時は1号艇を軸に昇格
+    // n=508で明確な逆転現象を確認（1号艇46.3% vs スコア1位艇27.0%）。他艇では起きない1号艇固有の構造的過小評価。
+    // 3位以下は逆転が確認できなかったため対象外（kyotei_backtest.htmlと必ず同期させること）
+    const _b1RankBeforeFix=areScores.findIndex(s=>String(s.no)==='1');
+    if(_b1RankBeforeFix===1){
+      const _tmp=areScores[0]; areScores[0]=areScores[1]; areScores[1]=_tmp;
+    }
+
     // 3. 荒れ指数・逃げ率・モード判定（全部JS）
     const{areIndex,nigeRate}=calcAreIndex(d);
     let mode=judgeMode(areIndex,nigeRate);
@@ -2099,24 +2090,32 @@ async function runYoso(){
     // 実績を見るとmaru=1号艇のまま逃げなし判定になった132件は実際の1号艇1着率42.4%と高く、
     // 2・3着に固定してしまうと毎回自動的に外れていたため、その場合は通常モードに任せる。
     // （kyotei_backtest.htmlと必ず同期させること）
-    const sortedForAxis=[...areScores].sort((a,b)=>(b.raw||0)-(a.raw||0));
-    const boat1Rank=sortedForAxis.findIndex(s=>String(s.no)==='1');
+    // 2026-07-28修正: 以前はraw値で再ソートしていたが、これだと上の1号艇昇格ルールでのpositionの入れ替えが
+    // 無効化されてしまう(rawの値自体は変えていないため)。areScoresは既に正しい順位で並んでいるのでそのまま使う。
+    const boat1Rank=areScores.findIndex(s=>String(s.no)==='1');
     if(nigeRate<30 && boat1Rank>0 && boat1Rank<5){
       mode='nigenashi';
     }
     lastSuggestedMode=mode; // 診断用: この時点の自動提案を記録(手動でボタンを変えても診断ログには残る)
 
-    // 点数の自動選択: 通常モード(逃げ固定・2艇頭とも)は8点、荒れ・強/逃げなしは12点、荒れ・弱は6点
-    // （2026-07-19: 逃げ固定はn=20/n=7でROIの結果が逆転するほど不安定だったため、
-    // 実運用の判断で逃げ固定も8点に統一。逃げが堅いレースほど合成オッズが薄く、
-    // 点数を増やしても実質的な上乗せが少ないため）
-    // 手動でボタンを押せばいつでも上書きできる
-    // 2026-07-24: 逃げ固定は全体の2.5%程度しか出現せずn=300到達に約2年かかる試算のため、
-    // 「データで裏付けを取る」対象から正式に除外することを確定。今後この8点は
-    // 実務判断ベースの固定値として扱い、小サンプルのバックテスト結果だけを理由に
-    // 変更しないこと（ログ収集自体（isRareCase圧縮除外）はそのまま継続する）
-    // 2026-07-27: 荒れ・弱(areIndex6-7帯、n=50でROI45.1%とareIndex8以上のROI79.0%より明確に劣る)は6点に縮小
-    let autoPts=(mode==='normal'||mode==='nigenashi')?8:(mode==='are_weak')?6:12;
+    // 逃げモード(low/mid/high)を先に判定（点数選択に使うため）。
+    // 2026-07-28: ST脅威判定を廃止（n=3146でST脅威ありでも1号艇勝率70.6%あり、判定を外した方が的中率・ROIとも微増）
+    const _isAxisBoat1=String(areScores[0].no)==='1';
+    const _autoNige=(_isAxisBoat1&&nigeRate>=85)?'high':(_isAxisBoat1&&nigeRate>=50)?'mid':'low';
+
+    // 点数の自動選択（2026-07-28: n=3146の大規模検証により全面改訂）
+    // 通常(2艇頭/low)・逃げなし: 10点（8→10で的中率+3.4pt、ROIは変化なし）
+    // 逃げ固定: 6点（軸の確信度が高いため絞る方がROI良好。点数を増やすとROI悪化）
+    // 荒れ(弱/強): 12点に統一（旧来の弱6点/強12点の差は境界のアーティファクトと判明。
+    //   同じareIndexでも12点構成の方が6点構成より的中率が大きく上回ることをareIndex5〜10全域で確認）
+    let autoPts;
+    if(mode==='are_weak'||mode==='are_strong'){
+      autoPts=12;
+    }else if(mode==='normal'&&_autoNige==='high'){
+      autoPts=6;
+    }else{
+      autoPts=10; // 通常(2艇頭含む)・逃げなし
+    }
     autoSetBetCount(autoPts);
 
     // 場所・レース番号を自動セット
@@ -2144,16 +2143,18 @@ async function runYoso(){
     const debugLines=areScores.map(s=>s.raw<=-990?`${s.no}号: 【賞除外】`:`${s.no}号: 攻${s._atk.toFixed(1)} 差捲${s._sashi.toFixed(1)} 展示${parseFloat(s._ex).toFixed(1)} 周回${parseFloat(s._lap).toFixed(1)} ST${s._st.toFixed(1)} 得点${s._toku.toFixed(1)} モーター${s._motor.toFixed(1)} 逃ペナ${s._pen1} Fペナ${s._penF} = ${s.raw.toFixed(1)}pt`).join('\n');
     const parseLines=d.boats.map(b=>`${b.no}号${b.name?'('+b.name+')':''}: 得点${b.isJogai?'除外':b.sessonPt} 直前ST${b.directST}${b.isExhibitF?'(展示F)':''} F休${b.isF?'✓':'-'} 展示${b.tenji} 周足${b.syukaiFoot||0} 直線${b.chokusen||0} 周回${b.syukai} Motor${b.motor2ren}%`).join('\n');
     scoreEl.innerHTML+=`<details style="margin-top:8px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">📋 スコア内訳</summary><pre style="font-size:10px;color:var(--muted);margin-top:6px;overflow-x:auto;">${debugLines}\n\n【パース値】\n${parseLines}</pre></details>`;
+    // 表示ラベルもbuildBetsNormal内部の実ロジックと一致させる（_autoNigeは既に上で計算済み）
+    // 2026-07-28修正: 「通常」の内部でこっそり2艇頭/逃げ固定になっているのが分かりにくいという指摘のため、
+    // mode==='normal'の時は_autoNigeの結果をそのまま独立モードへ昇格させる(バッジ表示も選択ボタンも実態と一致させる)
+    // （kyotei_backtest.htmlはボタンUIが無いためこの昇格は不要、sg_narutou.html側だけの対応）
+    if(mode==='normal'){
+      if(_autoNige==='mid') mode='nito';
+      else if(_autoNige==='high') mode='nigekotei';
+    }
     const modeEl=document.getElementById('mode-result');
     const modeCls=(mode==='are_weak'||mode==='are_strong')?'mode-are':mode==='skip'?'mode-skip':mode==='nigenashi'?'mode-are':'mode-normal';
-    const modeLabel=mode==='are_strong'?'⚡ 荒れ・強モード':mode==='are_weak'?'🌊 荒れ・弱モード':mode==='skip'?'⏭ スキップ':mode==='nigenashi'?'🚫 逃げなしモード':'🔒 通常モード';
-    // 表示ラベルもbuildBetsNormal内部の実ロジック(逃げ率85%+STの脅威なし)と一致させる(2026-07-18修正、以前は古い65%閾値のままでズレていた)
-    const _isAxisBoat1=String(areScores[0].no)==='1';
-    const _axisBoat1St=_isAxisBoat1?(areScores[0]._st||0):0;
-    const _labelSTThreat=_isAxisBoat1&&areScores.some(s=>String(s.no)!=='1'&&(s._st||0)>_axisBoat1St);
-    const _autoNige=(_isAxisBoat1&&nigeRate>=85&&!_labelSTThreat)?'high':(_isAxisBoat1&&nigeRate>=50)?'mid':'low';
-    const nigeLabel={'high':'逃げ固定','mid':'2艇頭','low':'通常'}[_autoNige];
-    modeEl.innerHTML=`<span class="mode-badge ${modeCls}">${modeLabel}</span> <span style="font-size:12px;color:var(--muted);">荒れ指数 <strong style="color:var(--text);">${areIndex}点</strong> / 逃げ率 <strong style="color:var(--text);">${nigeRate.toFixed(1)}%</strong> / 構成auto: <strong style="color:var(--gold);">${nigeLabel}</strong></span>`;
+    const modeLabel=mode==='are_strong'?'⚡ 荒れ・強モード':mode==='are_weak'?'🌊 荒れ・弱モード':mode==='skip'?'⏭ スキップ':mode==='nigenashi'?'🚫 逃げなしモード':mode==='nito'?'⚖️ 2艇頭モード':mode==='nigekotei'?'🔐 逃げ固定モード':'🔒 通常モード';
+    modeEl.innerHTML=`<span class="mode-badge ${modeCls}">${modeLabel}</span> <span style="font-size:12px;color:var(--muted);">荒れ指数 <strong style="color:var(--text);">${areIndex}点</strong> / 逃げ率 <strong style="color:var(--text);">${nigeRate.toFixed(1)}%</strong></span>`;
 
     // 荒れ指数4〜7点: スキップ推奨アラートを表示するが予想は続行
     if(areIndex>=4&&areIndex<=7&&nigeRate<70){
@@ -3347,7 +3348,7 @@ function openResultModal(id){
   const entry=logs.find(l=>l.id===id);
   if(!entry) return;
   document.getElementById('modal-race-label').textContent=
-    (entry.venue||'鳴門')+' '+entry.racenum+'R　'+entry.date+'　'+(entry.mode==='are_strong'?'⚡荒れ・強':entry.mode==='are_weak'?'🌊荒れ・弱':entry.mode==='nigenashi'?'🚫逃げなし':entry.mode==='himo_adjust'?'🧵紐調整版':entry.mode==='nito'?'⚖️2艇頭':entry.mode==='nigekotei'?'🔐逃げ固定':'🔒通常');
+    (entry.venue||'鳴門')+' '+entry.racenum+'R　'+entry.date+'　'+(entry.mode==='are_strong'?'⚡荒れ・強':entry.mode==='are_weak'?'🌊荒れ・弱':entry.mode==='nigenashi'?'🚫逃げなし':entry.mode==='nito'?'⚖️2艇頭':entry.mode==='nigekotei'?'🔐逃げ固定':'🔒通常');
   _renderModalBody();
   const modal=document.getElementById('result-modal');
   modal.style.visibility='visible';
@@ -3799,7 +3800,7 @@ function renderHaraiSel(){
   for(const l of logs){
     const opt=document.createElement('option');
     opt.value=l.id;
-    const label=`${l.date} ${l.venue||''}${l.racenum}R [${l.result||'未入力'}] (${l.mode==='are_strong'?'荒れ・強':l.mode==='are_weak'?'荒れ・弱':l.mode==='nigenashi'?'逃げなし':l.mode==='himo_adjust'?'紐調整版':l.mode==='nito'?'2艇頭':l.mode==='nigekotei'?'逃げ固定':'通常'})`;
+    const label=`${l.date} ${l.venue||''}${l.racenum}R [${l.result||'未入力'}] (${l.mode==='are_strong'?'荒れ・強':l.mode==='are_weak'?'荒れ・弱':l.mode==='nigenashi'?'逃げなし':l.mode==='nito'?'2艇頭':l.mode==='nigekotei'?'逃げ固定':'通常'})`;
     opt.textContent=label;
     sel.appendChild(opt);
   }
@@ -3989,7 +3990,7 @@ function renderLog(){
     return`<div class="log-item">
       <div class="log-left">
         <div class="log-race">${l.date} ${l.venue||'鳴門'} ${l.racenum}R</div>
-        <div class="log-meta">${l.mode==='are_strong'?'⚡荒れ・強':l.mode==='are_weak'?'🌊荒れ・弱':l.mode==='nigenashi'?'🚫逃げなし':l.mode==='himo_adjust'?'🧵紐調整版':l.mode==='nito'?'⚖️2艇頭':l.mode==='nigekotei'?'🔐逃げ固定':'🔒通常'} 荒れ${l.areIndex||'?'}点 逃${l.nigeRate?l.nigeRate.toFixed(1):'?'}% ${l.betcount||'?'}点</div>
+        <div class="log-meta">${l.mode==='are_strong'?'⚡荒れ・強':l.mode==='are_weak'?'🌊荒れ・弱':l.mode==='nigenashi'?'🚫逃げなし':l.mode==='nito'?'⚖️2艇頭':l.mode==='nigekotei'?'🔐逃げ固定':'🔒通常'} 荒れ${l.areIndex||'?'}点 逃${l.nigeRate?l.nigeRate.toFixed(1):'?'}% ${l.betcount||'?'}点</div>
         <div class="log-bets">${bets}</div>
         ${missLabel&&!isHit&&!isSkip?`<div style="font-size:10px;color:var(--red);margin-top:2px;">${missLabel}</div>`:''}
         ${pendingBtn}
