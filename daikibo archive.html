@@ -57,9 +57,9 @@ p.note{font-size:11px;color:var(--text2);margin:0 0 8px;}
 <div class="card">
   <div class="section-title">② 結果を一括入力</div>
   <p class="note">
-    形式: [{"v":"桐生","r":"1R","d":"2026-07-04","c":"3-1-5"}, ...]（会場・レース番号・日付が一致するものに結果を反映します）
+    形式: [{"v":"桐生","r":"1R","d":"2026-07-04","c":"3-1-5","p":"¥1,200"}, ...]（会場・レース番号・日付が一致するものに結果と配当を反映します。pは3連単の払戻金額）
   </p>
-  <textarea id="input-results" rows="5" placeholder='[{"v":"桐生","r":"1R","d":"2026-07-04","c":"3-1-5"}, ...]'></textarea>
+  <textarea id="input-results" rows="5" placeholder='[{"v":"桐生","r":"1R","d":"2026-07-04","c":"3-1-5","p":"¥1,200"}, ...]'></textarea>
   <button class="btn btn-gold" style="width:100%;margin-top:8px;" onclick="applyResults()">✅ 結果を反映</button>
 </div>
 
@@ -510,11 +510,12 @@ function applyResults(){
   const logs=getArchiveLogs();
   let filled=0, noMatch=0;
   for(const r of arr){
-    const v=r.v, rNum=(r.r||'').replace('R','').trim(), dt=r.d, c=r.c;
+    const v=r.v, rNum=(r.r||'').replace('R','').trim(), dt=r.d, c=r.c, p=r.p||null;
     if(!v||!rNum||!dt||!c) { noMatch++; continue; }
     const idx=logs.findIndex(l=>l.venue===v&&l.racenum===rNum&&l.date===dt&&!l.resulted);
     if(idx>=0){
       logs[idx].chakuju=c;
+      logs[idx].payout=p; // 3連単の払戻金額（文字列、例:"¥1,200"）。無ければnullのまま
       logs[idx].resulted=true;
       filled++;
     } else {
@@ -563,7 +564,7 @@ function renderList(){
   const el=document.getElementById('entry-list');
   if(!logs.length){ el.innerHTML='<p class="note">まだ登録がありません</p>'; return; }
   el.innerHTML=logs.map(l=>{
-    const statusText=l.resulted?`結果:${l.chakuju}`:'未入力';
+    const statusText=l.resulted?`結果:${l.chakuju}${l.payout?' 配当:'+l.payout:''}`:'未入力';
     return `<div class="entry-row">${l.date} ${l.venue}${l.racenum}R — ${statusText}</div>`;
   }).join('');
 }
