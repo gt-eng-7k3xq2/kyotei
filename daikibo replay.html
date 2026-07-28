@@ -62,6 +62,11 @@ p.note{font-size:11px;color:var(--text2);margin:0 0 8px;}
     <option value="standard" selected>標準</option>
     <option value="adjusted">調整版</option>
   </select>
+  <label style="font-size:12px;color:var(--text2);margin-top:8px;display:block;">逃げなしモードの1号艇の扱い</label>
+  <select id="input-nigenashi-treatment">
+    <option value="equal" selected>対等（現行）</option>
+    <option value="exclude">完全排除（買い目から1号艇を外す）</option>
+  </select>
   <button class="btn btn-gold" style="width:100%;margin-top:8px;" onclick="runReplay()">🚀 検証実行</button>
 </div>
 
@@ -713,6 +718,7 @@ function runReplay(){
   if(!usable.length){ showToast('検証対象データがありません。先にアーカイブを読み込んでください'); return; }
 
   selectedHimoMode=(document.getElementById('input-himo')||{}).value||'standard';
+  const nigenashiTreatment=(document.getElementById('input-nigenashi-treatment')||{}).value||'equal';
   selectedNigeMode='auto';
   selectedRaceType='ippan';
 
@@ -730,7 +736,12 @@ function runReplay(){
       }
       const pts=(mode==='normal'||mode==='nigenashi')?8:(mode==='are_weak')?6:12;
       const marks=['◎','○','▲','△','▽','×'];
-      const ranking=areScores.map((s,i)=>({rank:i+1,boat:parseInt(s.no),mark:marks[i]||'×',score:s.raw,_st:s._st}));
+      let ranking=areScores.map((s,i)=>({rank:i+1,boat:parseInt(s.no),mark:marks[i]||'×',score:s.raw,_st:s._st}));
+
+      // 逃げなしモード「完全排除」: 1号艇をランキングから除外し、残り5艇だけで1〜5位を振り直す
+      if(mode==='nigenashi' && nigenashiTreatment==='exclude'){
+        ranking=ranking.filter(r=>r.boat!==1).map((r,i)=>({...r, rank:i+1, mark:marks[i]||'×'}));
+      }
 
       if(mode==='are_weak'||mode==='are_strong'){
         // buildBetsAreはselectedNigeModeを使わないので何もしない
