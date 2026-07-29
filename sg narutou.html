@@ -248,6 +248,7 @@
           <button class="bc-btn" onclick="setBetCount(4,this)">4</button>
           <button class="bc-btn" onclick="setBetCount(6,this)">6</button>
           <button class="bc-btn" onclick="setBetCount(8,this)">8</button>
+          <button class="bc-btn" onclick="setBetCount(10,this)">10</button>
           <button class="bc-btn active" onclick="setBetCount(12,this)">12</button>
           <button class="bc-btn" onclick="setBetCount(14,this)">14</button>
           <button class="bc-btn" onclick="setBetCount(16,this)">16</button>
@@ -837,19 +838,23 @@ function switchTab(name){
 
 }
 // モード判定に応じて点数を自動選択する(ボタンのクリックと同じ状態にする。手動で後から変更可能)
+// 2026-07-29修正: 以前はボタン一覧(4/6/8/12/14/16)に一致するものが無いと selectedBetCount 自体が
+// 更新されないバグがあった(該当ボタンが存在しない点数、例えば10点を自動選択しようとすると
+// 何も反映されず、直前の値・初期値の12点のまま買い目が生成されていた)。
+// ボタンのハイライト表示は一致するものがあれば更新するが、値の反映自体はボタンの有無に関係なく必ず行う。
 function autoSetBetCount(pts){
-  const btns=document.querySelectorAll('.bc-btn');
+  selectedBetCount=pts;
+  const btns=document.querySelectorAll('.betcount-row .bc-btn'); // race-type選択(rtype-*)も.bc-btnを共有しているため、点数ボタンだけに絞る
   let target=null;
-  btns.forEach(b=>{ if(b.textContent.trim()===String(pts)) target=b; });
-  if(target){
-    selectedBetCount=pts;
-    btns.forEach(b=>b.classList.remove('active'));
-    target.classList.add('active');
-  }
+  btns.forEach(b=>{
+    b.classList.remove('active');
+    if(b.textContent.trim()===String(pts)) target=b;
+  });
+  if(target) target.classList.add('active');
 }
 function setBetCount(n,btn){
   selectedBetCount=n;
-  document.querySelectorAll('.bc-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.betcount-row .bc-btn').forEach(b=>b.classList.remove('active')); // race-type選択と混同しないよう範囲を限定(2026-07-29修正)
   btn.classList.add('active');
   refreshBetsForCount();
 }
