@@ -1306,9 +1306,9 @@ function applyPtsToAll(){
 // 前日スクリーニング（2026-07-27追加）
 // calcAreIndex/judgeModeは展示・直線・周り足・直前ST・オッズを一切使わないため、
 // 前日時点のBM（夜間検証と同じもの）だけで荒れ指数・逃げ率・モード判定が可能。
-// スコア計算(calcAreScore)自体は◎○▲の判定とhasSTThreat判定に必要なので呼ぶが、
-// directSTは前日データでは検出できず0.20固定フォールバックになるため、
-// 2艇頭/逃げ固定の境界(STの脅威判定)は前日時点では参考値扱いとする。
+// スコア計算(calcAreScore)自体は◎○▲の判定に必要なので呼ぶ。
+// 2026-07-29追記: ST脅威判定は本体側で廃止済みのため、directSTが前日データで検出できない
+// （0.20固定フォールバック）ことによる影響はもう無い。2艇頭/逃げ固定の境界はnigeRateのみで決まる。
 // ============================================================
 const GOOD_VENUES=['芦屋','江戸川','住之江','平和島','津']; // n≥40でROI上位が安定して確認できた会場（2026-07-28、新エンジン適用後の再計算）
 // 実測ROI(%)。2026-07-28、daikibo_archive n=3146の全件検証より（n≥40の会場のみ採用、新エンジン適用後）
@@ -1340,6 +1340,44 @@ function estimateHitRate(mode, venue){
   const base=MODE_HITRATE_BASE[mode]!==undefined?MODE_HITRATE_BASE[mode]:OVERALL_AVG_HITRATE;
   const venueDelta=VENUE_HITRATE[venue]!==undefined?(VENUE_HITRATE[venue]-OVERALL_AVG_HITRATE):0;
   return base+venueDelta;
+}
+
+// 高配当専用指数（2026-07-29追加）: 70倍以上決着レースの特徴6項目を合成した指数。
+// train(daikibo_archive前半)で閾値・正規化パラメータを固定化。全て「小さいほど荒れやすい」項目。
+// 参考実績(test側で検証済み): 指数上位10%→70倍以上35.7%/50倍以上43.3%/100倍以上24.2%(全体基準はそれぞれ22.6%/30.8%/17.2%)
+const CHAOS_INDEX_MINMAX={
+  compositeStdev:[4.22,68.17], gap16:[12.66,195.49], gap12:[0.02,66.63],
+  b1NigeRateEff:[0,100], sessonPt_b1:[-4,11], kinsetsu6m_b1:[0,10.76]
+};
+const CHAOS_INDEX_THRESHOLDS={top10:0.709, top15:0.684, top25:0.643}; // 上位何%に入るかの目安値
+function calcChaosIndex(areScores, d){
+  const scoresSorted=areScores.map(s=>s.raw).slice().sort((a,b)=>b-a);
+  const b1=d.boats[0];
+  const b1NigeRateEff=b1.sgNige>0?b1.sgNige:((b1.atchiNige>0&&(b1.atchiNigeCount||0)>=10)?b1.atchiNige:b1.nigerate6m);
+  const raw={
+    compositeStdev:(function(){const m=scoresSorted.reduce((a,b)=>a+b,0)/6;return Math.sqrt(scoresSorted.reduce((a,b)=>a+(b-m)**2,0)/6);})(),
+    gap16:scoresSorted[0]-scoresSorted[5],
+    gap12:scoresSorted[0]-scoresSorted[1],
+    b1NigeRateEff,
+    sessonPt_b1:b1.sessonPt||0,
+    kinsetsu6m_b1:b1.kinsetsu6m||0
+  };
+  let sum=0, n=0;
+  for(const k in CHAOS_INDEX_MINMAX){
+    const [mn,mx]=CHAOS_INDEX_MINMAX[k];
+    if(mx<=mn) continue;
+    let norm=(raw[k]-mn)/(mx-mn);
+    norm=Math.max(0,Math.min(1,norm)); // 学習時の範囲を超える値の対策
+    sum+=(1-norm); // 全項目「小さいほど荒れやすい」なので反転
+    n++;
+  }
+  return n?sum/n:0;
+}
+function chaosLabel(idx){
+  if(idx>=CHAOS_INDEX_THRESHOLDS.top10) return {text:'🎯高配当期待◎(上位10%)',color:'var(--gold)'};
+  if(idx>=CHAOS_INDEX_THRESHOLDS.top15) return {text:'🎯高配当期待○(上位15%)',color:'var(--gold)'};
+  if(idx>=CHAOS_INDEX_THRESHOLDS.top25) return {text:'高配当期待△(上位25%)',color:'var(--text2)'};
+  return null;
 }
 
 function runScreening(){
@@ -1375,10 +1413,12 @@ function runScreening(){
       const isGoodVenue=GOOD_VENUES.includes(venue);
       const estRoi=estimateROI(mode, venue);
       const estHit=estimateHitRate(mode, venue);
+      const chaosIdx=calcChaosIndex(areScores, d);
+      const chaosBadge=chaosLabel(chaosIdx);
 
-      results.push({venue, raceNum:(d.raceNum||'?').replace('R','').trim(), shimekiri:d.shimekiri||'', mode, nigeHint, areIndex, nigeRate, isGoodVenue, estRoi, estHit});
+      results.push({venue, raceNum:(d.raceNum||'?').replace('R','').trim(), shimekiri:d.shimekiri||'', mode, nigeHint, areIndex, nigeRate, isGoodVenue, estRoi, estHit, chaosIdx, chaosBadge});
     }catch(e){
-      results.push({venue:'(解析失敗)', raceNum:'?', shimekiri:'', mode:'error', nigeHint:'', areIndex:0, nigeRate:0, isGoodVenue:false, estRoi:-999, estHit:0, error:e.message});
+      results.push({venue:'(解析失敗)', raceNum:'?', shimekiri:'', mode:'error', nigeHint:'', areIndex:0, nigeRate:0, isGoodVenue:false, estRoi:-999, estHit:0, chaosIdx:0, chaosBadge:null, error:e.message});
     }
   }
 
@@ -1407,11 +1447,12 @@ function runScreening(){
     const venueBadge=r.isGoodVenue?'<span style="color:var(--gold);font-weight:700;">◎優良会場</span> ':'';
     const hintText=r.nigeHint?` / ${r.nigeHint}`:'';
     const shimekiriText=r.shimekiri?` / 締切${r.shimekiri}`:'';
+    const chaosLine=r.chaosBadge?`<br><span style="color:${r.chaosBadge.color};font-weight:700;">${r.chaosBadge.text}</span>`:'';
     html+=`<div style="padding:8px 10px;margin-bottom:6px;border-radius:6px;background:rgba(255,255,255,0.03);border-left:3px solid ${judge.color};font-size:12px;">
       <b>${r.venue}${r.raceNum}R</b> <span style="color:${judge.color};font-weight:700;">${judge.text}</span>${shimekiriText}<br>
       <span style="color:var(--text2);">推定的中率 ${r.estHit.toFixed(1)}% / 推定ROI ${r.estRoi.toFixed(1)}%</span><br>
       ${venueBadge}<span style="color:${ml.color};font-weight:700;">${ml.text}</span>${hintText}<br>
-      荒れ指数${r.areIndex}点 / 逃げ率${r.nigeRate.toFixed(1)}%
+      荒れ指数${r.areIndex}点 / 逃げ率${r.nigeRate.toFixed(1)}%${chaosLine}
     </div>`;
   }
   document.getElementById('screening-results').innerHTML=html;
@@ -1431,7 +1472,8 @@ function copyScreeningResults(){
   const lines=lastScreeningResults.map(r=>{
     const ml=modeLabelText[r.mode]||r.mode;
     const shime=r.shimekiri?`締切${r.shimekiri}`:'締切不明';
-    return `${r.venue}${r.raceNum}R ${shime} 推定ROI${r.estRoi.toFixed(1)}% ${ml}${r.isGoodVenue?'(優良会場)':''}`;
+    const chaosText=r.chaosBadge?` ${r.chaosBadge.text}`:'';
+    return `${r.venue}${r.raceNum}R ${shime} 推定ROI${r.estRoi.toFixed(1)}% ${ml}${r.isGoodVenue?'(優良会場)':''}${chaosText}`;
   });
   const text='【前日スクリーニング結果】\n'+lines.join('\n');
   if(navigator.clipboard&&navigator.clipboard.writeText){
