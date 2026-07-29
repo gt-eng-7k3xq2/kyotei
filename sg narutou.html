@@ -2829,7 +2829,14 @@ function buildClaudeCommentData(){
     const motor=b.motor2ren!=null?b.motor2ren.toFixed(1)+'%':'-';
     const sashi=b.sashi6m||0, makuri=b.makuri6m||0, makurisashi=b.makurisashi6m||0;
     const axisTag=(no===maruBoat)?'(軸)':'';
+    const tenji=b.tenji>0?b.tenji.toFixed(2):'-';
+    const avgTenji=b.avgTenji>0?b.avgTenji.toFixed(2):'-';
+    const syukai=b.syukai>0?b.syukai.toFixed(2):'-';
+    const syukaiFoot=b.syukaiFoot>0?b.syukaiFoot.toFixed(2):'-';
+    const avgSyukaiFoot=b.avgSyukaiFoot>0?b.avgSyukaiFoot.toFixed(2):'-';
+    const chokusen=b.chokusen>0?b.chokusen.toFixed(2):'-';
     lines.push(`${circled[no-1]}${name}${axisTag}　ST${st}　今節得点率${toku}　モーター2連率${motor}　差し${sashi}%/まくり${makuri}%/まくり差し${makurisashi}%`);
+    lines.push(`　展示${tenji}(今節平均${avgTenji})　周回${syukai}　周回足${syukaiFoot}(今節平均${avgSyukaiFoot})　直線${chokusen}`);
   }
   lines.push('');
 
