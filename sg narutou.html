@@ -267,13 +267,13 @@
       <hr class="divider">
       <label style="margin-bottom:8px;">モード選択</label>
       <div style="display:flex;flex-wrap:wrap;gap:6px;">
-        <button class="alloc-btn active" id="mode-btn-normal" onclick="setMode('normal')" style="flex:1 1 30%;padding:10px 4px;font-size:12px;">🔒 通常</button>
-        <button class="alloc-btn" id="mode-btn-nito" onclick="setMode('nito')" style="flex:1 1 30%;padding:10px 4px;font-size:12px;">⚖️ 2艇頭</button>
-        <button class="alloc-btn" id="mode-btn-nigekotei" onclick="setMode('nigekotei')" style="flex:1 1 30%;padding:10px 4px;font-size:12px;">🔐 逃げ固定</button>
-        <button class="alloc-btn" id="mode-btn-are_strong" onclick="setMode('are_strong')" style="flex:1 1 30%;padding:10px 4px;font-size:12px;">⚡ 荒れ・強</button>
-        <button class="alloc-btn" id="mode-btn-are_weak" onclick="setMode('are_weak')" style="flex:1 1 30%;padding:10px 4px;font-size:12px;">🌊 荒れ・弱</button>
-        <button class="alloc-btn" id="mode-btn-nigenashi" onclick="setMode('nigenashi')" style="flex:1 1 30%;padding:10px 4px;font-size:12px;">🚫 逃げなし</button>
-        <button class="alloc-btn" id="mode-btn-skip" onclick="setMode('skip')" style="display:none;">⏭ SKIP</button>
+        <button class="alloc-btn active" id="mode-btn-normal" onclick="selectModeAndApply('normal')" style="flex:1 1 30%;padding:10px 4px;font-size:12px;">🔒 通常</button>
+        <button class="alloc-btn" id="mode-btn-nito" onclick="selectModeAndApply('nito')" style="flex:1 1 30%;padding:10px 4px;font-size:12px;">⚖️ 2艇頭</button>
+        <button class="alloc-btn" id="mode-btn-nigekotei" onclick="selectModeAndApply('nigekotei')" style="flex:1 1 30%;padding:10px 4px;font-size:12px;">🔐 逃げ固定</button>
+        <button class="alloc-btn" id="mode-btn-are_strong" onclick="selectModeAndApply('are_strong')" style="flex:1 1 30%;padding:10px 4px;font-size:12px;">⚡ 荒れ・強</button>
+        <button class="alloc-btn" id="mode-btn-are_weak" onclick="selectModeAndApply('are_weak')" style="flex:1 1 30%;padding:10px 4px;font-size:12px;">🌊 荒れ・弱</button>
+        <button class="alloc-btn" id="mode-btn-nigenashi" onclick="selectModeAndApply('nigenashi')" style="flex:1 1 30%;padding:10px 4px;font-size:12px;">🚫 逃げなし</button>
+        <button class="alloc-btn" id="mode-btn-skip" onclick="selectModeAndApply('skip')" style="display:none;">⏭ SKIP</button>
       </div>
       <button class="btn btn-gold" onclick="applyMode()" style="margin-top:8px;">買い目を生成</button>
     </div>
@@ -489,6 +489,12 @@ const STORE_KEY='sg_narutou_v1';
 const SETTINGS_KEY='sg_narutou_settings';
 const GEMINI_KEY='kyotei_gemini_key';
 let selectedBetCount=12;
+// 2026-07-29追加→撤回: 逃げ固定を6点に強制する案は「手動で点数を選ぶ意味がなくなる」との
+// 指摘の通りだったため撤回。buildBetsNormal側の逃げ固定フォーメーション自体を修正し、
+// 12点を選んでも全通しにならないようにしたので、ここでの点数制限は不要になった。
+function effectivePts(){
+  return selectedBetCount;
+}
 let allocMode='equal';
 let selectedMode='normal'; // ユーザー手動選択
 let lastSuggestedMode=null; // 自動判定の提案(診断用、実際に使われたモードとズレがないか後から確認できるように)
@@ -496,6 +502,7 @@ let selectedRaceType='sg'; // 'ippan','g2g3','g1','sg'
 let currentCalcData=null;
 let currentParsedData=null; // パース済みデータ保持
 let currentAreScores=null; // スコア保持
+let naturalAreScores=null; // 2026-07-29追加: モードで軸を強制入替する前の「素の評価順位」を保持（逃げ固定解除時の復元用）
 
 // ============================================================
 // スコアエンジン バージョン管理
@@ -629,6 +636,38 @@ function setMode(mode, isManualOverride){
   else { selectedNigeMode='auto'; selectedHimoMode='standard'; } // are_weak/are_strong/nigenashi/skip
 }
 
+// 2026-07-29追加: モードボタンを押した瞬間に買い目を再生成する（今までは別途「買い目を生成」ボタンを
+// 押さないと反映されず、「手動でモードを変えても買い目が変わらない」ように見えるバグの原因だった）
+// 2026-07-29修正: 「逃げ固定」は名前通り「1号艇が逃げて勝つことを前提に固定する」モードのはずが、
+// 実際は◎(既存スコアの評価1位)がたまたま1号艇じゃなくても、その艇をそのまま逃げ艇として扱っていた。
+// これは名前と動作が矛盾しているという指摘の通りなので、「逃げ固定」選択時は軸(◎)を1号艇に強制する。
+// 他のモードに切り替えた時は、素の評価順位(naturalAreScores)に戻す。
+function selectModeAndApply(mode){
+  if(currentAreScores && naturalAreScores){
+    if(mode==='nigekotei'){
+      const forced=naturalAreScores.slice();
+      const b1idx=forced.findIndex(s=>String(s.no)==='1');
+      if(b1idx>0){ const tmp=forced[0]; forced[0]=forced[b1idx]; forced[b1idx]=tmp; }
+      currentAreScores=forced;
+    }else{
+      currentAreScores=naturalAreScores.slice(); // 他モードは素の評価順位に戻す
+    }
+    // ai-rawのテキストもcurrentAreScoresと一致させる（generateBetsはai-rawを再パースして使うため）
+    const marks=['◎','○','▲','△','▽','×'];
+    const ranking=currentAreScores.map((s,i)=>({rank:i+1,boat:parseInt(s.no),mark:marks[i]||'×'}));
+    const d=currentParsedData;
+    const rankText=ranking.map(r=>{const nm=d&&d.boats[r.boat-1]?d.boats[r.boat-1].name:'';return`${r.rank}位 ${r.boat}号艇 ${r.mark}${nm?' '+nm:''}`;}).join('\n');
+    const aiRawEl=document.getElementById('ai-raw');
+    if(aiRawEl) aiRawEl.textContent=rankText;
+  }
+  setMode(mode, true);
+  if(currentParsedData && currentAreScores && currentAreScores.length){
+    applyMode();
+  }
+  // まだ予想実行前ならボタンの状態だけ更新して待つ（applyMode側で「先に予想実行してください」の
+  // トーストは出さない。ボタンを押しただけでエラー扱いにするのは不親切なため）
+}
+
 function applyMode(){
   if(!currentParsedData||!currentAreScores){showToast('先に予想実行してください');return;}
   if(selectedMode==='skip'){showToast('スキップ設定です');return;}
@@ -729,7 +768,7 @@ function generateBets(d, areScores, mode){
   // 旧buildBetsNigeNashiは使用しなくなったが、過去ログとの互換確認用に関数自体は残す。
   // （kyotei_backtest.htmlと必ず同期させること）
   if(mode==='are_weak'||mode==='are_strong') lastResolvedNigeMode=null; // buildBetsNormalを通らないので明示的にリセット
-  const betsRaw=(mode==='are_weak'||mode==='are_strong')?buildBetsAre(ranking,selectedBetCount,nigeRate):buildBetsNormal(ranking,selectedBetCount,currentParsedData);
+  const betsRaw=(mode==='are_weak'||mode==='are_strong')?buildBetsAre(ranking,effectivePts(),nigeRate):buildBetsNormal(ranking,effectivePts(),currentParsedData);
 
   // 自信度計算（2026-07-24: 実績ベースの校正テーブルに刷新済み。定義はトップレベルのcalcConfidence参照）
   const conf=calcConfidence(mode, areScores, ranking);
@@ -825,8 +864,8 @@ function refreshBetsForCount(){
   const oddsMap=extractOddsMap(document.getElementById('inp-data').value);
   if(currentCalcData.mode==='are_weak'||currentCalcData.mode==='are_strong') lastResolvedNigeMode=null;
   const newBets=(currentCalcData.mode==='are_weak'||currentCalcData.mode==='are_strong')
-    ?buildBetsAre(ranking,selectedBetCount,nigeRate)
-    :buildBetsNormal(ranking,selectedBetCount,currentParsedData);
+    ?buildBetsAre(ranking,effectivePts(),nigeRate)
+    :buildBetsNormal(ranking,effectivePts(),currentParsedData);
 
   currentCalcData.ranking=ranking;
   currentCalcData.betsRaw=newBets;
@@ -1694,11 +1733,15 @@ function buildBetsNormal(ranking, pts, parsedData){
         honsen.push({val:`${maru}-${b}-${c}`, score:(rankMap[b]||9)*10+cRank});
       }
     }
+    // 2026-07-29修正: 以前はcRank<6(評価2〜5位)全部を3着候補にしていたため、
+    // 抑え(4〜5位評価艇を2着候補)と組み合わせると、評価2〜5位の全12通りを網羅してしまい、
+    // 「逃げ固定なのに3着が全通しになる」という、モード名と矛盾した挙動になっていた。
+    // 抑えの3着候補は評価2〜3位(一番信頼できる2艇)だけに絞り、12点でも選択的な構成を保つ。
     for(const b of osaeeNige2){
       for(const c of activeBoats){
         if(c===maru||c===b) continue;
         const cRank=rankMap[c]||9;
-        if(cRank>=6) continue;
+        if(cRank>=4) continue; // 評価2〜3位のみ（以前は<6=評価2〜5位まで許容していた）
         osaee.push({val:`${maru}-${b}-${c}`, score:(rankMap[b]||9)*10+cRank});
       }
     }
@@ -1795,12 +1838,14 @@ function buildBetsNormal(ranking, pts, parsedData){
   // 点数配分
   let hc, oc;
   if(nigeMode === 'high'){
-    // 逃げ固定: 本線=○▲各3着(6点)、抑え=△▽(残り)
+    // 逃げ固定: 本線=○▲各3着(6点)、抑え=△▽×評価2-3位のみ(最大4点)
+    // 2026-07-29修正: 抑えの3着候補を評価2〜5位全部→評価2〜3位のみに絞ったため、
+    // 抑えの上限は4点(2候補×2候補)。以前は12点で評価2〜5位の全12通りを網羅してしまい
+    // 「逃げ固定なのに3着が全通しになる」という、モード名と矛盾した挙動になっていた。
     if(pts<=4){       hc=4;  oc=0; }
     else if(pts<=6){  hc=6;  oc=0; }
     else if(pts<=8){  hc=6;  oc=2; }
-    else if(pts<=12){ hc=6;  oc=6; }
-    else {            hc=6;  oc=7; }
+    else {            hc=6;  oc=4; } // 8点超はすべて上限(6+4=10点)。全通しにはならない
   } else if(nigeMode === 'mid'){
     // 2艇頭: 本線=◎-○×3点+○-◎×3点、抑え=◎-▲以下
     if(pts<=4){       hc=4;  oc=0; }
@@ -2172,6 +2217,7 @@ async function runYoso(){
     // パース済みデータ・スコアを保持（モード選択後に使用）
     currentParsedData=d;
     currentAreScores=areScores;
+    naturalAreScores=areScores.slice(); // 2026-07-29追加: モード手動切替時に「素の評価順位」へ戻せるよう保持
     updateEntryFlag(); // 予想実行直後にすぐ表示（買い目生成を待たない）
 
     setMode(mode, false); // 自動提案なのでnigeMode/himoModeは強制しない
@@ -4044,6 +4090,25 @@ function updateLogSummary(){
     if(done.length-hits.length>0){
       html+=`<button onclick="showMissDetail()" style="width:100%;padding:10px;background:rgba(224,80,80,.08);color:var(--red);border:1px solid rgba(224,80,80,.3);border-radius:6px;font-size:12px;font-weight:700;-webkit-appearance:none;">📊 外れ詳細（${done.length-hits.length}件）</button>`;
     }
+    // モード別: 参入レース数・的中率・平均的中配当（2026-07-28追加）
+    const modeLabelMap={are_strong:'⚡荒れ・強',are_weak:'🌊荒れ・弱',nigenashi:'🚫逃げなし',nito:'⚖️2艇頭',nigekotei:'🔐逃げ固定',normal:'🔒通常'};
+    const byMode={};
+    done.forEach(l=>{ (byMode[l.mode]=byMode[l.mode]||[]).push(l); });
+    const modeOrder=['are_strong','are_weak','nigenashi','nito','nigekotei','normal'];
+    const modeRows=modeOrder.filter(m=>byMode[m]&&byMode[m].length).map(m=>{
+      const rs=byMode[m];
+      const rHits=rs.filter(l=>l.result==='hit');
+      const avgPayout=rHits.length?Math.round(rHits.reduce((s,l)=>s+(l.payout||0),0)/rHits.length):0;
+      const hr=Math.round(rHits.length/rs.length*100);
+      return`<tr><td style="padding:5px 4px;text-align:left;">${modeLabelMap[m]||m}</td><td style="padding:5px 4px;">${rs.length}</td><td style="padding:5px 4px;">${hr}%</td><td style="padding:5px 4px;">¥${avgPayout.toLocaleString()}</td></tr>`;
+    }).join('');
+    if(modeRows){
+      html+=`<div style="margin-top:10px;font-size:10px;color:var(--muted);font-weight:700;letter-spacing:1px;">モード別内訳</div>
+      <table style="width:100%;font-size:11px;border-collapse:collapse;margin-top:4px;">
+        <thead><tr style="color:var(--muted);"><th style="padding:4px;text-align:left;font-weight:600;">モード</th><th style="padding:4px;font-weight:600;">参入</th><th style="padding:4px;font-weight:600;">的中率</th><th style="padding:4px;font-weight:600;">平均的中配当</th></tr></thead>
+        <tbody>${modeRows}</tbody>
+      </table>`;
+    }
   }
   html+='</div>';
   el.innerHTML=html;
@@ -4381,8 +4446,8 @@ function regenerateBets(){
   const oddsMap=extractOddsMap(document.getElementById('inp-data').value);
   if(selectedMode==='are_weak'||selectedMode==='are_strong') lastResolvedNigeMode=null;
   const newBets=(selectedMode==='are_weak'||selectedMode==='are_strong')
-    ?buildBetsAre(newRanking,selectedBetCount,nigeRate)
-    :buildBetsNormal(newRanking,selectedBetCount,currentParsedData);
+    ?buildBetsAre(newRanking,effectivePts(),nigeRate)
+    :buildBetsNormal(newRanking,effectivePts(),currentParsedData);
 
   // currentCalcData更新
   if(currentCalcData){
