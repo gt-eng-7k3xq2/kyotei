@@ -1335,14 +1335,16 @@ const MODE_HITRATE_BASE={
 
 function estimateROI(mode, venue, stdev){
   const base=MODE_ROI_BASE[mode]!==undefined?MODE_ROI_BASE[mode]:OVERALL_AVG_ROI;
-  const venueDelta=VENUE_ROI[venue]!==undefined?(VENUE_ROI[venue]-OVERALL_AVG_ROI):0;
+  // 2026-07-30: 会場デルタは0.3倍に縮小。生の会場平均は数件の高配当に引っ張られやすく（例: 三国は上位3件の配当を除くとROIが107→74.5に低下）、
+  // 全面採用すると毎回同じ会場ばかり上位に出て偏りが生じる。n=4232で検証: 全面採用ROI97.5%(上位5会場で83%占有) → 0.3倍でROI107.7%(会場も分散)
+  const venueDelta=VENUE_ROI[venue]!==undefined?(VENUE_ROI[venue]-OVERALL_AVG_ROI)*0.3:0;
   const stdevDelta=(stdev!==undefined)?stdevROIDelta(stdev):0;
   return base+venueDelta+stdevDelta;
 }
 
 function estimateHitRate(mode, venue, stdev){
   const base=MODE_HITRATE_BASE[mode]!==undefined?MODE_HITRATE_BASE[mode]:OVERALL_AVG_HITRATE;
-  const venueDelta=VENUE_HITRATE[venue]!==undefined?(VENUE_HITRATE[venue]-OVERALL_AVG_HITRATE):0;
+  const venueDelta=VENUE_HITRATE[venue]!==undefined?(VENUE_HITRATE[venue]-OVERALL_AVG_HITRATE)*0.3:0;
   const stdevDelta=(stdev!==undefined)?stdevHitDelta(stdev):0;
   return base+venueDelta+stdevDelta;
 }
