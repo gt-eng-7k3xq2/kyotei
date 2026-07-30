@@ -499,7 +499,7 @@ function effectivePts(){
 let allocMode='equal';
 let selectedMode='normal'; // ユーザー手動選択
 let lastSuggestedMode=null; // 自動判定の提案(診断用、実際に使われたモードとズレがないか後から確認できるように)
-let selectedRaceType='sg'; // 'ippan','g2g3','g1','sg'
+let selectedRaceType='ippan'; // 'ippan','g2g3','g1','sg'
 let currentCalcData=null;
 let currentParsedData=null; // パース済みデータ保持
 let currentAreScores=null; // スコア保持
@@ -924,6 +924,17 @@ function validateExtractedData(d, rawText){
   checkAllZero('chokusen','直線');
   checkAllZero('syukai','周回');
   checkAllZero('directST','直前ST');
+
+  // 2026-07-30追加: キャリア勝率・一般戦2連対率は重み再最適化で最重量級の項目になったため、
+  // 「6艇中1〜5艇だけ0%」という部分欠損（新人選手で正しい0の場合もあるが、抽出ズレの可能性もある）
+  // を目視確認できるよう警告を追加。全艇0は既存のcheckAllZeroで別途拾う。
+  const checkPartialZero=(key,label)=>{
+    const boats=d.boats||[];
+    const zeroCount=boats.filter(b=>!b || !b[key]).length;
+    if(zeroCount>0 && zeroCount<boats.length) warnings.push(label+'(一部艇のみ0%・新人選手か抽出ズレか要確認)');
+  };
+  checkPartialZero('kinsetsu6m','キャリア勝率');
+  checkPartialZero('ippan2ren','一般戦2連対率');
 
   return warnings;
 }
