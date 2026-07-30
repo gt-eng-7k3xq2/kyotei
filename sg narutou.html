@@ -1172,18 +1172,34 @@ function parseData(text){
     for(let i=0;i<6;i++) d.boats[i].sessonAvgST=parseFloat(sessonStSection[i+1])||0;
   }
 
-  // SG/G1平均ST（基本情報セクション内）
-  const sgStSection=text.match(/基本情報[\s\S]*?SG\/G1[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)/m);
-  if(sgStSection){
-    for(let i=0;i<6;i++) d.boats[i].sgAvgST=parseFloat(sgStSection[i+1])||0;
+  // 2026-07-30修正: 基本情報の「平均ST」ブロック(平均ST〜ST順位の間)を一度だけ切り出し、
+  // SG/G1平均ST・当地平均STの両方をこのブロック内だけで検索する。
+  // 旧実装はブロック範囲を指定せず「基本情報以降で最初に見つかるSG/G1・当地」を拾っており、
+  // 別の見出し(勝率のSG/G1、ST順位の当地)を誤って掴んでいた。
+  const stBlockMatch=text.match(/基本情報[\s\S]*?\n平均ST\n([\s\S]*?)\nST順位/);
+
+  // SG/G1平均ST（基本情報 > 平均STブロック内のSG/G1行のみを対象。「-」は個別に0扱い）
+  if(stBlockMatch){
+    const sgStSection=stBlockMatch[1].match(/\nSG\/G1[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)/);
+    if(sgStSection){
+      for(let i=0;i<6;i++){
+        const v=sgStSection[i+1];
+        d.boats[i].sgAvgST=(v&&v!=='-')?parseFloat(v)||0:0;
+      }
+    }
   }
 
-  // 当地平均ST（基本情報 > 当地行、数値のみ）
-  const atchiStSection=text.match(/基本情報[\s\S]*?\n当地[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)/m);
-  if(atchiStSection){
-    for(let i=0;i<6;i++){
-      const v=atchiStSection[i+1];
-      d.boats[i].atchiAvgST=(v&&v!=='-')?parseFloat(v)||0:0;
+  // 当地平均ST（基本情報 > 平均STブロック内の当地行のみを対象。ST順位ブロックの「当地」行
+  // 2026-07-30まで誤って拾っていたバグを修正: 旧実装は基本情報以降で最初に見つかる「当地」行を
+  // 無条件に拾っており、平均STブロックに当地行が無い場合、離れたST順位ブロックの当地"順位"の値
+  // （1〜6のランキング）をタイムとして誤読していた。以下は平均STブロックの範囲内に限定して検索する）
+  if(stBlockMatch){
+    const atchiStSection2=stBlockMatch[1].match(/\n当地[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)/);
+    if(atchiStSection2){
+      for(let i=0;i<6;i++){
+        const v=atchiStSection2[i+1];
+        d.boats[i].atchiAvgST=(v&&v!=='-')?parseFloat(v)||0:0;
+      }
     }
   }
 
@@ -1224,7 +1240,9 @@ function parseData(text){
   }
 
   // 直前ST・展示Fフラグ（展示でFっただけ＝STスコアなし、ペナルティなし）
-  const stSection=text.match(/ST\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)/);
+  // 2026-07-30修正: 旧正規表現に行頭アンカーが無く、「今節データ」セクションの「平均ST」行
+  // （本来は無関係）を誤って先にマッチしていたバグを修正。ST行は必ず行頭が「ST」であることを要求する。
+  const stSection=text.match(/(?:^|\n)ST\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)/);
   if(stSection){
     for(let i=0;i<6;i++){
       const stStr=stSection[i+1];

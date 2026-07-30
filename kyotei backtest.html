@@ -93,6 +93,17 @@ textarea{resize:vertical;}
 </div>
 
 <div class="card">
+  <div class="section-title">🔍 直前最終チェック</div>
+  <p style="font-size:11px;color:var(--text2);margin-bottom:8px;">
+    展示・直前STまで揃った本命レースのBMデータを1件貼ると、前日判定と同じ基準（モード・会場・スコア差）で最終判定します。
+    見送りになったら予備リストから同じ時間帯のレースに差し替えてください。
+  </p>
+  <textarea id="finalcheck-paste" rows="6" placeholder="最終判定したいレースのBMデータ（1件）"></textarea>
+  <button class="btn btn-gold" style="width:100%;margin-top:8px;" onclick="runFinalCheck()">✅ 最終チェック実行</button>
+  <div id="finalcheck-results" style="margin-top:10px;"></div>
+</div>
+
+<div class="card">
   <div class="section-title">結果を一括入力</div>
   <p style="font-size:11px;color:var(--text2);margin-bottom:8px;">
     払戻データ収集用ブックマークレットでコピーしたJSON（[{"v":場,"r":レース,"c":結果,"p":払戻,...}]形式）を貼ると、
@@ -365,20 +376,33 @@ function parseData(text){
     for(let i=0;i<6;i++) d.boats[i].sessonAvgST=parseFloat(sessonStSection[i+1])||0;
   }
 
-  // SG/G1平均ST（基本情報セクション内）
-  const sgStSection=text.match(/基本情報[\s\S]*?SG\/G1[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)/m);
-  if(sgStSection){
-    for(let i=0;i<6;i++) d.boats[i].sgAvgST=parseFloat(sgStSection[i+1])||0;
-  }
+  // 2026-07-30修正: 基本情報の「平均ST」ブロックを一度だけ切り出し、SG/G1平均ST・当地平均STの
+  // 両方をこのブロック内だけで検索する（sg_narutou.htmlと同期）
+  const stBlockMatch=text.match(/基本情報[\s\S]*?\n平均ST\n([\s\S]*?)\nST順位/);
 
-  // 当地平均ST（基本情報 > 当地行、数値のみ）
-  const atchiStSection=text.match(/基本情報[\s\S]*?\n当地[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)/m);
-  if(atchiStSection){
-    for(let i=0;i<6;i++){
-      const v=atchiStSection[i+1];
-      d.boats[i].atchiAvgST=(v&&v!=='-')?parseFloat(v)||0:0;
+  // SG/G1平均ST（基本情報 > 平均STブロック内のSG/G1行のみを対象。「-」は個別に0扱い）
+  if(stBlockMatch){
+    const sgStSection=stBlockMatch[1].match(/\nSG\/G1[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)/);
+    if(sgStSection){
+      for(let i=0;i<6;i++){
+        const v=sgStSection[i+1];
+        d.boats[i].sgAvgST=(v&&v!=='-')?parseFloat(v)||0:0;
+      }
     }
   }
+
+  // 当地平均ST（基本情報 > 平均STブロック内の当地行のみを対象。旧実装はST順位ブロックの
+  // 当地"順位"をタイムとして誤読していた）
+  if(stBlockMatch){
+    const atchiStSection2=stBlockMatch[1].match(/\n当地[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)/);
+    if(atchiStSection2){
+      for(let i=0;i<6;i++){
+        const v=atchiStSection2[i+1];
+        d.boats[i].atchiAvgST=(v&&v!=='-')?parseFloat(v)||0:0;
+      }
+    }
+  }
+
 
   // 直前展示タイム
   const tenjiSection=text.match(/(?:^|\n)展示\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/m);
@@ -417,7 +441,8 @@ function parseData(text){
   }
 
   // 直前ST・展示Fフラグ（展示でFっただけ＝STスコアなし、ペナルティなし）
-  const stSection=text.match(/ST\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)/);
+  // 2026-07-30修正: 行頭アンカーが無く「今節データ」の平均ST行を誤ってマッチしていたバグを修正（sg_narutou.htmlと同期）
+  const stSection=text.match(/(?:^|\n)ST\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)/);
   if(stSection){
     for(let i=0;i<6;i++){
       const stStr=stSection[i+1];
@@ -808,6 +833,37 @@ function extractOddsMap(text){
   }
   flushBlock();
   return map;
+}
+
+// 2026-07-30追加: sg_narutou.htmlから移植（直前最終チェック機能で使用）
+function validateExtractedData(d, rawText){
+  const warnings=[];
+  try{
+    const oddsMap=extractOddsMap(rawText||'');
+    if(!oddsMap || !Object.keys(oddsMap).length){
+      warnings.push('オッズ');
+    }
+  }catch(e){ warnings.push('オッズ'); }
+
+  const checkAllZero=(key,label)=>{
+    const allZero=(d.boats||[]).every(b=>!b || !b[key]);
+    if(allZero) warnings.push(label);
+  };
+  checkAllZero('tenji','展示タイム');
+  checkAllZero('syukaiFoot','周り足');
+  checkAllZero('chokusen','直線');
+  checkAllZero('syukai','周回');
+  checkAllZero('directST','直前ST');
+
+  const checkPartialZero=(key,label)=>{
+    const boats=d.boats||[];
+    const zeroCount=boats.filter(b=>!b || !b[key]).length;
+    if(zeroCount>0 && zeroCount<boats.length) warnings.push(label+'(一部艇のみ0%・新人選手か抽出ズレか要確認)');
+  };
+  checkPartialZero('kinsetsu6m','キャリア勝率');
+  checkPartialZero('ippan2ren','一般戦2連対率');
+
+  return warnings;
 }
 
 // ============================================================
@@ -1413,8 +1469,10 @@ function runScreening(){
 
   const errorResults=results.filter(r=>r.mode==='error');
   const validResults=results.filter(r=>r.mode!=='error').sort((a,b)=>b.estRoi-a.estRoi);
-  const TOP_N=10;
-  const topResults=validResults.slice(0,TOP_N);
+  // 2026-07-30: 本命20件+予備10件の2段構成に変更（従来はTOP_N=10のみ）
+  const MAIN_N=20, RESERVE_N=10;
+  const mainResults=validResults.slice(0,MAIN_N);
+  const reserveResults=validResults.slice(MAIN_N,MAIN_N+RESERVE_N);
 
   const modeLabel={
     are_strong:{text:'⚡荒れ・強', color:'var(--gold)'},
@@ -1424,13 +1482,8 @@ function runScreening(){
     error:{text:'⚠️解析失敗', color:'var(--red)'}
   };
 
-  let html=`<p style="font-size:11px;color:var(--text2);margin-bottom:6px;">${results.length}レース中、推定ROI上位${topResults.length}件を表示（過去実績ベースの目安。直前ST・オッズは未反映）</p>`;
-  for(const r of errorResults){
-    html+=`<div style="padding:8px;margin-bottom:6px;border-radius:6px;background:rgba(200,60,60,0.1);border:1px solid rgba(200,60,60,0.4);font-size:12px;">⚠️ 解析失敗: ${r.error||''}</div>`;
-  }
-  for(const r of topResults){
+  function renderCard(r){
     // 参入判定: 推定ROI 89%以上=◎参入、74〜89%=△様子見、74%未満=✗見送り（2026-07-30、全体平均ROIの上昇分+3.9ptを反映）
-    // 2026-07-28: 新エンジンで全体平均ROIが65.4%→73.5%に上がったため、閾値も同じ分だけ引き上げ
     const judge=r.estRoi>=89?{text:'◎参入',color:'var(--green)'}:r.estRoi>=74?{text:'△様子見',color:'var(--gold)'}:{text:'✗見送り',color:'var(--red)'};
     const ml=modeLabel[r.mode]||{text:r.mode,color:'var(--text2)'};
     const venueBadge=r.isGoodVenue?'<span style="color:var(--gold);font-weight:700;">◎優良会場</span> ':'';
@@ -1440,17 +1493,28 @@ function runScreening(){
     else if(r.stdev>=27.9) stdevBadge='<span style="color:var(--text2);">△中間帯(ROI低め)</span> ';
     const hintText=r.nigeHint?` / ${r.nigeHint}`:'';
     const shimekiriText=r.shimekiri?` / 締切${r.shimekiri}`:'';
-    html+=`<div style="padding:8px 10px;margin-bottom:6px;border-radius:6px;background:rgba(255,255,255,0.03);border-left:3px solid ${judge.color};font-size:12px;">
+    return `<div style="padding:8px 10px;margin-bottom:6px;border-radius:6px;background:rgba(255,255,255,0.03);border-left:3px solid ${judge.color};font-size:12px;">
       <b>${r.venue}${r.raceNum}R</b> <span style="color:${judge.color};font-weight:700;">${judge.text}</span>${shimekiriText}<br>
       <span style="color:var(--text2);">推定的中率 ${r.estHit.toFixed(1)}% / 推定ROI ${r.estRoi.toFixed(1)}%</span><br>
       ${venueBadge}${stdevBadge}<span style="color:${ml.color};font-weight:700;">${ml.text}</span>${hintText}<br>
       荒れ指数${r.areIndex}点 / 逃げ率${r.nigeRate.toFixed(1)}% / スコア差${r.stdev.toFixed(1)}
     </div>`;
   }
+
+  let html=`<p style="font-size:11px;color:var(--text2);margin-bottom:6px;">${results.length}レース中、推定ROI上位${mainResults.length}件(本命)+${reserveResults.length}件(予備)を表示（過去実績ベースの目安。直前ST・オッズは未反映）</p>`;
+  for(const r of errorResults){
+    html+=`<div style="padding:8px;margin-bottom:6px;border-radius:6px;background:rgba(200,60,60,0.1);border:1px solid rgba(200,60,60,0.4);font-size:12px;">⚠️ 解析失敗: ${r.error||''}</div>`;
+  }
+  html+=`<p style="font-size:12px;font-weight:700;color:var(--gold);margin:8px 0 4px;">🎯 本命（上位${mainResults.length}件）</p>`;
+  for(const r of mainResults) html+=renderCard(r);
+  if(reserveResults.length){
+    html+=`<p style="font-size:12px;font-weight:700;color:var(--text2);margin:10px 0 4px;">🔁 予備（本命が見送りになった場合の差し替え候補）</p>`;
+    for(const r of reserveResults) html+=renderCard(r);
+  }
   document.getElementById('screening-results').innerHTML=html;
-  lastScreeningResults=topResults;
+  lastScreeningResults=mainResults.concat(reserveResults);
   const copyBtn=document.getElementById('screening-copy-btn');
-  if(copyBtn) copyBtn.style.display=topResults.length?'block':'none';
+  if(copyBtn) copyBtn.style.display=lastScreeningResults.length?'block':'none';
   showToast(`✅ ${results.length}レースをスクリーニングしました`);
 }
 
@@ -1476,6 +1540,67 @@ function copyScreeningResults(){
   } else {
     showToast('⚠️ このブラウザはコピー機能に対応していません');
   }
+}
+
+// 2026-07-30追加: 直前情報まで揃った時点での最終チェック。前日スクリーニングと同じ判定基準
+// （モード・会場0.3倍・スコア差）を、直前情報込みの本番データに対して再度適用する。
+function runFinalCheck(){
+  const raw=document.getElementById('finalcheck-paste').value;
+  if(!raw.trim()){showToast('データを貼り付けてください');return;}
+  const resultsEl=document.getElementById('finalcheck-results');
+  let d, areScores, warnings;
+  try{
+    d=parseData(raw);
+    warnings=validateExtractedData(d, raw);
+    areScores=calcAreScore(d);
+  }catch(e){
+    resultsEl.innerHTML=`<div style="padding:8px;border-radius:6px;background:rgba(200,60,60,0.1);border:1px solid rgba(200,60,60,0.4);font-size:12px;">⚠️ 解析失敗: ${e.message}</div>`;
+    return;
+  }
+  const b1RankBeforeFix=areScores.findIndex(s=>String(s.no)==='1');
+  if(b1RankBeforeFix===1){
+    const tmp=areScores[0]; areScores[0]=areScores[1]; areScores[1]=tmp;
+  }
+  const{areIndex,nigeRate}=calcAreIndex(d);
+  let mode=judgeMode(areIndex,nigeRate);
+  const boat1Rank=areScores.findIndex(s=>String(s.no)==='1');
+  if(nigeRate<30 && boat1Rank>0 && boat1Rank<5){
+    mode='nigenashi';
+  }
+  const venue=d.venue||'不明';
+  const isGoodVenue=GOOD_VENUES.includes(venue);
+  const stdev=calcStdev(areScores);
+  const estRoi=estimateROI(mode, venue, stdev);
+  const estHit=estimateHitRate(mode, venue, stdev);
+
+  const modeLabel={
+    are_strong:{text:'⚡荒れ・強', color:'var(--gold)'},
+    are_weak:{text:'🌊荒れ・弱', color:'#7ec8e3'},
+    nigenashi:{text:'🚫逃げなし', color:'#e37e7e'},
+    normal:{text:'🔒通常', color:'var(--text2)'}
+  };
+  const ml=modeLabel[mode]||{text:mode, color:'var(--text2)'};
+  const judge=estRoi>=89?{text:'◎参入続行',color:'var(--green)'}:estRoi>=74?{text:'△様子見（要判断）',color:'var(--gold)'}:{text:'✗見送り→予備に差し替え',color:'var(--red)'};
+  const venueBadge=isGoodVenue?'<span style="color:var(--gold);font-weight:700;">◎優良会場</span> ':'';
+  let stdevBadge='';
+  if(stdev<20.3) stdevBadge='<span style="color:var(--gold);font-weight:700;">🎯拮抗(高ROI帯)</span> ';
+  else if(stdev>=31.9) stdevBadge='<span style="color:var(--gold);font-weight:700;">💥1艇突出(高ROI帯)</span> ';
+  else if(stdev>=27.9) stdevBadge='<span style="color:var(--text2);">△中間帯(ROI低め)</span> ';
+
+  let warnHtml='';
+  if(warnings && warnings.length){
+    warnHtml=`<div style="margin-top:6px;padding:6px 8px;background:rgba(200,60,60,0.12);border:1px solid rgba(200,60,60,0.4);border-radius:6px;font-size:11px;color:#f0a0a0;">⚠️ データ抜け疑い: ${warnings.join('・')}</div>`;
+  }
+
+  resultsEl.innerHTML=`<div style="padding:10px;border-radius:6px;background:rgba(255,255,255,0.03);border-left:4px solid ${judge.color};font-size:13px;">
+    <b>${venue}${(d.raceNum||'?').replace('R','')}R</b>${d.shimekiri?` / 締切${d.shimekiri}`:''}<br>
+    <span style="font-size:15px;font-weight:700;color:${judge.color};">${judge.text}</span><br>
+    <span style="color:var(--text2);">最終推定的中率 ${estHit.toFixed(1)}% / 最終推定ROI ${estRoi.toFixed(1)}%</span><br>
+    ${venueBadge}${stdevBadge}<span style="color:${ml.color};font-weight:700;">${ml.text}</span><br>
+    荒れ指数${areIndex}点 / 逃げ率${nigeRate.toFixed(1)}% / スコア差${stdev.toFixed(1)}
+    ${warnHtml}
+  </div>`;
+  showToast(judge.text.includes('見送り')?'⚠️ 見送り判定です':'✅ 最終チェック完了');
 }
 
 function splitBulkPaste(){
