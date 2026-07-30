@@ -262,6 +262,7 @@
   <div id="yoso-result" style="display:none;">
     <div class="card">
       <div class="card-title">📊 JSスコア計算結果</div>
+      <div id="entry-verdict" style="margin-bottom:8px;"></div>
       <div id="score-display"></div>
       <div id="data-gap-alert" style="display:none;"></div>
       <div id="mode-result" style="margin-top:8px;"></div>
@@ -500,6 +501,70 @@ let allocMode='equal';
 let selectedMode='normal'; // ユーザー手動選択
 let lastSuggestedMode=null; // 自動判定の提案(診断用、実際に使われたモードとズレがないか後から確認できるように)
 let selectedRaceType='ippan'; // 'ippan','g2g3','g1','sg'
+
+// ===== 直前最終チェック用（kyotei_backtest.htmlと同期） =====
+
+const GOOD_VENUES=['三国','津','平和島','びわこ','住之江']
+
+const VENUE_ROI={'戸田':46.1,'多摩川':80.5,'浜名湖':61.5,'蒲郡':67.6,'常滑':74.6,'三国':107.2,'びわこ':94.5,'児島':79.3,'宮島':48.8,'下関':73.2,'若松':68.1,'福岡':71.4,'唐津':71.2,'大村':69.6,'平和島':97.3,'芦屋':76.6,'津':100.9,'住之江':90.0,'尼崎':72.5,'桐生':84.0,'徳山':66.4,'鳴門':84.3,'丸亀':67.6,'江戸川':81.7}
+
+const MODE_ROI_BASE={
+  are_strong:80.8,  // n=1044、実測（2026-07-30、重み再最適化後）
+  normal:76.8,      // n=2163、実測
+  are_weak:68.9,    // n=356、実測
+  nigenashi:81.7    // n=177、実測
+}
+
+const VENUE_HITRATE={'戸田':30.6,'多摩川':42.6,'浜名湖':38.9,'蒲郡':40.3,'常滑':44.9,'三国':43.1,'びわこ':45.0,'児島':42.9,'宮島':36.9,'下関':40.5,'若松':47.9,'福岡':47.9,'唐津':46.2,'大村':46.8,'平和島':42.9,'芦屋':40.8,'津':37.1,'住之江':40.5,'尼崎':48.3,'桐生':42.8,'徳山':46.5,'鳴門':39.6,'丸亀':49.2,'江戸川':49.0}
+
+const MODE_HITRATE_BASE={
+  are_strong:41.0,  // n=1044、実測（2026-07-30、重み再最適化後）
+  normal:45.8,      // n=2163、実測
+  are_weak:40.7,    // n=356、実測
+  nigenashi:27.1    // n=177、実測
+}
+
+const OVERALL_AVG_ROI=77.4;
+
+const OVERALL_AVG_HITRATE=43.1;
+
+function estimateROI(mode, venue, stdev){
+  const base=MODE_ROI_BASE[mode]!==undefined?MODE_ROI_BASE[mode]:OVERALL_AVG_ROI;
+  // 2026-07-30: 会場デルタは0.3倍に縮小。生の会場平均は数件の高配当に引っ張られやすく（例: 三国は上位3件の配当を除くとROIが107→74.5に低下）、
+  // 全面採用すると毎回同じ会場ばかり上位に出て偏りが生じる。n=4232で検証: 全面採用ROI97.5%(上位5会場で83%占有) → 0.3倍でROI107.7%(会場も分散)
+  const venueDelta=VENUE_ROI[venue]!==undefined?(VENUE_ROI[venue]-OVERALL_AVG_ROI)*0.3:0;
+  const stdevDelta=(stdev!==undefined)?stdevROIDelta(stdev):0;
+  return base+venueDelta+stdevDelta;
+}
+
+function estimateHitRate(mode, venue, stdev){
+  const base=MODE_HITRATE_BASE[mode]!==undefined?MODE_HITRATE_BASE[mode]:OVERALL_AVG_HITRATE;
+  const venueDelta=VENUE_HITRATE[venue]!==undefined?(VENUE_HITRATE[venue]-OVERALL_AVG_HITRATE)*0.3:0;
+  const stdevDelta=(stdev!==undefined)?stdevHitDelta(stdev):0;
+  return base+venueDelta+stdevDelta;
+}
+
+function stdevROIDelta(stdev){
+  if(stdev<20.3) return 9.8;
+  if(stdev<24.5) return -0.8;
+  if(stdev<27.9) return -3.3;
+  if(stdev<31.9) return -4.2;
+  return -1.9;
+}
+
+function stdevHitDelta(stdev){
+  if(stdev<20.3) return -11.3;
+  if(stdev<24.5) return -6.3;
+  if(stdev<27.9) return -1.3;
+  if(stdev<31.9) return 8.1;
+  return 10.8;
+}
+
+function calcStdev(areScores){
+  const m=areScores.reduce((s,x)=>s+x.raw,0)/areScores.length;
+  return Math.sqrt(areScores.reduce((s,x)=>s+(x.raw-m)**2,0)/areScores.length);
+}
+
 let currentCalcData=null;
 let currentParsedData=null; // パース済みデータ保持
 let currentAreScores=null; // スコア保持
@@ -2179,6 +2244,29 @@ async function runYoso(){
       mode='nigenashi';
     }
     lastSuggestedMode=mode; // 診断用: この時点の自動提案を記録(手動でボタンを変えても診断ログには残る)
+
+    // 2026-07-30追加: 直前最終チェック（kyotei_backtest.htmlの前日スクリーニングと同じ基準で参入判定）
+    {
+      const _stdev=calcStdev(areScores);
+      const _venue=d.venue||'不明';
+      const _estRoi=estimateROI(mode, _venue, _stdev);
+      const _estHit=estimateHitRate(mode, _venue, _stdev);
+      const _judge=_estRoi>=89?{text:'◎参入続行',color:'var(--green)'}:_estRoi>=74?{text:'△様子見（要判断）',color:'var(--gold)'}:{text:'✗見送り推奨→予備に差し替え検討',color:'var(--red)'};
+      const _isGoodVenue=GOOD_VENUES.includes(_venue);
+      const _venueBadge=_isGoodVenue?'<span style="color:var(--gold);font-weight:700;">◎優良会場</span> ':'';
+      let _stdevBadge='';
+      if(_stdev<20.3) _stdevBadge='<span style="color:var(--gold);font-weight:700;">🎯拮抗(高ROI帯)</span> ';
+      else if(_stdev>=31.9) _stdevBadge='<span style="color:var(--gold);font-weight:700;">💥1艇突出(高ROI帯)</span> ';
+      else if(_stdev>=27.9) _stdevBadge='<span style="color:var(--muted);">△中間帯(ROI低め)</span> ';
+      const verdictEl=document.getElementById('entry-verdict');
+      if(verdictEl){
+        verdictEl.innerHTML=`<div style="padding:8px 10px;border-radius:6px;background:rgba(255,255,255,0.03);border-left:4px solid ${_judge.color};font-size:12px;">
+          <span style="font-size:14px;font-weight:700;color:${_judge.color};">${_judge.text}</span><br>
+          <span style="color:var(--muted);">最終推定的中率 ${_estHit.toFixed(1)}% / 最終推定ROI ${_estRoi.toFixed(1)}%</span><br>
+          ${_venueBadge}${_stdevBadge}
+        </div>`;
+      }
+    }
 
     // 逃げモード(low/mid/high)を先に判定（点数選択に使うため）。
     // 2026-07-28: ST脅威判定を廃止（n=3146でST脅威ありでも1号艇勝率70.6%あり、判定を外した方が的中率・ROIとも微増）
