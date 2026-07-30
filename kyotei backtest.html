@@ -1313,36 +1313,59 @@ function applyPtsToAll(){
 // directSTは前日データでは検出できず0.20固定フォールバックになるため、
 // 2艇頭/逃げ固定の境界(STの脅威判定)は前日時点では参考値扱いとする。
 // ============================================================
-const GOOD_VENUES=['芦屋','江戸川','住之江','平和島','津']; // n≥40でROI上位が安定して確認できた会場（2026-07-28、新エンジン適用後の再計算）
+const GOOD_VENUES=['三国','津','平和島','びわこ','住之江']; // n≥40でROI上位が安定して確認できた会場（2026-07-30、重み再最適化後・n=3740の再計算）
 // 実測ROI(%)。2026-07-28、daikibo_archive n=3146の全件検証より（n≥40の会場のみ採用、新エンジン適用後）
-const VENUE_ROI={'戸田':59.3,'多摩川':77.3,'浜名湖':73.6,'蒲郡':61.8,'常滑':75.9,'三国':73.9,'びわこ':82.2,'児島':59.2,'宮島':46.8,'下関':61.6,'若松':72.0,'福岡':79.7,'唐津':74.4,'大村':73.7,'平和島':91.1,'芦屋':97.8,'津':90.0,'住之江':94.4,'尼崎':54.0,'桐生':65.7,'徳山':59.2,'鳴門':65.4,'丸亀':65.5,'江戸川':95.0};
-const OVERALL_AVG_ROI=73.5; // 全体平均ROI（2026-07-28、daikibo_archive n=3146の全件検証、新エンジン適用後）
+const VENUE_ROI={'戸田':46.1,'多摩川':80.5,'浜名湖':61.5,'蒲郡':67.6,'常滑':74.6,'三国':107.2,'びわこ':94.5,'児島':79.3,'宮島':48.8,'下関':73.2,'若松':68.1,'福岡':71.4,'唐津':71.2,'大村':69.6,'平和島':97.3,'芦屋':76.6,'津':100.9,'住之江':90.0,'尼崎':72.5,'桐生':84.0,'徳山':66.4,'鳴門':84.3,'丸亀':67.6,'江戸川':81.7}; // 2026-07-30更新
+const OVERALL_AVG_ROI=77.4; // 全体平均ROI（2026-07-30、daikibo_archive n=3740の全件検証、重み再最適化後）
 const MODE_ROI_BASE={
-  are_strong:75.3,  // n=831、実測（新エンジン: 荒れ弱強統合・12点）
-  normal:74.2,      // n=1814、実測（新エンジン: 1号艇ルール込み、2艇頭/逃げ固定/通常すべて込みの平均）
-  are_weak:69.0,    // n=291、実測（新エンジン: 荒れ弱強統合・12点。旧来の6点構成より大幅改善）
-  nigenashi:64.1    // n=210、実測（新エンジン: 「対等」設計、1号艇ルール適用後）
+  are_strong:80.8,  // n=1044、実測（2026-07-30、重み再最適化後）
+  normal:76.8,      // n=2163、実測
+  are_weak:68.9,    // n=356、実測
+  nigenashi:81.7    // n=177、実測
 };
 // 的中率(%)。ROIと同じ2026-07-28時点、daikibo_archive n=3146の全件検証より（n≥40の会場のみ採用）
-const VENUE_HITRATE={'戸田':34.8,'多摩川':38.7,'浜名湖':41.7,'蒲郡':36.1,'常滑':43.3,'三国':39.2,'びわこ':41.1,'児島':35.9,'宮島':38.9,'下関':36.7,'若松':48.5,'福岡':51.7,'唐津':43.3,'大村':47.7,'平和島':41.7,'芦屋':40.7,'津':35.7,'住之江':43.8,'尼崎':41.7,'桐生':38.7,'徳山':43.8,'鳴門':30.0,'丸亀':45.2,'江戸川':54.2};
-const OVERALL_AVG_HITRATE=41.4; // 全体平均的中率（2026-07-28、新エンジン適用後）
+const VENUE_HITRATE={'戸田':30.6,'多摩川':42.6,'浜名湖':38.9,'蒲郡':40.3,'常滑':44.9,'三国':43.1,'びわこ':45.0,'児島':42.9,'宮島':36.9,'下関':40.5,'若松':47.9,'福岡':47.9,'唐津':46.2,'大村':46.8,'平和島':42.9,'芦屋':40.8,'津':37.1,'住之江':40.5,'尼崎':48.3,'桐生':42.8,'徳山':46.5,'鳴門':39.6,'丸亀':49.2,'江戸川':49.0}; // 2026-07-30更新
+const OVERALL_AVG_HITRATE=43.1; // 全体平均的中率（2026-07-30、重み再最適化後、n=3740）
 const MODE_HITRATE_BASE={
-  are_strong:39.0,  // n=831、実測
-  normal:44.5,      // n=1814、実測
-  are_weak:41.2,    // n=291、実測
-  nigenashi:23.3    // n=210、実測
+  are_strong:41.0,  // n=1044、実測（2026-07-30、重み再最適化後）
+  normal:45.8,      // n=2163、実測
+  are_weak:40.7,    // n=356、実測
+  nigenashi:27.1    // n=177、実測
 };
 
-function estimateROI(mode, venue){
+function estimateROI(mode, venue, stdev){
   const base=MODE_ROI_BASE[mode]!==undefined?MODE_ROI_BASE[mode]:OVERALL_AVG_ROI;
   const venueDelta=VENUE_ROI[venue]!==undefined?(VENUE_ROI[venue]-OVERALL_AVG_ROI):0;
-  return base+venueDelta;
+  const stdevDelta=(stdev!==undefined)?stdevROIDelta(stdev):0;
+  return base+venueDelta+stdevDelta;
 }
 
-function estimateHitRate(mode, venue){
+function estimateHitRate(mode, venue, stdev){
   const base=MODE_HITRATE_BASE[mode]!==undefined?MODE_HITRATE_BASE[mode]:OVERALL_AVG_HITRATE;
   const venueDelta=VENUE_HITRATE[venue]!==undefined?(VENUE_HITRATE[venue]-OVERALL_AVG_HITRATE):0;
-  return base+venueDelta;
+  const stdevDelta=(stdev!==undefined)?stdevHitDelta(stdev):0;
+  return base+venueDelta+stdevDelta;
+}
+
+// 2026-07-30追加: 6艇スコアのばらつき(標準偏差)による補正。daikibo_archive n=3740を5分位に分けた実測差分（U字型）。
+// ばらつきが小さい(拮抗)・大きい(1艇が突出)レースの両方でROIが平均より高く、中間帯で落ちる傾向が確認された。
+function stdevROIDelta(stdev){
+  if(stdev<20.3) return 9.8;
+  if(stdev<24.5) return -0.8;
+  if(stdev<27.9) return -3.3;
+  if(stdev<31.9) return -4.2;
+  return -1.9;
+}
+function stdevHitDelta(stdev){
+  if(stdev<20.3) return -11.3;
+  if(stdev<24.5) return -6.3;
+  if(stdev<27.9) return -1.3;
+  if(stdev<31.9) return 8.1;
+  return 10.8;
+}
+function calcStdev(areScores){
+  const m=areScores.reduce((s,x)=>s+x.raw,0)/areScores.length;
+  return Math.sqrt(areScores.reduce((s,x)=>s+(x.raw-m)**2,0)/areScores.length);
 }
 
 function runScreening(){
@@ -1376,10 +1399,11 @@ function runScreening(){
       }
       const venue=d.venue||'不明';
       const isGoodVenue=GOOD_VENUES.includes(venue);
-      const estRoi=estimateROI(mode, venue);
-      const estHit=estimateHitRate(mode, venue);
+      const stdev=calcStdev(areScores);
+      const estRoi=estimateROI(mode, venue, stdev);
+      const estHit=estimateHitRate(mode, venue, stdev);
 
-      results.push({venue, raceNum:(d.raceNum||'?').replace('R','').trim(), shimekiri:d.shimekiri||'', mode, nigeHint, areIndex, nigeRate, isGoodVenue, estRoi, estHit});
+      results.push({venue, raceNum:(d.raceNum||'?').replace('R','').trim(), shimekiri:d.shimekiri||'', mode, nigeHint, areIndex, nigeRate, stdev, isGoodVenue, estRoi, estHit});
     }catch(e){
       results.push({venue:'(解析失敗)', raceNum:'?', shimekiri:'', mode:'error', nigeHint:'', areIndex:0, nigeRate:0, isGoodVenue:false, estRoi:-999, estHit:0, error:e.message});
     }
@@ -1403,18 +1427,22 @@ function runScreening(){
     html+=`<div style="padding:8px;margin-bottom:6px;border-radius:6px;background:rgba(200,60,60,0.1);border:1px solid rgba(200,60,60,0.4);font-size:12px;">⚠️ 解析失敗: ${r.error||''}</div>`;
   }
   for(const r of topResults){
-    // 参入判定: 推定ROI 85%以上=◎参入、70〜85%=△様子見、70%未満=✗見送り
+    // 参入判定: 推定ROI 89%以上=◎参入、74〜89%=△様子見、74%未満=✗見送り（2026-07-30、全体平均ROIの上昇分+3.9ptを反映）
     // 2026-07-28: 新エンジンで全体平均ROIが65.4%→73.5%に上がったため、閾値も同じ分だけ引き上げ
-    const judge=r.estRoi>=85?{text:'◎参入',color:'var(--green)'}:r.estRoi>=70?{text:'△様子見',color:'var(--gold)'}:{text:'✗見送り',color:'var(--red)'};
+    const judge=r.estRoi>=89?{text:'◎参入',color:'var(--green)'}:r.estRoi>=74?{text:'△様子見',color:'var(--gold)'}:{text:'✗見送り',color:'var(--red)'};
     const ml=modeLabel[r.mode]||{text:r.mode,color:'var(--text2)'};
     const venueBadge=r.isGoodVenue?'<span style="color:var(--gold);font-weight:700;">◎優良会場</span> ':'';
+    let stdevBadge='';
+    if(r.stdev<20.3) stdevBadge='<span style="color:var(--gold);font-weight:700;">🎯拮抗(高ROI帯)</span> ';
+    else if(r.stdev>=31.9) stdevBadge='<span style="color:var(--gold);font-weight:700;">💥1艇突出(高ROI帯)</span> ';
+    else if(r.stdev>=27.9) stdevBadge='<span style="color:var(--text2);">△中間帯(ROI低め)</span> ';
     const hintText=r.nigeHint?` / ${r.nigeHint}`:'';
     const shimekiriText=r.shimekiri?` / 締切${r.shimekiri}`:'';
     html+=`<div style="padding:8px 10px;margin-bottom:6px;border-radius:6px;background:rgba(255,255,255,0.03);border-left:3px solid ${judge.color};font-size:12px;">
       <b>${r.venue}${r.raceNum}R</b> <span style="color:${judge.color};font-weight:700;">${judge.text}</span>${shimekiriText}<br>
       <span style="color:var(--text2);">推定的中率 ${r.estHit.toFixed(1)}% / 推定ROI ${r.estRoi.toFixed(1)}%</span><br>
-      ${venueBadge}<span style="color:${ml.color};font-weight:700;">${ml.text}</span>${hintText}<br>
-      荒れ指数${r.areIndex}点 / 逃げ率${r.nigeRate.toFixed(1)}%
+      ${venueBadge}${stdevBadge}<span style="color:${ml.color};font-weight:700;">${ml.text}</span>${hintText}<br>
+      荒れ指数${r.areIndex}点 / 逃げ率${r.nigeRate.toFixed(1)}% / スコア差${r.stdev.toFixed(1)}
     </div>`;
   }
   document.getElementById('screening-results').innerHTML=html;
