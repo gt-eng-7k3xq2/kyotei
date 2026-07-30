@@ -579,29 +579,32 @@ function calcAreScore(d){
   // コースボーナス（ログ分析ベース：2025-06実績で2号◎8.3%/3号◎0%のため減算）
   const courseBonus=[3,0.5,-0.5,1,0,-2];
 
+  // 2026-07-30改訂: daikibo_archive n=3740で4分割CV+座標降下法により再最適化。
+  // 展示足・2連対率(序盤)を大幅増、今節得点率・STを大幅減、モーターを微減。
+  // 4-fold CV: 的中率40.6%→43.1%、ROI71.1%→77.4%（kyotei_backtest.htmlと必ず同期させること）
   const scores=boats.map(b=>{
     let s=0;
 
     // ① 今節得点率 序盤10pt/終盤25pt
-    const tokWeight=isEarlyRace?10:25;
+    const tokWeight=isEarlyRace?4.7:18.7;
     if(tokuMax>tokuMin) s+=(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*tokWeight;
     else if(b.sessonPt>0) s+=tokWeight/2;
 
     // ② キャリア勝率（直近6ヶ月）序盤20pt/終盤5pt
-    const rateWeight=isEarlyRace?20:5;
+    const rateWeight=isEarlyRace?32.7:6.5;
     if(kinsetsuMax>0) s+=(b.kinsetsu6m||0)/kinsetsuMax*rateWeight;
 
     // ③ 展示足スコア（展示＋周り足＋直線の合計ランク） max14pt
     // exhibitFootRank: 小さいほど好足（0=全指標1位）
     const exMax=b.exhibitFootMax||10;
-    s+=(exMax-b.exhibitFootRank)/exMax*14;
+    s+=(exMax-b.exhibitFootRank)/exMax*28.5;
 
     // ④ 周回機力ランク max14pt
-    if(b.lapRank>=0) s+=(5-b.lapRank)*2.8;
+    if(b.lapRank>=0) s+=(5-b.lapRank)*3.9;
 
     // ⑤ 合成ST max8pt
     // 2026-07-08 v3(8→10pt)を試したがn=269で悪化したため8ptに巻き戻し
-    const stPt=(stMax>stMin)?(stMax-b.compositeST)/(stMax-stMin)*8:0;
+    const stPt=(stMax>stMin)?(stMax-b.compositeST)/(stMax-stMin)*5.4:0;
     s+=stPt;
 
     // ⑥ 直前ST max10pt（ST=0.00は最速として正しく計算）
@@ -610,7 +613,7 @@ function calcAreScore(d){
     const dirSTmin=dirSTvals.length?Math.min(...dirSTvals):0.10;
     const dirSTmax=dirSTvals.length?Math.max(...dirSTvals):0.25;
     if(dirST!=null&&dirSTmax>dirSTmin){
-      s+=(dirSTmax-dirST)/(dirSTmax-dirSTmin)*10;
+      s+=(dirSTmax-dirST)/(dirSTmax-dirSTmin)*8.4;
     }
     // ST最悪艇ペナルティ: 直前STが全体最悪かつ今節平均STも最悪の場合
     if(!b.isExhibitF&&dirST!=null&&dirST===dirSTmax&&dirSTmax>dirSTmin){
@@ -621,7 +624,7 @@ function calcAreScore(d){
 
     // ⑦ 2連対率 序盤12pt/終盤10pt
     // SG/G1モード: SG/G1 2連対率、一般戦/G2G3モード: 一般戦2連対率
-    const renWeight=isEarlyRace?12:10;
+    const renWeight=isEarlyRace?23.2:10.6;
     const useIppanRen=(_rtype2==='ippan'||_rtype2==='g2g3');
     const ren=useIppanRen?(b.ippan2ren||0):(b.sg1chakuRate||0);
     const renMax=useIppanRen?
@@ -634,11 +637,11 @@ function calcAreScore(d){
     const sashiAtkVals=boats.map(x=>(x.sashi6m||0)+(x.makuri6m||0)+(x.makurisashi6m||0)*0.4);
     const sashiAtkMax=Math.max(...sashiAtkVals)||1;
     const bSashiAtk=(b.sashi6m||0)+(b.makuri6m||0)+(b.makurisashi6m||0)*0.4;
-    if(sashiAtkMax>0) s+=bSashiAtk/sashiAtkMax*12;
+    if(sashiAtkMax>0) s+=bSashiAtk/sashiAtkMax*15.9;
 
     // ⑧ モーター2連対率 max10pt
     // 2026-07-08 v3(10→13pt)を試したがn=269で悪化(motor頻度も高止まり)したため10ptに巻き戻し
-    if(motorMax>0) s+=(b.motor2ren||0)/motorMax*10;
+    if(motorMax>0) s+=(b.motor2ren||0)/motorMax*7.3;
 
     // ⑨ コースボーナス（通常エンジン準拠: [3,2,1,1,0,-2]）
     s+=courseBonus[(b.no-1)]||0;
@@ -659,8 +662,8 @@ function calcAreScore(d){
     if(b.isJogai) s-=10;
 
     const _toku=isEarlyRace?
-      (tokuMax>tokuMin?(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*10:0):
-      (tokuMax>tokuMin?(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*25:0);
+      (tokuMax>tokuMin?(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*4.7:0):
+      (tokuMax>tokuMin?(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*18.7:0);
     const _atk=renMax>0?ren/renMax*renWeight:0;
     const _exScore=(exMax-b.exhibitFootRank)/exMax*14;
     return{no:b.no, raw:s, tenji:b.tenji, syukai:b.syukai,
@@ -1306,9 +1309,9 @@ function applyPtsToAll(){
 // 前日スクリーニング（2026-07-27追加）
 // calcAreIndex/judgeModeは展示・直線・周り足・直前ST・オッズを一切使わないため、
 // 前日時点のBM（夜間検証と同じもの）だけで荒れ指数・逃げ率・モード判定が可能。
-// スコア計算(calcAreScore)自体は◎○▲の判定に必要なので呼ぶ。
-// 2026-07-29追記: ST脅威判定は本体側で廃止済みのため、directSTが前日データで検出できない
-// （0.20固定フォールバック）ことによる影響はもう無い。2艇頭/逃げ固定の境界はnigeRateのみで決まる。
+// スコア計算(calcAreScore)自体は◎○▲の判定とhasSTThreat判定に必要なので呼ぶが、
+// directSTは前日データでは検出できず0.20固定フォールバックになるため、
+// 2艇頭/逃げ固定の境界(STの脅威判定)は前日時点では参考値扱いとする。
 // ============================================================
 const GOOD_VENUES=['芦屋','江戸川','住之江','平和島','津']; // n≥40でROI上位が安定して確認できた会場（2026-07-28、新エンジン適用後の再計算）
 // 実測ROI(%)。2026-07-28、daikibo_archive n=3146の全件検証より（n≥40の会場のみ採用、新エンジン適用後）
@@ -1340,44 +1343,6 @@ function estimateHitRate(mode, venue){
   const base=MODE_HITRATE_BASE[mode]!==undefined?MODE_HITRATE_BASE[mode]:OVERALL_AVG_HITRATE;
   const venueDelta=VENUE_HITRATE[venue]!==undefined?(VENUE_HITRATE[venue]-OVERALL_AVG_HITRATE):0;
   return base+venueDelta;
-}
-
-// 高配当専用指数（2026-07-29追加）: 70倍以上決着レースの特徴6項目を合成した指数。
-// train(daikibo_archive前半)で閾値・正規化パラメータを固定化。全て「小さいほど荒れやすい」項目。
-// 参考実績(test側で検証済み): 指数上位10%→70倍以上35.7%/50倍以上43.3%/100倍以上24.2%(全体基準はそれぞれ22.6%/30.8%/17.2%)
-const CHAOS_INDEX_MINMAX={
-  compositeStdev:[4.22,68.17], gap16:[12.66,195.49], gap12:[0.02,66.63],
-  b1NigeRateEff:[0,100], sessonPt_b1:[-4,11], kinsetsu6m_b1:[0,10.76]
-};
-const CHAOS_INDEX_THRESHOLDS={top10:0.709, top15:0.684, top25:0.643}; // 上位何%に入るかの目安値
-function calcChaosIndex(areScores, d){
-  const scoresSorted=areScores.map(s=>s.raw).slice().sort((a,b)=>b-a);
-  const b1=d.boats[0];
-  const b1NigeRateEff=b1.sgNige>0?b1.sgNige:((b1.atchiNige>0&&(b1.atchiNigeCount||0)>=10)?b1.atchiNige:b1.nigerate6m);
-  const raw={
-    compositeStdev:(function(){const m=scoresSorted.reduce((a,b)=>a+b,0)/6;return Math.sqrt(scoresSorted.reduce((a,b)=>a+(b-m)**2,0)/6);})(),
-    gap16:scoresSorted[0]-scoresSorted[5],
-    gap12:scoresSorted[0]-scoresSorted[1],
-    b1NigeRateEff,
-    sessonPt_b1:b1.sessonPt||0,
-    kinsetsu6m_b1:b1.kinsetsu6m||0
-  };
-  let sum=0, n=0;
-  for(const k in CHAOS_INDEX_MINMAX){
-    const [mn,mx]=CHAOS_INDEX_MINMAX[k];
-    if(mx<=mn) continue;
-    let norm=(raw[k]-mn)/(mx-mn);
-    norm=Math.max(0,Math.min(1,norm)); // 学習時の範囲を超える値の対策
-    sum+=(1-norm); // 全項目「小さいほど荒れやすい」なので反転
-    n++;
-  }
-  return n?sum/n:0;
-}
-function chaosLabel(idx){
-  if(idx>=CHAOS_INDEX_THRESHOLDS.top10) return {text:'🎯高配当期待◎(上位10%)',color:'var(--gold)'};
-  if(idx>=CHAOS_INDEX_THRESHOLDS.top15) return {text:'🎯高配当期待○(上位15%)',color:'var(--gold)'};
-  if(idx>=CHAOS_INDEX_THRESHOLDS.top25) return {text:'高配当期待△(上位25%)',color:'var(--text2)'};
-  return null;
 }
 
 function runScreening(){
@@ -1413,12 +1378,10 @@ function runScreening(){
       const isGoodVenue=GOOD_VENUES.includes(venue);
       const estRoi=estimateROI(mode, venue);
       const estHit=estimateHitRate(mode, venue);
-      const chaosIdx=calcChaosIndex(areScores, d);
-      const chaosBadge=chaosLabel(chaosIdx);
 
-      results.push({venue, raceNum:(d.raceNum||'?').replace('R','').trim(), shimekiri:d.shimekiri||'', mode, nigeHint, areIndex, nigeRate, isGoodVenue, estRoi, estHit, chaosIdx, chaosBadge});
+      results.push({venue, raceNum:(d.raceNum||'?').replace('R','').trim(), shimekiri:d.shimekiri||'', mode, nigeHint, areIndex, nigeRate, isGoodVenue, estRoi, estHit});
     }catch(e){
-      results.push({venue:'(解析失敗)', raceNum:'?', shimekiri:'', mode:'error', nigeHint:'', areIndex:0, nigeRate:0, isGoodVenue:false, estRoi:-999, estHit:0, chaosIdx:0, chaosBadge:null, error:e.message});
+      results.push({venue:'(解析失敗)', raceNum:'?', shimekiri:'', mode:'error', nigeHint:'', areIndex:0, nigeRate:0, isGoodVenue:false, estRoi:-999, estHit:0, error:e.message});
     }
   }
 
@@ -1447,12 +1410,11 @@ function runScreening(){
     const venueBadge=r.isGoodVenue?'<span style="color:var(--gold);font-weight:700;">◎優良会場</span> ':'';
     const hintText=r.nigeHint?` / ${r.nigeHint}`:'';
     const shimekiriText=r.shimekiri?` / 締切${r.shimekiri}`:'';
-    const chaosLine=r.chaosBadge?`<br><span style="color:${r.chaosBadge.color};font-weight:700;">${r.chaosBadge.text}</span>`:'';
     html+=`<div style="padding:8px 10px;margin-bottom:6px;border-radius:6px;background:rgba(255,255,255,0.03);border-left:3px solid ${judge.color};font-size:12px;">
       <b>${r.venue}${r.raceNum}R</b> <span style="color:${judge.color};font-weight:700;">${judge.text}</span>${shimekiriText}<br>
       <span style="color:var(--text2);">推定的中率 ${r.estHit.toFixed(1)}% / 推定ROI ${r.estRoi.toFixed(1)}%</span><br>
       ${venueBadge}<span style="color:${ml.color};font-weight:700;">${ml.text}</span>${hintText}<br>
-      荒れ指数${r.areIndex}点 / 逃げ率${r.nigeRate.toFixed(1)}%${chaosLine}
+      荒れ指数${r.areIndex}点 / 逃げ率${r.nigeRate.toFixed(1)}%
     </div>`;
   }
   document.getElementById('screening-results').innerHTML=html;
@@ -1472,8 +1434,7 @@ function copyScreeningResults(){
   const lines=lastScreeningResults.map(r=>{
     const ml=modeLabelText[r.mode]||r.mode;
     const shime=r.shimekiri?`締切${r.shimekiri}`:'締切不明';
-    const chaosText=r.chaosBadge?` ${r.chaosBadge.text}`:'';
-    return `${r.venue}${r.raceNum}R ${shime} 推定ROI${r.estRoi.toFixed(1)}% ${ml}${r.isGoodVenue?'(優良会場)':''}${chaosText}`;
+    return `${r.venue}${r.raceNum}R ${shime} 推定ROI${r.estRoi.toFixed(1)}% ${ml}${r.isGoodVenue?'(優良会場)':''}`;
   });
   const text='【前日スクリーニング結果】\n'+lines.join('\n');
   if(navigator.clipboard&&navigator.clipboard.writeText){
