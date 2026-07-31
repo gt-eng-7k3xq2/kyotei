@@ -308,18 +308,30 @@ function parseData(text){
     for(let i=0;i<6;i++) d.boats[i].sessonAvgST=parseFloat(sessonStSection[i+1])||0;
   }
 
-  // SG/G1平均ST（基本情報セクション内）
-  const sgStSection=text.match(/基本情報[\s\S]*?SG\/G1[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)/m);
-  if(sgStSection){
-    for(let i=0;i<6;i++) d.boats[i].sgAvgST=parseFloat(sgStSection[i+1])||0;
+  // 2026-07-31修正: 基本情報の「平均ST」ブロックを一度だけ切り出し、SG/G1平均ST・当地平均STの
+  // 両方をこのブロック内だけで検索する（sg_narutou.htmlと同期）
+  const stBlockMatch=text.match(/基本情報[\s\S]*?\n平均ST\n([\s\S]*?)\nST順位/);
+
+  // SG/G1平均ST（基本情報 > 平均STブロック内のSG/G1行のみを対象。「-」は個別に0扱い）
+  if(stBlockMatch){
+    const sgStSection=stBlockMatch[1].match(/\nSG\/G1[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)/);
+    if(sgStSection){
+      for(let i=0;i<6;i++){
+        const v=sgStSection[i+1];
+        d.boats[i].sgAvgST=(v&&v!=='-')?parseFloat(v)||0:0;
+      }
+    }
   }
 
-  // 当地平均ST（基本情報 > 当地行、数値のみ）
-  const atchiStSection=text.match(/基本情報[\s\S]*?\n当地[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)/m);
-  if(atchiStSection){
-    for(let i=0;i<6;i++){
-      const v=atchiStSection[i+1];
-      d.boats[i].atchiAvgST=(v&&v!=='-')?parseFloat(v)||0:0;
+  // 当地平均ST（基本情報 > 平均STブロック内の当地行のみを対象。旧実装はST順位ブロックの
+  // 当地"順位"をタイムとして誤読していた）
+  if(stBlockMatch){
+    const atchiStSection=stBlockMatch[1].match(/\n当地[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)/);
+    if(atchiStSection){
+      for(let i=0;i<6;i++){
+        const v=atchiStSection[i+1];
+        d.boats[i].atchiAvgST=(v&&v!=='-')?parseFloat(v)||0:0;
+      }
     }
   }
 
@@ -360,7 +372,8 @@ function parseData(text){
   }
 
   // 直前ST・展示Fフラグ（展示でFっただけ＝STスコアなし、ペナルティなし）
-  const stSection=text.match(/ST\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)/);
+  // 2026-07-31修正: 行頭アンカーが無く「今節データ」の平均ST行を誤ってマッチしていたバグを修正（sg_narutou.htmlと同期）
+  const stSection=text.match(/(?:^|\n)ST\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)/);
   if(stSection){
     for(let i=0;i<6;i++){
       const stStr=stSection[i+1];
