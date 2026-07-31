@@ -565,6 +565,25 @@ function calcStdev(areScores){
   return Math.sqrt(areScores.reduce((s,x)=>s+(x.raw-m)**2,0)/areScores.length);
 }
 
+// 2026-07-31追加: 1号艇の相対的な地力弱さを検出。ST・展示・モーターの相対順位(6艇中)で
+// 「1位でない」信号がいくつ重なるかを数える。n=4232実測で0個=失敗率13.3%→3個=23.4%と判明。
+// 単独ではボーダーライン(1号艇はどの条件でもまだ過半数残る)なのでスコアへのペナルティには使わないが、
+// 2個以上重なった1号艇軸レースは点数を10→12点に広げるとROI・的中率とも改善することを確認済み。
+function calcBadCount(d){
+  const boats=d.boats;
+  const stVals=boats.map(b=>({no:b.no, st:(b.isExhibitF?999:(b.directST||999))})).sort((a,b)=>a.st-b.st);
+  const stRank=stVals.findIndex(x=>x.no===1)+1;
+  const tenjiVals=boats.map(b=>({no:b.no, t:b.tenji||999})).sort((a,b)=>a.t-b.t);
+  const tenjiRank=tenjiVals.findIndex(x=>x.no===1)+1;
+  const motorVals=boats.map(b=>({no:b.no, m:b.motor2ren||0})).sort((a,b)=>b.m-a.m);
+  const motorRank=motorVals.findIndex(x=>x.no===1)+1;
+  let c=0;
+  if(stRank>1) c++;
+  if(tenjiRank>1) c++;
+  if(motorRank>2) c++;
+  return c;
+}
+
 let currentCalcData=null;
 let currentParsedData=null; // パース済みデータ保持
 let currentAreScores=null; // スコア保持
@@ -1904,10 +1923,11 @@ function buildBetsNormal(ranking, pts, parsedData){
         honsen.push({val:`${maru}-${b}-${c}`, score:(rankMap[b]||9)*10+(rankMap[c]||9)});
       }
     }
-    // 抑え: 各2着軸ごとに3着=○固定（2位評価が必ず絡む構成）
-    // 2026-07-28: 紐調整版はn=3146の大規模検証でROI悪化(71%→68.5%)が確認されたため撤回し、標準のみに戻した
+    // 抑え: 各2着軸ごとに3着=○▲（2026-07-31修正: 以前は○固定で3着候補が常に1つしか無く、
+    // oc=6を要求しても実際は2通りしか作れず「10点のはずが実質8点」という未達が全レースの約13%で発生していた。
+    // ▲も3着候補に加えて実質的なバリエーションを確保。n=4232で検証: 的中率45.01%→45.70%, ROI79.18%→80.40%）
     for(const b of osaee2nd){
-      const thirds = [shiro].filter(c=>c!==b); // ○固定
+      const thirds = [shiro, sankaku].filter(c=>c && c!==b);
       for(const c of thirds){
         osaee.push({val:`${maru}-${b}-${c}`, score:(rankMap[b]||9)*10+(rankMap[c]||9)});
       }
@@ -2224,9 +2244,17 @@ async function runYoso(){
     // 2026-07-28: 1号艇がスコア2位の時は1号艇を軸に昇格
     // n=508で明確な逆転現象を確認（1号艇46.3% vs スコア1位艇27.0%）。他艇では起きない1号艇固有の構造的過小評価。
     // 3位以下は逆転が確認できなかったため対象外（kyotei_backtest.htmlと必ず同期させること）
+    // 2026-07-31修正: 7/30-31の実戦(昇格発動6件中0的中)を受けて新重みで再検証したところ、
+    // 重み再最適化により母集団が変わり優位性が46.3%→27.0%(差19.3pt)から36.8%→33.3%(差3.5pt)まで縮小していたと判明。
+    // さらに詳しく見ると、自然1位艇とのスコア差(gap)が小さい(僅差)時は1号艇44%台 vs 自然1位25%前後で優位性が健在だが、
+    // gapが大きい(自然1位が明確に強い)時はむしろ自然1位44%前後 vs 1号艇25-30%と逆転していた。
+    // gap<9の時だけ昇格するよう条件を追加（n=4232で的中率43.45%・ROI78.92%、条件なしのROI78.24%よりわずかに改善）
     const _b1RankBeforeFix=areScores.findIndex(s=>String(s.no)==='1');
     if(_b1RankBeforeFix===1){
-      const _tmp=areScores[0]; areScores[0]=areScores[1]; areScores[1]=_tmp;
+      const _promoGap=areScores[0].raw-areScores[1].raw;
+      if(_promoGap<9){
+        const _tmp=areScores[0]; areScores[0]=areScores[1]; areScores[1]=_tmp;
+      }
     }
 
     // 3. 荒れ指数・逃げ率・モード判定（全部JS）
@@ -2278,11 +2306,16 @@ async function runYoso(){
     // 逃げ固定: 6点（軸の確信度が高いため絞る方がROI良好。点数を増やすとROI悪化）
     // 荒れ(弱/強): 12点に統一（旧来の弱6点/強12点の差は境界のアーティファクトと判明。
     //   同じareIndexでも12点構成の方が6点構成より的中率が大きく上回ることをareIndex5〜10全域で確認）
+    // 2026-07-31追加: 1号艇が軸(◎)のnormalモードで、ST・展示・モーターの相対順位に「1位でない」信号が
+    // 2個以上重なる場合は10→12点に拡張。n=1441で検証: 的中率49.2%→53.8%、ROI75.8%→77.0%と両方改善。
     let autoPts;
+    const _badCount=calcBadCount(d);
     if(mode==='are_weak'||mode==='are_strong'){
       autoPts=12;
     }else if(mode==='normal'&&_autoNige==='high'){
       autoPts=6;
+    }else if(mode==='normal'&&String(areScores[0].no)==='1'&&_badCount>=2){
+      autoPts=12;
     }else{
       autoPts=10; // 通常(2艇頭含む)・逃げなし
     }

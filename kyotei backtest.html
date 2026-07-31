@@ -1033,10 +1033,10 @@ function buildBetsNormal(ranking, pts, parsedData){
         honsen.push({val:`${maru}-${b}-${c}`, score:(rankMap[b]||9)*10+(rankMap[c]||9)});
       }
     }
-    // 抑え: 各2着軸ごとに3着=○固定（2位評価が必ず絡む構成）
-    // 2026-07-28: 紐調整版はn=3146の大規模検証でROI悪化(71%→68.5%)が確認されたため撤回し、標準のみに戻した
+    // 抑え: 各2着軸ごとに3着=○▲（2026-07-31修正: sg_narutou.htmlと同期。以前は○固定で
+    // 「10点のはずが実質8点」の未達が発生していた。n=4232で的中率45.01%→45.70%, ROI79.18%→80.40%）
     for(const b of osaee2nd){
-      const thirds = [shiro].filter(c=>c!==b); // ○固定
+      const thirds = [shiro, sankaku].filter(c=>c && c!==b);
       for(const c of thirds){
         osaee.push({val:`${maru}-${b}-${c}`, score:(rankMap[b]||9)*10+(rankMap[c]||9)});
       }
@@ -1426,6 +1426,22 @@ function calcStdev(areScores){
   return Math.sqrt(areScores.reduce((s,x)=>s+(x.raw-m)**2,0)/areScores.length);
 }
 
+// 2026-07-31追加: sg_narutou.htmlと同期。1号艇の相対的な地力弱さ検出（ST・展示・モーター相対順位）
+function calcBadCount(d){
+  const boats=d.boats;
+  const stVals=boats.map(b=>({no:b.no, st:(b.isExhibitF?999:(b.directST||999))})).sort((a,b)=>a.st-b.st);
+  const stRank=stVals.findIndex(x=>x.no===1)+1;
+  const tenjiVals=boats.map(b=>({no:b.no, t:b.tenji||999})).sort((a,b)=>a.t-b.t);
+  const tenjiRank=tenjiVals.findIndex(x=>x.no===1)+1;
+  const motorVals=boats.map(b=>({no:b.no, m:b.motor2ren||0})).sort((a,b)=>b.m-a.m);
+  const motorRank=motorVals.findIndex(x=>x.no===1)+1;
+  let c=0;
+  if(stRank>1) c++;
+  if(tenjiRank>1) c++;
+  if(motorRank>2) c++;
+  return c;
+}
+
 function runScreening(){
   const raw=document.getElementById('screening-paste').value;
   if(!raw.trim()){showToast('データを貼り付けてください');return;}
@@ -1438,9 +1454,13 @@ function runScreening(){
       const d=parseData(chunk);
       const areScores=calcAreScore(d);
       // 2026-07-28: 1号艇スコア2位→軸昇格ルール（本体と同期）
+      // 2026-07-31修正: gap<9の時だけ昇格（詳細はsg_narutou.htmlのコメント参照）
       const _b1RankBeforeFix=areScores.findIndex(s=>String(s.no)==='1');
       if(_b1RankBeforeFix===1){
-        const _tmp=areScores[0]; areScores[0]=areScores[1]; areScores[1]=_tmp;
+        const _promoGap=areScores[0].raw-areScores[1].raw;
+        if(_promoGap<9){
+          const _tmp=areScores[0]; areScores[0]=areScores[1]; areScores[1]=_tmp;
+        }
       }
       const{areIndex,nigeRate}=calcAreIndex(d);
       let mode=judgeMode(areIndex,nigeRate);
@@ -1557,9 +1577,13 @@ function runFinalCheck(){
     resultsEl.innerHTML=`<div style="padding:8px;border-radius:6px;background:rgba(200,60,60,0.1);border:1px solid rgba(200,60,60,0.4);font-size:12px;">⚠️ 解析失敗: ${e.message}</div>`;
     return;
   }
+  // 2026-07-31修正: gap<9の時だけ昇格
   const b1RankBeforeFix=areScores.findIndex(s=>String(s.no)==='1');
   if(b1RankBeforeFix===1){
-    const tmp=areScores[0]; areScores[0]=areScores[1]; areScores[1]=tmp;
+    const promoGap=areScores[0].raw-areScores[1].raw;
+    if(promoGap<9){
+      const tmp=areScores[0]; areScores[0]=areScores[1]; areScores[1]=tmp;
+    }
   }
   const{areIndex,nigeRate}=calcAreIndex(d);
   let mode=judgeMode(areIndex,nigeRate);
@@ -1735,9 +1759,13 @@ function runAll(){
       // 2026-07-28: 1号艇がスコア2位の時は1号艇を軸に昇格
       // n=508で明確な逆転現象を確認（1号艇46.3% vs スコア1位艇27.0%）。他艇では起きない1号艇固有の構造的過小評価。
       // 3位以下は逆転が確認できなかったため対象外（sg_narutou.htmlと必ず同期させること）
+      // 2026-07-31修正: 重み再最適化で優位性が19.3pt→3.5ptに縮小したと判明。gap<9の時だけ昇格するよう変更
       const _b1RankBeforeFix=areScores.findIndex(s=>String(s.no)==='1');
       if(_b1RankBeforeFix===1){
-        const _tmp=areScores[0]; areScores[0]=areScores[1]; areScores[1]=_tmp;
+        const _promoGap=areScores[0].raw-areScores[1].raw;
+        if(_promoGap<9){
+          const _tmp=areScores[0]; areScores[0]=areScores[1]; areScores[1]=_tmp;
+        }
       }
       const{areIndex,nigeRate}=calcAreIndex(d);
       let mode=judgeMode(areIndex,nigeRate);
@@ -1757,10 +1785,13 @@ function runAll(){
       // (sg_narutou.htmlと必ず同期させること。2026-07-28: n=3146の大規模検証により全面改訂)
       // 通常(2艇頭/low)・逃げなし: 10点 / 逃げ固定: 6点 / 荒れ(弱強統合): 12点
       if(pts_manual==='12'){
+        const _badCount=calcBadCount(d);
         if(mode==='are_weak'||mode==='are_strong'){
           pts=12;
         } else if(mode==='normal'&&_autoNige==='high'){
           pts=6;
+        } else if(mode==='normal'&&_isAxisBoat1&&_badCount>=2){
+          pts=12; // 2026-07-31追加: 1号艇軸+危険信号2個以上は12点に拡張（n=1441実測で的中率+4.6pt改善）
         } else {
           pts=10; // 通常(2艇頭含む)・逃げなし
         }
