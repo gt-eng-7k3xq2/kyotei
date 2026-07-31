@@ -4675,7 +4675,9 @@ function saveVenueRace(){
   if(r) localStorage.setItem('sg_racenum',r.value);
 }
 function loadVenueRace(){
-  var rt=localStorage.getItem('sg_raceType')||'sg';
+  // 2026-07-31修正: フォールバック値を'sg'→'ippan'に変更。DOMContentLoadedで毎回自動実行されるため、
+  // モジュール冒頭の初期値を直しても、ここが'sg'のままだと実質無効化されていた
+  var rt=localStorage.getItem('sg_raceType')||'ippan';
   selectedRaceType=rt;
   var rtBtn=document.getElementById('rtype-'+rt);
   if(rtBtn){
