@@ -611,18 +611,18 @@ function calcAreScore(d){
     let s=0;
 
     // ① 今節得点率 序盤10pt/終盤25pt
-    const tokWeight=isEarlyRace?4.7:18.7;
+    const tokWeight=isEarlyRace?3.8:17.9;
     if(tokuMax>tokuMin) s+=(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*tokWeight;
     else if(b.sessonPt>0) s+=tokWeight/2;
 
     // ② キャリア勝率（直近6ヶ月）序盤20pt/終盤5pt
-    const rateWeight=isEarlyRace?32.7:6.5;
+    const rateWeight=isEarlyRace?29.4:7.6;
     if(kinsetsuMax>0) s+=(b.kinsetsu6m||0)/kinsetsuMax*rateWeight;
 
     // ③ 展示足スコア（展示＋周り足＋直線の合計ランク） max14pt
     // exhibitFootRank: 小さいほど好足（0=全指標1位）
     const exMax=b.exhibitFootMax||10;
-    s+=(exMax-b.exhibitFootRank)/exMax*28.5;
+    s+=(exMax-b.exhibitFootRank)/exMax*25.6;
 
     // ④ 周回機力ランク max14pt
     if(b.lapRank>=0) s+=(5-b.lapRank)*3.9;
@@ -638,7 +638,7 @@ function calcAreScore(d){
     const dirSTmin=dirSTvals.length?Math.min(...dirSTvals):0.10;
     const dirSTmax=dirSTvals.length?Math.max(...dirSTvals):0.25;
     if(dirST!=null&&dirSTmax>dirSTmin){
-      s+=(dirSTmax-dirST)/(dirSTmax-dirSTmin)*8.4;
+      s+=(dirSTmax-dirST)/(dirSTmax-dirSTmin)*9.2;
     }
     // ST最悪艇ペナルティ: 直前STが全体最悪かつ今節平均STも最悪の場合
     if(!b.isExhibitF&&dirST!=null&&dirST===dirSTmax&&dirSTmax>dirSTmin){
@@ -649,7 +649,7 @@ function calcAreScore(d){
 
     // ⑦ 2連対率 序盤12pt/終盤10pt
     // SG/G1モード: SG/G1 2連対率、一般戦/G2G3モード: 一般戦2連対率
-    const renWeight=isEarlyRace?23.2:10.6;
+    const renWeight=isEarlyRace?23.2:9.5;
     const useIppanRen=(_rtype2==='ippan'||_rtype2==='g2g3');
     const ren=useIppanRen?(b.ippan2ren||0):(b.sg1chakuRate||0);
     const renMax=useIppanRen?
@@ -687,8 +687,8 @@ function calcAreScore(d){
     if(b.isJogai) s-=10;
 
     const _toku=isEarlyRace?
-      (tokuMax>tokuMin?(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*4.7:0):
-      (tokuMax>tokuMin?(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*18.7:0);
+      (tokuMax>tokuMin?(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*3.8:0):
+      (tokuMax>tokuMin?(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*17.9:0);
     const _atk=renMax>0?ren/renMax*renWeight:0;
     const _exScore=(exMax-b.exhibitFootRank)/exMax*14;
     return{no:b.no, raw:s, tenji:b.tenji, syukai:b.syukai,
