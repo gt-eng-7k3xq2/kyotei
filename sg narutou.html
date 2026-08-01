@@ -1037,7 +1037,7 @@ function renderDataGapAlert(warnings){
 
 function parseData(text){
   const d={boats:[]};
-  for(let i=1;i<=6;i++) d.boats.push({no:i,name:'',regno:'',nigerate6m:0,nigerate1y:0,atchiNige:0,atchiNigeCount:0,sgNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sg1chakuRate:0,sg1chakuCount:0,ippan2ren:0,konki2ren:0,konki3ren:0,konkiAvgST:0,wakuAvgST:0,fCount:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,avgTenji:0,syukai:0,syukaiFoot:0,avgSyukaiFoot:0,chokusen:0,directST:0,isExhibitF:false,isF:false});
+  for(let i=1;i<=6;i++) d.boats.push({no:i,name:'',regno:'',nigerate6m:0,nigerate1y:0,atchiNige:0,atchiNigeCount:0,sgNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sg1chakuRate:0,sg1chakuCount:0,ippan2ren:0,konki2ren:0,konki3ren:0,konkiAvgST:0,wakuAvgST:0,fCount:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,avgTenji:0,syukai:0,syukaiFoot:0,avgSyukaiFoot:0,chokusen:0,directST:0,isExhibitF:false,isF:false,motorRank:0,motorContribP:0,motorTenjiRank:0,motorRaces:0,motorYushutsu:0,motorYusho:0,motorChukanSeibi:false,deashiEval:'',nobiEval:'',partsExchange:''});
 
   // 逃げ率パース（優先順位: SG/G1 → 当地 → 直近6ヶ月）
   // 直近6ヶ月
@@ -1254,6 +1254,56 @@ function parseData(text){
   const sessonStSection=text.match(/今節成績[\s\S]*?平均ST[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)/m);
   if(sessonStSection){
     for(let i=0;i<6;i++) d.boats[i].sessonAvgST=parseFloat(sessonStSection[i+1])||0;
+  }
+
+  // 2026-07-31追加: 選手コメント（出足/伸び評価）。自由文中の「出足◎、伸び○」の記号部分のみ抽出
+  const commentLine=text.match(/^コメント[\t ]([^\n]+)/m);
+  if(commentLine){
+    const cells=commentLine[1].split('\t');
+    for(let i=0;i<6&&i<cells.length;i++){
+      const cell=cells[i]||'';
+      const dm=cell.match(/出足([◎○▲])/);
+      const nm=cell.match(/伸び([◎○▲])/);
+      if(dm) d.boats[i].deashiEval=dm[1];
+      if(nm) d.boats[i].nobiEval=nm[1];
+    }
+  }
+
+  // 2026-07-31追加: 部品交換（「-」は交換なし、部品名があれば交換あり）
+  const partsLine=text.match(/^部品交換[\t ]([^\n]+)/m);
+  if(partsLine){
+    const cells=partsLine[1].split('\t');
+    for(let i=0;i<6&&i<cells.length;i++){
+      const v=(cells[i]||'').trim();
+      d.boats[i].partsExchange=(v&&v!=='-')?v:'';
+    }
+  }
+
+  // 2026-07-31追加: モータ情報タブ（貢献P〜中間整備の範囲だけを切り出し、他セクションの同名項目
+  // 「展示順位」「出走数」「優出数」「優勝数」との混同を避ける。実際のBM取得後、ラベル表記が
+  // 想定と異なる場合は要調整）
+  const motorInfoBlock=text.match(/番号[\t ][^\n]*\n[\s\S]*?中間整備[^\n]*/);
+  if(motorInfoBlock){
+    const mb=motorInfoBlock[0];
+    const rankM=mb.match(/(?:通算[\s]*)?ランク[\t ]([^\t\n]+)[\t ]([^\t\n]+)[\t ]([^\t\n]+)[\t ]([^\t\n]+)[\t ]([^\t\n]+)[\t ]([^\t\n]+)/);
+    if(rankM){ for(let i=0;i<6;i++) d.boats[i].motorRank=parseInt((rankM[i+1]||'').replace('位',''))||0; }
+    const contribM=mb.match(/貢献P[\t ]([\-\d.]+)[\t ]([\-\d.]+)[\t ]([\-\d.]+)[\t ]([\-\d.]+)[\t ]([\-\d.]+)[\t ]([\-\d.]+)/);
+    if(contribM){ for(let i=0;i<6;i++) d.boats[i].motorContribP=parseFloat(contribM[i+1])||0; }
+    const tenjiRankM=mb.match(/展示順位[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)/);
+    if(tenjiRankM){ for(let i=0;i<6;i++) d.boats[i].motorTenjiRank=parseFloat(tenjiRankM[i+1])||0; }
+    const racesM=mb.match(/出走数[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)/);
+    if(racesM){ for(let i=0;i<6;i++) d.boats[i].motorRaces=parseInt(racesM[i+1])||0; }
+    const yushutsuM=mb.match(/優出数[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)/);
+    if(yushutsuM){ for(let i=0;i<6;i++) d.boats[i].motorYushutsu=parseInt(yushutsuM[i+1])||0; }
+    const yushoM=mb.match(/優勝数[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)/);
+    if(yushoM){ for(let i=0;i<6;i++) d.boats[i].motorYusho=parseInt(yushoM[i+1])||0; }
+    const chukanM=mb.match(/中間整備[\t ]([^\n]+)/);
+    if(chukanM){
+      const cells=chukanM[1].split('\t');
+      for(let i=0;i<6&&i<cells.length;i++){
+        d.boats[i].motorChukanSeibi=(cells[i]||'').trim()!=='-';
+      }
+    }
   }
 
   // 2026-07-30修正: 基本情報の「平均ST」ブロック(平均ST〜ST順位の間)を一度だけ切り出し、
@@ -1508,18 +1558,18 @@ function calcAreScore(d){
     let s=0;
 
     // ① 今節得点率 序盤10pt/終盤25pt
-    const tokWeight=isEarlyRace?4.7:18.7;
+    const tokWeight=isEarlyRace?3.8:17.9;
     if(tokuMax>tokuMin) s+=(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*tokWeight;
     else if(b.sessonPt>0) s+=tokWeight/2;
 
     // ② キャリア勝率（直近6ヶ月）序盤20pt/終盤5pt
-    const rateWeight=isEarlyRace?32.7:6.5;
+    const rateWeight=isEarlyRace?29.4:7.6;
     if(kinsetsuMax>0) s+=(b.kinsetsu6m||0)/kinsetsuMax*rateWeight;
 
     // ③ 展示足スコア（展示＋周り足＋直線の合計ランク） max14pt
     // exhibitFootRank: 小さいほど好足（0=全指標1位）
     const exMax=b.exhibitFootMax||10;
-    s+=(exMax-b.exhibitFootRank)/exMax*28.5;
+    s+=(exMax-b.exhibitFootRank)/exMax*25.6;
 
     // ④ 周回機力ランク max14pt
     if(b.lapRank>=0) s+=(5-b.lapRank)*3.9;
@@ -1535,7 +1585,7 @@ function calcAreScore(d){
     const dirSTmin=dirSTvals.length?Math.min(...dirSTvals):0.10;
     const dirSTmax=dirSTvals.length?Math.max(...dirSTvals):0.25;
     if(dirST!=null&&dirSTmax>dirSTmin){
-      s+=(dirSTmax-dirST)/(dirSTmax-dirSTmin)*8.4;
+      s+=(dirSTmax-dirST)/(dirSTmax-dirSTmin)*9.2;
     }
     // ST最悪艇ペナルティ: 直前STが全体最悪かつ今節平均STも最悪の場合
     if(!b.isExhibitF&&dirST!=null&&dirST===dirSTmax&&dirSTmax>dirSTmin){
@@ -1546,7 +1596,7 @@ function calcAreScore(d){
 
     // ⑦ 2連対率 序盤12pt/終盤10pt
     // SG/G1モード: SG/G1 2連対率、一般戦/G2G3モード: 一般戦2連対率
-    const renWeight=isEarlyRace?23.2:10.6;
+    const renWeight=isEarlyRace?23.2:9.5;
     const useIppanRen=(_rtype2==='ippan'||_rtype2==='g2g3');
     const ren=useIppanRen?(b.ippan2ren||0):(b.sg1chakuRate||0);
     const renMax=useIppanRen?
@@ -1586,8 +1636,8 @@ function calcAreScore(d){
     if(b.isJogai) s-=10;
 
     const _toku=isEarlyRace?
-      (tokuMax>tokuMin?(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*4.7:0):
-      (tokuMax>tokuMin?(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*18.7:0);
+      (tokuMax>tokuMin?(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*3.8:0):
+      (tokuMax>tokuMin?(b.sessonPt-tokuMin)/(tokuMax-tokuMin)*17.9:0);
     const _atk=renMax>0?ren/renMax*renWeight:0;
     const _exScore=(exMax-b.exhibitFootRank)/exMax*14;
     return{no:b.no, raw:s, tenji:b.tenji, syukai:b.syukai,
