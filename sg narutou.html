@@ -2642,9 +2642,13 @@ function buildXSummary(mode,withAmount){
   const maruName=maruBoat?nm(maruBoat):'';
   const maruStr=maruName?maruCircle+maruName:maruCircle;
 
-  // 本線/抑えに分類
-  const honsen=betsRaw.filter(b=>b.type==='本線');
-  const osaee=betsRaw.filter(b=>b.type!=='本線');
+  // 本線/抑えの表示振り分け(2026-08-03〜): 実際の買い目の優先順位(betsRawの並び順=スコア順)は
+  // 変えず、投稿での見え方だけ件数がだいたい半々になるよう表示用に分割する。点数が少ないレース
+  // (6〜7点)だと本来の本線/抑え区分だと抑えがほぼ0件になり偏って見えるための対応。
+  // 内部の点数配分・買い目生成ロジック自体には一切影響しない(betsRawそのものは変更しない)。
+  const halfIdx=Math.ceil(betsRaw.length/2);
+  const honsen=betsRaw.slice(0,halfIdx);
+  const osaee=betsRaw.slice(halfIdx);
 
   // 賭け金込みの場合は各買い目に金額追加
   const getRealBets=(arr)=>{
@@ -2806,7 +2810,8 @@ function buildXSummary(mode,withAmount){
   // 合成オッズ（既存のcalcGoseiOdds/extractOddsMapをそのまま流用。本線・抑え全体の合成、UI上の表示と同じ計算方式）
   const oddsMapForGosei=extractOddsMap(document.getElementById('inp-data').value);
   const goseiForPost=calcGoseiOdds(betsRaw.map(b=>b.val), oddsMapForGosei);
-  const gRateLine = (conf ? `G.RATE ${conf.pct}%` : `G.RATE データ不足`) + `　|　合成 約${goseiForPost||'?'}倍`;
+  const gRateLine = conf ? `G.RATE ${conf.pct}%` : `G.RATE データ不足`;
+  // 合成オッズ(goseiForPost)は投稿文言には出さない方針(2026-08-03〜)。内部管理(ログ記録・足切り検証)用にのみ計算・保持する
 
   // 共通ヘッダー（評価順を除く部分）はX用・ノート用・全部用で共通
   const baseLines=[
