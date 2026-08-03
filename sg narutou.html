@@ -2341,8 +2341,10 @@ async function runYoso(){
       const _venue=d.venue||'不明';
       const _estRoi=estimateROI(mode, _venue, _stdev);
       const _estHit=estimateHitRate(mode, _venue, _stdev);
-      const _judge=_isNarrowGap?{text:'✗見送り推奨（僅差レース gap<10）',color:'var(--red)'}:
-        _estRoi>=89?{text:'◎参入続行',color:'var(--green)'}:_estRoi>=74?{text:'△様子見（要判断）',color:'var(--gold)'}:{text:'✗見送り推奨→予備に差し替え検討',color:'var(--red)'};
+      // 2026-08-03改訂: ◎参入続行/△様子見/✗見送りの3段階をやめ、参戦/見送りの2択に簡素化。
+      // 境界線は旧△の下限(推定ROI74%)をそのまま採用（gap0-10の見送り推奨は従来通り優先）
+      const _judge=_isNarrowGap?{text:'✗見送り（僅差レース gap<10）',color:'var(--red)'}:
+        _estRoi>=74?{text:'◎参戦',color:'var(--green)'}:{text:'✗見送り',color:'var(--red)'};
       const _isGoodVenue=GOOD_VENUES.includes(_venue);
       const _venueBadge=_isGoodVenue?'<span style="color:var(--gold);font-weight:700;">◎優良会場</span> ':'';
       let _stdevBadge='';
