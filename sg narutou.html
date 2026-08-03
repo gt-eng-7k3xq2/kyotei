@@ -2323,13 +2323,26 @@ async function runYoso(){
     }
     lastSuggestedMode=mode; // 診断用: この時点の自動提案を記録(手動でボタンを変えても診断ログには残る)
 
-    // 2026-07-30追加: 直前最終チェック（kyotei_backtest.htmlの前日スクリーニングと同じ基準で参入判定）
+    // 2026-08-03追加: gap(◎と2位のスコア差)ベースの参入判定・点数決定に全面改訂。
+    // n=2913(normalモード)のバックテストで、badCountベースの点数増加ルールより
+    // gapベースの方がROI・的中率・高配当的中の維持のバランスが良いことを確認済み。
+    // gap20以上=7点(6点固定よりROI・的中率・高配当的中とも上回る)、gap10〜20=8点、
+    // gap0〜10=見送り推奨（10点構成でも実際の高配当93件中3件しか拾えておらず、
+    // badCount/軸艇/areIndex等どの条件で絞っても再現性のある例外は見つからなかったため）。
+    const _isAxisBoat1=String(areScores[0].no)==='1';
+    const _autoNige=(_isAxisBoat1&&nigeRate>=85)?'high':(_isAxisBoat1&&nigeRate>=50)?'mid':'low';
+    const _gap=areScores[0].raw-areScores[1].raw;
+    const _isNarrowGap=(mode==='normal'&&_autoNige!=='high'&&_gap<10);
+
+    // 2026-08-03改訂: 直前最終チェック（kyotei_backtest.htmlの前日スクリーニングと同じ基準で参入判定）
+    // gap0〜10の僅差レースは、venue/stdevベースの推定ROIによらず見送り推奨を優先表示する
     {
       const _stdev=calcStdev(areScores);
       const _venue=d.venue||'不明';
       const _estRoi=estimateROI(mode, _venue, _stdev);
       const _estHit=estimateHitRate(mode, _venue, _stdev);
-      const _judge=_estRoi>=89?{text:'◎参入続行',color:'var(--green)'}:_estRoi>=74?{text:'△様子見（要判断）',color:'var(--gold)'}:{text:'✗見送り推奨→予備に差し替え検討',color:'var(--red)'};
+      const _judge=_isNarrowGap?{text:'✗見送り推奨（僅差レース gap<10）',color:'var(--red)'}:
+        _estRoi>=89?{text:'◎参入続行',color:'var(--green)'}:_estRoi>=74?{text:'△様子見（要判断）',color:'var(--gold)'}:{text:'✗見送り推奨→予備に差し替え検討',color:'var(--red)'};
       const _isGoodVenue=GOOD_VENUES.includes(_venue);
       const _venueBadge=_isGoodVenue?'<span style="color:var(--gold);font-weight:700;">◎優良会場</span> ':'';
       let _stdevBadge='';
@@ -2340,36 +2353,32 @@ async function runYoso(){
       if(verdictEl){
         verdictEl.innerHTML=`<div style="padding:8px 10px;border-radius:6px;background:rgba(255,255,255,0.03);border-left:4px solid ${_judge.color};font-size:12px;">
           <span style="font-size:14px;font-weight:700;color:${_judge.color};">${_judge.text}</span><br>
-          <span style="color:var(--muted);">最終推定的中率 ${_estHit.toFixed(1)}% / 最終推定ROI ${_estRoi.toFixed(1)}%</span><br>
+          <span style="color:var(--muted);">最終推定的中率 ${_estHit.toFixed(1)}% / 最終推定ROI ${_estRoi.toFixed(1)}% / gap ${_gap.toFixed(1)}</span><br>
           ${_venueBadge}${_stdevBadge}
         </div>`;
       }
     }
 
-    // 逃げモード(low/mid/high)を先に判定（点数選択に使うため）。
-    // 2026-07-28: ST脅威判定を廃止（n=3146でST脅威ありでも1号艇勝率70.6%あり、判定を外した方が的中率・ROIとも微増）
-    const _isAxisBoat1=String(areScores[0].no)==='1';
-    const _autoNige=(_isAxisBoat1&&nigeRate>=85)?'high':(_isAxisBoat1&&nigeRate>=50)?'mid':'low';
-
-    // 点数の自動選択（2026-07-28: n=3146の大規模検証により全面改訂）
-    // 通常(2艇頭/low)・逃げなし: 10点（8→10で的中率+3.4pt、ROIは変化なし）
-    // 逃げ固定: 6点（軸の確信度が高いため絞る方がROI良好。点数を増やすとROI悪化）
-    // 荒れ(弱/強): 12点に統一（旧来の弱6点/強12点の差は境界のアーティファクトと判明。
-    //   同じareIndexでも12点構成の方が6点構成より的中率が大きく上回ることをareIndex5〜10全域で確認）
-    // 2026-07-31追加: 1号艇が軸(◎)のnormalモードで、ST・展示・モーターの相対順位に「1位でない」信号が
-    // 2個以上重なる場合は10→12点に拡張。n=1441で検証: 的中率49.2%→53.8%、ROI75.8%→77.0%と両方改善。
+    // 点数の自動選択（2026-08-03改訂: gapベース。badCountによる10→12点拡張ルールは廃止）
+    // gap20以上: 7点（n=1529検証: 回収率88.5%・的中率43.6%・高配当的中4件で6点固定より全指標上回る）
+    // gap10〜20: 8点（n=522検証: 回収率87.0%・高配当的中4件で現状バランス良好）
+    // gap0〜10: 見送り推奨だが、手動で参戦する場合の点数は8点をデフォルトにしておく
     let autoPts;
-    const _badCount=calcBadCount(d);
     if(mode==='are_weak'||mode==='are_strong'){
       autoPts=12;
     }else if(mode==='normal'&&_autoNige==='high'){
       autoPts=6;
-    }else if(mode==='normal'&&String(areScores[0].no)==='1'&&_badCount>=2){
-      autoPts=12;
+    }else if(mode==='normal'&&_gap>=20){
+      autoPts=7;
+    }else if(mode==='normal'&&_gap>=10){
+      autoPts=8;
+    }else if(_isNarrowGap){
+      autoPts=8; // 見送り推奨レースで手動参戦する場合のデフォルト
     }else{
-      autoPts=10; // 通常(2艇頭含む)・逃げなし
+      autoPts=10; // nigenashi等
     }
     autoSetBetCount(autoPts);
+
 
     // 場所・レース番号を自動セット
     if(d.venue){
