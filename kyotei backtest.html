@@ -1596,6 +1596,11 @@ function runFinalCheck(){
   const stdev=calcStdev(areScores);
   const estRoi=estimateROI(mode, venue, stdev);
   const estHit=estimateHitRate(mode, venue, stdev);
+  // 2026-08-03追加: gap0-10の僅差レースはsg_narutou.htmlと同様に見送り推奨を優先表示
+  const _isAxisBoat1ForGap=String(areScores[0].no)==='1';
+  const _nigeForGap=(_isAxisBoat1ForGap&&nigeRate>=85)?'high':(_isAxisBoat1ForGap&&nigeRate>=50)?'mid':'low';
+  const gap=areScores[0].raw-areScores[1].raw;
+  const isNarrowGap=(mode==='normal'&&_nigeForGap!=='high'&&gap<10);
 
   const modeLabel={
     are_strong:{text:'⚡荒れ・強', color:'var(--gold)'},
@@ -1604,7 +1609,8 @@ function runFinalCheck(){
     normal:{text:'🔒通常', color:'var(--text2)'}
   };
   const ml=modeLabel[mode]||{text:mode, color:'var(--text2)'};
-  const judge=estRoi>=89?{text:'◎参入続行',color:'var(--green)'}:estRoi>=74?{text:'△様子見（要判断）',color:'var(--gold)'}:{text:'✗見送り→予備に差し替え',color:'var(--red)'};
+  const judge=isNarrowGap?{text:'✗見送り推奨（僅差レース gap<10）',color:'var(--red)'}:
+    estRoi>=89?{text:'◎参入続行',color:'var(--green)'}:estRoi>=74?{text:'△様子見（要判断）',color:'var(--gold)'}:{text:'✗見送り→予備に差し替え',color:'var(--red)'};
   const venueBadge=isGoodVenue?'<span style="color:var(--gold);font-weight:700;">◎優良会場</span> ':'';
   let stdevBadge='';
   if(stdev<20.3) stdevBadge='<span style="color:var(--gold);font-weight:700;">🎯拮抗(高ROI帯)</span> ';
@@ -1782,18 +1788,27 @@ function runAll(){
       const _isAxisBoat1=String(areScores[0].no)==='1';
       const _autoNige=(_isAxisBoat1&&nigeRate>=85)?'high':(_isAxisBoat1&&nigeRate>=50)?'mid':'low';
       // 点数の自動選択: 入力欄が初期値(12)のまま手動で変更されていなければ、モードごとに自動調整する
-      // (sg_narutou.htmlと必ず同期させること。2026-07-28: n=3146の大規模検証により全面改訂)
-      // 通常(2艇頭/low)・逃げなし: 10点 / 逃げ固定: 6点 / 荒れ(弱強統合): 12点
+      // (sg_narutou.htmlと必ず同期させること。2026-08-03改訂: gapベースに全面改訂。badCountによる
+      // 10→12点拡張ルールは廃止。gap20+=7点/gap10-20=8点/gap0-10=見送り推奨(手動参戦時は8点)。
+      // 2艇頭(mid)はnormalのgap分岐をそのまま流用。逃げなしは12点固定(n=331検証で全指標改善)。
+      // 荒れ弱/荒れ強は12点で現状維持)
+      const _gap=areScores[0].raw-areScores[1].raw;
+      const _isNarrowGap=(mode==='normal'&&_autoNige!=='high'&&_gap<10);
       if(pts_manual==='12'){
-        const _badCount=calcBadCount(d);
         if(mode==='are_weak'||mode==='are_strong'){
           pts=12;
         } else if(mode==='normal'&&_autoNige==='high'){
           pts=6;
-        } else if(mode==='normal'&&_isAxisBoat1&&_badCount>=2){
-          pts=12; // 2026-07-31追加: 1号艇軸+危険信号2個以上は12点に拡張（n=1441実測で的中率+4.6pt改善）
+        } else if(mode==='normal'&&_gap>=20){
+          pts=7;
+        } else if(mode==='normal'&&_gap>=10){
+          pts=8;
+        } else if(_isNarrowGap){
+          pts=8; // 見送り推奨レースで手動参戦する場合のデフォルト
+        } else if(mode==='nigenashi'){
+          pts=12;
         } else {
-          pts=10; // 通常(2艇頭含む)・逃げなし
+          pts=10; // 想定外のフォールバック
         }
         const ptsEl=document.getElementById('pts-'+id);
         if(ptsEl) ptsEl.value=String(pts);
