@@ -1503,8 +1503,8 @@ function runScreening(){
   };
 
   function renderCard(r){
-    // 参入判定: 推定ROI 89%以上=◎参入、74〜89%=△様子見、74%未満=✗見送り（2026-07-30、全体平均ROIの上昇分+3.9ptを反映）
-    const judge=r.estRoi>=89?{text:'◎参入',color:'var(--green)'}:r.estRoi>=74?{text:'△様子見',color:'var(--gold)'}:{text:'✗見送り',color:'var(--red)'};
+    // 参入判定: 2026-08-03改訂、◎/△/✗の3段階から参戦/見送りの2択に簡素化。境界は旧△下限(74%)を採用
+    const judge=r.estRoi>=74?{text:'◎参戦',color:'var(--green)'}:{text:'✗見送り',color:'var(--red)'};
     const ml=modeLabel[r.mode]||{text:r.mode,color:'var(--text2)'};
     const venueBadge=r.isGoodVenue?'<span style="color:var(--gold);font-weight:700;">◎優良会場</span> ':'';
     let stdevBadge='';
@@ -1609,8 +1609,9 @@ function runFinalCheck(){
     normal:{text:'🔒通常', color:'var(--text2)'}
   };
   const ml=modeLabel[mode]||{text:mode, color:'var(--text2)'};
-  const judge=isNarrowGap?{text:'✗見送り推奨（僅差レース gap<10）',color:'var(--red)'}:
-    estRoi>=89?{text:'◎参入続行',color:'var(--green)'}:estRoi>=74?{text:'△様子見（要判断）',color:'var(--gold)'}:{text:'✗見送り→予備に差し替え',color:'var(--red)'};
+  // 2026-08-03改訂: ◎参入続行/△様子見/✗見送りの3段階から参戦/見送りの2択に簡素化(境界は旧△下限74%)
+  const judge=isNarrowGap?{text:'✗見送り（僅差レース gap<10）',color:'var(--red)'}:
+    estRoi>=74?{text:'◎参戦',color:'var(--green)'}:{text:'✗見送り',color:'var(--red)'};
   const venueBadge=isGoodVenue?'<span style="color:var(--gold);font-weight:700;">◎優良会場</span> ':'';
   let stdevBadge='';
   if(stdev<20.3) stdevBadge='<span style="color:var(--gold);font-weight:700;">🎯拮抗(高ROI帯)</span> ';
