@@ -564,17 +564,74 @@ function showToast(msg){
 // ============================================================
 // アーカイブ専用ロジック（夜間検証・大型検証リプレイとは別のlocalStorageキー）
 // ============================================================
+// 2026-08-03改訂: localStorageは他ツール(夜間検証kyotei_v2・本番予想sg_narutou_v1)と
+// 同じ端末内ストレージを共有しており、合計1.7MB程度でも容量超過エラーが出ることを確認。
+// IndexedDBは別区画で管理され上限も桁違いに大きい(数百MB〜)ため、他ツールのデータを一切
+// 触らずに解決できる。ARCHIVE_STORE_KEYは後方互換のため残しているが実際には未使用。
 const ARCHIVE_STORE_KEY='daikibo_archive_v1';
+const IDB_NAME='daikibo_archive_db';
+const IDB_STORE='archive_logs';
 
-function getArchiveLogs(){
-  try{ return JSON.parse(localStorage.getItem(ARCHIVE_STORE_KEY)||'[]'); }catch{ return []; }
+function openArchiveDB(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(IDB_NAME,1);
+    req.onupgradeneeded=(e)=>{
+      const db=e.target.result;
+      if(!db.objectStoreNames.contains(IDB_STORE)){
+        db.createObjectStore(IDB_STORE,{keyPath:'id'});
+      }
+    };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
 }
-function saveArchiveLogs(logs){
+
+async function getArchiveLogs(){
   try{
-    localStorage.setItem(ARCHIVE_STORE_KEY, JSON.stringify(logs));
+    const db=await openArchiveDB();
+    return await new Promise((resolve,reject)=>{
+      const tx=db.transaction(IDB_STORE,'readonly');
+      const store=tx.objectStore(IDB_STORE);
+      const req=store.getAll();
+      req.onsuccess=()=>resolve(req.result||[]);
+      req.onerror=()=>reject(req.error);
+    });
+  }catch(e){
+    console.error('IndexedDB読み込みエラー',e);
+    return [];
+  }
+}
+
+async function saveArchiveLogs(logs){
+  try{
+    const db=await openArchiveDB();
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction(IDB_STORE,'readwrite');
+      const store=tx.objectStore(IDB_STORE);
+      store.clear();
+      logs.forEach(l=>store.put(l));
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>reject(tx.error);
+    });
     return true;
   }catch(e){
-    showToast('⚠️ 保存に失敗しました（容量超過の可能性。他のツール(夜間検証・本番予想)と同じ端末内ストレージを共有しています）: '+(e&&e.message||''));
+    showToast('⚠️ 保存に失敗しました: '+(e&&e.message||''));
+    return false;
+  }
+}
+
+async function clearArchiveDB(){
+  try{
+    const db=await openArchiveDB();
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction(IDB_STORE,'readwrite');
+      tx.objectStore(IDB_STORE).clear();
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>reject(tx.error);
+    });
+    return true;
+  }catch(e){
+    showToast('⚠️ 削除に失敗しました: '+(e&&e.message||''));
     return false;
   }
 }
@@ -675,11 +732,11 @@ function applyBulkResultsToEntries(){
   showToast(`✅ ${filled}件のカードに反映（未一致${noMatch}件）`);
 }
 
-function registerAllEntries(){
+async function registerAllEntries(){
   const cards=Array.from(document.querySelectorAll('.entry-card'));
   if(!cards.length){ showToast('登録するレースがありません。先に「分割して追加」してください'); return; }
 
-  const logs=getArchiveLogs();
+  const logs=await getArchiveLogs();
   let added=0, failed=0, dup=0, noDate=0, skipped=0, registeredIds=[];
 
   for(const card of cards){
@@ -724,18 +781,18 @@ function registerAllEntries(){
     }
   }
 
-  const saveOk=saveArchiveLogs(logs);
+  const saveOk=await saveArchiveLogs(logs);
   if(saveOk){
     // 登録できたカードだけ画面から取り除く（未入力・失敗分は残して再確認できるように）
     registeredIds.forEach(id=>{ const el=document.getElementById('entry-'+id); if(el) el.remove(); });
     showToast(`✅ ${added}件登録（重複${dup}件・日付不明${noDate}件・結果未入力${skipped}件・失敗${failed}件）`);
   }
-  renderStats();
-  renderList();
+  await renderStats();
+  await renderList();
 }
 
-function exportData(){
-  const logs=getArchiveLogs();
+async function exportData(){
+  const logs=await getArchiveLogs();
   if(!logs.length){ showToast('エクスポートするデータがありません'); return; }
   const blob=new Blob([JSON.stringify(logs)], {type:'application/json'});
   const url=URL.createObjectURL(blob);
@@ -757,14 +814,14 @@ function exportData(){
   showToast(`📤 ${logs.length}件エクスポートしました（${dateLabel}）`);
 }
 
-function clearData(){
-  localStorage.removeItem(ARCHIVE_STORE_KEY);
+async function clearData(){
+  await clearArchiveDB();
   showToast('削除しました');
-  renderStats();
-  renderList();
+  await renderStats();
+  await renderList();
 }
 
-function checkStorageUsage(){
+async function checkStorageUsage(){
   let total=0;
   const perKey=[];
   for(let i=0;i<localStorage.length;i++){
@@ -778,21 +835,30 @@ function checkStorageUsage(){
   const lines=perKey.map(p=>`${p.key}: ${(p.bytes/1024).toFixed(0)}KB`).join('<br>');
   const totalKB=(total/1024).toFixed(0);
   const totalMB=(total/1024/1024).toFixed(2);
+  let idbLine='';
+  try{
+    if(navigator.storage && navigator.storage.estimate){
+      const est=await navigator.storage.estimate();
+      const usageMB=((est.usage||0)/1024/1024).toFixed(2);
+      const quotaMB=((est.quota||0)/1024/1024).toFixed(0);
+      idbLine=`<br><br><b>IndexedDB(このツールのアーカイブ保存先)全体で ${usageMB}MB 使用中 / 上限目安 ${quotaMB}MB</b>`;
+    }
+  }catch(e){}
   document.getElementById('storage-info').innerHTML=
-    `<b>このドメイン(gt-eng-7k3xq2.github.io)全体で ${totalKB}KB(約${totalMB}MB)使用中</b><br>` +
-    `Safariの上限は端末により異なりますが、目安は5〜10MBです。内訳(大きい順):<br>${lines}`;
+    `<b>localStorage: このドメイン(gt-eng-7k3xq2.github.io)全体で ${totalKB}KB(約${totalMB}MB)使用中</b><br>` +
+    `Safariの上限は端末により異なりますが、目安は5〜10MBです。内訳(大きい順):<br>${lines}` + idbLine;
   showToast('📊 使用容量を確認しました');
 }
 
-function renderStats(){
-  const logs=getArchiveLogs();
+async function renderStats(){
+  const logs=await getArchiveLogs();
   document.getElementById('stat-total').textContent=logs.length;
   document.getElementById('stat-resulted').textContent=logs.filter(l=>l.resulted).length;
   document.getElementById('stat-pending').textContent=logs.filter(l=>!l.resulted).length;
 }
 
-function renderList(){
-  const logs=getArchiveLogs().slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,50);
+async function renderList(){
+  const logs=(await getArchiveLogs()).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,50);
   const el=document.getElementById('entry-list');
   if(!logs.length){ el.innerHTML='<p class="note">まだ登録がありません</p>'; return; }
   el.innerHTML=logs.map(l=>{
