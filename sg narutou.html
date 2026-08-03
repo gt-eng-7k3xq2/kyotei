@@ -2363,6 +2363,10 @@ async function runYoso(){
     // gap20以上: 7点（n=1529検証: 回収率88.5%・的中率43.6%・高配当的中4件で6点固定より全指標上回る）
     // gap10〜20: 8点（n=522検証: 回収率87.0%・高配当的中4件で現状バランス良好）
     // gap0〜10: 見送り推奨だが、手動で参戦する場合の点数は8点をデフォルトにしておく
+    // 2艇頭(mid)はnormalのgap分岐をそのまま流用（n=2570検証で回収率76.7%→82.9%に改善を確認）
+    // 逃げなし: 12点固定（n=331検証: 10点→12点で回収率84.4%→90.9%・的中率29.6%→33.2%・
+    //   高配当的中3→5件と全指標が改善。14点は候補生成の上限に達し12点と結果が同一だったため12点採用）
+    // 荒れ弱/荒れ強: 12点で現状維持（荒れ弱は将来モード再設計を検討中）
     let autoPts;
     if(mode==='are_weak'||mode==='are_strong'){
       autoPts=12;
@@ -2374,8 +2378,10 @@ async function runYoso(){
       autoPts=8;
     }else if(_isNarrowGap){
       autoPts=8; // 見送り推奨レースで手動参戦する場合のデフォルト
+    }else if(mode==='nigenashi'){
+      autoPts=12;
     }else{
-      autoPts=10; // nigenashi等
+      autoPts=10; // 想定外のフォールバック
     }
     autoSetBetCount(autoPts);
 
