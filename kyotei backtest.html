@@ -1429,37 +1429,39 @@ function calcStdev(areScores){
 // 2026-08-04追加: エンジン参入度（信頼度）の可視化（sg_narutou.htmlと必ず同期させること）。
 // あくまで「エンジンの内部判断」であり、販売判断（有料/無料公開）とは別レイヤー
 // （販売判断は実戦データが蓄積してから別途設計する）。
-// 表示ラベルは名称先行ではなく、引き継ぎノート(2026-08-04・2-1節)の実測ROIの
-// 自然なクラスタ境界（上位クラスタ約87〜91% / 中位クラスタ約76〜80% / 見送り帯66〜72%）
-// から機械的に決めたもの。2艇頭(mid)は点数決定ロジック自体はnormalのgap分岐を
-// そのまま流用するため、gap帯ごとの内訳データは存在しない。全体実測値(n=2570,82.9%)は
-// 参考バッジとして併記するに留め、gap帯別の実測値であるかのように誤表示しない。
+// 5階層は名称先行ではなく、引き継ぎノート(2026-08-04・2-1節)の実測ROIの
+// 自然なクラスタ境界から機械的に決めたもの:
+//   🔥本線(87〜91%: 逃げなし90.9%/gap20+88.5%) → ◎通常(gap10-20: 87.0%)
+//   → ○参考(2艇頭: 全体実測82.9%、gap帯別の内訳データなし)
+//   → △慎重(荒れ強・荒れ弱: 76〜78%) → ✗見送り(gap0-10: 66〜72%)
 // 逃げ固定(normal&&autoNige==='high')は今回のセッションで実測値を再検証していないため、
-// 数値を捏造せず「未検証」と表示する。
+// 数値を捏造せず5階層の外側で「未検証」と表示する。
 function getEngineConfidence(mode, gap, autoNige, isNarrowGap){
   if(mode==='are_strong'){
-    return {label:'△慎重', color:'var(--gold)', roi:'76〜78%目安', hit:null, n:'n=1274', badge:''};
+    return {label:'△慎重', color:'var(--muted)', roi:'76〜78%目安', hit:'-', n:'n=1,274件'};
   }
   if(mode==='are_weak'){
-    return {label:'△慎重', color:'var(--text2)', roi:'78.0%', hit:null, n:'n=356〜481', badge:''};
+    return {label:'△慎重', color:'var(--muted)', roi:'78.0%', hit:'-', n:'n=356〜481件'};
   }
   if(mode==='normal' && autoNige==='high'){
-    return {label:'◯参戦（未検証）', color:'var(--text2)', roi:'今回未再検証', hit:null, n:'-', badge:''};
-  }
-  const _nigeBadge=(mode==='normal'&&autoNige==='mid')?'2艇頭（参考: 全体実測ROI82.9%・n=2570、gap帯別の内訳なし）':'';
-  if(mode==='normal' && gap>=20){
-    return {label:'🔥本線', color:'var(--green)', roi:'88.5%', hit:'43.6%', n:'n=1529', badge:_nigeBadge};
-  }
-  if(mode==='normal' && gap>=10){
-    return {label:'🔥本線', color:'var(--green)', roi:'87.0%', hit:null, n:'n=522', badge:_nigeBadge};
+    return {label:'◯参戦（未検証）', color:'var(--muted)', roi:'今回未再検証', hit:'-', n:'-'};
   }
   if(isNarrowGap){
-    return {label:'✗見送り', color:'var(--red)', roi:'66〜72%', hit:null, n:'n=555', badge:_nigeBadge};
+    return {label:'✗見送り', color:'var(--red)', roi:'66〜72%', hit:'-', n:'n=555件'};
+  }
+  if(mode==='normal' && autoNige==='mid'){
+    return {label:'○参考', color:'var(--text2)', roi:'82.9%', hit:'-', n:'n=2,570件'};
+  }
+  if(mode==='normal' && gap>=20){
+    return {label:'🔥本線', color:'var(--gold)', roi:'88.5%', hit:'43.6%', n:'n=1,529件'};
+  }
+  if(mode==='normal' && gap>=10){
+    return {label:'◎通常', color:'var(--green)', roi:'87.0%', hit:'-', n:'n=522件'};
   }
   if(mode==='nigenashi'){
-    return {label:'🔥本線', color:'var(--green)', roi:'90.9%', hit:'33.2%', n:'n=331', badge:''};
+    return {label:'🔥本線', color:'var(--gold)', roi:'90.9%', hit:'33.2%', n:'n=331件'};
   }
-  return {label:'?未分類', color:'var(--text2)', roi:'-', hit:null, n:'-', badge:''};
+  return {label:'?未分類', color:'var(--text2)', roi:'-', hit:'-', n:'-'};
 }
 
 // 2026-07-31追加: sg_narutou.htmlと同期。1号艇の相対的な地力弱さ検出（ST・展示・モーター相対順位）
@@ -1555,16 +1557,21 @@ function runScreening(){
     const hintText=r.nigeHint?` / ${r.nigeHint}`:'';
     const shimekiriText=r.shimekiri?` / 締切${r.shimekiri}`:'';
     // 2026-08-04追加: エンジン参入度（実測バックテスト値ベース、内部評価専用。販売判断ではない）
-    const conf=r.confidence||{label:'?未分類',color:'var(--text2)',roi:'-',hit:null,n:'-',badge:''};
-    const confHitText=conf.hit?` / 的中率${conf.hit}`:'';
-    const confBadgeHtml=conf.badge?`<br><span style="color:var(--text2);font-size:10px;">${conf.badge}</span>`:'';
+    const conf=r.confidence||{label:'?未分類',color:'var(--text2)',roi:'-',hit:'-',n:'-'};
+    const confMismatch=(judge.text.indexOf('見送り')>=0)&&['🔥本線','◎通常','○参考'].includes(conf.label);
+    const mismatchNote=confMismatch?`<div style="margin-top:4px;padding:4px 6px;background:rgba(200,160,60,0.12);border:1px solid rgba(200,160,60,0.4);border-radius:5px;font-size:10px;color:#e0c060;">⚠️ 区分は好調ですが今回の推定ROIは74%未満のため見送り推奨です</div>`:'';
     return `<div style="padding:8px 10px;margin-bottom:6px;border-radius:6px;background:rgba(255,255,255,0.03);border-left:3px solid ${judge.color};font-size:12px;">
       <b>${r.venue}${r.raceNum}R</b> <span style="color:${judge.color};font-weight:700;">${judge.text}</span>${shimekiriText}<br>
       <span style="color:var(--text2);">推定的中率 ${r.estHit.toFixed(1)}% / 推定ROI ${r.estRoi.toFixed(1)}%</span><br>
       ${venueBadge}${stdevBadge}<span style="color:${ml.color};font-weight:700;">${ml.text}</span>${hintText}<br>
-      荒れ指数${r.areIndex}点 / 逃げ率${r.nigeRate.toFixed(1)}% / スコア差${r.stdev.toFixed(1)}<br>
-      <span style="font-weight:700;color:${conf.color};">エンジン参入度: ${conf.label}</span>
-      <span style="color:var(--text2);font-size:10px;">（実測ROI ${conf.roi}${confHitText}、${conf.n}）</span>${confBadgeHtml}
+      荒れ指数${r.areIndex}点 / 逃げ率${r.nigeRate.toFixed(1)}% / スコア差${r.stdev.toFixed(1)}
+    </div>
+    <div style="padding:8px 10px;margin-bottom:6px;margin-top:-4px;border-radius:6px;background:rgba(255,255,255,0.02);border-left:3px solid ${conf.color};font-size:11px;">
+      <div style="color:var(--text2);font-size:9px;letter-spacing:0.05em;">今回の評価</div>
+      <span style="font-weight:700;color:${conf.color};">${conf.label}</span>
+      <div style="margin-top:4px;color:var(--text2);font-size:9px;letter-spacing:0.05em;">── 実測データ ──</div>
+      ROI：${conf.roi}　的中率：${conf.hit}　サンプル数：${conf.n}
+      ${mismatchNote}
     </div>`;
   }
 
@@ -1666,8 +1673,10 @@ function runFinalCheck(){
   else if(stdev>=27.9) stdevBadge='<span style="color:var(--text2);">△中間帯(ROI低め)</span> ';
   // 2026-08-04追加: エンジン参入度（実測バックテスト値ベース、内部評価専用。販売判断ではない）
   const conf=getEngineConfidence(mode,gap,_nigeForGap,isNarrowGap);
-  const confHitText=conf.hit?` / 的中率${conf.hit}`:'';
-  const confBadgeHtml=conf.badge?`<br><span style="color:var(--text2);font-size:11px;">${conf.badge}</span>`:'';
+  // 2026-08-04追加: 区分は好調だが今回のROI推定は74%未満で見送り、という一見矛盾する
+  // 組み合わせが実際に起きたため注記（sg_narutou.htmlと同期）
+  const confMismatch=(judge.text.indexOf('見送り')>=0)&&['🔥本線','◎通常','○参考'].includes(conf.label);
+  const mismatchNote=confMismatch?`<div style="margin-top:6px;padding:6px 8px;background:rgba(200,160,60,0.12);border:1px solid rgba(200,160,60,0.4);border-radius:6px;font-size:11px;color:#e0c060;">⚠️ 区分としては好調ですが、今回は会場・拮抗度補正込みの推定ROIが参戦ライン(74%)を下回ったため見送り推奨です。区分の実測値は過去の平均であり、今回の判定を上書きするものではありません。</div>`:'';
 
   let warnHtml='';
   if(warnings && warnings.length){
@@ -1679,10 +1688,15 @@ function runFinalCheck(){
     <span style="font-size:15px;font-weight:700;color:${judge.color};">${judge.text}</span><br>
     <span style="color:var(--text2);">最終推定的中率 ${estHit.toFixed(1)}% / 最終推定ROI ${estRoi.toFixed(1)}%</span><br>
     ${venueBadge}${stdevBadge}<span style="color:${ml.color};font-weight:700;">${ml.text}</span><br>
-    荒れ指数${areIndex}点 / 逃げ率${nigeRate.toFixed(1)}% / スコア差${stdev.toFixed(1)}<br>
-    <span style="font-weight:700;color:${conf.color};">エンジン参入度: ${conf.label}</span>
-    <span style="color:var(--text2);font-size:11px;">（実測ROI ${conf.roi}${confHitText}、${conf.n}）</span>${confBadgeHtml}
+    荒れ指数${areIndex}点 / 逃げ率${nigeRate.toFixed(1)}% / スコア差${stdev.toFixed(1)}
     ${warnHtml}
+  </div>
+  <div style="margin-top:6px;padding:10px;border-radius:6px;background:rgba(255,255,255,0.03);border-left:4px solid ${conf.color};font-size:13px;">
+    <div style="color:var(--text2);font-size:10px;letter-spacing:0.05em;">今回の評価</div>
+    <span style="font-size:15px;font-weight:700;color:${conf.color};">${conf.label}</span>
+    <div style="margin-top:6px;color:var(--text2);font-size:10px;letter-spacing:0.05em;">── 実測データ ──</div>
+    ROI：${conf.roi}<br>的中率：${conf.hit}<br>サンプル数：${conf.n}
+    ${mismatchNote}
   </div>`;
   showToast(judge.text.includes('見送り')?'⚠️ 見送り判定です':'✅ 最終チェック完了');
 }
