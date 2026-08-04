@@ -50,7 +50,7 @@
 <div class="card">
   <label>GitHubトークン</label>
   <input type="password" id="token" placeholder="ghp_...">
-  <input type="file" id="tokenFile" accept=".txt" style="display:none;" onchange="loadTokenFromFile(event)">
+  <input type="file" id="tokenFile" accept=".txt,.json,text/plain,application/json" style="display:none;" onchange="loadTokenFromFile(event)">
   <button class="btn-secondary" onclick="document.getElementById('tokenFile').click()">📂 ファイルから読み込む</button>
   <button class="btn-secondary" onclick="saveToken()">トークンを保存</button>
   <div class="status" id="tokenStatus"></div>
@@ -61,7 +61,7 @@
   <input type="text" id="filename" value="">
 
   <label style="margin-top:14px;">貼り付けるデータ</label>
-  <input type="file" id="contentFile" accept=".txt" style="display:none;" onchange="loadContentFromFile(event)">
+  <input type="file" id="contentFile" accept=".txt,.json,text/plain,application/json" style="display:none;" onchange="loadContentFromFile(event)">
   <button class="btn-secondary" onclick="document.getElementById('contentFile').click()">📂 ファイルから読み込む</button>
   <textarea id="content" placeholder="daikibo_archive.htmlの「蓄積分を全部コピー」で出したテキストなどをここに貼り付け、または上のボタンでファイル選択"></textarea>
 
@@ -133,16 +133,54 @@ function saveHistory(name,url){
   loadHistory();
 }
 
+function extractTokenFromText(raw){
+  const trimmed = raw.trim();
+  // まずJSONとして読めるか試す（{"token":"ghp_..."} や ["ghp_..."] 等、キー名は問わない）
+  try{
+    const obj = JSON.parse(trimmed);
+    const found = findTokenLike(obj);
+    if(found) return found;
+  }catch(e){ /* JSONでなければ下のプレーンテキスト処理へ */ }
+  // JSONでない場合、あるいはJSON内にそれらしい値が無かった場合はテキストそのものを使う
+  // （ただし引用符で囲まれているだけの場合はそれを剥がす）
+  return trimmed.replace(/^["']|["']$/g, '');
+}
+function findTokenLike(val){
+  // GitHubトークンの見た目（ghp_/github_pat_/gho_ 等で始まる）に一致する文字列を再帰的に探す
+  if(typeof val === 'string'){
+    if(/^(ghp_|github_pat_|gho_|ghu_|ghs_|ghr_)/.test(val)) return val.trim();
+    return null;
+  }
+  if(Array.isArray(val)){
+    for(const item of val){ const r=findTokenLike(item); if(r) return r; }
+    return null;
+  }
+  if(val && typeof val === 'object'){
+    // token/access_token/pat 等、よくあるキー名を優先的に見る
+    const priorityKeys=['token','access_token','accessToken','pat','github_token','githubToken','value'];
+    for(const k of priorityKeys){
+      if(val[k]){ const r=findTokenLike(val[k]); if(r) return r; }
+    }
+    for(const k in val){ const r=findTokenLike(val[k]); if(r) return r; }
+  }
+  return null;
+}
+
 function loadTokenFromFile(evt){
   const file = evt.target.files[0];
   if(!file) return;
   const reader = new FileReader();
   reader.onload = function(e){
-    const text = e.target.result.trim();
+    const text = extractTokenFromText(e.target.result);
     document.getElementById('token').value = text;
     const s=document.getElementById('tokenStatus');
-    s.textContent = '📂 ファイルから読み込みました。「トークンを保存」を押してください';
-    s.className='status ok';
+    if(text){
+      s.textContent = '📂 ファイルから読み込みました。「トークンを保存」を押してください';
+      s.className='status ok';
+    } else {
+      s.textContent = '⚠️ ファイルからトークンらしき値が見つかりませんでした。中身を確認してください';
+      s.className='status err';
+    }
   };
   reader.onerror = function(){
     const s=document.getElementById('tokenStatus');
@@ -158,6 +196,10 @@ function loadContentFromFile(evt){
   const reader = new FileReader();
   reader.onload = function(e){
     document.getElementById('content').value = e.target.result;
+    // 読み込んだファイルの拡張子に合わせて、アップロード先のファイル名も揃える
+    const isJson = /\.json$/i.test(file.name) || file.type==='application/json';
+    const fnEl = document.getElementById('filename');
+    fnEl.value = fnEl.value.replace(/\.(txt|json)$/i, '') + (isJson ? '.json' : '.txt');
     const s=document.getElementById('uploadStatus');
     s.textContent = '📂 ファイルから読み込みました（'+file.name+'）';
     s.className='status ok';
