@@ -50,6 +50,8 @@
 <div class="card">
   <label>GitHubトークン</label>
   <input type="password" id="token" placeholder="ghp_...">
+  <input type="file" id="tokenFile" accept=".txt" style="display:none;" onchange="loadTokenFromFile(event)">
+  <button class="btn-secondary" onclick="document.getElementById('tokenFile').click()">📂 ファイルから読み込む</button>
   <button class="btn-secondary" onclick="saveToken()">トークンを保存</button>
   <div class="status" id="tokenStatus"></div>
 </div>
@@ -59,7 +61,9 @@
   <input type="text" id="filename" value="">
 
   <label style="margin-top:14px;">貼り付けるデータ</label>
-  <textarea id="content" placeholder="daikibo_archive.htmlの「蓄積分を全部コピー」で出したテキストなどをここに貼り付け"></textarea>
+  <input type="file" id="contentFile" accept=".txt" style="display:none;" onchange="loadContentFromFile(event)">
+  <button class="btn-secondary" onclick="document.getElementById('contentFile').click()">📂 ファイルから読み込む</button>
+  <textarea id="content" placeholder="daikibo_archive.htmlの「蓄積分を全部コピー」で出したテキストなどをここに貼り付け、または上のボタンでファイル選択"></textarea>
 
   <button class="btn-primary" onclick="uploadGist()">📤 アップロード</button>
   <div class="status" id="uploadStatus"></div>
@@ -127,6 +131,43 @@ function saveHistory(name,url){
   if(h.length>30) h=h.slice(h.length-30);
   localStorage.setItem(HISTORY_KEY, JSON.stringify(h));
   loadHistory();
+}
+
+function loadTokenFromFile(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const text = e.target.result.trim();
+    document.getElementById('token').value = text;
+    const s=document.getElementById('tokenStatus');
+    s.textContent = '📂 ファイルから読み込みました。「トークンを保存」を押してください';
+    s.className='status ok';
+  };
+  reader.onerror = function(){
+    const s=document.getElementById('tokenStatus');
+    s.textContent = '❌ ファイルの読み込みに失敗しました';
+    s.className='status err';
+  };
+  reader.readAsText(file);
+}
+
+function loadContentFromFile(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    document.getElementById('content').value = e.target.result;
+    const s=document.getElementById('uploadStatus');
+    s.textContent = '📂 ファイルから読み込みました（'+file.name+'）';
+    s.className='status ok';
+  };
+  reader.onerror = function(){
+    const s=document.getElementById('uploadStatus');
+    s.textContent = '❌ ファイルの読み込みに失敗しました';
+    s.className='status err';
+  };
+  reader.readAsText(file);
 }
 
 async function uploadGist(){
