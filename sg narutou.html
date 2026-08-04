@@ -617,8 +617,17 @@ function calcPredictedST(b){
 // 2026-08-04追加: 予測本番STのスリット風可視化（実機のスタート情報画面に寄せたデザイン）。
 // ラインは6艇共通で固定位置（右側）、アイコンはラインからの距離＝予測本番STの遅さで
 // 左にオフセットする。買い目・スコアには影響しない内部参考パネル。
+// [ ]内のランクは、当初は競艇日和の「展示ST/本番STのズレの信頼度」(SS〜C)をそのまま
+// 転記していたが、「Sなのに遅い」等、直感と逆に見えて分かりにくいとの指摘のため、
+// 2026-08-04中に「今回6艇の中での予測本番STの速さ順位」に変更（速いほどSS寄り）。
+function speedRankLabels(n){
+  // n=有効艇数（情報なしの艇を除く）。6艇ならSS,S,A,B,B,C。5艇以下は末尾から間引く。
+  const full=['SS','S','A','B','B','C'];
+  if(n>=6) return full;
+  return full.slice(0,n-1).concat(full[5]); // 例: n=4 → SS,S,A,C
+}
 function renderSTGapPanel(boats){
-  const preds=boats.map(b=>({no:b.no, val:calcPredictedST(b), rank:b.stgapRank, exhibit:b.directST, gap:b.stgapSec, isF:b.isExhibitF}));
+  const preds=boats.map(b=>({no:b.no, val:calcPredictedST(b), exhibit:b.directST, gap:b.stgapSec, isF:b.isExhibitF}));
   const valid=preds.filter(p=>p.val!=null);
   if(!valid.length) return '';
   const minV=Math.min(...valid.map(p=>p.val));
@@ -626,6 +635,11 @@ function renderSTGapPanel(boats){
   const range=(maxV-minV)||0.01;
   const trackWidth=150; // px、ラインからの最大オフセット
   const courseColors=['#ffffff','#333333','#e5544c','#3d7fd6','#e8c93c','#3fa860'];
+  // 予測本番STが速い順（値が小さい順）に今回のSS〜Cを割り当てる
+  const sortedByVal=[...valid].sort((a,b)=>a.val-b.val);
+  const labels=speedRankLabels(sortedByVal.length);
+  const speedRankMap={};
+  sortedByVal.forEach((p,i)=>{ speedRankMap[p.no]=labels[i]; });
   const rankColor=(r)=>{
     if(r==='SS') return 'var(--gold)';
     if(r==='S') return 'var(--gold2)';
@@ -643,17 +657,18 @@ function renderSTGapPanel(boats){
       </div>`;
     }
     const offset=((p.val-minV)/range)*trackWidth;
+    const rankLabel=speedRankMap[p.no];
     return `<div style="display:flex;align-items:center;height:22px;">
       <div style="width:16px;font-size:11px;font-weight:700;color:${idx===0?'#333':courseColors[idx]};background:${idx===0?'#fff':'transparent'};text-align:center;border-radius:3px;">${p.no}</div>
       <div style="position:relative;flex:1;height:100%;margin:0 6px;">
         <div style="position:absolute;right:0;top:0;bottom:0;width:1px;background:var(--gold);"></div>
         <div style="position:absolute;right:${offset}px;top:50%;transform:translate(50%,-50%);width:9px;height:9px;border-radius:50%;background:${courseColors[idx]};border:1px solid #222;"></div>
       </div>
-      <div style="width:120px;text-align:right;font-size:10px;color:var(--muted);white-space:nowrap;">展示${p.exhibit.toFixed(2)}→予測${p.val.toFixed(2)} <span style="color:${rankColor(p.rank)};font-weight:700;">[${p.rank||'?'}]</span></div>
+      <div style="width:120px;text-align:right;font-size:10px;color:var(--muted);white-space:nowrap;">展示${p.exhibit.toFixed(2)}→予測${p.val.toFixed(2)} <span style="color:${rankColor(rankLabel)};font-weight:700;">[${rankLabel||'?'}]</span></div>
     </div>`;
   }).join('');
   return `<div style="margin-top:6px;padding:8px 10px;border-radius:6px;background:rgba(255,255,255,0.03);">
-    <div style="color:var(--muted);font-size:10px;letter-spacing:0.05em;margin-bottom:4px;">予測本番ST（参考・内部情報／枠なり前提・買い目には影響なし）</div>
+    <div style="color:var(--muted);font-size:10px;letter-spacing:0.05em;margin-bottom:4px;">予測本番ST（参考・内部情報／枠なり前提・買い目には影響なし・[ ]は今回6艇内の速さ順位）</div>
     ${rows}
   </div>`;
 }
@@ -2471,6 +2486,12 @@ async function runYoso(){
       // 「今回の評価」（venue/stdev込みの今回推定）と「実測データ」（過去バックテストの実測値）を
       // 混同しないよう、表示セクションを明確に分ける
       const _conf=getEngineConfidence(mode,_gap,_autoNige,_isNarrowGap);
+      // 2026-08-04追加: 「今回のROI推定は74%未満で見送りだが、区分自体は好調」という
+      // 一見矛盾する組み合わせが実際に起きたため注記を追加。_judgeは venue/stdev込みの
+      // 「今回限定」の推定、_confは「gapの区分が過去平均でどれくらい強いか」で、
+      // 問いが違うため一致しないことがある（区分が強い＝今回も参戦していい、ではない）
+      const _confMismatch=(_judge.text.indexOf('見送り')>=0)&&['🔥本線','◎通常','○参考'].includes(_conf.label);
+      const _mismatchNote=_confMismatch?`<div style="margin-top:6px;padding:6px 8px;background:rgba(200,160,60,0.12);border:1px solid rgba(200,160,60,0.4);border-radius:6px;font-size:11px;color:#e0c060;">⚠️ 区分としては好調ですが、今回は会場・拮抗度補正込みの推定ROIが参戦ライン(74%)を下回ったため見送り推奨です。区分の実測値は過去の平均であり、今回の判定を上書きするものではありません。</div>`:'';
       const verdictEl=document.getElementById('entry-verdict');
       if(verdictEl){
         verdictEl.innerHTML=`<div style="padding:8px 10px;border-radius:6px;background:rgba(255,255,255,0.03);border-left:4px solid ${_judge.color};font-size:12px;">
@@ -2485,6 +2506,7 @@ async function runYoso(){
           <span style="color:var(--text);">ROI：${_conf.roi}</span><br>
           <span style="color:var(--text);">的中率：${_conf.hit}</span><br>
           <span style="color:var(--text);">サンプル数：${_conf.n}</span>
+          ${_mismatchNote}
         </div>
         ${renderSTGapPanel(d.boats)}`;
       }

@@ -119,7 +119,7 @@ function parseMotorHistory(text){
 
 function parseData(text){
   const d={boats:[]};
-  for(let i=1;i<=6;i++) d.boats.push({no:i,name:'',regno:'',nigerate6m:0,nigerate1y:0,atchiNige:0,atchiNigeCount:0,sgNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sg1chakuRate:0,sg1chakuCount:0,ippan2ren:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,avgTenji:0,syukai:0,syukaiFoot:0,avgSyukaiFoot:0,chokusen:0,directST:0,isExhibitF:false,isF:false,motorRank:0,motorContribP:0,motorTenjiRank:0,motorRaces:0,motorYushutsu:0,motorYusho:0,motorChukanSeibi:false,deashiEval:'',nobiEval:'',partsExchange:''});
+  for(let i=1;i<=6;i++) d.boats.push({no:i,name:'',regno:'',nigerate6m:0,nigerate1y:0,atchiNige:0,atchiNigeCount:0,sgNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sg1chakuRate:0,sg1chakuCount:0,ippan2ren:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,avgTenji:0,syukai:0,syukaiFoot:0,avgSyukaiFoot:0,chokusen:0,directST:0,isExhibitF:false,isF:false,motorRank:0,motorContribP:0,motorTenjiRank:0,motorRaces:0,motorYushutsu:0,motorYusho:0,motorChukanSeibi:false,deashiEval:'',nobiEval:'',partsExchange:'',stgapRank:'',stgapSec:null});
 
   // 逃げ率パース（優先順位: SG/G1 → 当地 → 直近6ヶ月）
   // 直近6ヶ月
@@ -429,6 +429,29 @@ function parseData(text){
       d.boats[i].directST=parseFloat(stStr.replace('F',''))||0.20;
     }
   }
+
+  // 展示STと本番STのズレ（2026-08-04追加。sg_narutou.htmlと同一ロジックで同期。
+  // アーカイブ側では記録のみ行い、スコアリング（calcAreScore相当）には一切使用しない）
+  // 枠なり前提（艇番＝進入コース番号）: 艇Nの信頼度・ズレは「Nコース」行の艇N列だけを参照する
+  const stgapSection=text.match(/=== 展示STと本番STのズレ ===([\s\S]*?)(?:\n===|$)/);
+  if(stgapSection){
+    const block=stgapSection[1];
+    const rankBlockM=block.match(/評価ランク([\s\S]*?)ズレ詳細/);
+    const gapBlockM=block.match(/ズレ詳細([\s\S]*?)平均ST/);
+    const rankBlock=rankBlockM?rankBlockM[1]:'';
+    const gapBlock=gapBlockM?gapBlockM[1]:'';
+    for(let i=0;i<6;i++){
+      const courseNo=i+1; // 枠なり前提: 艇番＝進入コース番号
+      const rankLineM=rankBlock.match(new RegExp(courseNo+"コース\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)"));
+      const gapLineM=gapBlock.match(new RegExp(courseNo+"コース\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)"));
+      if(rankLineM) d.boats[i].stgapRank=rankLineM[courseNo].trim();
+      if(gapLineM){
+        const gv=parseFloat(gapLineM[courseNo]);
+        if(!isNaN(gv)) d.boats[i].stgapSec=gv;
+      }
+    }
+  }
+
 
   // 今節走数推定（通常エンジン準拠）
   // 今節1着率・2連対率から逆算（estimateRaceCountSG）
