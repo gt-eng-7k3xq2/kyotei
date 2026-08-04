@@ -72,6 +72,12 @@
 
 <div class="card">
   <label>📜 アップロード履歴(この端末のみに保存)</label>
+  <div style="display:flex;gap:6px;margin-bottom:8px;">
+    <button class="btn-secondary" style="margin-top:0;flex:1;" onclick="selectAllHistory(true)">全選択</button>
+    <button class="btn-secondary" style="margin-top:0;flex:1;" onclick="selectAllHistory(false)">選択解除</button>
+  </div>
+  <button class="btn-primary" style="margin-top:0;margin-bottom:10px;" onclick="copySelectedHistory()">📋 選択したURLをコピー</button>
+  <div class="status" id="historyStatus"></div>
   <div id="history"></div>
 </div>
 
@@ -115,14 +121,45 @@ function loadHistory(){
   try{ h = JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]'); }catch(e){}
   const el=document.getElementById('history');
   if(!h.length){ el.innerHTML='<div class="small">まだありません</div>'; return; }
-  el.innerHTML = h.slice().reverse().map(item=>
+  // 逆順（新しい順）に表示するが、data-idxには元の配列のインデックスを持たせてコピー時に使う
+  const reversedWithIdx = h.map((item,idx)=>({item,idx})).reverse();
+  el.innerHTML = reversedWithIdx.map(({item,idx})=>
     `<div class="histItem">
-      <div>${item.name}<span style="color:var(--muted);"> ・ ${item.date}</span></div>
-      <div style="word-break:break-all;"><a href="${item.url}" target="_blank">${item.url}</a></div>
+      <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+        <input type="checkbox" class="histCheck" data-idx="${idx}" style="margin-top:3px;">
+        <span style="flex:1;">
+          <div>${item.name}<span style="color:var(--muted);"> ・ ${item.date}</span></div>
+          <div style="word-break:break-all;"><a href="${item.url}" target="_blank" onclick="event.stopPropagation();">${item.url}</a></div>
+        </span>
+      </label>
     </div>`
   ).join('');
 }
 loadHistory();
+
+function selectAllHistory(on){
+  document.querySelectorAll('.histCheck').forEach(cb=>{ cb.checked = on; });
+}
+
+function copySelectedHistory(){
+  let h=[];
+  try{ h = JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]'); }catch(e){}
+  const checked = Array.prototype.slice.call(document.querySelectorAll('.histCheck:checked'));
+  const s = document.getElementById('historyStatus');
+  if(!checked.length){
+    s.textContent = '⚠️ コピーする項目にチェックを入れてください';
+    s.className='status err';
+    return;
+  }
+  const urls = checked.map(cb => h[parseInt(cb.getAttribute('data-idx'))].url).filter(Boolean);
+  const text = urls.join('\n');
+  navigator.clipboard.writeText(text).then(()=>{
+    s.textContent = `✅ ${urls.length}件のURLをコピーしました`;
+    s.className='status ok';
+  }).catch(()=>{
+    prompt('コピーしてください（改行区切り）:', text);
+  });
+}
 
 function saveHistory(name,url){
   let h=[];
