@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>GARON データアップローダー</title>
+<style>
+  :root{
+    --bg:#102a1c; --surface:#1a4228; --surface2:#225535; --border:#347a48;
+    --gold:#c9a84c; --gold2:#f0d080; --red:#e05050; --green:#4caf7d; --muted:#82cc96; --text:#eef5f0;
+  }
+  *{box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,'Hiragino Sans',sans-serif;margin:0;padding:16px;padding-bottom:60px;}
+  h1{font-size:18px;color:var(--gold);margin:0 0 4px;}
+  .subtitle{font-size:11px;color:var(--muted);margin-bottom:16px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;}
+  input[type=text],input[type=password],textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:10px;font-size:14px;font-family:inherit;}
+  textarea{min-height:180px;resize:vertical;}
+  button{width:100%;padding:12px;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;}
+  .btn-primary{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#1a1a1a;}
+  .btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);font-size:13px;padding:9px;}
+  .small{font-size:11px;color:var(--muted);line-height:1.7;}
+  .result{background:var(--surface2);border:1px solid var(--gold);border-radius:8px;padding:12px;margin-top:10px;word-break:break-all;font-size:13px;}
+  .status{font-size:12px;margin-top:8px;min-height:16px;}
+  .status.ok{color:var(--green);}
+  .status.err{color:var(--red);}
+  a{color:var(--gold2);}
+  details summary{cursor:pointer;color:var(--gold2);font-size:12px;font-weight:700;}
+  .histItem{margin-bottom:8px;padding:8px;background:var(--surface2);border-radius:6px;font-size:11px;}
+</style>
+</head>
+<body>
+<h1>⚡ GARON データアップローダー</h1>
+<div class="subtitle">貼り付けたデータをGitHub Gistに上げて、ClaudeにはURLだけ渡す用</div>
+
+<div class="card">
+  <details>
+    <summary>🔑 初回のみ: トークンの準備</summary>
+    <div class="small" style="margin-top:10px;">
+      1. <a href="https://github.com/settings/tokens/new?scopes=gist&description=GARON%20Uploader" target="_blank">このリンクを開く</a>(GitHubへのログインが必要な場合はログイン)<br>
+      2. スコープ「gist」に自動でチェックが入っています。そのまま一番下までスクロールして緑の「Generate token」ボタンを押す<br>
+      3. 次の画面に表示される <code>ghp_</code> から始まる文字列をコピーする<br>
+      4. 下の「GitHubトークン」欄に貼り付けて「トークンを保存」を押す(次回からは不要です)<br><br>
+      ※このトークンはこの端末のブラウザ内にだけ保存されます。Gistの作成以外には使われません。
+    </div>
+  </details>
+</div>
+
+<div class="card">
+  <label>GitHubトークン</label>
+  <input type="password" id="token" placeholder="ghp_...">
+  <button class="btn-secondary" onclick="saveToken()">トークンを保存</button>
+  <div class="status" id="tokenStatus"></div>
+</div>
+
+<div class="card">
+  <label>ファイル名(日付は自動入力、変更もできます)</label>
+  <input type="text" id="filename" value="">
+
+  <label style="margin-top:14px;">貼り付けるデータ</label>
+  <textarea id="content" placeholder="daikibo_archive.htmlの「蓄積分を全部コピー」で出したテキストなどをここに貼り付け"></textarea>
+
+  <button class="btn-primary" onclick="uploadGist()">📤 アップロード</button>
+  <div class="status" id="uploadStatus"></div>
+  <div id="resultBox"></div>
+</div>
+
+<div class="card">
+  <label>📜 アップロード履歴(この端末のみに保存)</label>
+  <div id="history"></div>
+</div>
+
+<script>
+const TOKEN_KEY='garon_gh_token';
+const HISTORY_KEY='garon_gist_history';
+
+function todayFilename(){
+  const d=new Date();
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `garon-${y}-${m}-${day}.txt`;
+}
+document.getElementById('filename').value = todayFilename();
+
+function loadToken(){
+  const t = localStorage.getItem(TOKEN_KEY);
+  if(t){
+    document.getElementById('token').value = t;
+    const s=document.getElementById('tokenStatus');
+    s.textContent = '✅ 保存済みのトークンを読み込みました';
+    s.className='status ok';
+  }
+}
+loadToken();
+
+function saveToken(){
+  const t = document.getElementById('token').value.trim();
+  const s = document.getElementById('tokenStatus');
+  if(!t){
+    s.textContent='トークンを入力してください';
+    s.className='status err';
+    return;
+  }
+  localStorage.setItem(TOKEN_KEY, t);
+  s.textContent='✅ 保存しました';
+  s.className='status ok';
+}
+
+function loadHistory(){
+  let h=[];
+  try{ h = JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]'); }catch(e){}
+  const el=document.getElementById('history');
+  if(!h.length){ el.innerHTML='<div class="small">まだありません</div>'; return; }
+  el.innerHTML = h.slice().reverse().map(item=>
+    `<div class="histItem">
+      <div>${item.name}<span style="color:var(--muted);"> ・ ${item.date}</span></div>
+      <div style="word-break:break-all;"><a href="${item.url}" target="_blank">${item.url}</a></div>
+    </div>`
+  ).join('');
+}
+loadHistory();
+
+function saveHistory(name,url){
+  let h=[];
+  try{ h = JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]'); }catch(e){}
+  h.push({name, url, date:new Date().toLocaleString('ja-JP')});
+  if(h.length>30) h=h.slice(h.length-30);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(h));
+  loadHistory();
+}
+
+async function uploadGist(){
+  const token = document.getElementById('token').value.trim();
+  const filename = document.getElementById('filename').value.trim() || todayFilename();
+  const content = document.getElementById('content').value;
+  const statusEl = document.getElementById('uploadStatus');
+  const resultBox = document.getElementById('resultBox');
+  resultBox.innerHTML='';
+
+  if(!token){
+    statusEl.textContent='⚠️ 先にGitHubトークンを保存してください';
+    statusEl.className='status err';
+    return;
+  }
+  if(!content.trim()){
+    statusEl.textContent='⚠️ データが貼り付けられていません';
+    statusEl.className='status err';
+    return;
+  }
+
+  statusEl.textContent='アップロード中...';
+  statusEl.className='status';
+
+  try{
+    const res = await fetch('https://api.github.com/gists', {
+      method:'POST',
+      headers:{
+        'Authorization': 'token ' + token,
+        'Accept': 'application/vnd.github+json',
+        'Content-Type':'application/json'
+      },
+      body: JSON.stringify({
+        description: 'GARON archive data - ' + filename,
+        public: true,
+        files: { [filename]: { content: content } }
+      })
+    });
+    if(!res.ok){
+      const err = await res.json().catch(()=>({}));
+      throw new Error(err.message || ('HTTPエラー: '+res.status));
+    }
+    const data = await res.json();
+    const rawUrl = data.files[filename].raw_url;
+    statusEl.textContent='✅ アップロード完了';
+    statusEl.className='status ok';
+    resultBox.innerHTML = `<div class="result">
+      <div style="color:var(--muted);font-size:11px;margin-bottom:4px;">このURLをClaudeに貼ってください:</div>
+      <div id="rawUrlText">${rawUrl}</div>
+      <button class="btn-secondary" onclick="copyUrl('${rawUrl}')">📋 URLをコピー</button>
+    </div>`;
+    saveHistory(filename, rawUrl);
+    document.getElementById('content').value='';
+    document.getElementById('filename').value = todayFilename();
+  }catch(e){
+    statusEl.textContent='❌ 失敗: ' + e.message;
+    statusEl.className='status err';
+  }
+}
+
+function copyUrl(url){
+  navigator.clipboard.writeText(url).then(()=>{
+    alert('コピーしました');
+  }).catch(()=>{
+    prompt('コピーしてください:', url);
+  });
+}
+</script>
+</body>
+</html>
