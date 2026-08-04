@@ -568,37 +568,94 @@ function calcStdev(areScores){
 // 2026-08-04追加: エンジン参入度（信頼度）の可視化。
 // あくまで「エンジンの内部判断」であり、販売判断（有料/無料公開）とは別レイヤー
 // （販売判断は実戦データが蓄積してから別途設計する）。
-// 表示ラベルは名称先行ではなく、引き継ぎノート(2026-08-04・2-1節)の実測ROIの
-// 自然なクラスタ境界（上位クラスタ約87〜91% / 中位クラスタ約76〜80% / 見送り帯66〜72%）
-// から機械的に決めたもの。2艇頭(mid)は点数決定ロジック自体はnormalのgap分岐を
-// そのまま流用するため、gap帯ごとの内訳データは存在しない。全体実測値(n=2570,82.9%)は
-// 参考バッジとして併記するに留め、gap帯別の実測値であるかのように誤表示しない。
+// 5階層は名称先行ではなく、引き継ぎノート(2026-08-04・2-1節)の実測ROIの
+// 自然なクラスタ境界から機械的に決めたもの:
+//   🔥本線(87〜91%: 逃げなし90.9%/gap20+88.5%) → ◎通常(gap10-20: 87.0%)
+//   → ○参考(2艇頭: 全体実測82.9%、gap帯別の内訳データなし)
+//   → △慎重(荒れ強・荒れ弱: 76〜78%) → ✗見送り(gap0-10: 66〜72%)
 // 逃げ固定(normal&&autoNige==='high')は今回のセッションで実測値を再検証していないため、
-// 数値を捏造せず「未検証」と表示する。
+// 数値を捏造せず5階層の外側で「未検証」と表示する。
 function getEngineConfidence(mode, gap, autoNige, isNarrowGap){
   if(mode==='are_strong'){
-    return {label:'△慎重', color:'var(--gold)', roi:'76〜78%目安', hit:null, n:'n=1274', badge:''};
+    return {label:'△慎重', color:'var(--muted)', roi:'76〜78%目安', hit:'-', n:'n=1,274件'};
   }
   if(mode==='are_weak'){
-    return {label:'△慎重', color:'var(--muted)', roi:'78.0%', hit:null, n:'n=356〜481', badge:''};
+    return {label:'△慎重', color:'var(--muted)', roi:'78.0%', hit:'-', n:'n=356〜481件'};
   }
   if(mode==='normal' && autoNige==='high'){
-    return {label:'◯参戦（未検証）', color:'var(--muted)', roi:'今回未再検証', hit:null, n:'-', badge:''};
-  }
-  const _nigeBadge=(mode==='normal'&&autoNige==='mid')?'2艇頭（参考: 全体実測ROI82.9%・n=2570、gap帯別の内訳なし）':'';
-  if(mode==='normal' && gap>=20){
-    return {label:'🔥本線', color:'var(--green)', roi:'88.5%', hit:'43.6%', n:'n=1529', badge:_nigeBadge};
-  }
-  if(mode==='normal' && gap>=10){
-    return {label:'🔥本線', color:'var(--green)', roi:'87.0%', hit:null, n:'n=522', badge:_nigeBadge};
+    return {label:'◯参戦（未検証）', color:'var(--muted)', roi:'今回未再検証', hit:'-', n:'-'};
   }
   if(isNarrowGap){
-    return {label:'✗見送り', color:'var(--red)', roi:'66〜72%', hit:null, n:'n=555', badge:_nigeBadge};
+    return {label:'✗見送り', color:'var(--red)', roi:'66〜72%', hit:'-', n:'n=555件'};
+  }
+  if(mode==='normal' && autoNige==='mid'){
+    // 2艇頭: 点数決定ロジック自体はgap分岐を流用するが、実測値はgap帯別の
+    // 内訳がなく全体集計値(n=2570)のみ。gap>=20/10の🔥/◎とは別の独立クラスタとして扱う。
+    return {label:'○参考', color:'var(--blue)', roi:'82.9%', hit:'-', n:'n=2,570件'};
+  }
+  if(mode==='normal' && gap>=20){
+    return {label:'🔥本線', color:'var(--gold)', roi:'88.5%', hit:'43.6%', n:'n=1,529件'};
+  }
+  if(mode==='normal' && gap>=10){
+    return {label:'◎通常', color:'var(--green)', roi:'87.0%', hit:'-', n:'n=522件'};
   }
   if(mode==='nigenashi'){
-    return {label:'🔥本線', color:'var(--green)', roi:'90.9%', hit:'33.2%', n:'n=331', badge:''};
+    return {label:'🔥本線', color:'var(--gold)', roi:'90.9%', hit:'33.2%', n:'n=331件'};
   }
-  return {label:'?未分類', color:'var(--muted)', roi:'-', hit:null, n:'-', badge:''};
+  return {label:'?未分類', color:'var(--muted)', roi:'-', hit:'-', n:'-'};
+}
+
+// 2026-08-04追加: 予測本番ST（内部参考情報専用。買い目・スコアには一切影響させない）
+// 予測本番ST = 今日の展示ST(directST) + 展示STと本番STのズレ(枠なり前提でNコース行を参照)
+// 展示Fの艇・ズレ情報が取れていない艇はnullを返す（表示側で「情報なし」扱いにする）
+function calcPredictedST(b){
+  if(b.isExhibitF) return null;
+  if(b.directST==null || b.stgapSec==null) return null;
+  return b.directST + b.stgapSec;
+}
+
+// 2026-08-04追加: 予測本番STのスリット風可視化（実機のスタート情報画面に寄せたデザイン）。
+// ラインは6艇共通で固定位置（右側）、アイコンはラインからの距離＝予測本番STの遅さで
+// 左にオフセットする。買い目・スコアには影響しない内部参考パネル。
+function renderSTGapPanel(boats){
+  const preds=boats.map(b=>({no:b.no, val:calcPredictedST(b), rank:b.stgapRank, exhibit:b.directST, gap:b.stgapSec, isF:b.isExhibitF}));
+  const valid=preds.filter(p=>p.val!=null);
+  if(!valid.length) return '';
+  const minV=Math.min(...valid.map(p=>p.val));
+  const maxV=Math.max(...valid.map(p=>p.val));
+  const range=(maxV-minV)||0.01;
+  const trackWidth=150; // px、ラインからの最大オフセット
+  const courseColors=['#ffffff','#333333','#e5544c','#3d7fd6','#e8c93c','#3fa860'];
+  const rankColor=(r)=>{
+    if(r==='SS') return 'var(--gold)';
+    if(r==='S') return 'var(--gold2)';
+    if(r==='A') return 'var(--green)';
+    if(r==='B') return 'var(--muted)';
+    if(r==='C') return 'var(--red)';
+    return 'var(--muted)';
+  };
+  const rows=preds.map((p,idx)=>{
+    if(p.val==null){
+      const reason=p.isF?'展示F':'STズレ情報なし';
+      return `<div style="display:flex;align-items:center;height:20px;font-size:10px;color:var(--muted);">
+        <div style="width:16px;font-weight:700;color:${courseColors[idx]};">${p.no}</div>
+        <div style="flex:1;">${reason}</div>
+      </div>`;
+    }
+    const offset=((p.val-minV)/range)*trackWidth;
+    return `<div style="display:flex;align-items:center;height:22px;">
+      <div style="width:16px;font-size:11px;font-weight:700;color:${idx===0?'#333':courseColors[idx]};background:${idx===0?'#fff':'transparent'};text-align:center;border-radius:3px;">${p.no}</div>
+      <div style="position:relative;flex:1;height:100%;margin:0 6px;">
+        <div style="position:absolute;right:0;top:0;bottom:0;width:1px;background:var(--gold);"></div>
+        <div style="position:absolute;right:${offset}px;top:50%;transform:translate(50%,-50%);width:9px;height:9px;border-radius:50%;background:${courseColors[idx]};border:1px solid #222;"></div>
+      </div>
+      <div style="width:120px;text-align:right;font-size:10px;color:var(--muted);white-space:nowrap;">展示${p.exhibit.toFixed(2)}→予測${p.val.toFixed(2)} <span style="color:${rankColor(p.rank)};font-weight:700;">[${p.rank||'?'}]</span></div>
+    </div>`;
+  }).join('');
+  return `<div style="margin-top:6px;padding:8px 10px;border-radius:6px;background:rgba(255,255,255,0.03);">
+    <div style="color:var(--muted);font-size:10px;letter-spacing:0.05em;margin-bottom:4px;">予測本番ST（参考・内部情報／枠なり前提・買い目には影響なし）</div>
+    ${rows}
+  </div>`;
 }
 
 // 2026-07-31追加: 1号艇の相対的な地力弱さを検出。ST・展示・モーターの相対順位(6艇中)で
@@ -1420,6 +1477,29 @@ function parseData(text){
       d.boats[i].directST=parseFloat(stStr.replace('F',''))||0.20;
     }
   }
+
+  // 展示STと本番STのズレ（2026-08-04追加、内部参考情報専用。買い目・スコアには一切影響させない）
+  // 枠なり前提（俺さんの実運用は基本枠なりしか入らない）: 艇Nの信頼度・ズレは
+  // 「Nコース」行の艇N列（＝自分自身の列）だけを参照する。前づけの判定は行わない。
+  const stgapSection=text.match(/=== 展示STと本番STのズレ ===([\s\S]*?)(?:\n===|$)/);
+  if(stgapSection){
+    const block=stgapSection[1];
+    const rankBlockM=block.match(/評価ランク([\s\S]*?)ズレ詳細/);
+    const gapBlockM=block.match(/ズレ詳細([\s\S]*?)平均ST/);
+    const rankBlock=rankBlockM?rankBlockM[1]:'';
+    const gapBlock=gapBlockM?gapBlockM[1]:'';
+    for(let i=0;i<6;i++){
+      const courseNo=i+1; // 枠なり前提: 艇番＝進入コース番号
+      const rankLineM=rankBlock.match(new RegExp(courseNo+"コース\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)"));
+      const gapLineM=gapBlock.match(new RegExp(courseNo+"コース\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)"));
+      if(rankLineM) d.boats[i].stgapRank=rankLineM[courseNo].trim();
+      if(gapLineM){
+        const gv=parseFloat(gapLineM[courseNo]);
+        if(!isNaN(gv)) d.boats[i].stgapSec=gv;
+      }
+    }
+  }
+
 
   // 今節走数推定（通常エンジン準拠）
   // 今節1着率・2連対率から逆算（estimateRaceCountSG）
@@ -2388,18 +2468,25 @@ async function runYoso(){
       else if(_stdev>=31.9) _stdevBadge='<span style="color:var(--gold);font-weight:700;">💥1艇突出(高ROI帯)</span> ';
       else if(_stdev>=27.9) _stdevBadge='<span style="color:var(--muted);">△中間帯(ROI低め)</span> ';
       // 2026-08-04追加: エンジン参入度（実測バックテスト値ベース、内部評価専用。販売判断ではない）
+      // 「今回の評価」（venue/stdev込みの今回推定）と「実測データ」（過去バックテストの実測値）を
+      // 混同しないよう、表示セクションを明確に分ける
       const _conf=getEngineConfidence(mode,_gap,_autoNige,_isNarrowGap);
-      const _confHitText=_conf.hit?` / 的中率${_conf.hit}`:'';
-      const _confBadgeHtml=_conf.badge?`<br><span style="color:var(--muted);font-size:11px;">${_conf.badge}</span>`:'';
       const verdictEl=document.getElementById('entry-verdict');
       if(verdictEl){
         verdictEl.innerHTML=`<div style="padding:8px 10px;border-radius:6px;background:rgba(255,255,255,0.03);border-left:4px solid ${_judge.color};font-size:12px;">
           <span style="font-size:14px;font-weight:700;color:${_judge.color};">${_judge.text}</span><br>
           <span style="color:var(--muted);">最終推定的中率 ${_estHit.toFixed(1)}% / 最終推定ROI ${_estRoi.toFixed(1)}% / gap ${_gap.toFixed(1)}</span><br>
-          ${_venueBadge}${_stdevBadge}<br>
-          <span style="font-size:13px;font-weight:700;color:${_conf.color};">エンジン参入度: ${_conf.label}</span>
-          <span style="color:var(--muted);font-size:11px;">（実測ROI ${_conf.roi}${_confHitText}、${_conf.n}）</span>${_confBadgeHtml}
-        </div>`;
+          ${_venueBadge}${_stdevBadge}
+        </div>
+        <div style="margin-top:6px;padding:8px 10px;border-radius:6px;background:rgba(255,255,255,0.03);border-left:4px solid ${_conf.color};font-size:12px;">
+          <div style="color:var(--muted);font-size:10px;letter-spacing:0.05em;">今回の評価</div>
+          <span style="font-size:15px;font-weight:700;color:${_conf.color};">${_conf.label}</span>
+          <div style="margin-top:6px;color:var(--muted);font-size:10px;letter-spacing:0.05em;">── 実測データ ──</div>
+          <span style="color:var(--text);">ROI：${_conf.roi}</span><br>
+          <span style="color:var(--text);">的中率：${_conf.hit}</span><br>
+          <span style="color:var(--text);">サンプル数：${_conf.n}</span>
+        </div>
+        ${renderSTGapPanel(d.boats)}`;
       }
     }
 
