@@ -1426,6 +1426,42 @@ function calcStdev(areScores){
   return Math.sqrt(areScores.reduce((s,x)=>s+(x.raw-m)**2,0)/areScores.length);
 }
 
+// 2026-08-04追加: エンジン参入度（信頼度）の可視化（sg_narutou.htmlと必ず同期させること）。
+// あくまで「エンジンの内部判断」であり、販売判断（有料/無料公開）とは別レイヤー
+// （販売判断は実戦データが蓄積してから別途設計する）。
+// 表示ラベルは名称先行ではなく、引き継ぎノート(2026-08-04・2-1節)の実測ROIの
+// 自然なクラスタ境界（上位クラスタ約87〜91% / 中位クラスタ約76〜80% / 見送り帯66〜72%）
+// から機械的に決めたもの。2艇頭(mid)は点数決定ロジック自体はnormalのgap分岐を
+// そのまま流用するため、gap帯ごとの内訳データは存在しない。全体実測値(n=2570,82.9%)は
+// 参考バッジとして併記するに留め、gap帯別の実測値であるかのように誤表示しない。
+// 逃げ固定(normal&&autoNige==='high')は今回のセッションで実測値を再検証していないため、
+// 数値を捏造せず「未検証」と表示する。
+function getEngineConfidence(mode, gap, autoNige, isNarrowGap){
+  if(mode==='are_strong'){
+    return {label:'△慎重', color:'var(--gold)', roi:'76〜78%目安', hit:null, n:'n=1274', badge:''};
+  }
+  if(mode==='are_weak'){
+    return {label:'△慎重', color:'var(--text2)', roi:'78.0%', hit:null, n:'n=356〜481', badge:''};
+  }
+  if(mode==='normal' && autoNige==='high'){
+    return {label:'◯参戦（未検証）', color:'var(--text2)', roi:'今回未再検証', hit:null, n:'-', badge:''};
+  }
+  const _nigeBadge=(mode==='normal'&&autoNige==='mid')?'2艇頭（参考: 全体実測ROI82.9%・n=2570、gap帯別の内訳なし）':'';
+  if(mode==='normal' && gap>=20){
+    return {label:'🔥本線', color:'var(--green)', roi:'88.5%', hit:'43.6%', n:'n=1529', badge:_nigeBadge};
+  }
+  if(mode==='normal' && gap>=10){
+    return {label:'🔥本線', color:'var(--green)', roi:'87.0%', hit:null, n:'n=522', badge:_nigeBadge};
+  }
+  if(isNarrowGap){
+    return {label:'✗見送り', color:'var(--red)', roi:'66〜72%', hit:null, n:'n=555', badge:_nigeBadge};
+  }
+  if(mode==='nigenashi'){
+    return {label:'🔥本線', color:'var(--green)', roi:'90.9%', hit:'33.2%', n:'n=331', badge:''};
+  }
+  return {label:'?未分類', color:'var(--text2)', roi:'-', hit:null, n:'-', badge:''};
+}
+
 // 2026-07-31追加: sg_narutou.htmlと同期。1号艇の相対的な地力弱さ検出（ST・展示・モーター相対順位）
 function calcBadCount(d){
   const boats=d.boats;
@@ -1480,8 +1516,13 @@ function runScreening(){
       const stdev=calcStdev(areScores);
       const estRoi=estimateROI(mode, venue, stdev);
       const estHit=estimateHitRate(mode, venue, stdev);
+      // 2026-08-04追加: エンジン参入度の可視化用（sg_narutou.htmlの直前チェックと同じ計算・必ず同期させること）
+      const gap=areScores[0].raw-areScores[1].raw;
+      const autoNigeForConf=(boat1Rank===0&&nigeRate>=85)?'high':(boat1Rank===0&&nigeRate>=50)?'mid':'low';
+      const isNarrowGapForConf=(mode==='normal'&&autoNigeForConf!=='high'&&gap<10);
+      const confidence=getEngineConfidence(mode, gap, autoNigeForConf, isNarrowGapForConf);
 
-      results.push({venue, raceNum:(d.raceNum||'?').replace('R','').trim(), shimekiri:d.shimekiri||'', mode, nigeHint, areIndex, nigeRate, stdev, isGoodVenue, estRoi, estHit});
+      results.push({venue, raceNum:(d.raceNum||'?').replace('R','').trim(), shimekiri:d.shimekiri||'', mode, nigeHint, areIndex, nigeRate, stdev, isGoodVenue, estRoi, estHit, confidence});
     }catch(e){
       results.push({venue:'(解析失敗)', raceNum:'?', shimekiri:'', mode:'error', nigeHint:'', areIndex:0, nigeRate:0, isGoodVenue:false, estRoi:-999, estHit:0, error:e.message});
     }
@@ -1513,11 +1554,17 @@ function runScreening(){
     else if(r.stdev>=27.9) stdevBadge='<span style="color:var(--text2);">△中間帯(ROI低め)</span> ';
     const hintText=r.nigeHint?` / ${r.nigeHint}`:'';
     const shimekiriText=r.shimekiri?` / 締切${r.shimekiri}`:'';
+    // 2026-08-04追加: エンジン参入度（実測バックテスト値ベース、内部評価専用。販売判断ではない）
+    const conf=r.confidence||{label:'?未分類',color:'var(--text2)',roi:'-',hit:null,n:'-',badge:''};
+    const confHitText=conf.hit?` / 的中率${conf.hit}`:'';
+    const confBadgeHtml=conf.badge?`<br><span style="color:var(--text2);font-size:10px;">${conf.badge}</span>`:'';
     return `<div style="padding:8px 10px;margin-bottom:6px;border-radius:6px;background:rgba(255,255,255,0.03);border-left:3px solid ${judge.color};font-size:12px;">
       <b>${r.venue}${r.raceNum}R</b> <span style="color:${judge.color};font-weight:700;">${judge.text}</span>${shimekiriText}<br>
       <span style="color:var(--text2);">推定的中率 ${r.estHit.toFixed(1)}% / 推定ROI ${r.estRoi.toFixed(1)}%</span><br>
       ${venueBadge}${stdevBadge}<span style="color:${ml.color};font-weight:700;">${ml.text}</span>${hintText}<br>
-      荒れ指数${r.areIndex}点 / 逃げ率${r.nigeRate.toFixed(1)}% / スコア差${r.stdev.toFixed(1)}
+      荒れ指数${r.areIndex}点 / 逃げ率${r.nigeRate.toFixed(1)}% / スコア差${r.stdev.toFixed(1)}<br>
+      <span style="font-weight:700;color:${conf.color};">エンジン参入度: ${conf.label}</span>
+      <span style="color:var(--text2);font-size:10px;">（実測ROI ${conf.roi}${confHitText}、${conf.n}）</span>${confBadgeHtml}
     </div>`;
   }
 
@@ -1617,6 +1664,10 @@ function runFinalCheck(){
   if(stdev<20.3) stdevBadge='<span style="color:var(--gold);font-weight:700;">🎯拮抗(高ROI帯)</span> ';
   else if(stdev>=31.9) stdevBadge='<span style="color:var(--gold);font-weight:700;">💥1艇突出(高ROI帯)</span> ';
   else if(stdev>=27.9) stdevBadge='<span style="color:var(--text2);">△中間帯(ROI低め)</span> ';
+  // 2026-08-04追加: エンジン参入度（実測バックテスト値ベース、内部評価専用。販売判断ではない）
+  const conf=getEngineConfidence(mode,gap,_nigeForGap,isNarrowGap);
+  const confHitText=conf.hit?` / 的中率${conf.hit}`:'';
+  const confBadgeHtml=conf.badge?`<br><span style="color:var(--text2);font-size:11px;">${conf.badge}</span>`:'';
 
   let warnHtml='';
   if(warnings && warnings.length){
@@ -1628,7 +1679,9 @@ function runFinalCheck(){
     <span style="font-size:15px;font-weight:700;color:${judge.color};">${judge.text}</span><br>
     <span style="color:var(--text2);">最終推定的中率 ${estHit.toFixed(1)}% / 最終推定ROI ${estRoi.toFixed(1)}%</span><br>
     ${venueBadge}${stdevBadge}<span style="color:${ml.color};font-weight:700;">${ml.text}</span><br>
-    荒れ指数${areIndex}点 / 逃げ率${nigeRate.toFixed(1)}% / スコア差${stdev.toFixed(1)}
+    荒れ指数${areIndex}点 / 逃げ率${nigeRate.toFixed(1)}% / スコア差${stdev.toFixed(1)}<br>
+    <span style="font-weight:700;color:${conf.color};">エンジン参入度: ${conf.label}</span>
+    <span style="color:var(--text2);font-size:11px;">（実測ROI ${conf.roi}${confHitText}、${conf.n}）</span>${confBadgeHtml}
     ${warnHtml}
   </div>`;
   showToast(judge.text.includes('見送り')?'⚠️ 見送り判定です':'✅ 最終チェック完了');

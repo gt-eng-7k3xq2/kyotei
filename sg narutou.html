@@ -565,6 +565,42 @@ function calcStdev(areScores){
   return Math.sqrt(areScores.reduce((s,x)=>s+(x.raw-m)**2,0)/areScores.length);
 }
 
+// 2026-08-04追加: エンジン参入度（信頼度）の可視化。
+// あくまで「エンジンの内部判断」であり、販売判断（有料/無料公開）とは別レイヤー
+// （販売判断は実戦データが蓄積してから別途設計する）。
+// 表示ラベルは名称先行ではなく、引き継ぎノート(2026-08-04・2-1節)の実測ROIの
+// 自然なクラスタ境界（上位クラスタ約87〜91% / 中位クラスタ約76〜80% / 見送り帯66〜72%）
+// から機械的に決めたもの。2艇頭(mid)は点数決定ロジック自体はnormalのgap分岐を
+// そのまま流用するため、gap帯ごとの内訳データは存在しない。全体実測値(n=2570,82.9%)は
+// 参考バッジとして併記するに留め、gap帯別の実測値であるかのように誤表示しない。
+// 逃げ固定(normal&&autoNige==='high')は今回のセッションで実測値を再検証していないため、
+// 数値を捏造せず「未検証」と表示する。
+function getEngineConfidence(mode, gap, autoNige, isNarrowGap){
+  if(mode==='are_strong'){
+    return {label:'△慎重', color:'var(--gold)', roi:'76〜78%目安', hit:null, n:'n=1274', badge:''};
+  }
+  if(mode==='are_weak'){
+    return {label:'△慎重', color:'var(--muted)', roi:'78.0%', hit:null, n:'n=356〜481', badge:''};
+  }
+  if(mode==='normal' && autoNige==='high'){
+    return {label:'◯参戦（未検証）', color:'var(--muted)', roi:'今回未再検証', hit:null, n:'-', badge:''};
+  }
+  const _nigeBadge=(mode==='normal'&&autoNige==='mid')?'2艇頭（参考: 全体実測ROI82.9%・n=2570、gap帯別の内訳なし）':'';
+  if(mode==='normal' && gap>=20){
+    return {label:'🔥本線', color:'var(--green)', roi:'88.5%', hit:'43.6%', n:'n=1529', badge:_nigeBadge};
+  }
+  if(mode==='normal' && gap>=10){
+    return {label:'🔥本線', color:'var(--green)', roi:'87.0%', hit:null, n:'n=522', badge:_nigeBadge};
+  }
+  if(isNarrowGap){
+    return {label:'✗見送り', color:'var(--red)', roi:'66〜72%', hit:null, n:'n=555', badge:_nigeBadge};
+  }
+  if(mode==='nigenashi'){
+    return {label:'🔥本線', color:'var(--green)', roi:'90.9%', hit:'33.2%', n:'n=331', badge:''};
+  }
+  return {label:'?未分類', color:'var(--muted)', roi:'-', hit:null, n:'-', badge:''};
+}
+
 // 2026-07-31追加: 1号艇の相対的な地力弱さを検出。ST・展示・モーターの相対順位(6艇中)で
 // 「1位でない」信号がいくつ重なるかを数える。n=4232実測で0個=失敗率13.3%→3個=23.4%と判明。
 // 単独ではボーダーライン(1号艇はどの条件でもまだ過半数残る)なのでスコアへのペナルティには使わないが、
@@ -2351,12 +2387,18 @@ async function runYoso(){
       if(_stdev<20.3) _stdevBadge='<span style="color:var(--gold);font-weight:700;">🎯拮抗(高ROI帯)</span> ';
       else if(_stdev>=31.9) _stdevBadge='<span style="color:var(--gold);font-weight:700;">💥1艇突出(高ROI帯)</span> ';
       else if(_stdev>=27.9) _stdevBadge='<span style="color:var(--muted);">△中間帯(ROI低め)</span> ';
+      // 2026-08-04追加: エンジン参入度（実測バックテスト値ベース、内部評価専用。販売判断ではない）
+      const _conf=getEngineConfidence(mode,_gap,_autoNige,_isNarrowGap);
+      const _confHitText=_conf.hit?` / 的中率${_conf.hit}`:'';
+      const _confBadgeHtml=_conf.badge?`<br><span style="color:var(--muted);font-size:11px;">${_conf.badge}</span>`:'';
       const verdictEl=document.getElementById('entry-verdict');
       if(verdictEl){
         verdictEl.innerHTML=`<div style="padding:8px 10px;border-radius:6px;background:rgba(255,255,255,0.03);border-left:4px solid ${_judge.color};font-size:12px;">
           <span style="font-size:14px;font-weight:700;color:${_judge.color};">${_judge.text}</span><br>
           <span style="color:var(--muted);">最終推定的中率 ${_estHit.toFixed(1)}% / 最終推定ROI ${_estRoi.toFixed(1)}% / gap ${_gap.toFixed(1)}</span><br>
-          ${_venueBadge}${_stdevBadge}
+          ${_venueBadge}${_stdevBadge}<br>
+          <span style="font-size:13px;font-weight:700;color:${_conf.color};">エンジン参入度: ${_conf.label}</span>
+          <span style="color:var(--muted);font-size:11px;">（実測ROI ${_conf.roi}${_confHitText}、${_conf.n}）</span>${_confBadgeHtml}
         </div>`;
       }
     }
