@@ -2581,11 +2581,14 @@ function buildXSummary(mode,withAmount){
 
   // 評価順: ◎>○>▲>△>▽>× を号艇番号で表示。隣接するスコア差が大きいほど>を増やす
   // 例: 4>1>6>>5>3>2（6と5の間に大きな差がある場合）
+  // 2026-08-05修正: 旧閾値(8/15)だとバックテストn=5,348(隣接差26,740サンプル)で単一矢印38.4%・
+  // 最大矢印(>>>)38.3%とほぼ同頻度になり「基本は1個」という設計意図に反していたため、
+  // 単一矢印が基本形(73.7%)になるよう20pt/35ptへ引き上げ（>>19.1%・>>>7.2%）
   const hyokaOrder=ranking.map((r,i)=>{
     if(i===0) return String(r.boat);
     const prev=ranking[i-1];
     const gap=(typeof prev.score==='number'&&typeof r.score==='number')?Math.abs(prev.score-r.score):0;
-    const arrows = gap>=15 ? '>>>' : gap>=8 ? '>>' : '>';
+    const arrows = gap>=35 ? '>>>' : gap>=20 ? '>>' : '>';
     return arrows+r.boat;
   }).join('');
 
