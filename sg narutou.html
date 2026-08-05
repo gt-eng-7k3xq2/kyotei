@@ -939,7 +939,8 @@ function generateBets(d, areScores, mode){
   const honme='1';
   const shikin=parseInt(document.getElementById('inp-shikin').value)||3000;
   const oddsMap=extractOddsMap(document.getElementById('inp-data').value);
-  const ranking=parseRanking(document.getElementById('ai-raw').textContent||'');
+  const marks=['◎','○','▲','△','▽','×'];
+  const ranking=areScores.map((s,i)=>({rank:i+1,boat:parseInt(s.no),mark:marks[i]||'×',score:s.raw}));
   if(!ranking.length){showToast('AIランキングがありません');return;}
   // 診断: 自動提案と実際に使うモードが違う場合は警告(手動で変えた時は正常なので黄色い注意のみ、エラーではない)
   if(lastSuggestedMode && mode!==lastSuggestedMode){
@@ -1966,24 +1967,31 @@ function sujiBonus(maruBoat, niCandBoat){
 }
 
 // ============================================================
+// 点数決定（gapベース動的、8-10点）2026-08-05実装
+// 軸(◎)と2位評価艇のスコア差(gap)に応じて8/9/10点を動的に選択。
+// バックテスト(n=4,562、時系列前半/後半・不調期間で頑健性確認済み):
+//   gap>=35(◎が圧倒的)→8点、20<=gap<35→9点、gap<20(僅差)→10点
+//   平均点数9.33、10点固定に対し的中率96%・ROIほぼ同等・万舟93%を平均0.7点少ない投資で達成
+// ============================================================
+function decideProbabilisticPts(ranking){
+  if(!ranking || ranking.length<2) return 10;
+  const gap = (ranking[0].score||0) - (ranking[1].score||0);
+  if(gap>=35) return 8;
+  if(gap>=20) return 9;
+  return 10;
+}
+
+// ============================================================
 // 買い目生成（確率ベース: 軸固定+動的ヘッジ）2026-08-05実装
-// 経緯: ◎○▲△の順位ラベル化→honsen/osaee固定パターン生成という旧方式は、
-// 「◎の2着残り」「低評価艇が絡む荒れ」など、レースごとに異なる確率分布の情報を
-// 固定フォーマットに落とし込む過程で損失していたことがバックテストで判明。
-// 新方式: 軸選定(calcAreScore・1号艇昇格ルール)はそのまま使い、軸(◎)決定後の
+// 軸選定(calcAreScore・1号艇昇格ルール)はそのまま使い、軸(◎)決定後の
 // 3連単候補生成のみをPlackett-Luceモデル(スコアを強さとする順位確率)に置き換える。
 // ◎を1着固定した条件付き確率を基本とし、◎の勝率とO(次点評価艇)の勝率の比に応じて
 // 動的に「○が1着になった場合に◎が2-3着に来る」ヘッジ候補を混ぜる。
-// バックテスト結果(アーカイブn=5,348、オッズ照合可能n=4,562、時系列前半/後半で再現確認済み):
-//   8点:  ヘッジなし(◎固定のみ)が最良。現行(旧honsen/osaee方式)とほぼ互角
-//         (的中率38.69% vs 38.29%、ROI82.3% vs 81.9%、万舟19件 vs 20件)
-//   10点: 動的ヘッジ導入で現行を的中率・ROI・万舟の3指標とも上回る
-//         (的中率44.89% vs 42.85%、ROI80.5% vs 80.2%、万舟28件 vs 29件)
-//   12点以上は本方式では未採用(運用点数を8-10点に抑える方針のため対象外)
-// 検証で分かった限界: 直近の実運用不調期間(2026-07-27〜08-03)だけに限ると、
-// 的中率はほぼ互角、ROIはやや現行が優位、万舟のみ新方式が明確に優位という結果だった。
-// 買い目生成の改善は長期的な期待値向上であり、実運用不調の直接的原因(are系モードでの
-// 大差軸不一致16件、原因未特定)の解決策ではないことに留意。
+// 2026-08-05追加: 「同一1着・2着固定で3着だけ総流し」という機械的すぎる買い目パターンを
+// 避けるため、同一(1着,2着)ペアからの採用は最大3件まで（4件=全通しは禁止）に制限。
+// 検証結果(n=4,562、gapベース点数8-10点併用):
+//   制限なし: 的中率42.83%/ROI80.8%/万舟26件、うち55%のレースが3着4通り全流しの機械的な形
+//   上限3(採用): 的中率41.98%/ROI78.4%/万舟24件、全流しパターンは完全に解消(0件)
 // ============================================================
 function _plWinProbs(scoreMap, temperature){
   const boats = Object.keys(scoreMap);
@@ -2014,11 +2022,27 @@ function _plConditionalProbs(scoreMap, head, temperature){
   return combos.sort((a,b)=>b.p-a.p);
 }
 
+// 同一(1着,2着)ペアからの採用件数を上限maxPerPairまでに制限しつつ、確率上位からN件選ぶ
+function _selectWithPairCap(sortedCombos, n, maxPerPair){
+  const selected = [];
+  const pairCount = {};
+  for(const item of sortedCombos){
+    const pairKey = item.combo[0]+'|'+item.combo[1];
+    const cnt = pairCount[pairKey]||0;
+    if(cnt >= maxPerPair) continue;
+    selected.push(item);
+    pairCount[pairKey] = cnt+1;
+    if(selected.length >= n) break;
+  }
+  return selected;
+}
+
 function buildBetsProbabilistic(ranking, pts){
   if(!ranking || ranking.length<2) return [];
   const T = 6; // 温度パラメータ（バックテストでT=3〜8の範囲は安定、6を採用）
   const MAX_HEDGE_FRAC = 0.5; // ヘッジ配分比率の上限（バックテストで確認した値）
   const MIN_MAIN = 3; // main(◎頭)に最低限確保する点数
+  const MAX_PER_PAIR = 3; // 同一(1着,2着)ペアからの採用上限（4件=全通しを禁止）
 
   const scoreMap = {};
   ranking.forEach(r=>{ scoreMap[String(r.boat)] = r.score; });
@@ -2037,18 +2061,18 @@ function buildBetsProbabilistic(ranking, pts){
   }
   const mainN = pts - hedgeN;
 
-  const mainCombos = _plConditionalProbs(scoreMap, axis, T).slice(0, mainN);
-  const bets = mainCombos.map(x=>({val:x.combo.join('-'), type:'本線'}));
+  const mainSorted = _plConditionalProbs(scoreMap, axis, T);
+  const mainSel = _selectWithPairCap(mainSorted, mainN, MAX_PER_PAIR);
+  const bets = mainSel.map(x=>({val:x.combo.join('-'), type:'本線'}));
 
   if(hedgeN>0){
-    const hedgeCombos = _plConditionalProbs(scoreMap, runnerUp, T)
-      .filter(x=>x.combo.indexOf(axis)>=0)
-      .slice(0, hedgeN);
-    hedgeCombos.forEach(x=>bets.push({val:x.combo.join('-'), type:'抑え'}));
+    const hedgeSorted = _plConditionalProbs(scoreMap, runnerUp, T)
+      .filter(x=>x.combo.indexOf(axis)>=0);
+    const hedgeSel = _selectWithPairCap(hedgeSorted, hedgeN, MAX_PER_PAIR);
+    hedgeSel.forEach(x=>bets.push({val:x.combo.join('-'), type:'抑え'}));
   }
   return bets;
 }
-
 
 // ============================================================
 // 資金配分（100円単位・最低100円保証）
@@ -2332,30 +2356,10 @@ async function runYoso(){
       }
     }
 
-    // 点数の自動選択（2026-08-03改訂: gapベース。badCountによる10→12点拡張ルールは廃止）
-    // gap20以上: 7点（n=1529検証: 回収率88.5%・的中率43.6%・高配当的中4件で6点固定より全指標上回る）
-    // gap10〜20: 8点（n=522検証: 回収率87.0%・高配当的中4件で現状バランス良好）
-    // gap0〜10: 見送り推奨だが、手動で参戦する場合の点数は8点をデフォルトにしておく
-    // 2艇頭(mid)はnormalのgap分岐をそのまま流用（n=2570検証で回収率76.7%→82.9%に改善を確認）
-    // 逃げなし: 12点固定（n=331検証: 10点→12点で回収率84.4%→90.9%・的中率29.6%→33.2%・
-    //   高配当的中3→5件と全指標が改善。14点は候補生成の上限に達し12点と結果が同一だったため12点採用）
-    // 荒れ弱/荒れ強: 12点で現状維持（荒れ弱は将来モード再設計を検討中）
-    let autoPts;
-    if(mode==='are_weak'||mode==='are_strong'){
-      autoPts=12;
-    }else if(mode==='normal'&&_autoNige==='high'){
-      autoPts=6;
-    }else if(mode==='normal'&&_gap>=20){
-      autoPts=7;
-    }else if(mode==='normal'&&_gap>=10){
-      autoPts=8;
-    }else if(_isNarrowGap){
-      autoPts=8; // 見送り推奨レースで手動参戦する場合のデフォルト
-    }else if(mode==='nigenashi'){
-      autoPts=12;
-    }else{
-      autoPts=10; // 想定外のフォールバック
-    }
+    // 点数の自動選択（2026-08-05改訂: 確率ベース買い目生成と合わせ、gapベースで8-10点に集約）
+    // gap>=35(◎が圧倒的): 8点 / 20<=gap<35: 9点 / gap<20(僅差): 10点
+    // バックテスト(n=4,562)で10点固定に対し的中率96%・ROIほぼ同等・万舟93%を平均0.7点少ない投資で達成
+    let autoPts = decideProbabilisticPts([{score:areScores[0].raw},{score:areScores[1].raw}]);
     autoSetBetCount(autoPts);
 
 
