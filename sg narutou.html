@@ -607,9 +607,11 @@ function getEngineConfidence(mode, gap, autoNige, isNarrowGap){
 
 // 2026-08-04追加: 予測本番ST（内部参考情報専用。買い目・スコアには一切影響させない）
 // 予測本番ST = 今日の展示ST(directST) + 展示STと本番STのズレ(枠なり前提でNコース行を参照)
-// 展示Fの艇・ズレ情報が取れていない艇はnullを返す（表示側で「情報なし」扱いにする）
+// 2026-08-05修正: 展示Fの艇でもdirectSTは実測値として取得できている（parseDataでF明けの数値を
+// パース済み）ため、従来のように予測自体を握りつぶさず、他艇と同様に予測STを算出・表示する。
+// 展示Fだった事実は行表示側で「(展示F)」として併記し、参考情報として残す。
+// ズレ情報が取れていない艇のみnullを返す（表示側で「情報なし」扱いにする）
 function calcPredictedST(b){
-  if(b.isExhibitF) return null;
   if(b.directST==null || b.stgapSec==null) return null;
   return b.directST + b.stgapSec;
 }
@@ -664,7 +666,7 @@ function renderSTGapPanel(boats){
         <div style="position:absolute;right:0;top:0;bottom:0;width:1px;background:var(--gold);"></div>
         <div style="position:absolute;right:${offset}px;top:50%;transform:translate(50%,-50%);width:9px;height:9px;border-radius:50%;background:${courseColors[idx]};border:1px solid #222;"></div>
       </div>
-      <div style="width:120px;text-align:right;font-size:10px;color:var(--muted);white-space:nowrap;">展示${p.exhibit.toFixed(2)}→予測${p.val.toFixed(2)} <span style="color:${rankColor(rankLabel)};font-weight:700;">[${rankLabel||'?'}]</span></div>
+      <div style="width:120px;text-align:right;font-size:10px;color:var(--muted);white-space:nowrap;">展示${p.exhibit.toFixed(2)}→予測${p.val.toFixed(2)} <span style="color:${rankColor(rankLabel)};font-weight:700;">[${rankLabel||'?'}]</span>${p.isF?' <span style="color:var(--red);">(展示F)</span>':''}</div>
     </div>`;
   }).join('');
   return `<div style="margin-top:6px;padding:8px 10px;border-radius:6px;background:rgba(255,255,255,0.03);">
