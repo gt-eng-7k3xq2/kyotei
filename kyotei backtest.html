@@ -901,24 +901,31 @@ function sujiBonus(maruBoat, niCandBoat){
 }
 
 // ============================================================
+// 点数決定（gapベース動的、8-10点）2026-08-05実装
+// 軸(◎)と2位評価艇のスコア差(gap)に応じて8/9/10点を動的に選択。
+// バックテスト(n=4,562、時系列前半/後半・不調期間で頑健性確認済み):
+//   gap>=35(◎が圧倒的)→8点、20<=gap<35→9点、gap<20(僅差)→10点
+//   平均点数9.33、10点固定に対し的中率96%・ROIほぼ同等・万舟93%を平均0.7点少ない投資で達成
+// ============================================================
+function decideProbabilisticPts(ranking){
+  if(!ranking || ranking.length<2) return 10;
+  const gap = (ranking[0].score||0) - (ranking[1].score||0);
+  if(gap>=35) return 8;
+  if(gap>=20) return 9;
+  return 10;
+}
+
+// ============================================================
 // 買い目生成（確率ベース: 軸固定+動的ヘッジ）2026-08-05実装
-// 経緯: ◎○▲△の順位ラベル化→honsen/osaee固定パターン生成という旧方式は、
-// 「◎の2着残り」「低評価艇が絡む荒れ」など、レースごとに異なる確率分布の情報を
-// 固定フォーマットに落とし込む過程で損失していたことがバックテストで判明。
-// 新方式: 軸選定(calcAreScore・1号艇昇格ルール)はそのまま使い、軸(◎)決定後の
+// 軸選定(calcAreScore・1号艇昇格ルール)はそのまま使い、軸(◎)決定後の
 // 3連単候補生成のみをPlackett-Luceモデル(スコアを強さとする順位確率)に置き換える。
 // ◎を1着固定した条件付き確率を基本とし、◎の勝率とO(次点評価艇)の勝率の比に応じて
 // 動的に「○が1着になった場合に◎が2-3着に来る」ヘッジ候補を混ぜる。
-// バックテスト結果(アーカイブn=5,348、オッズ照合可能n=4,562、時系列前半/後半で再現確認済み):
-//   8点:  ヘッジなし(◎固定のみ)が最良。現行(旧honsen/osaee方式)とほぼ互角
-//         (的中率38.69% vs 38.29%、ROI82.3% vs 81.9%、万舟19件 vs 20件)
-//   10点: 動的ヘッジ導入で現行を的中率・ROI・万舟の3指標とも上回る
-//         (的中率44.89% vs 42.85%、ROI80.5% vs 80.2%、万舟28件 vs 29件)
-//   12点以上は本方式では未採用(運用点数を8-10点に抑える方針のため対象外)
-// 検証で分かった限界: 直近の実運用不調期間(2026-07-27〜08-03)だけに限ると、
-// 的中率はほぼ互角、ROIはやや現行が優位、万舟のみ新方式が明確に優位という結果だった。
-// 買い目生成の改善は長期的な期待値向上であり、実運用不調の直接的原因(are系モードでの
-// 大差軸不一致16件、原因未特定)の解決策ではないことに留意。
+// 2026-08-05追加: 「同一1着・2着固定で3着だけ総流し」という機械的すぎる買い目パターンを
+// 避けるため、同一(1着,2着)ペアからの採用は最大3件まで（4件=全通しは禁止）に制限。
+// 検証結果(n=4,562、gapベース点数8-10点併用):
+//   制限なし: 的中率42.83%/ROI80.8%/万舟26件、うち55%のレースが3着4通り全流しの機械的な形
+//   上限3(採用): 的中率41.98%/ROI78.4%/万舟24件、全流しパターンは完全に解消(0件)
 // ============================================================
 function _plWinProbs(scoreMap, temperature){
   const boats = Object.keys(scoreMap);
@@ -949,11 +956,27 @@ function _plConditionalProbs(scoreMap, head, temperature){
   return combos.sort((a,b)=>b.p-a.p);
 }
 
+// 同一(1着,2着)ペアからの採用件数を上限maxPerPairまでに制限しつつ、確率上位からN件選ぶ
+function _selectWithPairCap(sortedCombos, n, maxPerPair){
+  const selected = [];
+  const pairCount = {};
+  for(const item of sortedCombos){
+    const pairKey = item.combo[0]+'|'+item.combo[1];
+    const cnt = pairCount[pairKey]||0;
+    if(cnt >= maxPerPair) continue;
+    selected.push(item);
+    pairCount[pairKey] = cnt+1;
+    if(selected.length >= n) break;
+  }
+  return selected;
+}
+
 function buildBetsProbabilistic(ranking, pts){
   if(!ranking || ranking.length<2) return [];
   const T = 6; // 温度パラメータ（バックテストでT=3〜8の範囲は安定、6を採用）
   const MAX_HEDGE_FRAC = 0.5; // ヘッジ配分比率の上限（バックテストで確認した値）
   const MIN_MAIN = 3; // main(◎頭)に最低限確保する点数
+  const MAX_PER_PAIR = 3; // 同一(1着,2着)ペアからの採用上限（4件=全通しを禁止）
 
   const scoreMap = {};
   ranking.forEach(r=>{ scoreMap[String(r.boat)] = r.score; });
@@ -972,18 +995,18 @@ function buildBetsProbabilistic(ranking, pts){
   }
   const mainN = pts - hedgeN;
 
-  const mainCombos = _plConditionalProbs(scoreMap, axis, T).slice(0, mainN);
-  const bets = mainCombos.map(x=>({val:x.combo.join('-'), type:'本線'}));
+  const mainSorted = _plConditionalProbs(scoreMap, axis, T);
+  const mainSel = _selectWithPairCap(mainSorted, mainN, MAX_PER_PAIR);
+  const bets = mainSel.map(x=>({val:x.combo.join('-'), type:'本線'}));
 
   if(hedgeN>0){
-    const hedgeCombos = _plConditionalProbs(scoreMap, runnerUp, T)
-      .filter(x=>x.combo.indexOf(axis)>=0)
-      .slice(0, hedgeN);
-    hedgeCombos.forEach(x=>bets.push({val:x.combo.join('-'), type:'抑え'}));
+    const hedgeSorted = _plConditionalProbs(scoreMap, runnerUp, T)
+      .filter(x=>x.combo.indexOf(axis)>=0);
+    const hedgeSel = _selectWithPairCap(hedgeSorted, hedgeN, MAX_PER_PAIR);
+    hedgeSel.forEach(x=>bets.push({val:x.combo.join('-'), type:'抑え'}));
   }
   return bets;
 }
-
 
 
 // ============================================================
@@ -1271,6 +1294,40 @@ function calcBadCount(d){
   return c;
 }
 
+// ============================================================
+// 前日スクリーニング・採用条件式（2026-08-05実装）
+// 新エンジン(確率ベース買い目・gapベース点数)でのバックテスト(n=4,562、8-fold時系列検証)に基づく。
+// 市場オッズ一致・軸=1号艇・モード・弱会場×荒れ系・軸スコアの5特徴量によるロジスティック回帰。
+// 日次confidence上位20レースのみを「配信対象」として正式採用（運営者決定、2026-08-05）。
+// 検証結果: 全レース的中率41.98%/ROI78.4% → 上位20採用時54.4%/96.6%（採用率11.9%）
+// オッズが取得できない前日早期のデータでは market_agrees は 0（中立・やや保守的）として計算する。
+// ============================================================
+const WEAK_VENUES_ARE=['戸田','唐津','三国','宮島','平和島']; // are_strong/are_weakで軸的中率が明確に低い会場（n=1,700超で確認）
+function calcScreeningConfidence(mode, axisIsBoat1, weakVenueXAre, axisRawScore, marketAgrees){
+  return -2.4627
+    + 0.5114*(marketAgrees?1:0)
+    + 0.2593*(axisIsBoat1?1:0)
+    + 0.1539*(mode==='normal'?1:0)
+    - 0.1757*(weakVenueXAre?1:0)
+    + 0.0130*axisRawScore;
+}
+// 軸のオッズ・市場一致判定。oddsMapが空(前日早期でオッズ未確定)ならmarketAgrees=null(中立0扱い)を返す
+function calcMarketAgrees(oddsMap, axisBoat){
+  if(!oddsMap || !Object.keys(oddsMap).length) return null;
+  const byFirst={};
+  for(const k in oddsMap){
+    const first=k.split('-')[0];
+    if(!byFirst[first]) byFirst[first]=[];
+    byFirst[first].push(oddsMap[k]);
+  }
+  const bestByBoat={};
+  for(const b in byFirst) bestByBoat[b]=Math.min(...byFirst[b]);
+  if(!(String(axisBoat) in bestByBoat)) return null;
+  let favorite=null, favoriteOdds=Infinity;
+  for(const b in bestByBoat){ if(bestByBoat[b]<favoriteOdds){favorite=b; favoriteOdds=bestByBoat[b];} }
+  return favorite===String(axisBoat) ? 1 : 0;
+}
+
 function runScreening(){
   const raw=document.getElementById('screening-paste').value;
   if(!raw.trim()){showToast('データを貼り付けてください');return;}
@@ -1315,15 +1372,23 @@ function runScreening(){
       const isNarrowGapForConf=(mode==='normal'&&autoNigeForConf!=='high'&&gap<10);
       const confidence=getEngineConfidence(mode, gap, autoNigeForConf, isNarrowGapForConf);
 
-      results.push({venue, raceNum:(d.raceNum||'?').replace('R','').trim(), shimekiri:d.shimekiri||'', mode, nigeHint, areIndex, nigeRate, stdev, isGoodVenue, estRoi, estHit, confidence});
+      // 2026-08-05追加: 前日スクリーニング採用条件式（新エンジンでの検証結果に基づく正式採用基準）
+      const axisIsBoat1=boat1Rank===0;
+      const weakVenueXAre=WEAK_VENUES_ARE.includes(venue) && (mode==='are_strong'||mode==='are_weak');
+      const chunkOddsMap=extractOddsMap(chunk);
+      const marketAgreesRaw=calcMarketAgrees(chunkOddsMap, areScores[0].no);
+      const oddsAvailable=marketAgreesRaw!==null;
+      const screeningScore=calcScreeningConfidence(mode, axisIsBoat1, weakVenueXAre, areScores[0].raw, marketAgreesRaw||0);
+
+      results.push({venue, raceNum:(d.raceNum||'?').replace('R','').trim(), shimekiri:d.shimekiri||'', mode, nigeHint, areIndex, nigeRate, stdev, isGoodVenue, estRoi, estHit, confidence, screeningScore, oddsAvailable});
     }catch(e){
       results.push({venue:'(解析失敗)', raceNum:'?', shimekiri:'', mode:'error', nigeHint:'', areIndex:0, nigeRate:0, isGoodVenue:false, estRoi:-999, estHit:0, error:e.message});
     }
   }
 
   const errorResults=results.filter(r=>r.mode==='error');
-  const validResults=results.filter(r=>r.mode!=='error').sort((a,b)=>b.estRoi-a.estRoi);
-  // 2026-07-30: 本命20件+予備10件の2段構成に変更（従来はTOP_N=10のみ）
+  const validResults=results.filter(r=>r.mode!=='error').sort((a,b)=>b.screeningScore-a.screeningScore);
+  // 2026-08-05: 採用条件式のconfidence上位20件を正式な配信対象とする（運営者決定）
   const MAIN_N=20, RESERVE_N=10;
   const mainResults=validResults.slice(0,MAIN_N);
   const reserveResults=validResults.slice(MAIN_N,MAIN_N+RESERVE_N);
@@ -1351,8 +1416,10 @@ function runScreening(){
     const conf=r.confidence||{label:'?未分類',color:'var(--text2)',roi:'-',hit:'-',n:'-'};
     const confMismatch=(judge.text.indexOf('見送り')>=0)&&['🔥本線','◎通常','○参考'].includes(conf.label);
     const mismatchNote=confMismatch?`<div style="margin-top:4px;padding:4px 6px;background:rgba(200,160,60,0.12);border:1px solid rgba(200,160,60,0.4);border-radius:5px;font-size:10px;color:#e0c060;">⚠️ 区分は好調ですが今回の推定ROIは74%未満のため見送り推奨です</div>`:'';
+    const oddsNote=r.oddsAvailable?'':'<span style="color:var(--text2);font-size:9px;">（オッズ未確定、市場一致は中立扱い）</span>';
     return `<div style="padding:8px 10px;margin-bottom:6px;border-radius:6px;background:rgba(255,255,255,0.03);border-left:3px solid ${judge.color};font-size:12px;">
       <b>${r.venue}${r.raceNum}R</b> <span style="color:${judge.color};font-weight:700;">${judge.text}</span>${shimekiriText}<br>
+      <span style="color:var(--gold);font-weight:700;">採用スコア ${r.screeningScore.toFixed(2)}</span> ${oddsNote}<br>
       <span style="color:var(--text2);">推定的中率 ${r.estHit.toFixed(1)}% / 推定ROI ${r.estRoi.toFixed(1)}%</span><br>
       ${venueBadge}${stdevBadge}<span style="color:${ml.color};font-weight:700;">${ml.text}</span>${hintText}<br>
       荒れ指数${r.areIndex}点 / 逃げ率${r.nigeRate.toFixed(1)}% / スコア差${r.stdev.toFixed(1)}
@@ -1366,7 +1433,7 @@ function runScreening(){
     </div>`;
   }
 
-  let html=`<p style="font-size:11px;color:var(--text2);margin-bottom:6px;">${results.length}レース中、推定ROI上位${mainResults.length}件(本命)+${reserveResults.length}件(予備)を表示（過去実績ベースの目安。直前ST・オッズは未反映）</p>`;
+  let html=`<p style="font-size:11px;color:var(--text2);margin-bottom:6px;">${results.length}レース中、採用スコア上位${mainResults.length}件を配信対象（本命）として選抜。＋予備${reserveResults.length}件</p>`;
   for(const r of errorResults){
     html+=`<div style="padding:8px;margin-bottom:6px;border-radius:6px;background:rgba(200,60,60,0.1);border:1px solid rgba(200,60,60,0.4);font-size:12px;">⚠️ 解析失敗: ${r.error||''}</div>`;
   }
@@ -1646,29 +1713,11 @@ function runAll(){
       // 逃げモード(low/mid/high)を先に判定（点数選択に使うため）。ST脅威判定は2026-07-28廃止
       const _isAxisBoat1=String(areScores[0].no)==='1';
       const _autoNige=(_isAxisBoat1&&nigeRate>=85)?'high':(_isAxisBoat1&&nigeRate>=50)?'mid':'low';
-      // 点数の自動選択: 入力欄が初期値(12)のまま手動で変更されていなければ、モードごとに自動調整する
-      // (sg_narutou.htmlと必ず同期させること。2026-08-03改訂: gapベースに全面改訂。badCountによる
-      // 10→12点拡張ルールは廃止。gap20+=7点/gap10-20=8点/gap0-10=見送り推奨(手動参戦時は8点)。
-      // 2艇頭(mid)はnormalのgap分岐をそのまま流用。逃げなしは12点固定(n=331検証で全指標改善)。
-      // 荒れ弱/荒れ強は12点で現状維持)
+      // 点数の自動選択（2026-08-05改訂: 確率ベース買い目生成と合わせ、gapベースで8-10点に集約。
+      // sg_narutou.htmlと同期済み）
       const _gap=areScores[0].raw-areScores[1].raw;
-      const _isNarrowGap=(mode==='normal'&&_autoNige!=='high'&&_gap<10);
       if(pts_manual==='12'){
-        if(mode==='are_weak'||mode==='are_strong'){
-          pts=12;
-        } else if(mode==='normal'&&_autoNige==='high'){
-          pts=6;
-        } else if(mode==='normal'&&_gap>=20){
-          pts=7;
-        } else if(mode==='normal'&&_gap>=10){
-          pts=8;
-        } else if(_isNarrowGap){
-          pts=8; // 見送り推奨レースで手動参戦する場合のデフォルト
-        } else if(mode==='nigenashi'){
-          pts=12;
-        } else {
-          pts=10; // 想定外のフォールバック
-        }
+        pts = decideProbabilisticPts([{score:areScores[0].raw},{score:areScores[1].raw}]);
         const ptsEl=document.getElementById('pts-'+id);
         if(ptsEl) ptsEl.value=String(pts);
       }
