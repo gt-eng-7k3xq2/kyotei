@@ -900,299 +900,90 @@ function sujiBonus(maruBoat, niCandBoat){
   return [-6,-4,-2,0,0][rank]||0;
 }
 
-function buildBetsNormal(ranking, pts, parsedData){
-  // 通常エンジン準拠 + 紐ズレ対策強化版
-  // 逃げ率判定: nigeRate取得
-  const b1 = currentParsedData&&currentParsedData.boats[0];
-  const _atchiValidBN = b1&&b1.atchiNige>0&&(b1.atchiNigeCount||0)>=10;
-  const nigeR = b1?(b1.sgNige>0?b1.sgNige:(_atchiValidBN?b1.atchiNige:b1.nigerate6m)):0;
-  // 逃げ率で買い目モードを3段階に分類（手動指定があれば優先）
-  const maru1 = String(ranking[0].boat) === '1';
-  // 逃げ固定(high)の閾値: 逃げ率85%以上（1号艇のみ）
-  // 2026-07-28: ST脅威判定を廃止。n=3146の大規模検証で、ST脅威ありでも1号艇勝率70.6%あり、
-  // 判定を外した方が的中率・ROIとも微増したため（sg_narutou.htmlと必ず同期させること）
-  const _autoNigeMode = (maru1 && nigeR >= 85) ? 'high'
-                      : (maru1 && nigeR >= 50) ? 'mid'
-                      : 'low';
-  const nigeMode = (typeof selectedNigeMode !== 'undefined' && selectedNigeMode !== 'auto')
-                 ? selectedNigeMode
-                 : _autoNigeMode;
-  lastResolvedNigeMode = nigeMode; // ログ記録用（2026-07-27追加）。呼ぶたびに必ず上書きされるので古い値が残る心配はない
-  const isNigeRace = nigeMode !== 'low';
+// ============================================================
+// 買い目生成（確率ベース: 軸固定+動的ヘッジ）2026-08-05実装
+// 経緯: ◎○▲△の順位ラベル化→honsen/osaee固定パターン生成という旧方式は、
+// 「◎の2着残り」「低評価艇が絡む荒れ」など、レースごとに異なる確率分布の情報を
+// 固定フォーマットに落とし込む過程で損失していたことがバックテストで判明。
+// 新方式: 軸選定(calcAreScore・1号艇昇格ルール)はそのまま使い、軸(◎)決定後の
+// 3連単候補生成のみをPlackett-Luceモデル(スコアを強さとする順位確率)に置き換える。
+// ◎を1着固定した条件付き確率を基本とし、◎の勝率とO(次点評価艇)の勝率の比に応じて
+// 動的に「○が1着になった場合に◎が2-3着に来る」ヘッジ候補を混ぜる。
+// バックテスト結果(アーカイブn=5,348、オッズ照合可能n=4,562、時系列前半/後半で再現確認済み):
+//   8点:  ヘッジなし(◎固定のみ)が最良。現行(旧honsen/osaee方式)とほぼ互角
+//         (的中率38.69% vs 38.29%、ROI82.3% vs 81.9%、万舟19件 vs 20件)
+//   10点: 動的ヘッジ導入で現行を的中率・ROI・万舟の3指標とも上回る
+//         (的中率44.89% vs 42.85%、ROI80.5% vs 80.2%、万舟28件 vs 29件)
+//   12点以上は本方式では未採用(運用点数を8-10点に抑える方針のため対象外)
+// 検証で分かった限界: 直近の実運用不調期間(2026-07-27〜08-03)だけに限ると、
+// 的中率はほぼ互角、ROIはやや現行が優位、万舟のみ新方式が明確に優位という結果だった。
+// 買い目生成の改善は長期的な期待値向上であり、実運用不調の直接的原因(are系モードでの
+// 大差軸不一致16件、原因未特定)の解決策ではないことに留意。
+// ============================================================
+function _plWinProbs(scoreMap, temperature){
+  const boats = Object.keys(scoreMap);
+  const strengths = {};
+  boats.forEach(b=>{ strengths[b]=Math.exp(scoreMap[b]/temperature); });
+  const total = boats.reduce((s,b)=>s+strengths[b],0);
+  const probs = {};
+  boats.forEach(b=>{ probs[b]=total>0?strengths[b]/total:1/boats.length; });
+  return probs;
+}
 
-  if(ranking.length<4) return [];
-  const maru    = String(ranking[0].boat);
-  const shiro   = String(ranking[1].boat);
-  const sankaku = ranking[2]?String(ranking[2].boat):null;
-  const yonkaku = ranking[3]?String(ranking[3].boat):null;
-  const go      = ranking[4]?String(ranking[4].boat):null;
-
-  const rankMap = {};
-  rankMap[maru]=1; rankMap[shiro]=2;
-  if(sankaku) rankMap[sankaku]=3;
-  if(yonkaku) rankMap[yonkaku]=4;
-  if(go)      rankMap[go]=5;
-  if(ranking[5]) rankMap[String(ranking[5].boat)]=6;
-
-  // 賞除外艇を除いた艇リスト
-  // activeBoatsをランク順（評価順）に並べる
-  const activeBoats = ranking
-    .map(r=>String(r.boat)); // 賞除外も含めて買い目候補に入れる（rankingはすでにスコア降順）
-
-  const honsen=[], osaee=[];
-
-  if(nigeMode === 'high'){
-    // ===== 逃げ固定モード（逃げ率65%以上）=====
-    // スジ補正適用: 2着候補をスジ順位でソート
-    let honsenNige2 = activeBoats.filter(b=>b!==maru&&(rankMap[b]||9)<=3)
-      .sort((a,b)=>{
-        const sa=(rankMap[a]||9)*10+sujiBonus(maru,a);
-        const sb=(rankMap[b]||9)*10+sujiBonus(maru,b);
-        return sa-sb;
-      });
-    // ◎が4号艇以降の場合、1号艇を2着候補に必須で含める（内側艇への差し対策）
-    if(parseInt(maru)>=4 && activeBoats.includes(1) && !honsenNige2.includes(1)){
-      honsenNige2 = [1, ...honsenNige2].slice(0,3);
-    }
-    const osaeeNige2  = activeBoats.filter(b=>b!==maru&&(rankMap[b]||9)>=4&&(rankMap[b]||9)<=5)
-      .sort((a,b)=>{
-        const sa=(rankMap[a]||9)*10+sujiBonus(maru,a);
-        const sb=(rankMap[b]||9)*10+sujiBonus(maru,b);
-        return sa-sb;
-      });
-    for(const b of honsenNige2){
-      for(const c of activeBoats){
-        if(c===maru||c===b) continue;
-        const cRank=rankMap[c]||9;
-        if(cRank>=6) continue;
-        honsen.push({val:`${maru}-${b}-${c}`, score:(rankMap[b]||9)*10+cRank});
-      }
-    }
-    for(const b of osaeeNige2){
-      for(const c of activeBoats){
-        if(c===maru||c===b) continue;
-        const cRank=rankMap[c]||9;
-        if(cRank>=6) continue;
-        osaee.push({val:`${maru}-${b}-${c}`, score:(rankMap[b]||9)*10+cRank});
-      }
-    }
-  } else if(nigeMode === 'mid'){
-    // ===== 2艇頭モード =====
-    // 2026-07-27改訂: 887件の実績分析で◎が実際に1着だった割合66.5%に対し○は13.0%と、
-    // 前提だった「五分五分」から大きくズレていたことが判明。◎頭側を手厚く、○頭側を1点まで絞ることで
-    // 実績比に近い配分(◎頭5点:○頭1点)に変更。6位評価艇は「キリがない」ため対象外、5位評価までで組む。
-    // （sg_narutou.htmlと必ず同期させること）
-    // スジ補正適用: 2着候補の並び順をスジで補正
-    let rankOrder2 = activeBoats.slice().sort((a,b)=>{
-      const sa=(rankMap[a]||9)*10+sujiBonus(maru,a);
-      const sb=(rankMap[b]||9)*10+sujiBonus(maru,b);
-      return sa-sb;
+function _plConditionalProbs(scoreMap, head, temperature){
+  // headを1着固定した場合の、残り5艇での2着・3着条件付き確率（Plackett-Luce）
+  const others = Object.keys(scoreMap).filter(b=>b!==String(head));
+  const strengths = {};
+  others.forEach(b=>{ strengths[b]=Math.exp(scoreMap[b]/temperature); });
+  const total = others.reduce((s,b)=>s+strengths[b],0);
+  const combos = [];
+  others.forEach(b2=>{
+    const p2 = total>0?strengths[b2]/total:1/others.length;
+    const remaining = total - strengths[b2];
+    others.forEach(b3=>{
+      if(b3===b2) return;
+      const p3 = remaining>0?strengths[b3]/remaining:1/(others.length-1);
+      combos.push({combo:[String(head),b2,b3], p:p2*p3});
     });
-    // ◎が4号艇以降の場合、1号艇を上位に必須で繰り上げ（内側艇への差し対策）
-    if(parseInt(maru)>=4 && activeBoats.includes(1)){
-      rankOrder2 = [1, ...rankOrder2.filter(b=>b!==1)];
-    }
-    // 3着候補は5位評価まで（6位は対象外）
-    const thirdAll2 = rankOrder2.filter(b=>b!==maru&&b!==shiro&&(rankMap[b]||9)<=5);
-
-    // ◎頭・2着=○・3着=残り（評価順、5位まで。3点）
-    for(const c of thirdAll2){
-      honsen.push({val:`${maru}-${shiro}-${c}`, score:10+(rankMap[c]||9)});
-    }
-    // ◎頭・2着=▲以下・3着=上位評価（実績上○が2着に来るケースの取りこぼしを補う。2点）
-    const outerCandidates2=rankOrder2.filter(b=>b!==maru&&b!==shiro&&(rankMap[b]||9)<=5);
-    for(const b of outerCandidates2.slice(0,2)){
-      honsen.push({val:`${maru}-${b}-${shiro}`, score:100+(rankMap[b]||9)});
-    }
-    // ○頭・2着=◎・3着=残り（評価順、上位1つのみ。実績上○が1着になる比率は低いため最小限に）
-    for(const c of thirdAll2.slice(0,1)){
-      honsen.push({val:`${shiro}-${maru}-${c}`, score:200+(rankMap[c]||9)});
-    }
-    // 抑え: ◎頭・2着=▲以下・3着=▲以下（5位評価まで）
-    const osaee2nd2=rankOrder2.filter(b=>b!==maru&&b!==shiro&&(rankMap[b]||9)<=5);
-    for(const b of osaee2nd2){
-      const thirds2=rankOrder2.filter(c=>c!==maru&&c!==b&&(rankMap[c]||9)<=5);
-      for(const c of thirds2){
-        osaee.push({val:`${maru}-${b}-${c}`, score:(rankMap[b]||9)*10+(rankMap[c]||9)});
-      }
-    }
-  } else {
-    // ===== 通常モード（low）=====
-    // ◎頭固定
-    // 本線: 2着=○▲ × 3着=残り全艇（評価順）
-    // 抑え: 2着=△▽ × 3着=○▲のみ
-    const rankOrder = activeBoats.slice().sort((a,b)=>(rankMap[a]||9)-(rankMap[b]||9));
-    const thirdAll  = rankOrder.filter(b=>b!==maru&&(rankMap[b]||9)<=5);
-    const honsen2nd = rankOrder.filter(b=>b!==maru&&(rankMap[b]||9)<=3); // ○▲
-    const osaee2nd  = rankOrder.filter(b=>b!==maru&&(rankMap[b]||9)>=4&&(rankMap[b]||9)<=5); // △▽
-
-    // 本線: 各2着軸ごとに3着を評価順で列挙
-    for(const b of honsen2nd){
-      const thirds = thirdAll.filter(c=>c!==b);
-      for(const c of thirds){
-        honsen.push({val:`${maru}-${b}-${c}`, score:(rankMap[b]||9)*10+(rankMap[c]||9)});
-      }
-    }
-    // 抑え: 各2着軸ごとに3着=○▲（2026-07-31修正: sg_narutou.htmlと同期。以前は○固定で
-    // 「10点のはずが実質8点」の未達が発生していた。n=4232で的中率45.01%→45.70%, ROI79.18%→80.40%）
-    for(const b of osaee2nd){
-      const thirds = [shiro, sankaku].filter(c=>c && c!==b);
-      for(const c of thirds){
-        osaee.push({val:`${maru}-${b}-${c}`, score:(rankMap[b]||9)*10+(rankMap[c]||9)});
-      }
-    }
-
-    // 軸ヘッジ: 実データ分析で軸(◎)が1着を外すケースが約4割あることが判明しているため、
-    // ▲(評価3位)が1着になるケースの保険を抑えの一部として追加する。
-    // ▲を軸に見立て、2着候補=◎○△、3着候補=残り上位から広めに取る。
-    if(sankaku && pts>=12){
-      const hedgeAxis=sankaku;
-      const hedge2nd=[maru,shiro,yonkaku].filter(b=>b&&b!==hedgeAxis);
-      const hedgeThirdAll=rankOrder.filter(b=>b!==hedgeAxis);
-      for(const b of hedge2nd){
-        const thirds=hedgeThirdAll.filter(c=>c!==b);
-        for(const c of thirds){
-          // scoreを高めのオフセットにして、通常の抑えより後回し（点数に余裕がある時だけ採用）にする
-          osaee.push({val:`${hedgeAxis}-${b}-${c}`, score:200+(rankMap[b]||9)*10+(rankMap[c]||9)});
-        }
-      }
-    }
-  }
-
-  honsen.sort((a,b)=>a.score-b.score);
-  osaee.sort((a,b)=>a.score-b.score);
-
-  const dedup=(arr)=>{const seen=new Set(),out=[];for(const x of arr){if(!seen.has(x.val)){seen.add(x.val);out.push(x.val);}}return out;};
-  const honsenVals=dedup(honsen);
-  const osaeeVals=dedup(osaee).filter(v=>!honsenVals.includes(v));
-
-  // 点数配分
-  let hc, oc;
-  if(nigeMode === 'high'){
-    // 逃げ固定: 本線=○▲各3着(6点)、抑え=△▽(残り)
-    if(pts<=4){       hc=4;  oc=0; }
-    else if(pts<=6){  hc=6;  oc=0; }
-    else if(pts<=8){  hc=6;  oc=2; }
-    else if(pts<=12){ hc=6;  oc=6; }
-    else {            hc=6;  oc=7; }
-  } else if(nigeMode === 'mid'){
-    // 2艇頭: 本線=◎-○×3点+○-◎×3点、抑え=◎-▲以下
-    if(pts<=4){       hc=4;  oc=0; }
-    else if(pts<=6){  hc=6;  oc=0; }
-    else if(pts<=8){  hc=6;  oc=2; }
-    else if(pts<=12){ hc=6;  oc=6; }
-    else {            hc=6;  oc=7; }
-  } else {
-    // 通常モード点数配分: 2着軸ごとに均等割り当て
-    if(pts<=4){       hc=4;  oc=0; }
-    else if(pts<=6){  hc=6;  oc=0; }
-    else if(pts<=8){  hc=6;  oc=2; }
-    else if(pts<=12){ hc=6;  oc=6; }
-    else {            hc=7;  oc=6; }
-  }
-
-  const bets=[];
-  honsenVals.slice(0,hc).forEach(v=>bets.push({val:v,type:'本線'}));
-  osaeeVals.slice(0,oc).forEach(v=>bets.push({val:v,type:'抑え'}));
-  return bets.slice(0,pts);
+  });
+  return combos.sort((a,b)=>b.p-a.p);
 }
 
-// ============================================================
-// 逃げなしモード（sg_narutou.htmlと完全に同一のロジック。必ず同期を保つこと）
-// 最下位評価艇を除外、非1号艇上位2艇を頭に、本線=2着1号艇固定、抑え=2着⇔3着入替
-// ============================================================
-function buildBetsNigeNashi(ranking, pts){
-  if(ranking.length<6) return [];
-  const boatsOrder=ranking.map(r=>String(r.boat));
-  const survivors=boatsOrder.slice(0,5);
-  if(!survivors.includes('1')) return [];
-  const nonIchiSurvivors=survivors.filter(b=>b!=='1');
-  if(nonIchiSurvivors.length<2) return [];
-  const atamaList=nonIchiSurvivors.slice(0,2);
-  const thirdCands=(atama)=>survivors.filter(b=>b!==atama&&b!=='1');
+function buildBetsProbabilistic(ranking, pts){
+  if(!ranking || ranking.length<2) return [];
+  const T = 6; // 温度パラメータ（バックテストでT=3〜8の範囲は安定、6を採用）
+  const MAX_HEDGE_FRAC = 0.5; // ヘッジ配分比率の上限（バックテストで確認した値）
+  const MIN_MAIN = 3; // main(◎頭)に最低限確保する点数
 
-  const honsen=[];
-  for(const atama of atamaList){
-    for(const third of thirdCands(atama)){
-      honsen.push({val:`${atama}-1-${third}`,type:'本線'});
-    }
-  }
-  if(pts<=6) return honsen.slice(0,pts);
+  const scoreMap = {};
+  ranking.forEach(r=>{ scoreMap[String(r.boat)] = r.score; });
+  const axis = String(ranking[0].boat);
+  const runnerUp = String(ranking[1].boat);
 
-  const osaee=[];
-  if(pts<=8){
-    const cands=thirdCands(atamaList[0]).slice(0,2);
-    for(const second of cands){
-      osaee.push({val:`${atamaList[0]}-${second}-1`,type:'抑え'});
-    }
-  } else {
-    for(const atama of atamaList){
-      for(const second of thirdCands(atama)){
-        osaee.push({val:`${atama}-${second}-1`,type:'抑え'});
-      }
-    }
-  }
-  return honsen.concat(osaee).slice(0,pts);
-}
+  const wp = _plWinProbs(scoreMap, T);
+  const pAxis = wp[axis]||0, pRunner = wp[runnerUp]||0;
+  let hedgeRatio = (pAxis+pRunner)>0 ? pRunner/(pAxis+pRunner) : 0;
+  hedgeRatio = Math.min(hedgeRatio, MAX_HEDGE_FRAC);
 
-function buildBetsAre(ranking, pts, nigeRate){
-  // 荒れエンジン: 実ログ分析(2026-07-03)に基づく再設計版。
-  // ◎が1着に来る確率31.1%、○が1着に来る確率16.4%（比率約2:1）。
-  // ◎単独固定ではなく◎○を軸候補として折り返し、実績比に応じて◎を厚く○を薄く配分する。
-  if(ranking.length<5) return [];
-  const m = String(ranking[0].boat); // ◎
-  const s = String(ranking[1].boat); // ○
-  const sa= String(ranking[2].boat); // ▲
-  const yo= String(ranking[3].boat); // △
-  const go= String(ranking[4].boat); // ▽
-  const roku = ranking[5]?String(ranking[5].boat):null; // ×
+  let hedgeN = 0;
+  if(pts >= 9){ // 8点以下はヘッジなしが最良（バックテスト済み、9点以上でヘッジ導入）
+    hedgeN = Math.round(pts*hedgeRatio);
+    hedgeN = Math.max(0, Math.min(hedgeN, pts-MIN_MAIN));
+  }
+  const mainN = pts - hedgeN;
 
-  // 優先度付きリスト（priority昇順=優先度高い順）。ptsで上から切り出す。
-  // ①◎-○=▲△×(折り返し) 6点 → ②○-◎=▲△(折り返し) 4点 → ③◎-▲=△(折り返し) 2点
-  // ①②=本線(◎○が絡む主力)、③=抑え(◎▲の保険)として扱う。
-  const cands = [];
-  let p = 0;
-  // ①◎-○=▲△▽: ◎-○-{▲△▽} と ◎-{▲△▽}-○。14点構成では×(roku)も含めて広げる。
-  // 2026-07-06修正: 12点構成で誤って×(6位/最下位艇)を組み込み、▽(5位)が抜けていたバグを修正。
-  // ×は評価最下位のため買い目候補から常に除外するのが正しい設計。14点以上の扱いは別途検討中。
-  const set1 = pts>=14 ? [sa, yo, roku, go] : [sa, yo, go];
-  for(const c of set1){
-    if(!c) continue;
-    cands.push({val:`${m}-${s}-${c}`, p:p++, group:'本線'});
-  }
-  for(const c of set1){
-    if(!c) continue;
-    cands.push({val:`${m}-${c}-${s}`, p:p++, group:'本線'});
-  }
-  // ②○-◎=▲△: ○-◎-{▲△} と ○-{▲△}-◎
-  const set2 = [sa, yo];
-  for(const c of set2){
-    if(!c) continue;
-    cands.push({val:`${s}-${m}-${c}`, p:p++, group:'本線'});
-  }
-  for(const c of set2){
-    if(!c) continue;
-    cands.push({val:`${s}-${c}-${m}`, p:p++, group:'本線'});
-  }
-  // ③◎-▲=△(▽): ◎-▲-△(▽) と ◎-△(▽)-▲（保険枠）。16点構成では▽も含めて広げる。
-  const set3 = pts>=15 ? [yo, go] : [yo];
-  for(const c of set3){
-    cands.push({val:`${m}-${sa}-${c}`, p:p++, group:'抑え'});
-  }
-  for(const c of set3){
-    cands.push({val:`${m}-${c}-${sa}`, p:p++, group:'抑え'});
-  }
+  const mainCombos = _plConditionalProbs(scoreMap, axis, T).slice(0, mainN);
+  const bets = mainCombos.map(x=>({val:x.combo.join('-'), type:'本線'}));
 
-  // 重複除去して優先度順にpts分だけ採用
-  const seen=new Set(), picked=[];
-  for(const c of cands){
-    if(picked.length>=pts) break;
-    if(!seen.has(c.val)){seen.add(c.val);picked.push(c);}
+  if(hedgeN>0){
+    const hedgeCombos = _plConditionalProbs(scoreMap, runnerUp, T)
+      .filter(x=>x.combo.indexOf(axis)>=0)
+      .slice(0, hedgeN);
+    hedgeCombos.forEach(x=>bets.push({val:x.combo.join('-'), type:'抑え'}));
   }
-  // 本線/抑えの分類: グループタグをそのまま使う
-  const bets = picked.map(c=>({val:c.val, type:c.group}));
   return bets;
 }
+
 
 
 // ============================================================
@@ -1889,8 +1680,8 @@ function runAll(){
       // 1号艇も他5艇と対等にスコア順で扱う（買い目構成はbuildBetsNormalと共通化）。
       // 旧buildBetsNigeNashiは使用しなくなったが、過去ログとの互換確認用に関数自体は残す。
       // （sg_narutou.htmlと必ず同期させること）
-      if(mode==='are_weak'||mode==='are_strong') lastResolvedNigeMode=null; // buildBetsNormalを通らないので明示的にリセット（古い値の残留防止）
-      const betsRaw=(mode==='are_weak'||mode==='are_strong')?buildBetsAre(ranking,pts,nigeRate):buildBetsNormal(ranking,pts,d);
+      lastResolvedNigeMode=null; // 2026-08-05: 買い目生成を確率ベースに統一（sg_narutou.htmlと同期済み）
+      const betsRaw=buildBetsProbabilistic(ranking,pts);
 
       const allBets=betsRaw.map(b=>b.val);
       const maruBoat=ranking[0]?ranking[0].boat:null;
