@@ -1402,38 +1402,21 @@ function runScreening(){
   };
 
   function renderCard(r){
-    // 参入判定: 2026-08-03改訂、◎/△/✗の3段階から参戦/見送りの2択に簡素化。境界は旧△下限(74%)を採用
-    const judge=r.estRoi>=74?{text:'◎参戦',color:'var(--green)'}:{text:'✗見送り',color:'var(--red)'};
     const ml=modeLabel[r.mode]||{text:r.mode,color:'var(--text2)'};
     const venueBadge=r.isGoodVenue?'<span style="color:var(--gold);font-weight:700;">◎優良会場</span> ':'';
-    let stdevBadge='';
-    if(r.stdev<20.3) stdevBadge='<span style="color:var(--gold);font-weight:700;">🎯拮抗(高ROI帯)</span> ';
-    else if(r.stdev>=31.9) stdevBadge='<span style="color:var(--gold);font-weight:700;">💥1艇突出(高ROI帯)</span> ';
-    else if(r.stdev>=27.9) stdevBadge='<span style="color:var(--text2);">△中間帯(ROI低め)</span> ';
     const hintText=r.nigeHint?` / ${r.nigeHint}`:'';
     const shimekiriText=r.shimekiri?` / 締切${r.shimekiri}`:'';
-    // 2026-08-04追加: エンジン参入度（実測バックテスト値ベース、内部評価専用。販売判断ではない）
-    const conf=r.confidence||{label:'?未分類',color:'var(--text2)',roi:'-',hit:'-',n:'-'};
-    const confMismatch=(judge.text.indexOf('見送り')>=0)&&['🔥本線','◎通常','○参考'].includes(conf.label);
-    const mismatchNote=confMismatch?`<div style="margin-top:4px;padding:4px 6px;background:rgba(200,160,60,0.12);border:1px solid rgba(200,160,60,0.4);border-radius:5px;font-size:10px;color:#e0c060;">⚠️ 区分は好調ですが今回の推定ROIは74%未満のため見送り推奨です</div>`:'';
     const oddsNote=r.oddsAvailable?'':'<span style="color:var(--text2);font-size:9px;">（オッズ未確定、市場一致は中立扱い）</span>';
-    return `<div style="padding:8px 10px;margin-bottom:6px;border-radius:6px;background:rgba(255,255,255,0.03);border-left:3px solid ${judge.color};font-size:12px;">
-      <b>${r.venue}${r.raceNum}R</b> <span style="color:${judge.color};font-weight:700;">${judge.text}</span>${shimekiriText}<br>
+    return `<div style="padding:8px 10px;margin-bottom:6px;border-radius:6px;background:rgba(255,255,255,0.03);border-left:3px solid var(--gold);font-size:12px;">
+      <b>${r.venue}${r.raceNum}R</b>${shimekiriText}<br>
       <span style="color:var(--gold);font-weight:700;">採用スコア ${r.screeningScore.toFixed(2)}</span> ${oddsNote}<br>
-      <span style="color:var(--text2);">推定的中率 ${r.estHit.toFixed(1)}% / 推定ROI ${r.estRoi.toFixed(1)}%</span><br>
-      ${venueBadge}${stdevBadge}<span style="color:${ml.color};font-weight:700;">${ml.text}</span>${hintText}<br>
+      ${venueBadge}<span style="color:${ml.color};font-weight:700;">${ml.text}</span>${hintText}<br>
       荒れ指数${r.areIndex}点 / 逃げ率${r.nigeRate.toFixed(1)}% / スコア差${r.stdev.toFixed(1)}
-    </div>
-    <div style="padding:8px 10px;margin-bottom:6px;margin-top:-4px;border-radius:6px;background:rgba(255,255,255,0.02);border-left:3px solid ${conf.color};font-size:11px;">
-      <div style="color:var(--text2);font-size:9px;letter-spacing:0.05em;">今回の評価</div>
-      <span style="font-weight:700;color:${conf.color};">${conf.label}</span>
-      <div style="margin-top:4px;color:var(--text2);font-size:9px;letter-spacing:0.05em;">── 実測データ ──</div>
-      ROI：${conf.roi}　的中率：${conf.hit}　サンプル数：${conf.n}
-      ${mismatchNote}
     </div>`;
   }
 
-  let html=`<p style="font-size:11px;color:var(--text2);margin-bottom:6px;">${results.length}レース中、採用スコア上位${mainResults.length}件を配信対象（本命）として選抜。＋予備${reserveResults.length}件</p>`;
+  let html=`<p style="font-size:11px;color:var(--text2);margin-bottom:6px;">${results.length}レース中、採用スコア上位${mainResults.length}件を配信対象（本命）として選抜。＋予備${reserveResults.length}件</p>
+  <p style="font-size:10px;color:var(--text2);margin-bottom:6px;">※旧エンジン(買い目生成刷新前)の実績値に基づく「推定的中率/推定ROI/エンジン参入度」表示は、2026-08-05の買い目生成刷新に伴い廃止しました。現在の採用基準は「採用スコア」のみです。</p>`;
   for(const r of errorResults){
     html+=`<div style="padding:8px;margin-bottom:6px;border-radius:6px;background:rgba(200,60,60,0.1);border:1px solid rgba(200,60,60,0.4);font-size:12px;">⚠️ 解析失敗: ${r.error||''}</div>`;
   }
@@ -1460,7 +1443,7 @@ function copyScreeningResults(){
   const lines=lastScreeningResults.map(r=>{
     const ml=modeLabelText[r.mode]||r.mode;
     const shime=r.shimekiri?`締切${r.shimekiri}`:'締切不明';
-    return `${r.venue}${r.raceNum}R ${shime} 推定ROI${r.estRoi.toFixed(1)}% ${ml}${r.isGoodVenue?'(優良会場)':''}`;
+    return `${r.venue}${r.raceNum}R ${shime} 採用スコア${r.screeningScore.toFixed(2)} ${ml}${r.isGoodVenue?'(優良会場)':''}`;
   });
   const text='【前日スクリーニング結果】\n'+lines.join('\n');
   if(navigator.clipboard&&navigator.clipboard.writeText){
