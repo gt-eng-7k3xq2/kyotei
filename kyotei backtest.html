@@ -958,6 +958,7 @@ function _plConditionalProbs(scoreMap, head, temperature){
 
 // 同一(1着,2着)ペアからの採用件数を上限maxPerPairまでに制限しつつ、確率上位からN件選ぶ
 function _selectWithPairCap(sortedCombos, n, maxPerPair){
+  if(n<=0) return []; // 2026-08-05修正: n=0/負の場合に1件だけ紛れ込むオフバイワンを防止(境界値テストで発見)
   const selected = [];
   const pairCount = {};
   for(const item of sortedCombos){
