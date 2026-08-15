@@ -158,7 +158,7 @@ let currentParsedData=null;
 // v2 (2026-07-04〜): 差し・まくり実績スコアを8pt→12ptに引き上げ
 // v3 (2026-07-06〜2026-07-08): モーター10pt→13pt、合成ST8pt→10ptに引き上げ（本体sg_narutou.htmlと同期）
 // v4 (2026-07-08〜): n=269検証で的中率がv2比-6.0pt悪化のためv2の重みに巻き戻し（本体と同期）
-const SCORE_ENGINE_VERSION=6;
+const SCORE_ENGINE_VERSION=7;
 let selectedNigeMode='auto';
 // 紐調整版: 通常モード(low)の抑え2点のうち「◎-5位-○固定」を「◎-4位-5位」に差し替えるバリエーション。
 // 2026-07-28: 紐調整版はn=3146の大規模検証(daikibo_replay.html)でROI悪化(71%→68.5%)が確認されたため撤回。標準のみ使用
@@ -1543,8 +1543,13 @@ function runFinalCheck(){
   const ml=modeLabel[mode]||{text:mode, color:'var(--text2)'};
   // 2026-08-15改訂: 合成オッズ補正込みのestRoiをheld-out検証(tests/estroi_v2_exposure_search.js)した上で
   // 閾値を74→82に変更(sg_narutou.htmlと同期)。参戦頻度を現行比約6割に抑える代わりにEVを改善する設定。
+  // 2026-08-15再改訂: 実際の3,000円均等回収配分でのバックテスト(tests/weighted_optimization_search.js)
+  // により、閾値82は依然として赤字(held-out確認用データでROI81.7%)と判明。チューニング用データ
+  // (前半17日)で探索した結果、閾値91が最良(ROI100.0%)。held-out検証(確認用データ・後半16日)でも
+  // ROI103.2%・純損益+¥16,580と黒字を維持したため、held-out検証済みの91を正式採用(82→91、sg_narutou.htmlと同期)。
+  // 1日あたり参戦件数は確認用データで約10.8件(全期間ベースでは約7.9〜10.8件)。
   const judge=isNarrowGap?{text:'✗見送り（僅差レース gap<10）',color:'var(--red)'}:
-    estRoi>=82?{text:'◎参戦',color:'var(--green)'}:{text:'✗見送り',color:'var(--red)'};
+    estRoi>=91?{text:'◎参戦',color:'var(--green)'}:{text:'✗見送り',color:'var(--red)'};
   const venueBadge=isGoodVenue?'<span style="color:var(--gold);font-weight:700;">◎優良会場</span> ':'';
   let stdevBadge='';
   if(stdev<20.3) stdevBadge='<span style="color:var(--gold);font-weight:700;">🎯拮抗(高ROI帯)</span> ';
@@ -1555,7 +1560,7 @@ function runFinalCheck(){
   // 2026-08-04追加: 区分は好調だが今回のROI推定は74%未満で見送り、という一見矛盾する
   // 組み合わせが実際に起きたため注記（sg_narutou.htmlと同期）
   const confMismatch=(judge.text.indexOf('見送り')>=0)&&['🔥本線','◎通常','○参考'].includes(conf.label);
-  const mismatchNote=confMismatch?`<div style="margin-top:6px;padding:6px 8px;background:rgba(200,160,60,0.12);border:1px solid rgba(200,160,60,0.4);border-radius:6px;font-size:11px;color:#e0c060;">⚠️ 区分としては好調ですが、今回は会場・拮抗度・合成オッズ補正込みの推定ROIが参戦ライン(82%)を下回ったため見送り推奨です。区分の実測値は過去の平均であり、今回の判定を上書きするものではありません。</div>`:'';
+  const mismatchNote=confMismatch?`<div style="margin-top:6px;padding:6px 8px;background:rgba(200,160,60,0.12);border:1px solid rgba(200,160,60,0.4);border-radius:6px;font-size:11px;color:#e0c060;">⚠️ 区分としては好調ですが、今回は会場・拮抗度・合成オッズ補正込みの推定ROIが参戦ライン(91%)を下回ったため見送り推奨です。区分の実測値は過去の平均であり、今回の判定を上書きするものではありません。</div>`:'';
 
   let warnHtml='';
   if(warnings && warnings.length){
