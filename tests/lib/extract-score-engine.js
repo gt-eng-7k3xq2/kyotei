@@ -84,6 +84,48 @@ function extractScoreEngineVersion(source) {
   return parseInt(m[1], 10);
 }
 
+// `const NAME = <値>` を波カッコ/角カッコの対応を数えて丸ごと切り出す(関数以外の定数用)。
+// 値がオブジェクト/配列リテラルの場合は対応する閉じ括弧まで、単純なリテラル(数値等)の場合は
+// 最初の`;`までを切り出す。extractFunctionSourceと同じ文字列/コメント読み飛ばしロジックを使う。
+function extractConstSource(source, name) {
+  const startMatch = source.match(new RegExp(`\\nconst ${name}\\s*=`));
+  if (!startMatch) throw new Error(`const ${name} が見つかりません(sg_narutou.htmlの構造が変わった可能性があります)`);
+  const start = startMatch.index + 1;
+  const eqIdx = source.indexOf('=', start);
+
+  let i = eqIdx + 1;
+  let depth = 0;
+  let state = null;
+  let sawNonSpace = false;
+
+  for (; i < source.length; i++) {
+    const c = source[i];
+    const next = source[i + 1];
+
+    if (state === 'line') { if (c === '\n') state = null; continue; }
+    if (state === 'block') { if (c === '*' && next === '/') { state = null; i++; } continue; }
+    if (state === 'sq' || state === 'dq' || state === 'tpl') {
+      if (c === '\\') { i++; continue; }
+      if ((state === 'sq' && c === "'") || (state === 'dq' && c === '"') || (state === 'tpl' && c === '`')) state = null;
+      continue;
+    }
+    if (c === '/' && next === '/') { state = 'line'; i++; continue; }
+    if (c === '/' && next === '*') { state = 'block'; i++; continue; }
+    if (c === "'") { state = 'sq'; sawNonSpace = true; continue; }
+    if (c === '"') { state = 'dq'; sawNonSpace = true; continue; }
+    if (c === '`') { state = 'tpl'; sawNonSpace = true; continue; }
+    if (c === '{' || c === '[') { depth++; sawNonSpace = true; continue; }
+    if (c === '}' || c === ']') {
+      depth--;
+      if (depth === 0) return source.slice(start, i + 1);
+      continue;
+    }
+    if (c === ';' && depth === 0) return source.slice(start, i + 1);
+    if (!/\s/.test(c)) sawNonSpace = true;
+  }
+  throw new Error(`const ${name} の終端が見つかりません`);
+}
+
 // sg_narutou.html から純粋関数群を切り出し、requireできるモジュールとして返す。
 // 戻り値: { version, setRaceType(v), calcAreScore, calcNigeRate, calcAreIndex, judgeMode,
 //           decideProbabilisticPts, buildBetsProbabilistic }
@@ -117,4 +159,4 @@ function loadScoreEngine(htmlPath) {
   return engine;
 }
 
-module.exports = { loadScoreEngine, extractFunctionSource, extractScoreEngineVersion, FUNCTION_NAMES };
+module.exports = { loadScoreEngine, extractFunctionSource, extractConstSource, extractScoreEngineVersion, FUNCTION_NAMES };

@@ -158,7 +158,7 @@ let currentParsedData=null;
 // v2 (2026-07-04〜): 差し・まくり実績スコアを8pt→12ptに引き上げ
 // v3 (2026-07-06〜2026-07-08): モーター10pt→13pt、合成ST8pt→10ptに引き上げ（本体sg_narutou.htmlと同期）
 // v4 (2026-07-08〜): n=269検証で的中率がv2比-6.0pt悪化のためv2の重みに巻き戻し（本体と同期）
-const SCORE_ENGINE_VERSION=5;
+const SCORE_ENGINE_VERSION=6;
 let selectedNigeMode='auto';
 // 紐調整版: 通常モード(low)の抑え2点のうち「◎-5位-○固定」を「◎-4位-5位」に差し替えるバリエーション。
 // 2026-07-28: 紐調整版はn=3146の大規模検証(daikibo_replay.html)でROI悪化(71%→68.5%)が確認されたため撤回。標準のみ使用
@@ -1210,13 +1210,36 @@ const MODE_HITRATE_BASE={
   nigenashi:27.1    // n=177、実測
 };
 
-function estimateROI(mode, venue, stdev){
+// 2026-08-15追加: sg_narutou.htmlから移植（買い目の合成オッズ計算。estimateROIの補正に使う）
+function calcGoseiOdds(betsArr, oddsMap){
+  var sum=0;
+  betsArr.forEach(function(bet){
+    var o=oddsMap[bet];
+    if(o&&o>0) sum+=1/o;
+  });
+  return sum===0?null:(1/sum).toFixed(1);
+}
+
+// 2026-08-15追加: 合成オッズ帯による補正（estroi_v2_diagnosis.jsでの検証に基づく、sg_narutou.htmlと同期）。
+// チューニング用データ(2026-07-01〜07-17)のみで学習し、確認用データ(07-18〜08-03)で
+// held-out検証済み(tests/estroi_v2_diagnosis.js参照)。オッズ未取得時は補正なし(0)。
+function goseiOddsDelta(goseiOdds){
+  if(!(goseiOdds>0)) return 0;
+  if(goseiOdds<1.4) return 13.9;
+  if(goseiOdds<1.7) return 5.5;
+  if(goseiOdds<2.1) return -5.0;
+  if(goseiOdds<2.8) return -2.1;
+  return -2.8;
+}
+
+function estimateROI(mode, venue, stdev, goseiOdds){
   const base=MODE_ROI_BASE[mode]!==undefined?MODE_ROI_BASE[mode]:OVERALL_AVG_ROI;
   // 2026-07-30: 会場デルタは0.3倍に縮小。生の会場平均は数件の高配当に引っ張られやすく（例: 三国は上位3件の配当を除くとROIが107→74.5に低下）、
   // 全面採用すると毎回同じ会場ばかり上位に出て偏りが生じる。n=4232で検証: 全面採用ROI97.5%(上位5会場で83%占有) → 0.3倍でROI107.7%(会場も分散)
   const venueDelta=VENUE_ROI[venue]!==undefined?(VENUE_ROI[venue]-OVERALL_AVG_ROI)*0.3:0;
   const stdevDelta=(stdev!==undefined)?stdevROIDelta(stdev):0;
-  return base+venueDelta+stdevDelta;
+  const goseiDelta=goseiOddsDelta(goseiOdds);
+  return base+venueDelta+stdevDelta+goseiDelta;
 }
 
 function estimateHitRate(mode, venue, stdev){
@@ -1496,7 +1519,14 @@ function runFinalCheck(){
   const venue=d.venue||'不明';
   const isGoodVenue=GOOD_VENUES.includes(venue);
   const stdev=calcStdev(areScores);
-  const estRoi=estimateROI(mode, venue, stdev);
+  // 2026-08-15追加: estRoiに合成オッズを反映するため、参入判定用に買い目を先読みする
+  // (sg_narutou.htmlのrunYoso()と同期させること)
+  const _finalPreviewPts=decideProbabilisticPts([{score:areScores[0].raw},{score:areScores[1].raw}]);
+  const _finalPreviewRanking=areScores.map((s,i)=>({rank:i+1,boat:parseInt(s.no),mark:['◎','○','▲','△','▽','×'][i]||'×',score:s.raw}));
+  const _finalPreviewBets=buildBetsProbabilistic(_finalPreviewRanking,_finalPreviewPts);
+  const _finalPreviewOddsMap=extractOddsMap(raw);
+  const _finalGoseiOdds=parseFloat(calcGoseiOdds(_finalPreviewBets.map(b=>b.val),_finalPreviewOddsMap))||null;
+  const estRoi=estimateROI(mode, venue, stdev, _finalGoseiOdds);
   const estHit=estimateHitRate(mode, venue, stdev);
   // 2026-08-03追加: gap0-10の僅差レースはsg_narutou.htmlと同様に見送り推奨を優先表示
   const _isAxisBoat1ForGap=String(areScores[0].no)==='1';
@@ -1511,9 +1541,10 @@ function runFinalCheck(){
     normal:{text:'🔒通常', color:'var(--text2)'}
   };
   const ml=modeLabel[mode]||{text:mode, color:'var(--text2)'};
-  // 2026-08-03改訂: ◎参入続行/△様子見/✗見送りの3段階から参戦/見送りの2択に簡素化(境界は旧△下限74%)
+  // 2026-08-15改訂: 合成オッズ補正込みのestRoiをheld-out検証(tests/estroi_v2_exposure_search.js)した上で
+  // 閾値を74→82に変更(sg_narutou.htmlと同期)。参戦頻度を現行比約6割に抑える代わりにEVを改善する設定。
   const judge=isNarrowGap?{text:'✗見送り（僅差レース gap<10）',color:'var(--red)'}:
-    estRoi>=74?{text:'◎参戦',color:'var(--green)'}:{text:'✗見送り',color:'var(--red)'};
+    estRoi>=82?{text:'◎参戦',color:'var(--green)'}:{text:'✗見送り',color:'var(--red)'};
   const venueBadge=isGoodVenue?'<span style="color:var(--gold);font-weight:700;">◎優良会場</span> ':'';
   let stdevBadge='';
   if(stdev<20.3) stdevBadge='<span style="color:var(--gold);font-weight:700;">🎯拮抗(高ROI帯)</span> ';
@@ -1524,7 +1555,7 @@ function runFinalCheck(){
   // 2026-08-04追加: 区分は好調だが今回のROI推定は74%未満で見送り、という一見矛盾する
   // 組み合わせが実際に起きたため注記（sg_narutou.htmlと同期）
   const confMismatch=(judge.text.indexOf('見送り')>=0)&&['🔥本線','◎通常','○参考'].includes(conf.label);
-  const mismatchNote=confMismatch?`<div style="margin-top:6px;padding:6px 8px;background:rgba(200,160,60,0.12);border:1px solid rgba(200,160,60,0.4);border-radius:6px;font-size:11px;color:#e0c060;">⚠️ 区分としては好調ですが、今回は会場・拮抗度補正込みの推定ROIが参戦ライン(74%)を下回ったため見送り推奨です。区分の実測値は過去の平均であり、今回の判定を上書きするものではありません。</div>`:'';
+  const mismatchNote=confMismatch?`<div style="margin-top:6px;padding:6px 8px;background:rgba(200,160,60,0.12);border:1px solid rgba(200,160,60,0.4);border-radius:6px;font-size:11px;color:#e0c060;">⚠️ 区分としては好調ですが、今回は会場・拮抗度・合成オッズ補正込みの推定ROIが参戦ライン(82%)を下回ったため見送り推奨です。区分の実測値は過去の平均であり、今回の判定を上書きするものではありません。</div>`:'';
 
   let warnHtml='';
   if(warnings && warnings.length){
@@ -1534,7 +1565,7 @@ function runFinalCheck(){
   resultsEl.innerHTML=`<div style="padding:10px;border-radius:6px;background:rgba(255,255,255,0.03);border-left:4px solid ${judge.color};font-size:13px;">
     <b>${venue}${(d.raceNum||'?').replace('R','')}R</b>${d.shimekiri?` / 締切${d.shimekiri}`:''}<br>
     <span style="font-size:15px;font-weight:700;color:${judge.color};">${judge.text}</span><br>
-    <span style="color:var(--text2);">最終推定的中率 ${estHit.toFixed(1)}% / 最終推定ROI ${estRoi.toFixed(1)}%</span><br>
+    <span style="color:var(--text2);">最終推定的中率 ${estHit.toFixed(1)}% / 最終推定ROI ${estRoi.toFixed(1)}% / 合成オッズ ${_finalGoseiOdds?_finalGoseiOdds.toFixed(2)+'倍':'取得不可'}</span><br>
     ${venueBadge}${stdevBadge}<span style="color:${ml.color};font-weight:700;">${ml.text}</span><br>
     荒れ指数${areIndex}点 / 逃げ率${nigeRate.toFixed(1)}% / スコア差${stdev.toFixed(1)}
     ${warnHtml}

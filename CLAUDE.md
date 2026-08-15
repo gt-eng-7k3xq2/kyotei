@@ -48,6 +48,22 @@ GARONは競艇(ボートレース)の予想・検証を行うツール群。ビ�
   ```
 - **回帰テスト**: `node tests/score_engine.regression.test.js` — sg_narutou.htmlから`calcAreScore`/`calcAreIndex`/`judgeMode`/`buildBetsProbabilistic`等を直接抜き出して実行し、実際のレースデータ(三国9R・平和島12R、`tests/fixtures/`)に対する出力を`tests/golden/`のゴールデン値と比較する。ロジックを意図的に変更した後は`--update-golden`でゴールデン値を更新すること。`parseData()`はテスト対象外(理由はテストファイル冒頭のコメント参照)。
 
+## データ収集(scripts/)
+
+`scripts/collect_playwright.js` — kyoteibiyori.comのBMデータを半自動収集するPlaywrightスクリプト。元は`garon_multiwin_full_auto.txt`というブックマークレット(iPhone Safari用)で、そのDOM操作ロジックを移植したもの。完全無人のスケジュール実行ではなく、ターミナルからコマンドを1つ叩いて実行する運用。
+
+- `npm install` (playwrightがこのプロジェクト初のnpm依存。`package.json`/`node_modules`が生成される)
+- `npx playwright install chromium` (初回のみ、ブラウザバイナリのダウンロード)
+- 実行例: `node scripts/collect_playwright.js --venue=桐生 --races=3`(小規模テスト用。`--venue`省略で全会場、`--races`省略で12R全部)
+- `--motor`でモーター履歴収集(最も重い処理)をオプトインで追加、`--headless`で画面非表示実行
+- `--date=YYYYMMDD`で過去日付の収集も可能(`--venue`省略で全会場を自動検出)。2026-08-15確認: race_shusso.phpは過去日付でも基本情報/枠別勝率/今節成績/直前情報/モータ情報/STズレ/オッズが当時のまま全て残っている。会場一覧は`schedule/kaisai_today.php`が内部で叩いているAJAX API(`schedule/request_kaisak_ctrl.php`、POST `data={"hiduke":"YYYYMMDD","place_no":0,"sort_select":0}`)を直接呼んで取得しており、トップページのHTML抽出(今日専用)と並ぶ2つ目の会場検出経路になっている(今日分で両方式の結果が完全一致することを確認済み)
+- 保存先は`daikibo_archive_YYYY-MM-DD.json`(既存の手動収集と同一フォーマット)。同日ファイルが既にある場合、会場+レース番号が重複するレースは自動スキップ(再開安全)
+- **既知の制限**: 「欠場選手あり」レースは、展示タイム・直前STが0のまま取得されることがある(2026-08-15確認、平和島9R・住之江10Rで再現)。欠場によりページのタブ構造が通常と異なり、`browser-scan.browser.js`のキーワード一致スキャンが対応できていないため。同じレースを再収集しても直らない(タイミングの問題ではなく構造的な問題)。oddsMapの件数が通常の120通りより少ない(欠場艇の分、組み合わせが減る)ことがこのケースの目印になる。
+- `scripts/collect_batch.js` — 複数日をまとめて連続実行するバッチスクリプト。1日ごとに`collect_playwright.js`を`--date`違いで順次呼び出し、ある日が失敗しても止まらず次の日へ進む。最後に日ごとのサマリー(追加/スキップ/失敗件数)を一覧表示する。
+- `scripts/lib/browser-scan.browser.js` — ブックマークレットのスキャン関数群をほぼそのまま移植したブラウザコンテキスト側スクリプト。`context.addInitScript()`で毎回のページ遷移時に自動注入される
+- `scripts/lib/extract-parse-data.js` — **daikibo_archive.html**から`parseData`/`parseMotorHistory`/`extractOddsMap`を直接抜き出して実行するヘルパー(tests/lib/extract-score-engine.jsと同じ「本体を毎回読みに行く」方式)。sg_narutou.html側のparseData()ではなくdaikibo_archive.html側を使う理由: 実際のアーカイブのoddsMap/motorHistoryはdaikibo_archive.html独自のparseData()(末尾でparseMotorHistory()/extractOddsMap()を呼ぶ)で作られているため
+- **既知の制約**: daikibo_archive.html側のparseData()は開催日目・レース種別(day/raceCategory)をメタ行から読み取っていない。収集スクリプト側でどれだけ正確に収集しても、この値はアーカイブJSONには保存されない(既存の手動運用と同じ挙動を踏襲)
+
 ## GitHubリポジトリ
 
 `https://github.com/gt-eng-7k3xq2/kyotei` (GitHub Pagesで公開) と連携している。ローカルの`C:\garon`とは別の場所(`C:\garon\gt-eng-7k3xq2`)にcloneして運用しており、`C:\garon`自体はgit管理下ではない。
