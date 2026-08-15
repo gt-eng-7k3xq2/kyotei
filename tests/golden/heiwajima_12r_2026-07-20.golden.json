@@ -1,0 +1,85 @@
+{
+  "_scoreEngineVersion": 5,
+  "_fixture": "heiwajima_12r_2026-07-20.json",
+  "_label": "堅い/逃げ決まり(1号艇逃げ率83.3%で1着・配当600円)",
+  "_actualResult": {
+    "chakuju": "1-2-6",
+    "payout": "¥600"
+  },
+  "areIndex": 3,
+  "nigeRate": 68.8,
+  "mode": "nito",
+  "autoPts": 8,
+  "ranking": [
+    {
+      "rank": 1,
+      "boat": 1,
+      "mark": "◎",
+      "score": 133.3
+    },
+    {
+      "rank": 2,
+      "boat": 2,
+      "mark": "○",
+      "score": 77.4
+    },
+    {
+      "rank": 3,
+      "boat": 3,
+      "mark": "▲",
+      "score": 69.2
+    },
+    {
+      "rank": 4,
+      "boat": 6,
+      "mark": "△",
+      "score": 66.1
+    },
+    {
+      "rank": 5,
+      "boat": 5,
+      "mark": "▽",
+      "score": 46.4
+    },
+    {
+      "rank": 6,
+      "boat": 4,
+      "mark": "×",
+      "score": 39.4
+    }
+  ],
+  "bets": [
+    {
+      "val": "1-2-3",
+      "type": "本線"
+    },
+    {
+      "val": "1-2-6",
+      "type": "本線"
+    },
+    {
+      "val": "1-3-2",
+      "type": "本線"
+    },
+    {
+      "val": "1-6-2",
+      "type": "本線"
+    },
+    {
+      "val": "1-3-6",
+      "type": "本線"
+    },
+    {
+      "val": "1-6-3",
+      "type": "本線"
+    },
+    {
+      "val": "1-2-5",
+      "type": "本線"
+    },
+    {
+      "val": "1-5-2",
+      "type": "本線"
+    }
+  ]
+}

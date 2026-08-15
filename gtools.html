@@ -427,7 +427,7 @@ function switchPage(p){
 // v2 (2026-07-04〜): 差し・まくり実績スコアを8pt→12ptに引き上げ
 // v3 (2026-07-06〜2026-07-08): モーター10pt→13pt、合成ST8pt→10ptに引き上げ
 // v4 (2026-07-08〜): n=269検証で悪化のためv2の重みに巻き戻し
-const SCORE_ENGINE_VERSION=4;
+const SCORE_ENGINE_VERSION=5;
 function getLogs(){try{return JSON.parse(localStorage.getItem('kyotei_v2')||'[]');}catch{return[];}}
 function saveLogs(logs){localStorage.setItem('kyotei_v2',JSON.stringify(logs));}
 

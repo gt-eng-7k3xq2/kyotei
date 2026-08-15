@@ -1,0 +1,89 @@
+{
+  "_scoreEngineVersion": 5,
+  "_fixture": "mikuni_9r_2026-07-27.json",
+  "_label": "荒れ(1号艇30.8%で着外・配当28,910円)",
+  "_actualResult": {
+    "chakuju": "2-5-3",
+    "payout": "¥28,910"
+  },
+  "areIndex": 7,
+  "nigeRate": 30.8,
+  "mode": "are_strong",
+  "autoPts": 9,
+  "ranking": [
+    {
+      "rank": 1,
+      "boat": 2,
+      "mark": "◎",
+      "score": 118.4
+    },
+    {
+      "rank": 2,
+      "boat": 1,
+      "mark": "○",
+      "score": 88.6
+    },
+    {
+      "rank": 3,
+      "boat": 4,
+      "mark": "▲",
+      "score": 71.7
+    },
+    {
+      "rank": 4,
+      "boat": 6,
+      "mark": "△",
+      "score": 69.2
+    },
+    {
+      "rank": 5,
+      "boat": 5,
+      "mark": "▽",
+      "score": 56.8
+    },
+    {
+      "rank": 6,
+      "boat": 3,
+      "mark": "×",
+      "score": 53.4
+    }
+  ],
+  "bets": [
+    {
+      "val": "2-1-4",
+      "type": "本線"
+    },
+    {
+      "val": "2-1-6",
+      "type": "本線"
+    },
+    {
+      "val": "2-4-1",
+      "type": "本線"
+    },
+    {
+      "val": "2-1-5",
+      "type": "本線"
+    },
+    {
+      "val": "2-6-1",
+      "type": "本線"
+    },
+    {
+      "val": "2-5-1",
+      "type": "本線"
+    },
+    {
+      "val": "2-3-1",
+      "type": "本線"
+    },
+    {
+      "val": "2-4-6",
+      "type": "本線"
+    },
+    {
+      "val": "2-6-4",
+      "type": "本線"
+    }
+  ]
+}

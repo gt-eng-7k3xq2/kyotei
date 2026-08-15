@@ -95,7 +95,7 @@ p.note{font-size:11px;color:var(--text2);margin:0 0 8px;}
 // ============================================================
 </script>
 <script>
-const SCORE_ENGINE_VERSION=4;
+const SCORE_ENGINE_VERSION=5;
 let selectedNigeMode='auto';
 let selectedHimoMode='standard';
 let selectedRaceType='ippan';
@@ -333,8 +333,13 @@ function calcAreIndex(d){
   if(jogaiCount>=1) score+=3; // 1艇除外で+3（5艇戦）
   if(jogaiCount>=2) score+=2; // 2艇以上でさらに+2
 
-  // 5. 鳴門SGボーナス
-  score+=3;
+  // 5. (2026-08-15削除) 旧「鳴門SGボーナス」: 全レースに無条件+3していた名残。
+  // 元々このツールは鳴門開催のSGグランドチャンピオンのみを処理する前提で作られており、
+  // 「鳴門」要因と「SG」要因が当時のデータでは完全に一致していたため、どちらの意図だったか
+  // 今となっては区別できない。SGが構造的に荒れやすいという仮説はdaikibo_archiveにレース格が
+  // 記録されておらず検証不能なため、未検証の会場/格依存を持ち込まず撤去。
+  // judgeMode側の閾値を-3して従来と同じ判定基準を維持する
+  // （sg_narutou.html/kyotei_backtest.htmlを必ず同期させること。SCORE_ENGINE_VERSION 4→5）
 
   // 6. 1コース実力補正（マイナス）
   const b1=d.boats[0];
@@ -353,16 +358,17 @@ function calcAreIndex(d){
 }
 
 function judgeMode(areIndex, nigeRate){
-  // calcAreIndexの最大スコアは約15〜18点
+  // calcAreIndexの最大スコアは約12〜15点
   // 逃げ率70%以上は通常固定
   if(nigeRate>=70) return 'normal';
   // 2026-07-27: 荒れを強弱で分割。7/19の閾値緩和(10→6)で新設されたareIndex6-7帯は
   // 実績で的中率34.0%・ROI45.1%(n=50)とareIndex8以上(ROI79.0%,n=304)より明確に劣ることが判明したため、
   // 同じ「are」ではなく別モードとして扱い、点数を絞る（sg_narutou.htmlと必ず同期させること）
-  if(areIndex>=6&&areIndex<8&&nigeRate<50) return 'are_weak';
-  if(areIndex>=8&&nigeRate<50) return 'are_strong';
-  // areIndex9以上でも逃げ率60%未満のみ荒れ（強のみ。9以上は元々8以上に含まれるためare_strong扱い）
-  if(areIndex>=9&&nigeRate<60) return 'are_strong';
+  // 2026-08-15: 鳴門SGボーナス(+3)撤去に伴い、旧6/8/9の閾値を-3(3/5/6)へ平行移動。判定基準自体は変えていない。
+  if(areIndex>=3&&areIndex<5&&nigeRate<50) return 'are_weak';
+  if(areIndex>=5&&nigeRate<50) return 'are_strong';
+  // areIndex6以上でも逃げ率60%未満のみ荒れ（強のみ。6以上は元々5以上に含まれるためare_strong扱い）
+  if(areIndex>=6&&nigeRate<60) return 'are_strong';
   return 'normal';
 }
 
