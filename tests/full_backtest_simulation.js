@@ -1,7 +1,8 @@
 'use strict';
 // 「実際に運用していたらどうなっていたか」の時系列フル・シミュレーション。
-// 2026-07-01〜08-03(結果入力済みの33日分。08-04以降はPlaywright収集分で
-// resulted未入力のため対象外)を日付+締切時刻順に走査し、
+// 2026-07-01〜08-08(結果入力済みの39日分。08-04〜08-08はPlaywright収集分だが
+// scripts/backfill_official_results.jsで公式サイトから結果を紐付け済み)を
+// 日付+締切時刻順に走査し、
 //   新ロジック(SCORE_ENGINE_VERSION=6, 合成オッズ補正込み・閾値82)
 //   旧ロジック(閾値74, 合成オッズ補正なし)
 // それぞれで実際に参入したレースの的中・回収(1点100円均等)を積み上げて比較する。
@@ -17,7 +18,7 @@ const { extractFunctionSource, extractConstSource, extractScoreEngineVersion } =
 const ROOT = path.join(__dirname, '..');
 const HTML_PATH = path.join(ROOT, 'sg_narutou.html');
 const ARCHIVE_DATE_MIN = '2026-07-01';
-const ARCHIVE_DATE_MAX = '2026-08-03';
+const ARCHIVE_DATE_MAX = '2026-08-08';
 
 const FUNCTION_NAMES = [
   'calcAreScore', 'calcNigeRate', 'calcAreIndex', 'judgeMode',
@@ -195,7 +196,7 @@ function main() {
   const files = listArchiveFiles();
   const dates = files.map(f => f.match(/(\d{4}-\d{2}-\d{2})/)[1]);
   console.log(`シミュレーション対象: ${files.length}日分 (${dates[0]} 〜 ${dates[dates.length - 1]})`);
-  console.log('※ 2026-08-04以降はPlaywright収集分でresulted未入力のため対象外(結果が確定している期間のみ)\n');
+  console.log('※ 2026-08-04〜08-08はPlaywright収集分だが、backfill_official_results.jsで公式サイトから結果を紐付け済み\n');
 
   const allRaces = loadAllRacesChronological(engine, files);
   console.log(`総レース数(時系列): ${allRaces.length}\n`);

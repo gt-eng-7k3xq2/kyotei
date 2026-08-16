@@ -59,13 +59,28 @@ GARONは競艇(ボートレース)の予想・検証を行うツール群。ビ�
 - `--date=YYYYMMDD`で過去日付の収集も可能(`--venue`省略で全会場を自動検出)。2026-08-15確認: race_shusso.phpは過去日付でも基本情報/枠別勝率/今節成績/直前情報/モータ情報/STズレ/オッズが当時のまま全て残っている。会場一覧は`schedule/kaisai_today.php`が内部で叩いているAJAX API(`schedule/request_kaisak_ctrl.php`、POST `data={"hiduke":"YYYYMMDD","place_no":0,"sort_select":0}`)を直接呼んで取得しており、トップページのHTML抽出(今日専用)と並ぶ2つ目の会場検出経路になっている(今日分で両方式の結果が完全一致することを確認済み)
 - 保存先は`daikibo_archive_YYYY-MM-DD.json`(既存の手動収集と同一フォーマット)。同日ファイルが既にある場合、会場+レース番号が重複するレースは自動スキップ(再開安全)
 - **既知の制限**: 「欠場選手あり」レースは、展示タイム・直前STが0のまま取得されることがある(2026-08-15確認、平和島9R・住之江10Rで再現)。欠場によりページのタブ構造が通常と異なり、`browser-scan.browser.js`のキーワード一致スキャンが対応できていないため。同じレースを再収集しても直らない(タイミングの問題ではなく構造的な問題)。oddsMapの件数が通常の120通りより少ない(欠場艇の分、組み合わせが減る)ことがこのケースの目印になる。
-- **既知の課題**: `daikibo_archive_2026-08-04.json`〜`08-08.json`(Playwrightで自動収集した分)は`resulted:false`のまま、着順(chakuju)・配当(payout)が未入力。手動収集(daikibo_archive.html経由)と違い、結果を後から入力する工程がまだ無いため、的中率・ROIを使うバックテスト(entry_criteria_diagnosis.js等)では現状これらの日付を除外している。結果を後付けする方法の候補(2026-08-15調査、未実装・未検証。kyoteibiyori.comブロック中のため実機確認できず):
-  - **方法A(推奨)**: 公式サイト(boatrace.jp)の結果ページを使う。`sg_narutou.html`の`OFFICIAL_VENUE_CODE`(会場→場コード表)と`openOfficialRaceList()`が使っている出走表URL(`https://www.boatrace.jp/owpc/pc/race/racelist?rno=X&jcd=Y&hd=Z`)と同じパラメータ形式で、結果ページ(`raceresult`)が存在するはずだが未確認。
-  - **方法B**: kyoteibiyori.com自体の`race_shusso.php`にある「結果」「出目ランク」タブ(過去日付ページに存在することは確認済み)を`browser-scan.browser.js`と同じ方式でスキャンする。
+- **解決済み(2026-08-16)**: Playwright自動収集分(`resulted:false`のまま着順・配当が未入力になる問題)は`scripts/backfill_official_results.js`で解消した。公式サイト(boatrace.jp)の結果ページ(`https://www.boatrace.jp/owpc/pc/race/raceresult?rno=X&jcd=Y&hd=Z`。会場コードは`sg_narutou.html`の`OFFICIAL_VENUE_CODE`をその場で抽出して使う。kyoteibiyori.comとは別ドメインでブロックの影響を受けない)から着順(chakuju)・3連単払戻(payout)を取得し、`resulted:true`として書き戻す。`--auto --max-days=N`で「resulted:falseが残っている過去日付を古い順にN件」自動検出でき、`scripts/run_nightly_backfill.cmd`経由でタスクスケジューラが毎晩22:15に2日分ずつ自動実行する(下記「無人運用インフラ」参照)。**既知の制約**: 全艇フライング等で「レース不成立」(公式サイト側にも着順が存在しない)のレースは`resulted:false`のまま残り続ける。バグではなく実データの制約(2026-08-07大村1R・2026-08-08戸田8Rで確認済み)。自動検出は日付ベースのため、こうした恒久的に解決不能な日は毎晩再試行され続ける(無害だが数秒分の無駄なリクエストが発生する)。
 - `scripts/collect_batch.js` — 複数日をまとめて連続実行するバッチスクリプト。1日ごとに`collect_playwright.js`を`--date`違いで順次呼び出し、ある日が失敗しても止まらず次の日へ進む。最後に日ごとのサマリー(追加/スキップ/失敗件数)を一覧表示する。
 - `scripts/lib/browser-scan.browser.js` — ブックマークレットのスキャン関数群をほぼそのまま移植したブラウザコンテキスト側スクリプト。`context.addInitScript()`で毎回のページ遷移時に自動注入される
 - `scripts/lib/extract-parse-data.js` — **daikibo_archive.html**から`parseData`/`parseMotorHistory`/`extractOddsMap`を直接抜き出して実行するヘルパー(tests/lib/extract-score-engine.jsと同じ「本体を毎回読みに行く」方式)。sg_narutou.html側のparseData()ではなくdaikibo_archive.html側を使う理由: 実際のアーカイブのoddsMap/motorHistoryはdaikibo_archive.html独自のparseData()(末尾でparseMotorHistory()/extractOddsMap()を呼ぶ)で作られているため
 - **既知の制約**: daikibo_archive.html側のparseData()は開催日目・レース種別(day/raceCategory)をメタ行から読み取っていない。収集スクリプト側でどれだけ正確に収集しても、この値はアーカイブJSONには保存されない(既存の手動運用と同じ挙動を踏襲)
+
+## 無人運用インフラ(2026-08-16〜)
+
+Windowsタスクスケジューラに6つのタスクを登録し、PCを常時起動・ログイン状態にしておけば無人で毎日稼働する(`scripts/setup_scheduled_tasks.ps1`で再登録・設定変更可能。冪等)。あわせてスリープ・休止状態はAC/バッテリー両方で恒久的に無効化済み(`powercfg /change standby-timeout-* 0` / `hibernate-timeout-* 0`)。
+
+| タスク名 | 起動時刻 | 実行スクリプト | 内容 |
+|---|---|---|---|
+| `GARON_RealtimeScreening` | 毎日8:00(2026-08-16、モーニング開催の1R締切8:32等に対応するため10:00→8:00に変更) | `scripts/realtime_screening.js`(`run_realtime_screening.cmd`経由) | T-10到達レースの抽出・参入判定・ntfy通知。稼働時間帯(8時台〜21時台)を過ぎるとプロセス自身が日次サマリー通知を送って終了する(タスクスケジューラは起動と失敗時再起動〈2分間隔・最大999回〉のみ担当)。抽出/判定が連続5件失敗するとntfyで異常アラートを送る(ただしkyoteibiyori.comへのスケジュール取得自体が失敗するケースはこのアラート対象外。サイトブロック監視は`GARON_SiteBlockMonitor`が別途担当)。 |
+| `GARON_NightlyBackfill` | 毎日22:15 | `scripts/backfill_official_results.js --auto --write`(`run_nightly_backfill.cmd`経由) | `daikibo_archive`の`resulted:false`が残っている過去日付を古い順に2日分ずつ自動バックフィル。 |
+| `GARON_NightlyDiagnosis` | 毎日22:45 | `scripts/nightly_diagnosis.js`(`run_nightly_diagnosis.cmd`経由) | `tests/weighted_optimization_search.js`の計算ロジック(3,000円均等回収配分・held-out検証)を再利用し、sg_narutou.htmlから動的取得した現行本番閾値の全期間/held-out成績を前回スナップショット(`reports/.diagnosis_snapshot.json`)と比較。純損益の黒字/赤字反転・ROIが2pt以上変動・本番閾値変更・前回レポートから7日以上経過のいずれかに該当した時だけ`reports/proposal_YYYY-MM-DD.md`を生成する。 |
+| `GARON_DataQualityScan` | 毎日23:00(バックフィル後) | `scripts/data_quality_scan.js`(`run_data_quality_scan.cmd`経由) | `daikibo_archive`全体を既知パターンでスキャン(boats欠損/`isJogai`による欠場検知/oddsMap不足/resulted不整合/3日以上未バックフィル放置/重複エントリ)。検出時のみ`reports/data_quality_YYYY-MM-DD.md`を生成しntfy通知。**注意**: 展示タイム・直前STが0という条件だけでは欠場を判定しない(2026-08-16調査で全体の約24%が該当する誤検知だらけの指標と判明したため)。データに既にある`isJogai`フラグを直接見る。 |
+| `GARON_ArchiveBackup` | 毎日23:15 | `scripts/backup_archive.js`(`run_backup_archive.cmd`経由) | `daikibo_archive_*.json`を`C:\garon_backup\daikibo_archive\`へミラーコピー(差分のみ)。物理的な別ドライブが無いため、C内の別フォルダを保存先としている(2026-08-16、雄大さん了承済み。誤削除・誤上書き対策であり、Cドライブ自体の障害には非対応)。 |
+| `GARON_SiteBlockMonitor` | 毎日0:05から15分間隔で終日反復 | `scripts/monitor_site_block.js`(`run_site_block_monitor.cmd`経由) | kyoteibiyori.comへの軽量な疎通確認(realtime_screening.jsと同じAPIエンドポイント)。状態は`logs/.site_block_state.json`に保存し、「ブロック中→到達可能」に変化した瞬間だけntfy通知する(逆方向は通知せずログのみ)。稼働時間帯に縛られず終日動くため、夜間にブロックが解けても気づける。 |
+
+各タスクのログは`C:\garon\logs\`配下(`realtime_screening.log` / `nightly_backfill.log` / `nightly_diagnosis.log` / `data_quality_scan.log` / `backup_archive.log` / `site_block_monitor.log`、追記式)。
+
+**セッション開始時の提示ルール**: 新しいセッションを開始したら、`reports/`ディレクトリ内の`proposal_*.md`・`data_quality_*.md`のうち、`reports/.last_presented`(日付文字列のみを書いたマーカーファイル。無ければ「まだ何も提示していない」扱い)に記録された日付より新しいものが無いか確認すること。あれば最新のものの要点をセッション冒頭でユーザーに提示し、提示後に`reports/.last_presented`をその日付で更新すること。
 
 ## GitHubリポジトリ
 

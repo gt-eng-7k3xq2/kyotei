@@ -2,8 +2,10 @@
 // 実際の資金配分ロジック(sg_narutou.html:recalcAlloc()の「均等回収」モード)を移植し、
 // 1点100円均等ではなく実運用と同じ3,000円加重配分で収支シミュレーションを行う。
 // あわせて、露出量の下限を外し「黒字化・高精度」だけを目的にROI閾値を86〜92で再探索する
-// (held-out: 前半17日でチューニング→後半16日で検証、を維持)。
+// (held-out: 対象日数の前半でチューニング→後半で検証、を維持。日数は自動算出)。
 // ロジックは一切変更しない(診断専用)。
+// 対象期間: 2026-07-01〜08-08(08-04〜08-08はPlaywright収集分だが、
+// scripts/backfill_official_results.jsで公式サイトから結果を紐付け済み)。
 //
 // 使い方: node tests/weighted_optimization_search.js
 
@@ -15,7 +17,7 @@ const { extractFunctionSource, extractConstSource, extractScoreEngineVersion } =
 const ROOT = path.join(__dirname, '..');
 const HTML_PATH = path.join(ROOT, 'sg_narutou.html');
 const ARCHIVE_DATE_MIN = '2026-07-01';
-const ARCHIVE_DATE_MAX = '2026-08-03';
+const ARCHIVE_DATE_MAX = '2026-08-08';
 const SHIKIN = 3000;
 const CURRENT_GAP_THRESH = 10;
 const CURRENT_ROI_THRESH = 82;
@@ -245,4 +247,14 @@ function main() {
   console.log(`1日あたり参戦件数: ${holdoutResult.perDay.toFixed(1)}件(目標15〜20件との比較)`);
 }
 
-main();
+// node tests/weighted_optimization_search.js で直接実行された時だけCLI出力する。
+// require()から使う側(scripts/nightly_diagnosis.js等)はmain()を呼ばず、下記のexportsだけを使う
+// (2026-08-16、夜間診断パイプライン向けに追加。既存の計算ロジック・CLI出力は一切変更していない)。
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  loadEngine, listArchiveFiles, loadAllRacesChronological, computeSeries,
+  ROOT, HTML_PATH, ARCHIVE_DATE_MIN, ARCHIVE_DATE_MAX, SHIKIN, CURRENT_ROI_THRESH,
+};
