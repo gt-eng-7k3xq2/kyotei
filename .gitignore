@@ -1,2 +1,8 @@
 # 実データのアーカイブ(容量が大きく、GitHub Pagesで公開したくないためリポジトリには含めない)
 daikibo_archive_*.json
+
+# .env(ntfy.shのトピック名など、事実上パスワード相当の値を含む。絶対にコミットしない)
+.env
+
+# npm依存(package.jsonから再生成可能)
+node_modules/
