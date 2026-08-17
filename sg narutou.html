@@ -3037,6 +3037,28 @@ function saveThumbCard(){
 // ============================================================
 // Claude用コメント生成データ抽出（オンデマンド。毎回自動生成はしない）
 // ============================================================
+// 号艇番号→❶田中のようなラベルに変換する共通ヘルパー(2026-08-17、buildClaudeCommentData/
+// computeTenkaiFactsで共有)。AIコメント生成用データの表記をgaron-kyotei-humanizerスキルの
+// 必須フォーマット(丸数字＋苗字)に統一するため。通常の①②③丸数字はスキルのNGパターンなので使わない。
+const GARON_LABEL_CIRCLED=['❶','❷','❸','❹','❺','❻'];
+const GARON_ONE_CHAR_SURNAMES=['林','森','田','原','関','堀','進','辻','沢','岡'];
+// 3文字苗字（先頭2文字だと途中で切れてしまう選手）。誤り報告があるたび随時追加。
+const GARON_THREE_CHAR_SURNAMES=['濱野谷'];
+// 完全一致の例外指定（フルネーム→苗字）。機械判定では対応しきれないケースをここで上書き。
+const GARON_NAME_OVERRIDES={};
+function garonSurname(name){
+  if(!name) return '';
+  if(GARON_NAME_OVERRIDES[name]) return GARON_NAME_OVERRIDES[name];
+  if(name.includes(' ')) return name.split(' ')[0];
+  if(GARON_ONE_CHAR_SURNAMES.includes(name[0])) return name[0];
+  const three=GARON_THREE_CHAR_SURNAMES.find(s=>name.startsWith(s));
+  if(three) return three;
+  return name.slice(0,2);
+}
+function garonBoatLabel(no,name){
+  return `${GARON_LABEL_CIRCLED[no-1]||no+'号艇'}${garonSurname(name)}`;
+}
+
 function buildClaudeCommentData(){
   if(!currentCalcData||!currentParsedData) return '⚠️ データがありません。予想を作成してから使ってください。';
   const ranking=currentCalcData.ranking||[];
@@ -3044,7 +3066,6 @@ function buildClaudeCommentData(){
   if(!ranking.length) return '⚠️ データがありません。予想を作成してから使ってください。';
 
   const bd=(no)=>(currentParsedData.boats[no-1])||{};
-  const circled=['①','②','③','④','⑤','⑥'];
 
   const venue=document.getElementById('inp-venue')?document.getElementById('inp-venue').value||'':'';
   const racenum=currentCalcData.racenum||'';
@@ -3072,7 +3093,7 @@ function buildClaudeCommentData(){
     const syukaiFoot=b.syukaiFoot>0?b.syukaiFoot.toFixed(2):'-';
     const avgSyukaiFoot=b.avgSyukaiFoot>0?b.avgSyukaiFoot.toFixed(2):'-';
     const chokusen=b.chokusen>0?b.chokusen.toFixed(2):'-';
-    lines.push(`${circled[no-1]}${name}${axisTag}　ST${st}　今節得点率${toku}　モーター2連率${motor}　差し${sashi}%/まくり${makuri}%/まくり差し${makurisashi}%`);
+    lines.push(`${garonBoatLabel(no,name)}${axisTag}　ST${st}　今節得点率${toku}　モーター2連率${motor}　差し${sashi}%/まくり${makuri}%/まくり差し${makurisashi}%`);
     lines.push(`　展示${tenji}(今節平均${avgTenji})　周回${syukai}　周回足${syukaiFoot}(今節平均${avgSyukaiFoot})　直線${chokusen}`);
   }
   lines.push('');
@@ -3083,7 +3104,7 @@ function buildClaudeCommentData(){
     lines.push('');
   }
 
-  const rankText=ranking.map((r,i)=>`${i+1}位:${circled[r.boat-1]||r.boat}`).join(' ');
+  const rankText=ranking.map((r,i)=>`${i+1}位:${GARON_LABEL_CIRCLED[r.boat-1]||r.boat}`).join(' ');
   lines.push(`評価順: ${rankText}`);
 
   const honsen=betsRaw.filter(b=>b.type==='本線');
@@ -3092,7 +3113,14 @@ function buildClaudeCommentData(){
   if(osaee.length) lines.push(`抑え: ${compressBetsSG(osaee)}`);
   lines.push('');
 
-  lines.push('→ 上記を踏まえて、的中画像の「根拠」欄用に30字程度の展開コメントを作って');
+  lines.push('→ 上記を踏まえて、的中画像の「根拠」欄用の展開コメントを作って。');
+  lines.push('');
+  lines.push('【必須ルール】');
+  lines.push('・20〜40字程度(目安30字)、体言止めか言い切りの1文');
+  lines.push('・艇の表記は上記と同じ❶田中のような丸数字＋苗字形式で統一する(①②③のような通常の丸数字は使わない)');
+  lines.push('・「〜が予想されます」「〜に注目です」「〜が期待されます」等の定型的な締め文句は使わない。断定で言い切る');
+  lines.push('・丸数字を羅列するだけの構成(「❶は◯◯。❷は◯◯。」)にせず、「❶が◯◯できるかどうか→できなければ❷が◯◯」のように1本の分岐ストーリーにする');
+  lines.push('・上記データに無い着順・決まり手・艇を創作しない。本線・抑えの買い目にある艇のみ言及する');
 
   return lines.join('\n');
 }
@@ -3128,23 +3156,7 @@ function computeTenkaiFacts(){
   if(!maruBoat) return null;
 
   const bd=(no)=>(currentParsedData&&currentParsedData.boats[no-1])||{};
-  const ONE_CHAR_SURNAMES=['林','森','田','原','関','堀','進','辻','沢','岡'];
-  // 3文字苗字（先頭2文字だと途中で切れてしまう選手）。誤り報告があるたび随時追加。
-  const THREE_CHAR_SURNAMES=['濱野谷'];
-  // 完全一致の例外指定（フルネーム→苗字）。機械判定では対応しきれないケースをここで上書き。
-  const NAME_OVERRIDES={};
-  const nm=(no)=>{
-    const n=bd(no).name;
-    if(!n) return '';
-    if(NAME_OVERRIDES[n]) return NAME_OVERRIDES[n];
-    if(n.includes(' ')) return n.split(' ')[0];
-    if(ONE_CHAR_SURNAMES.includes(n[0])) return n[0];
-    const three=THREE_CHAR_SURNAMES.find(s=>n.startsWith(s));
-    if(three) return three;
-    return n.slice(0,2);
-  };
-  const circled=['❶','❷','❸','❹','❺','❻'];
-  const label=(no)=>`${circled[no-1]||no+'号艇'}${nm(no)}`;
+  const label=(no)=>garonBoatLabel(no,bd(no).name);
 
   const boatsInBets=new Set();
   const honsenBets=betsRaw.filter(b=>b.type==='本線');
@@ -3302,17 +3314,25 @@ async function generateTenkaiAI(){
   「〜とみて期待する」「〜なら〜とみる」のような控えめな言い切りにする。
   "通常想定"の場合は「〜とみた」「〜だ」のようにはっきり言い切ってよい。
 - 荒れ想定かつ複数艇の絡みが複雑な場合、「Aが仕掛けてBが応戦するなら、Cに展開が向く」のような
-  条件連鎖（2段階まで）を使ってもよい。ただしこの場合も登場する艇は合計2艇までとし、
-  3艇目以降を追加しない。ただしfactsに無い因果関係は作らない。
-- 【最重要】1文に登場させる艇は軸を含めて最大2艇まで。対抗筆頭1艇に絞り、
-  「〜も」「さらに〜も」で3艇目・4艇目を追加で列挙することは禁止。
-  複数の対抗艇に触れたくなっても、決まり手実績が最も高い1艇だけを選ぶこと。
-- 出力は1文、30字以内。体言止めで終える簡潔な予想文体。
+  条件連鎖（2段階まで）を使ってもよい。ただしfactsに無い因果関係は作らない。
+- 1文に登場させる艇は軸を含めて原則2艇まで。対抗筆頭1艇に絞るのが基本だが、
+  facts内の「決まり手実績_買い目内のみ」で実績が際立って高い、または「rankingList」で
+  評価順が上位の3艇目がいる場合に限り、「〜も」で軽く触れる形で3艇目まで追加してよい
+  （2026-08-17: 実際のX投稿分析で「GARONは艇数が少なすぎる」と判明したための緩和。
+  ただし4艇目以降は追加しない）。3艇目に触れる場合も30字の制約内に収まる範囲にとどめ、
+  収まらなければ2艇構成に戻す。「①は◯◯。④も◯◯。」のような独立した並列文にはせず、
+  既存の分岐ストーリーの流れに軽く付け足す形にすること。
+- 出力は1文、20〜40字程度（目安30字）。体言止めで終える簡潔な予想文体。
+- 「〜が予想されます」「〜に注目です」「〜が期待されます」「〜という展開が想定される」
+  「〜の可能性が高いでしょう」のような定型的な締め文句は使わない。断定の言い切りか
+  体言止めで終える。
 
 【文章の型（この順序・要素を意識すること。全部盛り込む必要はなく、事実がある部分だけでよい）】
 1. 軸が来る根拠（コース位置＋決まり手や位置取りの強み）。ただし軸が①の場合はこの要素を省略し、
    いきなり対抗艇の話から始める（①が軸の時に①自身の位置取りを書かないルールと同じ）
-2. 対抗筆頭1艇の「2着」争いの話のみ（決まり手＋根拠があれば一言）。ここで終える。3艇目は追加しない。
+2. 対抗筆頭1艇の「2着」争いの話（決まり手＋根拠があれば一言）
+3.（任意）3艇目の一言。決まり手実績が際立つ、または評価順が上位の艇がいる場合のみ、
+   「〜も」で軽く触れる。30字に収まらなければ入れない。
 
 【文体の参考（内容ではなく言い回しのトーンだけ真似ること。軸の位置関係は毎回違うので固定しない、
 　対抗艇は必ず2着の文脈で書く）】
@@ -3321,6 +3341,7 @@ async function generateTenkaiAI(){
 ・2着はまくり差し鋭い⑤が有力
 ・軸マークから2着に浮上しそうな②が相手本線
 ・②が仕掛けて①が抵抗するなら、2着は④のカド差しに期待（荒れ想定・条件連鎖の例）
+・軸③が仕掛け、⑤が2着追走、①も一撃警戒（3艇目を軽く添える例）
 
 【確定事実】
 ${JSON.stringify(facts,null,2)}

@@ -35,6 +35,8 @@ GARONは競艇(ボートレース)の予想・検証を行うツール群。ビ�
 | `sg_venue` / `sg_racenum` / `sg_raceType` | 入力フォームの直近値保持 | sg_narutou.html |
 | `kyotei_backtest_v1` | 夜間検証エンジン専用ログ(本番とは別領域) | kyotei_backtest.html |
 | `daikibo_archive_db` (IndexedDB) | 大規模アーカイブの生データ保存先 | daikibo_archive.html |
+| `garon_gist_sync_token` | Gist自動同期用GitHubトークン(クライアント側平文保存、`gist`スコープのみ) | gtools.html |
+| `garon_gist_sync_id` | 自動同期先のPrivate Gist ID(初回同期時に自動作成・保存) | gtools.html |
 
 ## 開発コマンド
 
@@ -67,25 +69,84 @@ GARONは競艇(ボートレース)の予想・検証を行うツール群。ビ�
 
 ## 無人運用インフラ(2026-08-16〜)
 
-Windowsタスクスケジューラに9つのタスクを登録し、PCを常時起動・ログイン状態にしておけば無人で毎日稼働する(`scripts/setup_scheduled_tasks.ps1`で再登録・設定変更可能。冪等)。あわせてスリープ・休止状態はAC/バッテリー両方で恒久的に無効化済み(`powercfg /change standby-timeout-* 0` / `hibernate-timeout-* 0`)。
+Windowsタスクスケジューラに13タスク(日次9・週次1・オンデマンド専用2)を登録している(`scripts/setup_scheduled_tasks.ps1`で再登録・設定変更可能。冪等)。あわせてスリープ・休止状態はAC/バッテリー両方で恒久的に無効化済み(`powercfg /change standby-timeout-* 0` / `hibernate-timeout-* 0`)、Windows Updateのアクティブ時間は7:00〜22:00に固定済み(稼働時間帯中の強制再起動を防止)。
+
+**2026-08-17更新: 全タスクをS4Uログオン方式に変更**。従来のInteractiveToken(対話ログオン必須)だと、毎晩の自動再起動(`GARON_NightlyReboot`)後に誰もサインインしない限りどのタスクも動かなくなってしまうため、パスワード保存不要で「サインインの有無を問わず実行」できるS4Uに切り替えた(自動サインオン設定は不使用)。`GARON_NightlyReboot`本体と、オンデマンド専用の`GARON_EmergencyStop`/`GARON_ResumeAutomation`はRunLevel=Highest(shutdown /rやタスク無効化に管理者権限が要るため、登録時点で昇格を確定させ、実行時にUACを出さない設計)。
 
 | タスク名 | 起動時刻 | 実行スクリプト | 内容 |
 |---|---|---|---|
-| `GARON_RealtimeScreening` | 毎日8:00(2026-08-16、モーニング開催の1R締切8:32等に対応するため10:00→8:00に変更) | `scripts/realtime_screening.js`(`run_realtime_screening.cmd`経由) | T-10到達レースの抽出・参入判定・ntfy通知。稼働時間帯(8時台〜21時台)を過ぎるとプロセス自身が日次サマリー通知を送って終了する(タスクスケジューラは起動と失敗時再起動〈2分間隔・最大999回〉のみ担当)。抽出/判定が連続5件失敗するとntfyで異常アラートを送る(ただしkyoteibiyori.comへのスケジュール取得自体が失敗するケースはこのアラート対象外。サイトブロック監視は`GARON_SiteBlockMonitor`が別途担当)。判定結果は`logs/race_judgments_YYYY-MM-DD.json`に構造化保存する(`GARON_DraftSkipReason`が読む)。 |
+| `GARON_RealtimeScreening` | 毎日8:00(2026-08-16、モーニング開催の1R締切8:32等に対応するため10:00→8:00に変更) | `scripts/realtime_screening.js`(`run_realtime_screening.cmd`経由) | T-10到達レースの抽出・参入判定・ntfy通知。稼働時間帯(8時台〜21時台)を過ぎるとプロセス自身が日次サマリー通知を送って終了する(タスクスケジューラは起動と失敗時再起動〈2分間隔・最大999回〉のみ担当)。抽出/判定が連続5件失敗するとntfyで異常アラートを送る(ただしkyoteibiyori.comへのスケジュール取得自体が失敗するケースはこのアラート対象外。サイトブロック監視は`GARON_SiteBlockMonitor`が別途担当)。判定結果は`logs/race_judgments_YYYY-MM-DD.json`に構造化保存する(`GARON_DraftSkipReason`が読む)。**2026-08-17追加**: `GARON_SiteBlockMonitor`が書く`logs/.site_block_state.json`を毎ループ読み、ブロック中(かつ直近20分以内に確認済み=状態が新しい)と分かっている間はkyoteibiyori.comへの実リクエスト自体をスキップして待機する。状態が無い/壊れている/20分以上古い(監視タスク停止の疑い)場合は信用せず通常通り自分でポーリングを試みる(安全側に倒す設計)。ブロック解除検知後は次のループ(最大4分後)で自動的に通常監視を再開する。 |
 | `GARON_DraftSkipReason` | 毎日22:05(realtime_screening終了直後) | `scripts/draft_skip_reason.js`(`run_draft_skip_reason.cmd`経由) | その日1件も参戦しなかった(評価はしたが全件見送り)場合のみ、見送り理由の内訳(僅差/推定ROI不足の件数)をまとめた投稿下書き`reports/skip_reason_YYYY-MM-DD.md`を生成。文面はsg_narutou.htmlのX投稿の流儀(「G.」署名)に合わせた下書きであり、投稿前に必ず内容を確認すること。 |
 | `GARON_NightlyBackfill` | 毎日22:15 | `scripts/backfill_official_results.js --auto --write`(`run_nightly_backfill.cmd`経由) | `daikibo_archive`の`resulted:false`が残っている過去日付を古い順に2日分ずつ自動バックフィル。 |
-| `GARON_NightlyDiagnosis` | 毎日22:45 | `scripts/nightly_diagnosis.js`(`run_nightly_diagnosis.cmd`経由) | `tests/weighted_optimization_search.js`の計算ロジック(3,000円均等回収配分・held-out検証)を再利用し、sg_narutou.htmlから動的取得した現行本番閾値の全期間/held-out成績を前回スナップショット(`reports/.diagnosis_snapshot.json`)と比較。純損益の黒字/赤字反転・ROIが2pt以上変動・本番閾値変更・前回レポートから7日以上経過のいずれかに該当した時だけ`reports/proposal_YYYY-MM-DD.md`を生成する。レポート生成時は`scripts/motor_correlation_analysis.js`(下記)のモーター成績相関セクションも自動的に含める。 |
+| `GARON_NightlyDiagnosis` | 毎日22:45 | `scripts/fetch_gist_log.js`→`scripts/nightly_diagnosis.js`(`run_nightly_diagnosis.cmd`経由) | 本体の前に`scripts/fetch_gist_log.js`を実行し、gtools実績ログ(下記「gtools実績ログのGist自動同期」参照)を`logs/gtools_actual_log.json`へ取得(未設定なら黙ってスキップ、診断本体は止めない)。`tests/weighted_optimization_search.js`の計算ロジック(3,000円均等回収配分・held-out検証)を再利用し、sg_narutou.htmlから動的取得した現行本番閾値の全期間/held-out成績を前回スナップショット(`reports/.diagnosis_snapshot.json`)と比較。純損益の黒字/赤字反転・ROIが2pt以上変動・本番閾値変更・前回レポートから7日以上経過のいずれかに該当した時だけ`reports/proposal_YYYY-MM-DD.md`を生成する。レポート生成時は`scripts/motor_correlation_analysis.js`(下記)のモーター成績相関セクションと、gtools実績データとの比較セクションも自動的に含める。 |
 | `GARON_UpdateDashboard` | 毎日22:50 | `scripts/update_dashboard.js`(`run_update_dashboard.cmd`経由) | 現行本番閾値での「実際に参入していたら」の日別収支を累積し、`reports/dashboard.html`(累積純損益・累積的中率の推移グラフ、vanilla JS・外部フレームワーク不使用の静的HTML)を毎晩無条件で更新する。 |
 | `GARON_DataQualityScan` | 毎日23:00(バックフィル後) | `scripts/data_quality_scan.js`(`run_data_quality_scan.cmd`経由) | `daikibo_archive`全体を既知パターンでスキャン(boats欠損/`isJogai`による欠場検知/oddsMap不足/resulted不整合/3日以上未バックフィル放置/重複エントリ)。検出時のみ`reports/data_quality_YYYY-MM-DD.md`を生成しntfy通知。**注意**: 展示タイム・直前STが0という条件だけでは欠場を判定しない(2026-08-16調査で全体の約24%が該当する誤検知だらけの指標と判明したため)。データに既にある`isJogai`フラグを直接見る。 |
 | `GARON_ArchiveBackup` | 毎日23:15 | `scripts/backup_archive.js`(`run_backup_archive.cmd`経由) | `daikibo_archive_*.json`を`C:\garon_backup\daikibo_archive\`へミラーコピー(差分のみ)。物理的な別ドライブが無いため、C内の別フォルダを保存先としている(2026-08-16、雄大さん了承済み。誤削除・誤上書き対策であり、Cドライブ自体の障害には非対応)。 |
 | `GARON_NightlyGitCommit` | 毎日23:30(最後) | `scripts/nightly_git_commit.js`(`run_nightly_git_commit.cmd`経由) | CLAUDE.md・`tests/`・6つのHTMLツール(スペース区切りへリネーム)を`C:\garon\gt-eng-7k3xq2`へコピーし、変更があればそのリポジトリでローカルcommitのみ行う(pushは一切しない。手動で確認してからpushする運用を維持)。`scripts/`はリポジトリに存在しないため同期対象外(追加するかは別途判断)。リポジトリのgit設定は2026-08-16よりローカルで`user.name=GARON`に変更済み(以前の履歴書き換えと整合させるため)。 |
+| `GARON_NightlyReboot` | 毎日03:00(git commitの後、翌8:00のRealtimeScreeningまで十分な余裕を確保) | `scripts/run_nightly_reboot.cmd`(`shutdown /r /t 60`) | 24時間稼働の安定性のためPCを毎晩自動再起動する(2026-08-17追加)。S4Uログオンのため、再起動後に誰もサインインしなくても他の全タスクは通常通り動く。`GARON_SiteBlockMonitor`のダウンタイムは再起動所要時間(数分程度)のみ。 |
 | `GARON_SiteBlockMonitor` | 毎日0:05から15分間隔で終日反復 | `scripts/monitor_site_block.js`(`run_site_block_monitor.cmd`経由) | kyoteibiyori.comへの軽量な疎通確認(realtime_screening.jsと同じAPIエンドポイント)。状態は`logs/.site_block_state.json`に保存し、「ブロック中→到達可能」に変化した瞬間だけntfy通知する(逆方向は通知せずログのみ)。稼働時間帯に縛られず終日動くため、夜間にブロックが解けても気づける。 |
+| `GARON_NtfyHealthCheck` | 毎週月曜7:30(週次、8:00の稼働開始前) | `scripts/ntfy_health_check.js`(`run_ntfy_health_check.cmd`経由) | ntfy疎通確認専用の軽量テスト通知を1件送るだけ(2026-08-17追加)。トピック誤設定・ntfy.sh側の障害・スマホ側の購読解除などを、実際のレース判断に影響する前に検知する目的。 |
 
 各タスクのログは`C:\garon\logs\`配下(タスク名に対応する`*.log`、追記式)。
 
+**オンデマンド専用タスク(トリガー無し。デスクトップショートカットから起動、2026-08-17追加)**:
+
+| タスク名 | 起動方法 | 内容 |
+|---|---|---|
+| `GARON_EmergencyStop` | デスクトップの`GARON_緊急停止.lnk`をダブルクリック(`schtasks /run /tn GARON_EmergencyStop`) | `GARON_*`全13タスクを無効化(削除ではない)し、`C:\garon\scripts`配下のnode.exeプロセスを終了する。`scripts/emergency_stop.ps1`。 |
+| `GARON_ResumeAutomation` | デスクトップの`GARON_再開.lnk`をダブルクリック(`schtasks /run /tn GARON_ResumeAutomation`) | 全タスクを再有効化し、`GARON_SiteBlockMonitor`を即時起動(稼働時間帯内なら`GARON_RealtimeScreening`も即時起動)。`scripts/resume_automation.ps1`。 |
+
+## gtools実績ログのGist自動同期(2026-08-17〜)
+
+gtools.htmlの予想ログ(`kyotei_v2`)は日々iPhoneのブラウザlocalStorageに溜まるため、PC側のClaude Codeから直接読めない(手動エクスポート&貼り付けが必要だった)問題への対応。
+
+- **gtools.html側**: `saveLogs()`(ログの追加・編集・削除・配当反映が全て経由する唯一の書き込み関数)にフックを追加し、書き込みのたびに2.5秒デバウンスで非公開(`public:false`)Gistへ自動アップロードする(`scripts/gtools.html`内、`doGistSync()`)。初回は新規Gist作成、以降は同じGist IDへPATCHで上書き。トークン未設定時は何もしない(既存動作に影響なし)。設定は「ログ」タブ内のカードから、GitHubトークン(`gist`スコープのclassic PAT。**fine-grained PATはGist未対応のため使えない**)を貼り付けるだけ。
+- **PC側**: `scripts/fetch_gist_log.js`が`.env`の`GITHUB_GIST_TOKEN`/`GITHUB_GIST_ID`を使ってGistを取得し、`logs/gtools_actual_log.json`へ保存。`GARON_NightlyDiagnosis`(22:45)の直前に実行され、`reports/proposal_*.md`と`reports/dashboard.html`の両方に「実績データ(gtoolsの実際の記録)」セクション/タイルとして反映される(`scripts/lib/gtools_actual.js`が集計ロジックを共有)。**シミュレーション(閾値ベースの機械的な参入判定)と実績(実際の記録)は別集計として並べて表示**しており、どちらかに一本化するかは実績データが十分溜まってから判断する。gtools同期データには賭け金(単価)情報が含まれないため、正確なROI/純損益は計算せず、件数・的中率・的中時配当合計の比較にとどめている。
+- **トークンは用途別に2本発行**(同じトークンを使い回さない): iPhone用(書き込み、gtools.html内`localStorage`保存)とPC用(読み取り、`.env`の`GITHUB_GIST_TOKEN`)。どちらも`kyotei_gemini_key`/`NTFY_TOPIC`と同じ既存の信頼モデル(クライアント側平文 / `.gitignore`済み`.env`)を踏襲している。
+- **セットアップ未完了(2026-08-17時点)**: 上記2本のトークン発行・貼り付けはまだ行われていない。`fetch_gist_log.js`は`.env`にキーが無い間は黙ってスキップし続けるので、診断・ダッシュボード生成自体は壊れない。
+
 **モーター成績相関分析(`scripts/motor_correlation_analysis.js`)の制約(2026-08-16確認)**: 生の「モーター履歴」(`motorHistory`、レースごとの時系列)は全5,973レース中1件しか取得できておらず使用不可。代わりに艇ごとのモーター成績統計(`motorRank`/`motor2ren`/`motorContribP`、全体の約98%で値あり)を使う。SG/G1等のレース格式(`grade`/`raceCategory`)はアーカイブのスキーマに存在せず、級別の絞り込みは現状不可能(将来収集パイプライン側を拡張すれば対応可能)。
 
-**セッション開始時の提示ルール**: 新しいセッションを開始したら、`reports/`ディレクトリ内の`proposal_*.md`・`data_quality_*.md`・`skip_reason_*.md`のうち、`reports/.last_presented`(日付文字列のみを書いたマーカーファイル。無ければ「まだ何も提示していない」扱い)に記録された日付より新しいものが無いか確認すること。あれば最新のものの要点をセッション冒頭でユーザーに提示し、提示後に`reports/.last_presented`をその日付で更新すること。
+**セッション開始時の提示ルール**: 下記「理想スケジュールとフェーズ移行」の「新セッション開始時のチェック順序」に統合した。そちらを参照。
+
+## 理想スケジュールとフェーズ移行(2026-08-17〜)
+
+GARONは「無人稼働インフラの完成度」と「実際に予想を出す・当たる」が別軸で進む。インフラがどのフェーズにあっても、日々の予想作成・投稿(下記「原則」参照)は独立して継続する。
+
+### フェーズ定義
+
+| フェーズ | 内容 | 状態(2026-08-17時点) |
+|---|---|---|
+| 1: 基盤構築 | 無人運用インフラ全13タスクの登録・S4Uログオン化・深夜自動再起動・Windows Updateアクティブ時間・緊急停止/再開・ntfy疎通週次チェック | 完了 |
+| 2: ブロック待機 | kyoteibiyori.comのブロック継続中。インフラは稼働しているが新規データ収集・実質的なリアルタイム参入判定ができない | **現在ここ**(2026-08-16 22:36〜継続中。`GARON_SiteBlockMonitor`が15分間隔で監視) |
+| 3: 実機検証 | ブロック解除後、下記4ステップを順に実施 | 未着手 |
+| 4: 本格採用 | シャドーモードの実績を確認した上で、リアルタイム参入判定を正式な参戦判断として採用 | 未着手 |
+
+### フェーズ2→3移行手順(ブロック解除がトリガー)
+
+ブロックが解除されたら、前のステップが終わってから次へ、の順で進める。
+
+1. **バックフィル完了** — `daikibo_archive_*.json`のresulted:false件数が0になるまで`GARON_NightlyBackfill`(毎晩22:15、2日分ずつ)を待つ。2026-08-17時点で8/9(105レース)・8/15(3レース)分が未消化、8/10〜8/14・8/16以降はブロックのため収集自体が未実施。
+2. **閾値91再検証** — `GARON_NightlyDiagnosis`が生成する`reports/proposal_*.md`で、バックフィル完了後の完全なデータに基づくROI>=91閾値のheld-out検証を再確認する。ブロック中の空白期間(8/10〜8/14等)でデータが偏っていないか要確認。
+3. **リアルタイムスクリーニング実機テスト** — ブロック解除後、`GARON_RealtimeScreening`が実際に当日レースを取得・判定できているか(`logs/realtime_screening.log`で判定件数>0、ブロックスキップ以外のログが出ているか)を確認する。
+4. **シャドーモード期間** — 判定結果は記録するが実際の参戦判断には使わず、後から答え合わせする期間を置く。厳守ルール3(n<30は信用しない)と同じ基準で、**n>=30件**(できればn=60〜80)蓄積するまで継続する。
+
+### フェーズ3→4移行条件
+
+シャドーモードで蓄積したn>=30件の判定成績が、閾値の想定(ROI>=91水準)から大きく外れていないことを確認できたら、リアルタイム参入判定の出力を正式な参戦判断として採用する(フェーズ4)。乖離が大きい場合はフェーズ3に留まり、閾値・ロジックを見直す。
+
+### 新セッション開始時のチェック順序
+
+新しいセッションを開始したら、本題に入る前に以下の順で確認し、要点(あれば)と「現在フェーズ・次にすべきこと」を一度提示する。
+
+1. **提案レポート等** — `reports/`内の`proposal_*.md`・`data_quality_*.md`・`skip_reason_*.md`のうち、`reports/.last_presented`(日付文字列のみのマーカーファイル。無ければ「まだ何も提示していない」扱い)の日付より新しいものが無いか確認。あれば要点を提示し、`reports/.last_presented`をその日付で更新する。
+2. **ブロック状況** — `logs/.site_block_state.json`の`blocked`/`since`/`lastCheckedAt`を確認する。
+3. **ダッシュボード** — `reports/dashboard.html`の最終更新日時・累計参戦件数・的中率・ROI・純損益を確認する。
+4. **現在フェーズの判定と提示** — 上記の結果を踏まえ、上記フェーズ定義のどこにいるか(基本的にはブロック状況で2↔3を判定)を一言で示し、次にすべきことを一言添える。その後で本題に入る。
+
+### 原則: 開発作業と実際の予想発信は別物
+
+無人稼働インフラがどのフェーズにあっても(たとえフェーズ2でブロックが続き自動化が実質止まっていても)、雄大さんの**日々のiPhoneでの予想作成・X投稿は普段通り継続する**。sg_narutou.htmlを手動で使う既存フローは本自動化インフラの外側にあり、依存関係が無い。自動化はあくまで「将来的に検証を厚くする・省力化する」ための並行トラックであり、その進捗状況を理由に日々の予想発信を止めない。
 
 ## GitHubリポジトリ
 

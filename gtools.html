@@ -211,6 +211,26 @@ html,body{min-height:100vh;background:#04040c;}
     <button class="btn-secondary" style="flex:1;font-size:12px;padding:9px;" onclick="document.getElementById('import-file-input').click()">📤 JSONインポート（復元）</button>
   </div>
   <input type="file" id="import-file-input" accept=".json,application/json" style="display:none;" onchange="importJSONFile(event)">
+
+  <div class="card" style="margin-bottom:10px;">
+    <div class="card-title">🔄 Gist自動同期(Claude Code連携)</div>
+    <details>
+      <summary style="cursor:pointer;color:var(--gold2);font-size:12px;font-weight:700;">🔑 初回のみ: トークンの準備</summary>
+      <div style="font-size:11px;color:var(--text2);line-height:1.7;margin-top:8px;">
+        1. <a href="https://github.com/settings/tokens/new?scopes=gist&description=GARON%20gtools%20sync" target="_blank" style="color:var(--gold2);">このリンクを開く</a>(gistスコープに自動でチェックが入っています)<br>
+        2. 一番下までスクロールし緑の「Generate token」を押す<br>
+        3. 表示された<code>ghp_</code>から始まる文字列をコピーし、下の欄に貼り付けて保存<br>
+        ※このトークンは端末内のみに保存され、Gistの読み書き以外には使われません
+      </div>
+    </details>
+    <div class="field" style="margin-top:10px;"><label>GitHubトークン(iPhone用・書き込み専用)</label>
+      <input type="password" id="gist-sync-token" placeholder="ghp_..." style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);padding:10px;font-size:14px;box-sizing:border-box;">
+    </div>
+    <button class="btn-secondary" style="width:100%;font-size:12px;padding:9px;margin-top:8px;" onclick="saveGistSyncToken()">保存</button>
+    <div id="gist-sync-status" style="font-size:11px;margin-top:6px;min-height:14px;"></div>
+    <div id="gist-sync-id-box" style="font-size:11px;color:var(--text2);margin-top:8px;line-height:1.6;"></div>
+  </div>
+
   <div id="log-list"></div>
 </div>
 
@@ -413,7 +433,7 @@ function switchPage(p){
   const pages=['input','analysis','logs','nippo','ohayo','tekichu'];
   document.querySelectorAll('#tool-1 .nav-item')[pages.indexOf(p)].classList.add('active');
   if(p==='analysis')renderAnalysis();
-  if(p==='logs')renderLogs();
+  if(p==='logs'){renderLogs();loadGistSyncSettings();}
   if(p==='tekichu')tekichuInit();
   if(p==='nippo'){
     var today=new Date().toISOString().split('T')[0];
@@ -429,7 +449,77 @@ function switchPage(p){
 // v4 (2026-07-08〜): n=269検証で悪化のためv2の重みに巻き戻し
 const SCORE_ENGINE_VERSION=5;
 function getLogs(){try{return JSON.parse(localStorage.getItem('kyotei_v2')||'[]');}catch{return[];}}
-function saveLogs(logs){localStorage.setItem('kyotei_v2',JSON.stringify(logs));}
+function saveLogs(logs){localStorage.setItem('kyotei_v2',JSON.stringify(logs));scheduleGistSync();}
+
+// ===== Gist自動同期(Claude Code連携、2026-08-17) =====
+// saveLogs()を経由する全ての書き込み(追加・編集・削除・配当反映)で、
+// 非公開Gistへの自動アップロードをデバウンス付きでスケジュールする。
+// トークン未設定の場合は何もしない(既存動作に影響なし)。
+const GIST_SYNC_TOKEN_KEY='garon_gist_sync_token';
+const GIST_SYNC_ID_KEY='garon_gist_sync_id';
+const GIST_SYNC_FILENAME='kyotei_v2_sync.json';
+const GIST_SYNC_DEBOUNCE_MS=2500;
+let gistSyncTimer=null;
+
+function scheduleGistSync(){
+  const token=localStorage.getItem(GIST_SYNC_TOKEN_KEY);
+  if(!token) return;
+  if(gistSyncTimer) clearTimeout(gistSyncTimer);
+  gistSyncTimer=setTimeout(doGistSync,GIST_SYNC_DEBOUNCE_MS);
+}
+
+async function doGistSync(){
+  const token=localStorage.getItem(GIST_SYNC_TOKEN_KEY);
+  if(!token) return;
+  const gistId=localStorage.getItem(GIST_SYNC_ID_KEY);
+  const body={
+    description:'GARON kyotei_v2 予想ログ自動同期(非公開・gtools.htmlから自動更新)',
+    public:false,
+    files:{ [GIST_SYNC_FILENAME]: { content: JSON.stringify(getLogs(),null,2) } }
+  };
+  try{
+    const res=await fetch(gistId?('https://api.github.com/gists/'+gistId):'https://api.github.com/gists',{
+      method:gistId?'PATCH':'POST',
+      headers:{'Authorization':'token '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+      body:JSON.stringify(body)
+    });
+    if(!res.ok){ const err=await res.json().catch(()=>({})); throw new Error(err.message||('HTTP '+res.status)); }
+    const data=await res.json();
+    if(!gistId && data.id){
+      localStorage.setItem(GIST_SYNC_ID_KEY,data.id);
+      updateGistSyncStatusBox(data.id);
+    }
+  }catch(e){
+    console.warn('Gist自動同期に失敗しました(ログ自体の保存は成功しています):',e.message);
+    const s=document.getElementById('gist-sync-status');
+    if(s){ s.textContent='⚠️ 前回の同期に失敗: '+e.message; s.style.color='var(--red)'; }
+  }
+}
+
+function saveGistSyncToken(){
+  const t=document.getElementById('gist-sync-token').value.trim();
+  const s=document.getElementById('gist-sync-status');
+  if(!t){ s.textContent='⚠️ トークンを入力してください'; s.style.color='var(--red)'; return; }
+  localStorage.setItem(GIST_SYNC_TOKEN_KEY,t);
+  s.textContent='✅ 保存しました(次回のログ保存時から自動同期されます)';
+  s.style.color='var(--green)';
+}
+
+function updateGistSyncStatusBox(gistId){
+  const box=document.getElementById('gist-sync-id-box');
+  if(!box) return;
+  if(gistId){
+    box.innerHTML='✅ 同期先Gist ID: <code>'+gistId+'</code>(<a href="https://gist.github.com/'+gistId+'" target="_blank" style="color:var(--gold2);">開く</a>)<br>このIDをPC側の<code>.env</code>の<code>GITHUB_GIST_ID</code>に設定してください';
+  } else {
+    box.innerHTML='まだ未作成です(トークン保存後、次回のログ保存時に自動作成されます)';
+  }
+}
+
+function loadGistSyncSettings(){
+  const tokenEl=document.getElementById('gist-sync-token');
+  if(tokenEl) tokenEl.value=localStorage.getItem(GIST_SYNC_TOKEN_KEY)||'';
+  updateGistSyncStatusBox(localStorage.getItem(GIST_SYNC_ID_KEY)||'');
+}
 
 
 
@@ -1316,7 +1406,7 @@ function applyPayFromUrl(){
       }
     });
     if(updated>0){
-      localStorage.setItem('kyotei_v2',JSON.stringify(v2logs));
+      saveLogs(v2logs); // saveLogs()経由に統一(Gist自動同期のフックを通すため、2026-08-17)
       setTimeout(function(){
         showToast('✅ '+updated+'件の配当を反映しました');
         switchPage('logs');
