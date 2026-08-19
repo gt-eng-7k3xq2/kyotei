@@ -6,20 +6,59 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 GARONは競艇(ボートレース)の予想・検証を行うツール群。ビルドプロセス・パッケージマネージャは存在せず、独立したHTML単一ファイル(vanilla JS + インラインCSS、外部フレームワーク不使用)で構成される。各ファイルはブラウザで直接開いて使う。
 
+## GARON COMPANY構想(北極星、2026-08-18〜)
+
+将来的にGARONを「人間1人＋複数の専門AI・決定的コードによって運営されるAIネイティブな個人会社」へ発展させる構想がある。**今すぐ全組織・全Agentを実装するものではなく、今後の開発判断の指針(北極星)として保持する。**
+
+**構想の全文(26セクション、CEO/Data/Prediction/Research/Devil/Audit/System/Content/Marketingの各部門の役割・権限・意思決定フロー等)は[GARON_COMPANY_VISION.md](GARON_COMPANY_VISION.md)を参照。** 以下は要点のみ。
+
+**最重要の設計思想**:
+1. **リアルタイム経路(データ取得→GARON判定→参入/見送り→ntfy通知)には原則としてLLMを入れない。** 決定的コード・ルールベースで高速・再現性を維持する。「AIを使う必要がない場所にAIを使わない」。
+2. AIは創造的・分析的な仕事(Research・新しい仮説の発見・改善案の提案・展開コメント生成・SNS企画・開発支援等)に使う。
+3. 本番環境と研究・開発環境は分離する。Research→Proposal→Backtest→Development→Testing→Audit→Human Approval→Productionの流れを目指す。
+4. **バックテストと本番ロジックの一致を最重要事項の一つとする。** 「同じデータなら同じルール・同じ判定結果になる」再現性を重視する(2026-08-18のdaikibo_replay.html v5放置発覚は、まさにこの原則が守られていなかった実例)。
+5. AI同士が無条件に肯定し合わない構造(Devil/Opponent役)を将来的に検討するが、今は独立AIとして実装しない。
+
+**現在の優先順位**: ①予想精度・収益性の確立 ②リアルタイムスクリーニングの安定運用 ③バックテストと本番ロジックの完全一致 ④Auditの強化。
+
+**具体的な目標数値(2026-08-19、雄大さんより明示)**: ①的中率の最大化 ②回収率の最大化 ③SNS運用での露出 ④Xフォロワー数の爆増 ⑤note記事販売のコンスタント月6万円。組織を大きくすること自体が目的ではなく、これらの最終目標達成のために「各部署からの提案を自動的にどんどん出してもらい、トライアンドエラーを繰り返す」ことが構想の実務的な狙いである。ただし闇雲な拡大は避け、段階的に検証しながら広げる(既存の優先順位・n<30を信用しないルール等と矛盾しない範囲で)。
+
+**重要な誤解の訂正(2026-08-19)**: 「1日の参入数が少なすぎてSNS露出が下がる」という懸念に対し、閾値を緩めると的中率・ROIが下がる(閾値91: 6.7件/日・ROI99.1% → 閾値88: 19.1件/日・ROI89.5%)というトレードオフを提示したところ、CEOから「それは今のスコアリング・買い目構成の実力の話であって、**そのスコアリング自体を改善し、閾値を緩めても質を落とさず件数を増やせるようにするのが各部隊(特にRESEARCH)の本来の仕事**」という重要な訂正があった。今後の研究部隊の仕事は、既存スコアに後からフィルタをかける分析(gap帯・motor2ren等の絞り込み)に留まらず、**calcAreScore/buildBetsProbabilistic自体の改良(新しい特徴量の発見、重み付けの見直し等)によって「閾値を緩めても質を維持できる」状態を目指すこと**を上位目標とする。閾値と的中率/ROIのトレードオフは所与の制約ではなく、改善によって動かすべき対象。
+
+**2026-08-19、構想の第一歩として実装開始**: `.claude/agents/devil.md`(反証部隊)・`.claude/agents/audit.md`(監査部隊)を作成し、Claude Codeのサブエージェント機能として実体化した。呼び出し名(ファイル名・`name:`フィールド)は`devil`/`audit`のまま(互換性のため英語)だが、`description`や会話上での呼称は「反証部隊(Devil)」「監査部隊(Audit)」と日本語を主にしている。両エージェントとも`tools: Read, Grep, Glob, Bash`のみ(Edit/Write権限なし)に意図的に制限し、「本番ロジックを勝手に変更しない」を精神論ではなく構造的に不可能な状態として実装している。最終決定権は引き続きCEO(雄大さん)にあり、両部門は提案・指摘のみを行う。
+
+同日中に`.claude/agents/research.md`(研究部隊)・`.claude/agents/hr.md`(人事部)・`.claude/agents/sns-research.md`(SNSリサーチ部隊)も追加した。研究部隊・人事部は反証部隊/監査部隊と同じ`tools: Read, Grep, Glob, Bash`(Edit/Write権限なし)。SNSリサーチ部隊のみ`tools: Read, Grep, Glob, WebSearch, WebFetch`(外部SNS調査のため。Bash不要、Edit/Write権限なしは同様)。人事部は「新しい部隊を作るべきか」をCEOに定量的根拠付きで進言する部門で、GARON_COMPANY_VISION.mdセクション19「将来的に部署を増やせる組織OS」を体現する。Prediction/Data/System(Operations)は既存スクリプトの萌芽のまま、Content/正式なMarketingは未着手。
+
+**既知の制約**: 新規作成した`.claude/agents/*.md`は、作成した同一セッション内ではAgentツールのsubagent_typeとして認識されない(新しいセッションで初めて読み込まれる)。同一セッション中に使う場合はgeneral-purposeエージェントに役割定義を直接プロンプトへ埋め込んで代用する。
+
+**2026-08-19、初回実案件**: 反証部隊(代行)にgtools実績32.7% vs シミュレーション50.0%の乖離を検証させ、`reports/devil_findings_2026-08-19_gtools_discrepancy.md`を得た。現行v7エンジンの実戦サンプルはn=10のみで50.0%はまだ実戦未検証であること、三国のVENUE_ROI定数(107.2、全場最高)がこの38日間の実測(的中率38.6%・ROI85.7%、黒字化ライン割れ)と食い違っている疑いを発見。研究部隊(代行)には`daikibo_archive_*.json`(5,973件)を分析させ、`reports/research_findings_2026-08-19.md`を得た。最有力仮説はgap15-20限定(的中率+3.2pt・ROI+26pt・最大DD大幅縮小、ただし参入数が現行の6割減)。監査部隊(代行)がkyotei_backtest.htmlのコメントから、VENUE_ROIが2026-07-28時点(n=3,146)の一度きりの計算値で3週間以上再計算されていないことを裏付けた(`reports/audit_findings_2026-08-19.md`)。人事部(代行)は新部門新設不要と結論(`reports/hr_findings_2026-08-19.md`)。SNSリサーチ部隊(代行)は5施策を提案(`reports/sns_research_findings_2026-08-19.md`)。全5部隊の統合レポートは`reports/company_report_2026-08-19.md`。
+
+**2026-08-19、CEO承認による初の本番修正(SCORE_ENGINE_VERSION 7→8)**: `tests/recalc_venue_roi.js`(新規)でdaikibo_archive全件(n=5,044、40ファイル、2026-07-01〜08-15)を対象にVENUE_ROI/VENUE_HITRATE/OVERALL_AVG_ROI/OVERALL_AVG_HITRATEを再計算(n>=40の会場のみ採用、既存手法をそのまま踏襲)。三国は107.2→84.0(-23.2)で反証部隊・監査部隊の指摘通り大幅下方修正されたが、**それだけでなく24会場全体が想定より大きくズレていた**(戸田46.1→76.8など+30pt級の逆方向修正も複数)。CEO承認を得て24会場全てを新しい値に更新し、sg_narutou.html/kyotei_backtest.html/daikibo_replay.htmlの3ファイルに同期、回帰テストのgolden値も更新済み(スコア計算自体への影響はなし、VENUE_ROIはcalcAreScore等の対象外のため)。`scripts/lib/entry-judgment.js`はsg_narutou.htmlから実行時に定数を動的抽出するため、本番のリアルタイム判定には次回評価から自動反映される(手動同期不要)。**未解決**: `GOOD_VENUES`(◎優良会場バッジ、表示専用で参入判定には影響しない)は新しい会場別順位と食い違ったままで、CEO判断により**据え置き**(買い目に影響しないため)。
+
+**2026-08-19、費用対効果分析とCEOによる上位方針の明確化**: `tests/hypothesis_cost_benefit.js`(新規)で新VENUE_ROI反映後の仮説再検証を実施(`reports/cost_benefit_2026-08-19.md`)。gap15-20仮説は旧VENUE_ROIの歪みに引っ張られた見かけの効果で、新VENUE_ROI下では効果がほぼ消失(ROI+26pt→+2.3pt)と判明、不採用推奨。motor2ren>=35は新旧どちらでも頑健(ROI+7〜8pt)。CEOから「1日の参入数が少なすぎるとSNS露出が下がる」との懸念があり、`tests/roi_threshold_sweep_volume.js`(新規)でROI閾値を緩めた場合の参入数を試算したところ、閾値88で希望の19.1件/日に届くがROIが89.5%(黒字化ライン割れ)に転落することが判明。**CEOより重要な方針が示された: 「参入数と精度のトレードオフは今のスコアリングの実力の限界であり、所与の制約として受け入れるべきではない。閾値を緩めても質を落とさないよう、スコアリングロジック自体(calcAreScore/buildBetsProbabilistic等)を改善するのが各部隊、特に研究部隊の本来の仕事」。** この方針を`.claude/agents/research.md`の上位目標として明記済み。
+
+**2026-08-19、研究ログ(仮説トラッカー)を新設**: `reports/research_log.md`。試した仮説・データ期間・結果・採否を記録し、同じ静的なアーカイブを繰り返し掘り返すことによる多重比較問題(偶然のノイズを発見と誤認するリスク)を自己管理する仕組み。研究部隊・反証部隊は作業開始前に必読、作業後は追記が必須(両エージェント定義に明記済み)。新セッション開始時のチェック対象にも追加。
+
+**2026-08-18の現状調査で判明した論点**(詳細はセッション履歴参照、今後の判断材料として要点のみ残す):
+- スコア関数自体(`calcAreScore`等)はNode.js側(entry-judgment.js/weighted_optimization_search.js等)がsg_narutou.htmlから実行時抽出するため一致が構造的に保証されているが、それらを組み合わせる「グルーコード」(1号艇逆転昇格判定等)はentry-judgment.js/weighted_optimization_search.jsの2箇所に手書きで重複しており、将来ズレるリスクが残る(B: 急がないが改善余地あり)
+- 「本番judgmentとバックテストロジックを事後的に突き合わせる自動チェック」が存在しない(Audit強化の具体的な次の一手候補)
+- Research(`nightly_diagnosis.js`/`motor_correlation_analysis.js`)・Writer(`garon-kyotei-humanizer`スキル)は既に役割分離の萌芽があり、将来AI化する際の土台になる
+- Research/SNS/Marketing AIの追加は、①上記A項目(即対応事項)が完了し、②該当業務の負担を雄大さんが繰り返し感じ始めた時、を目安に検討する
+
 ## ファイル構成と役割
 
 - **sg_narutou.html** — 本番予想エンジン。BM抽出データを貼り付けてスコア計算・モード判定・買い目生成・X投稿文生成までを行う。Gemini API (`generativelanguage.googleapis.com`) を呼び出して展開コメントを生成する。
 - **gtools.html** — 集計・分析ツール集。取込/分析/ログ/日報/朝投稿/的中画像などの複数タブを1ファイルに束ねたSPA。sg_narutou.htmlと同じ`localStorage`キー(`kyotei_v2`)を共有し、ベット記録・的中ログを読み書きする。
 - **kyotei_backtest.html** — 夜間検証エンジン。終了レースの答え合わせ専用。本番(sg_narutou/gtools)とは完全に独立した`localStorage`キー(`kyotei_backtest_v1`)を使い、週間報告・的中率集計には一切混ざらない。プロンプトやスコア配分の検証用。
 - **daikibo_archive.html** — 大規模検証アーカイブ。艇ごとの逃げ率・モーター・展示・直線・直前STなどの生データと結果をIndexedDB(`daikibo_archive_db`)にそのまま保存する専用ツール。スコア計算・モード判定・買い目生成は一切行わない(判定ロジックが変わっても過去データをそのまま再利用できるようにするための保管庫)。
-- **daikibo_replay.html** — リプレイ検証。daikibo_archive.htmlでエクスポートしたJSONを読み込み、「今この瞬間の最新ロジック」(`calcAreScore`/`calcAreIndex`/`judgeMode`/`buildBetsProbabilistic`)を全件に通して的中率・ROIを一括再計算する。
+- **daikibo_replay.html** — リプレイ検証。daikibo_archive.htmlでエクスポートしたJSONを読み込み、「今この瞬間の最新ロジック」(`calcAreScore`/`calcAreIndex`/`judgeMode`/`buildBetsProbabilistic`)を全件に通して、参入判定(ROI>=91・gap<10)を通過したレースだけを対象に3,000円均等回収配分でのROI・純損益を一括再計算する。**2026-08-18同期**: 長期間`SCORE_ENGINE_VERSION=5`のまま放置され、旧世代の買い目生成(`buildBetsNormal`/`buildBetsAre`、無条件全件ベット・1点100円モデル)を使い続けていたことが判明(GARON COMPANY構想レビュー時に発覚。過去の分析・判断に使われた形跡は無いことを確認済み)。sg_narutou.htmlから関数ソースを機械抽出して`SCORE_ENGINE_VERSION=7`へ更新し、実アーカイブ100件で本番判定エンジン(`entry-judgment.js`)と完全一致することを確認済み。
 - **garon_gist_uploader.html** — 補助ツール。貼り付けたデータをGitHub Gistにアップロードし、Claudeとの会話にはURLだけ渡せるようにする(大きいデータをチャットに直接貼らずに済ませるため)。スコアロジックとは無関係で同期対象外。GitHubリポジトリ側では`garon gist uploader.html`(スペース区切り)という名前で置かれている。
 
 ## 重要アーキテクチャ: スコアロジックの手動複製
 
 スコア計算・判定ロジック(`calcAreScore`, `calcAreIndex`, `judgeMode`, `buildBetsProbabilistic`, `parseData` など)は共通モジュール化されておらず、必要なファイルごとにコピー&ペーストで複製されている。買い目生成は`buildBetsProbabilistic`(確率ベース)に一本化されており、`buildBetsNigeNashi`は過去ログ互換確認用に残っているだけの未使用コード。
 
-- `SCORE_ENGINE_VERSION`定数(現在5)が **sg_narutou.html / gtools.html / kyotei_backtest.html / daikibo_replay.html** の4ファイルにそれぞれ独立して定義されている。
+- `SCORE_ENGINE_VERSION`定数(2026-08-18時点で7)が **sg_narutou.html / gtools.html / kyotei_backtest.html / daikibo_replay.html** の4ファイルにそれぞれ独立して定義されている。**gtools.html内の`calcAreScore`等はどこからも呼ばれていない未使用コード**(GARON COMPANY構想レビュー時に発覚。バージョンが`5`のまま放置されていても実害は無いが、削除するかは別途判断)。
 - daikibo_archive.html / daikibo_replay.html のスクリプト冒頭には「kyotei_backtest.htmlから流用（改変なし。必ず同期させること）」という明示コメントがある。
 - ロジックを変更する場合は、影響する全ファイルに同じ変更を手動で反映し、`SCORE_ENGINE_VERSION`をインクリメントすること。1ファイルだけ直して終わりにしない。どのファイルが同期対象かは変更前に確認する。
 - `tests/score_engine.regression.test.js`(下記参照)がsg_narutou.htmlから対象関数を毎回読み込んで実行するため、ロジック変更後は必ずこれも実行して意図した差分だけになっているか確認する。
@@ -31,7 +70,7 @@ GARONは競艇(ボートレース)の予想・検証を行うツール群。ビ�
 | キー | 用途 | 使用ファイル |
 |---|---|---|
 | `kyotei_v2` | 本番のベット・結果ログ本体 | sg_narutou.html, gtools.html(共有) |
-| `kyotei_gemini_key` | Gemini APIキー(クライアント側平文保存) | sg_narutou.html, gtools.html |
+| `kyotei_gemini_key` | Gemini APIキー(クライアント側平文保存) | sg_narutou.html **のみ**(2026-08-19、監査部隊が発見: gtools.htmlの朝投稿機能`saveOhayoKey()`/`generateOhayo()`は別キー`gemini_key`を使用しており、sg_narutou.html側のキーは引き継がれない。フォールバックなし。旧記載「sg_narutou.html, gtools.html」は誤り) |
 | `sg_venue` / `sg_racenum` / `sg_raceType` | 入力フォームの直近値保持 | sg_narutou.html |
 | `kyotei_backtest_v1` | 夜間検証エンジン専用ログ(本番とは別領域) | kyotei_backtest.html |
 | `daikibo_archive_db` (IndexedDB) | 大規模アーカイブの生データ保存先 | daikibo_archive.html |
@@ -73,6 +112,8 @@ Windowsタスクスケジューラに13タスク(日次9・週次1・オンデ�
 
 **2026-08-17更新: 全タスクをS4Uログオン方式に変更**。従来のInteractiveToken(対話ログオン必須)だと、毎晩の自動再起動(`GARON_NightlyReboot`)後に誰もサインインしない限りどのタスクも動かなくなってしまうため、パスワード保存不要で「サインインの有無を問わず実行」できるS4Uに切り替えた(自動サインオン設定は不使用)。`GARON_NightlyReboot`本体と、オンデマンド専用の`GARON_EmergencyStop`/`GARON_ResumeAutomation`はRunLevel=Highest(shutdown /rやタスク無効化に管理者権限が要るため、登録時点で昇格を確定させ、実行時にUACを出さない設計)。
 
+**インシデント記録(2026-08-17 22:10)**: `GARON_EmergencyStop`が原因不明のまま作動し、全13タスクが無効化された。原因究明の過程で`Microsoft-Windows-TaskScheduler/Operational`イベントログが既定で無効になっていたことが判明し、2026-08-18に一度有効化したが、**2026-08-19の監査部隊による調査で、実際には夜間バッチ(NightlyDiagnosis/DataQualityScan/ArchiveBackup/NightlyGitCommit/UpdateDashboard等)のLastRunTimeが2026-08-16で止まったまま、NightlyBackfill/NightlyRebootは一度も実行履歴が無い(未実行)状態が2026-08-19の対応まで続いていたことが判明した。**つまり「発見・手動復旧は2026-08-18」という当初の記載は不正確で、実質的な全面復旧は2026-08-19(全13タスクの再有効化・setup_scheduled_tasks.ps1再登録・ウォッチドッグ修正)まで及んでいた。発火元(手動クリックか他要因か)は特定できないまま。次回同種の事象が起きた際は、有効化済みの`Microsoft-Windows-TaskScheduler/Operational`ログに加え、**セッション開始時のチェック順序に「13タスクの有効化状態確認」を追加済み**(下記参照)なので早期発見できる見込み。
+
 | タスク名 | 起動時刻 | 実行スクリプト | 内容 |
 |---|---|---|---|
 | `GARON_RealtimeScreening` | 毎日8:00(2026-08-16、モーニング開催の1R締切8:32等に対応するため10:00→8:00に変更) | `scripts/realtime_screening.js`(`run_realtime_screening.cmd`経由) | T-10到達レースの抽出・参入判定・ntfy通知。稼働時間帯(8時台〜21時台)を過ぎるとプロセス自身が日次サマリー通知を送って終了する(タスクスケジューラは起動と失敗時再起動〈2分間隔・最大999回〉のみ担当)。抽出/判定が連続5件失敗するとntfyで異常アラートを送る(ただしkyoteibiyori.comへのスケジュール取得自体が失敗するケースはこのアラート対象外。サイトブロック監視は`GARON_SiteBlockMonitor`が別途担当)。判定結果は`logs/race_judgments_YYYY-MM-DD.json`に構造化保存する(`GARON_DraftSkipReason`が読む)。**2026-08-17追加**: `GARON_SiteBlockMonitor`が書く`logs/.site_block_state.json`を毎ループ読み、ブロック中(かつ直近20分以内に確認済み=状態が新しい)と分かっている間はkyoteibiyori.comへの実リクエスト自体をスキップして待機する。状態が無い/壊れている/20分以上古い(監視タスク停止の疑い)場合は信用せず通常通り自分でポーリングを試みる(安全側に倒す設計)。ブロック解除検知後は次のループ(最大4分後)で自動的に通常監視を再開する。 |
@@ -103,7 +144,8 @@ gtools.htmlの予想ログ(`kyotei_v2`)は日々iPhoneのブラウザlocalStorag
 - **gtools.html側**: `saveLogs()`(ログの追加・編集・削除・配当反映が全て経由する唯一の書き込み関数)にフックを追加し、書き込みのたびに2.5秒デバウンスで非公開(`public:false`)Gistへ自動アップロードする(`scripts/gtools.html`内、`doGistSync()`)。初回は新規Gist作成、以降は同じGist IDへPATCHで上書き。トークン未設定時は何もしない(既存動作に影響なし)。設定は「ログ」タブ内のカードから、GitHubトークン(`gist`スコープのclassic PAT。**fine-grained PATはGist未対応のため使えない**)を貼り付けるだけ。
 - **PC側**: `scripts/fetch_gist_log.js`が`.env`の`GITHUB_GIST_TOKEN`/`GITHUB_GIST_ID`を使ってGistを取得し、`logs/gtools_actual_log.json`へ保存。`GARON_NightlyDiagnosis`(22:45)の直前に実行され、`reports/proposal_*.md`と`reports/dashboard.html`の両方に「実績データ(gtoolsの実際の記録)」セクション/タイルとして反映される(`scripts/lib/gtools_actual.js`が集計ロジックを共有)。**シミュレーション(閾値ベースの機械的な参入判定)と実績(実際の記録)は別集計として並べて表示**しており、どちらかに一本化するかは実績データが十分溜まってから判断する。gtools同期データには賭け金(単価)情報が含まれないため、正確なROI/純損益は計算せず、件数・的中率・的中時配当合計の比較にとどめている。
 - **トークンは用途別に2本発行**(同じトークンを使い回さない): iPhone用(書き込み、gtools.html内`localStorage`保存)とPC用(読み取り、`.env`の`GITHUB_GIST_TOKEN`)。どちらも`kyotei_gemini_key`/`NTFY_TOPIC`と同じ既存の信頼モデル(クライアント側平文 / `.gitignore`済み`.env`)を踏襲している。
-- **セットアップ未完了(2026-08-17時点)**: 上記2本のトークン発行・貼り付けはまだ行われていない。`fetch_gist_log.js`は`.env`にキーが無い間は黙ってスキップし続けるので、診断・ダッシュボード生成自体は壊れない。
+- **有効化済み(2026-08-18)**: トークン発行・`.env`設定完了、`fetch_gist_log.js`の疎通確認済み(初回759件取得)。**既知の注意点**: GitHub Gist APIは1MB超のファイルを`content`フィールドで切り詰める(`truncated:true`)。ログが増えて1MBを超えたことで一度発生し、`file.truncated`を見て`raw_url`から完全な内容を取得するフォールバックを追加して解消した。今後さらにログが増えても同じ経路で対応できる。
+- **初回取得(2026-08-18)で判明した論点**: gtools実績759件の的中率(32.7%)が、シミュレーション(daikibo_archiveベース、閾値91)の的中率(50.0%)と明確に乖離。ただし単純比較はできない(実績は閾値74→82→90→91と変遷した全期間の実際の判断を含み、シミュレーションは「今の閾値91を通過したレースだけ」の集計のため、母集団が異なる)。原因調査は別途実施。
 
 **モーター成績相関分析(`scripts/motor_correlation_analysis.js`)の制約(2026-08-16確認)**: 生の「モーター履歴」(`motorHistory`、レースごとの時系列)は全5,973レース中1件しか取得できておらず使用不可。代わりに艇ごとのモーター成績統計(`motorRank`/`motor2ren`/`motorContribP`、全体の約98%で値あり)を使う。SG/G1等のレース格式(`grade`/`raceCategory`)はアーカイブのスキーマに存在せず、級別の絞り込みは現状不可能(将来収集パイプライン側を拡張すれば対応可能)。
 
@@ -139,7 +181,8 @@ GARONは「無人稼働インフラの完成度」と「実際に予想を出す
 
 新しいセッションを開始したら、本題に入る前に以下の順で確認し、要点(あれば)と「現在フェーズ・次にすべきこと」を一度提示する。
 
-1. **提案レポート等** — `reports/`内の`proposal_*.md`・`data_quality_*.md`・`skip_reason_*.md`のうち、`reports/.last_presented`(日付文字列のみのマーカーファイル。無ければ「まだ何も提示していない」扱い)の日付より新しいものが無いか確認。あれば要点を提示し、`reports/.last_presented`をその日付で更新する。
+1. **提案レポート等** — `reports/`内の`proposal_*.md`・`data_quality_*.md`・`skip_reason_*.md`・`research_findings_*.md`・`devil_findings_*.md`・`hr_findings_*.md`・`sns_research_findings_*.md`・`audit_findings_*.md`・`company_report_*.md`(5部隊の統合レポート、2026-08-19〜)・`cost_benefit_*.md`のうち、また`reports/research_log.md`(仮説トラッカー、2026-08-19〜)に新規追記が無いかも確認する。`reports/.last_presented`(日付文字列のみのマーカーファイル。無ければ「まだ何も提示していない」扱い)の日付より新しいものが無いか確認。あれば要点を提示し、`reports/.last_presented`をその日付で更新する。(2026-08-19、人事部が発見: 5部隊の成果物ファイル名パターンが元々このチェック対象から漏れていた)
+2. **13タスクの有効化状態** — `Get-ScheduledTask -TaskName "GARON_*"`で全13タスクが`Ready`になっているか確認する(2026-08-19、人事部が発見: 8/17のEmergencyStop以降、この確認がセッション開始チェックに含まれておらず約8時間の無効化に気づけなかった実例あり)。
 2. **ブロック状況** — `logs/.site_block_state.json`の`blocked`/`since`/`lastCheckedAt`を確認する。
 3. **ダッシュボード** — `reports/dashboard.html`の最終更新日時・累計参戦件数・的中率・ROI・純損益を確認する。
 4. **現在フェーズの判定と提示** — 上記の結果を踏まえ、上記フェーズ定義のどこにいるか(基本的にはブロック状況で2↔3を判定)を一言で示し、次にすべきことを一言添える。その後で本題に入る。
@@ -147,6 +190,14 @@ GARONは「無人稼働インフラの完成度」と「実際に予想を出す
 ### 原則: 開発作業と実際の予想発信は別物
 
 無人稼働インフラがどのフェーズにあっても(たとえフェーズ2でブロックが続き自動化が実質止まっていても)、雄大さんの**日々のiPhoneでの予想作成・X投稿は普段通り継続する**。sg_narutou.htmlを手動で使う既存フローは本自動化インフラの外側にあり、依存関係が無い。自動化はあくまで「将来的に検証を厚くする・省力化する」ための並行トラックであり、その進捗状況を理由に日々の予想発信を止めない。
+
+### CEOの運用体制・報告カデンス(2026-08-19〜)
+
+- **CEO(雄大さん)は日中は本業があり、PC・Claude Codeに常時張り付いているわけではない。** 判断を仰ぐ内容は、リアルタイムで都度ではなく、まとまった形(提案書・報告書・日報)で届ける方が実態に合っている。
+- **PCの運用場所(現状は暫定)**: 通常はPCを自宅に置いて電源を常時つけっぱなしにする運用が基本。ただし2026-08-16からのkyoteibiyori.comブロック(フェーズ2)が続いている間は、PCを会社に持参し、個人用iPhoneのテザリングで稼働させる暫定運用を取っている(会社用iPhoneでのテザリング実測は2026-08-19に別途実施済み、詳細は本セクション上部の運用インフラ記述参照)。ブロックが解除され次第、自宅常時稼働に戻る想定。
+- **将来構想(リモート運用)**: 雄大さんが外出先からiPhoneでClaude Code本体を操作し、システムの稼働状況はntfy通知で把握する運用を目指す。あわせて、**毎朝・毎晩にClaudeから提案書・報告書・日報を提出し、CEOがそれを見て判断する**という運用フローを希望している。
+- **現状とのギャップ**: 夜間(22時台)は`GARON_NightlyDiagnosis`(提案書)・`GARON_DraftSkipReason`(見送り理由下書き)・`GARON_UpdateDashboard`(ダッシュボード更新)が既に自動生成しているが、いずれも「条件を満たした時だけ」生成する設計であり、また**朝の報告に相当するものは現状存在しない**。「毎朝・毎晩」を厳密に満たすには、①朝の定時報告タスクの新設、②夜間レポート群を「条件付き生成」から「毎日必ず提出」に変える設計変更、のどちらか(または両方)が必要になる。これは今後の実装候補であり、着手前に雄大さんの確認を取ること(厳守ルール1)。
+- **エンジン修正の頻度ルール(2026-08-19明言)**: スコアロジック・閾値等の本番エンジンへの修正提案は、**1日1回にまとめる**。日中に複数の改善案(例: 2026-08-19の研究部隊のgap帯仮説・反証部隊のVENUE_ROI較正ズレ指摘)が出ても、その都度バラバラに本番へ反映しない。まとめてレポート化し、CEOがそれを見て1日1回の判断で採否を決める運用とする。
 
 ## GitHubリポジトリ
 
