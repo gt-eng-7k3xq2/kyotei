@@ -53,7 +53,7 @@
 
 <script>
 const GIST_ID = 'c95fa9b66b4fb95d42d766a3e140cb0a';
-const REFRESH_MS = 60000; // GitHub APIの未認証レート制限(60回/時)に収まるよう60秒間隔
+const REFRESH_MS = 120000; // GitHub APIの未認証レート制限(60回/時)に対し、手動更新ボタンの余地も残すため2分間隔(自動だけで30回/時)
 const STALE_MINUTES = 12; // 稼働時間帯中にこれ以上更新が無ければ「止まっている疑い」表示
 
 function fmtTime(iso) {
@@ -77,6 +77,7 @@ function isActiveHourJST() {
 
 async function fetchGistFile(filename) {
   const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, { cache: 'no-store' });
+  if (res.status === 403) throw new Error('GitHubの一時的なアクセス制限(1時間あたりの上限)に達しました。しばらく(最大1時間)待ってから更新ボタンを押してください。');
   if (!res.ok) throw new Error(`Gist取得失敗: HTTP ${res.status}`);
   const data = await res.json();
   const file = data.files && data.files[filename];
