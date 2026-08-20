@@ -56,8 +56,12 @@
 </div>
 
 <script>
+const GIST_OWNER = 'gt-eng-7k3xq2';
 const GIST_ID = 'c95fa9b66b4fb95d42d766a3e140cb0a';
-const REFRESH_MS = 120000; // GitHub APIの未認証レート制限(60回/時)に対し、手動更新ボタンの余地も残すため2分間隔(自動だけで30回/時)
+// api.github.com/gists/{id}(未認証60回/時)は、PCとiPhoneがテザリングで同一IPを共有している
+// ため実質的にすぐ枯渇することが判明(2026-08-20)。gist.githubusercontent.comのraw配信URL
+// (CDN経由の静的コンテンツ取得。api.github.comのレート制限対象外)に切り替えた。
+const REFRESH_MS = 60000; // raw配信はレート制限が実質無いため60秒間隔に戻せる(CDN側で数分キャッシュされる場合あり)
 const STALE_MINUTES = 12; // 稼働時間帯中にこれ以上更新が無ければ「止まっている疑い」表示
 
 function fmtTime(iso) {
@@ -80,17 +84,12 @@ function isActiveHourJST() {
 }
 
 async function fetchGistFile(filename) {
-  const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, { cache: 'no-store' });
-  if (res.status === 403) throw new Error('GitHubの一時的なアクセス制限(1時間あたりの上限)に達しました。しばらく(最大1時間)待ってから更新ボタンを押してください。');
+  // キャッシュバスター(?t=)を付けて、CDN/ブラウザ双方の古いキャッシュをできるだけ避ける。
+  const url = `https://gist.githubusercontent.com/${GIST_OWNER}/${GIST_ID}/raw/${filename}?t=${Date.now()}`;
+  const res = await fetch(url, { cache: 'no-store' });
+  if (res.status === 403 || res.status === 429) throw new Error('GitHubの一時的なアクセス制限に達しました。しばらく待ってから更新ボタンを押してください。');
   if (!res.ok) throw new Error(`Gist取得失敗: HTTP ${res.status}`);
-  const data = await res.json();
-  const file = data.files && data.files[filename];
-  if (!file) throw new Error(`ファイルが見つかりません: ${filename}`);
-  let text = file.content;
-  if (file.truncated) {
-    const rawRes = await fetch(file.raw_url, { cache: 'no-store' });
-    text = await rawRes.text();
-  }
+  const text = await res.text();
   return JSON.parse(text);
 }
 
