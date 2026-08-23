@@ -20,7 +20,7 @@ const { extractFunctionSource, extractConstSource, extractScoreEngineVersion } =
 const ROOT = path.join(__dirname, '..');
 const HTML_PATH = path.join(ROOT, 'sg_narutou.html');
 const ARCHIVE_DATE_MIN = '2026-07-01';
-const ARCHIVE_DATE_MAX = '2026-08-03';
+const ARCHIVE_DATE_MAX = '2026-08-21';
 const FULL_ODDS_COMBOS = 120;
 const N_BUCKETS = 5; // 合成オッズを5分位(quintile)で分ける
 

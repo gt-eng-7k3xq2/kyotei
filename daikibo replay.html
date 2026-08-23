@@ -94,7 +94,7 @@ p.note{font-size:11px;color:var(--text2);margin:0 0 8px;}
 // ============================================================
 </script>
 <script>
-const SCORE_ENGINE_VERSION=8; // 2026-08-19: VENUE_ROI/VENUE_HITRATE/OVERALL_AVG_ROI/OVERALL_AVG_HITRATE再計算
+const SCORE_ENGINE_VERSION=9; // 2026-08-23: goseiOdds<1.4帯の補正を赤字実績に基づき是正(goseiOddsDelta)
 let selectedRaceType='ippan';
 // 参入判定の閾値(sg_narutou.html/kyotei_backtest.htmlの現行値91・10と必ず同期させること。
 // このHTMLファイルはNode.jsのように実行時抽出ができないため、手動同期の値としてここに置く)
@@ -517,9 +517,11 @@ function stdevHitDelta(stdev){
   return 10.8;
 }
 
+// 2026-08-23修正: goseiOdds<1.4帯は参入ゲート通過後の実績EV86.2%(赤字、n=130/271)が
+// 確認されたためsg_narutou.htmlと同期して是正(SCORE_ENGINE_VERSION 8→9、詳細はsg_narutou.html参照)。
 function goseiOddsDelta(goseiOdds){
   if(!(goseiOdds>0)) return 0;
-  if(goseiOdds<1.4) return 13.9;
+  if(goseiOdds<1.4) return -50.0;
   if(goseiOdds<1.7) return 5.5;
   if(goseiOdds<2.1) return -5.0;
   if(goseiOdds<2.8) return -2.1;
