@@ -119,7 +119,7 @@ function parseMotorHistory(text){
 
 function parseData(text){
   const d={boats:[]};
-  for(let i=1;i<=6;i++) d.boats.push({no:i,name:'',regno:'',nigerate6m:0,nigerate1y:0,atchiNige:0,atchiNigeCount:0,sgNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sg1chakuRate:0,sg1chakuCount:0,ippan2ren:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,avgTenji:0,syukai:0,syukaiFoot:0,avgSyukaiFoot:0,chokusen:0,directST:0,isExhibitF:false,isF:false,motorRank:0,motorContribP:0,motorTenjiRank:0,motorRaces:0,motorYushutsu:0,motorYusho:0,motorChukanSeibi:false,deashiEval:'',nobiEval:'',partsExchange:'',stgapRank:'',stgapSec:null});
+  for(let i=1;i<=6;i++) d.boats.push({no:i,name:'',regno:'',nigerate6m:0,nigerate1y:0,atchiNige:0,atchiNigeCount:0,sgNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sashi1y:0,makuri1y:0,makurisashi1y:0,sg1chakuRate:0,sg1chakuCount:0,ippan2ren:0,konki2ren:0,konki3ren:0,konkiAvgST:0,wakuAvgST:0,fCount:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,avgTenji:0,syukai:0,syukaiFoot:0,avgSyukaiFoot:0,chokusen:0,directST:0,isExhibitF:false,isF:false,motorRank:0,motorContribP:0,motorTenjiRank:0,motorRaces:0,motorYushutsu:0,motorYusho:0,motorChukanSeibi:false,deashiEval:'',nobiEval:'',partsExchange:'',stgapRank:'',stgapSec:null,stgapRankByCourse:[],stgapSecByCourse:[],kimariteNige6m:null,kimariteNigashi6m:null,kimariteNigashi1y:null,wakuStats:null});
 
   // 逃げ率パース（優先順位: SG/G1 → 当地 → 直近6ヶ月）
   // 直近6ヶ月
@@ -171,10 +171,51 @@ function parseData(text){
     }
   })();
 
-  // 決まり手（直近6ヶ月）- 2ステップパーサー（kyotei_are.html準拠）
+  // 2026-08-25追加: 枠別勝率(個人×コース別、複数期間)の1着率/2連対率/3連対率をフルパース
+  // BM抽出の生テキストと完全一致させる方針(雄大さん指示)。既存のnigerate6m(=1着率・直近6ヶ月)は
+  // 変更せず、それ以外の期間・指標をwakuStatsへ追加する。
   (function(){
-    var lines2=text.split('\n');
-    var inK6M=false,nextIs6M=false,kType='';
+    function parsePeriodTable(blockText){
+      var periods=['今期','直近 6ヶ月','直近 3ヶ月','直近 1ヶ月','当地','一般戦','SG/G1'];
+      var out={};
+      for(var pi=0;pi<periods.length;pi++){
+        var p=periods[pi];
+        var esc=p.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+        var lineM=blockText.match(new RegExp('(?:^|\\n)'+esc+'\\t([^\\n]+)'));
+        if(!lineM) continue;
+        var cells=lineM[1].split('\t');
+        var vals=[];
+        for(var i=0;i<6;i++){
+          var cell=(cells[i]||'').trim();
+          var cm=cell.match(/([\d.]+)%\s*\((\d+)\)/);
+          vals.push(cm?{rate:parseFloat(cm[1]),n:parseInt(cm[2])}:null);
+        }
+        out[p]=vals;
+      }
+      return out;
+    }
+    var wakuSection=text.match(/=== 枠別勝率 ===([\s\S]*?)(?:\n着順別直近成績|\n=== )/);
+    if(wakuSection){
+      var wb=wakuSection[1];
+      var ichiM=wb.match(/1着率\n([\s\S]*?)(?=\n2連対率)/);
+      var nirenM=wb.match(/2連対率\n([\s\S]*?)(?=\n3連対率)/);
+      var sanrenM=wb.match(/3連対率\n([\s\S]*)$/);
+      var ichi=ichiM?parsePeriodTable(ichiM[1]):{};
+      var niren=nirenM?parsePeriodTable(nirenM[1]):{};
+      var sanren=sanrenM?parsePeriodTable(sanrenM[1]):{};
+      for(var bi=0;bi<6;bi++){
+        var ws={ichiChaku:{},niren2:{},sanren2:{}};
+        Object.keys(ichi).forEach(function(p){ws.ichiChaku[p]=ichi[p][bi];});
+        Object.keys(niren).forEach(function(p){ws.niren2[p]=niren[p][bi];});
+        Object.keys(sanren).forEach(function(p){ws.sanren2[p]=sanren[p][bi];});
+        d.boats[bi].wakuStats=ws;
+      }
+    }
+  })();
+
+  // 決まり手（直近6ヶ月・直近1年）- 2ステップパーサー（kyotei_are.html準拠）
+  // 2026-08-25拡張: 逃げ/逃し(コース1のみの値)と直近1年も追加パース(雄大さん指示、BM完全一致)
+  (function(){
     function kv6(line){
       var cols=line.split('\t'),out=[];
       for(var ci=0;ci<cols.length&&out.length<6;ci++){
@@ -185,28 +226,57 @@ function parseData(text){
       while(out.length<6)out.push(null);
       return out;
     }
-    for(var li=0;li<lines2.length;li++){
-      var ln=lines2[li].trim();
-      var lb=(ln.split('\t')[0]||'').trim().replace(/\s+/g,'');
-      if(lb==='決まり手'){inK6M=false;nextIs6M=true;kType='';continue;}
-      if(nextIs6M&&(ln.includes('直近6ヶ月')||ln.includes('直近 6ヶ月'))){inK6M=true;nextIs6M=false;continue;}
-      if(!inK6M)continue;
-      if(ln.includes('直近1年')||ln.includes('直近 1年')||ln.includes('直近3ヶ月')){inK6M=false;kType='';continue;}
-      var fullLb=ln.split('\t').join('');
-      if(fullLb.includes('差し')&&!fullLb.includes('捲り')){kType='sashi';continue;}
-      if(fullLb.includes('捲り')&&!fullLb.includes('差し')){kType='makuri';continue;}
-      if(fullLb.includes('捲り')&&fullLb.includes('差し')){kType='makuriSashi';continue;}
-      if(kType){
-        var kvals=kv6(ln);
-        for(var j=0;j<6;j++){
-          if(kvals[j]===null)continue;
-          if(kType==='sashi')d.boats[j].sashi6m=kvals[j];
-          else if(kType==='makuri')d.boats[j].makuri6m=kvals[j];
-          else if(kType==='makuriSashi')d.boats[j].makurisashi6m=kvals[j];
+    function parseKimariteBlock(periodMarkers, otherMarkers){
+      var lines2=text.split('\n');
+      var inBlock=false,nextIsBlock=false,kType='';
+      var result={nige:null,nigashi:null,sashi:[null,null,null,null,null,null],makuri:[null,null,null,null,null,null],makuriSashi:[null,null,null,null,null,null]};
+      for(var li=0;li<lines2.length;li++){
+        var ln=lines2[li].trim();
+        if(ln.startsWith('===')){inBlock=false;nextIsBlock=false;kType='';continue;}
+        var lb=(ln.split('\t')[0]||'').trim().replace(/\s+/g,'');
+        if(lb==='決まり手'){inBlock=false;nextIsBlock=true;kType='';continue;}
+        if(nextIsBlock){
+          if(periodMarkers.some(function(pm){return ln.includes(pm);})){inBlock=true;nextIsBlock=false;}
+          continue;
         }
-        kType='';
+        if(!inBlock)continue;
+        if(otherMarkers.some(function(om){return ln.includes(om);})){inBlock=false;kType='';continue;}
+        var fullLb=ln.split('\t').join('');
+        if(fullLb.includes('逃げ')&&fullLb.includes('逃し')){kType='nige';continue;}
+        if(fullLb.includes('差し')&&!fullLb.includes('捲り')){kType='sashi';continue;}
+        if(fullLb.includes('捲り')&&!fullLb.includes('差し')){kType='makuri';continue;}
+        if(fullLb.includes('捲り')&&fullLb.includes('差し')){kType='makuriSashi';continue;}
+        if(kType){
+          var kvals=kv6(ln);
+          if(kType==='nige'){
+            result.nige=kvals[0];
+            result.nigashi=kvals[1];
+          } else if(kType==='sashi'){
+            for(var j=0;j<6;j++) if(kvals[j]!==null) result.sashi[j]=kvals[j];
+          } else if(kType==='makuri'){
+            for(var j2=0;j2<6;j2++) if(kvals[j2]!==null) result.makuri[j2]=kvals[j2];
+          } else if(kType==='makuriSashi'){
+            for(var j3=0;j3<6;j3++) if(kvals[j3]!==null) result.makuriSashi[j3]=kvals[j3];
+          }
+          kType='';
+        }
       }
+      return result;
     }
+    var k6=parseKimariteBlock(['直近6ヶ月','直近 6ヶ月'],['直近1年','直近 1年','直近3ヶ月','直近 3ヶ月']);
+    var k1y=parseKimariteBlock(['直近1年','直近 1年'],['直近6ヶ月','直近 6ヶ月','直近3ヶ月','直近 3ヶ月']);
+    for(var i=0;i<6;i++){
+      if(k6.sashi[i]!==null) d.boats[i].sashi6m=k6.sashi[i];
+      if(k6.makuri[i]!==null) d.boats[i].makuri6m=k6.makuri[i];
+      if(k6.makuriSashi[i]!==null) d.boats[i].makurisashi6m=k6.makuriSashi[i];
+      if(k1y.sashi[i]!==null) d.boats[i].sashi1y=k1y.sashi[i];
+      if(k1y.makuri[i]!==null) d.boats[i].makuri1y=k1y.makuri[i];
+      if(k1y.makuriSashi[i]!==null) d.boats[i].makurisashi1y=k1y.makuriSashi[i];
+    }
+    if(k6.nige!==null) d.boats[0].kimariteNige6m=k6.nige;
+    if(k6.nigashi!==null) d.boats[0].kimariteNigashi6m=k6.nigashi;
+    if(k1y.nige!==null) d.boats[0].nigerate1y=k1y.nige; // 既存の未使用フィールドをここで初めて実装
+    if(k1y.nigashi!==null) d.boats[0].kimariteNigashi1y=k1y.nigashi;
   })();
 
   // レース情報（BMデータ冒頭から取得）
@@ -268,6 +338,40 @@ function parseData(text){
   const ippanRenSection=text.match(/一般戦\s+([\d.]+)%[\t ]+([\d.]+)%[\t ]+([\d.]+)%[\t ]+([\d.]+)%[\t ]+([\d.]+)%[\t ]+([\d.]+)%/);
   if(ippanRenSection){
     for(let i=0;i<6;i++) d.boats[i].ippan2ren=parseFloat(ippanRenSection[i+1])||0;
+  }
+
+  // 2026-08-25追加: konkiAvgST/wakuAvgST(garon_q_engine.htmlのcalcAvgSTが使うSTの2項目)を
+  // このアーカイブ収集にも追加。garon_q_engine.htmlのparseData()から正規表現をそのまま移植。
+
+  // 今期2連対率（枠別勝率セクション内・コメント画像ツールの表示用）
+  const konkiRenSection=text.match(/2連対率\s*\n今期[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)/);
+  if(konkiRenSection){
+    for(let i=0;i<6;i++) d.boats[i].konki2ren=parseFloat(konkiRenSection[i+1])||0;
+  }
+
+  // 今期3連対率（枠別勝率セクション内・コメント画像ツールの表示用）
+  const konki3RenSection=text.match(/3連対率\s*\n今期[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)/);
+  if(konki3RenSection){
+    for(let i=0;i<6;i++) d.boats[i].konki3ren=parseFloat(konki3RenSection[i+1])||0;
+  }
+
+  // 今期平均ST（基本情報セクション内・選手個人の平均ST。枠別勝率セクションのコース別平均STとは別物なので、
+  // 必ず「基本情報」セクション以降を対象に検索する）
+  const konkiAvgSTSection=text.match(/基本情報[\s\S]*?平均ST\s*\n今期[\t ]+([\d.]+|-)[\t ]+([\d.]+|-)[\t ]+([\d.]+|-)[\t ]+([\d.]+|-)[\t ]+([\d.]+|-)[\t ]+([\d.]+|-)/);
+  if(konkiAvgSTSection){
+    for(let i=0;i<6;i++) d.boats[i].konkiAvgST=parseFloat(konkiAvgSTSection[i+1])||0;
+  }
+
+  // 今期・枠別平均ST（枠別勝率セクション内・コース別の平均ST。コメント画像ツールの「平均ST」表示で使用）
+  const wakuAvgSTSection=text.match(/枠別勝率[\s\S]*?平均ST\s*\n今期[\t ]+([\d.]+|-)[\t ]+([\d.]+|-)[\t ]+([\d.]+|-)[\t ]+([\d.]+|-)[\t ]+([\d.]+|-)[\t ]+([\d.]+|-)/);
+  if(wakuAvgSTSection){
+    for(let i=0;i<6;i++) d.boats[i].wakuAvgST=parseFloat(wakuAvgSTSection[i+1])||0;
+  }
+
+  // 今期フライング数（コメント画像ツールのF持ちバッジ表示用）
+  const fCountSection=text.match(/フライング\s*\n今期[\t ]+(\d+)[\t ]+(\d+)[\t ]+(\d+)[\t ]+(\d+)[\t ]+(\d+)[\t ]+(\d+)/);
+  if(fCountSection){
+    for(let i=0;i<6;i++) d.boats[i].fCount=parseInt(fCountSection[i+1],10)||0;
   }
 
   // 直近6ヶ月勝率
@@ -449,6 +553,17 @@ function parseData(text){
         const gv=parseFloat(gapLineM[courseNo]);
         if(!isNaN(gv)) d.boats[i].stgapSec=gv;
       }
+      // 2026-08-25追加: 対角成分(自艇コース)だけでなく1〜6コース全マスを配列化(雄大さん指示、BM完全一致)
+      const rankByCourse=[], secByCourse=[];
+      for(let c=1;c<=6;c++){
+        const rM=rankBlock.match(new RegExp(c+"コース\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)"));
+        const gM=gapBlock.match(new RegExp(c+"コース\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)\\t([^\\t\\n]+)"));
+        rankByCourse.push(rM?rM[i+1].trim():'');
+        const gv2=gM?parseFloat(gM[i+1]):NaN;
+        secByCourse.push(isNaN(gv2)?null:gv2);
+      }
+      d.boats[i].stgapRankByCourse=rankByCourse;
+      d.boats[i].stgapSecByCourse=secByCourse;
     }
   }
 
