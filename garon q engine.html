@@ -846,6 +846,18 @@ function generateQBets(boats, oddsMap){
     return b.weight-a.weight;
   });
 
+  // 2026-08-26追加(CEO指摘、児島8R): 5・6号艇はコース位置的に1着(頭)を取ること自体が難しいため、
+  // 2番手候補との点差が一定以上(暫定8点、要検証。今後の実戦検証で調整する)無い限り、
+  // 1着軸(最有力候補)には採用しない。2-3着候補としては通常通り扱う(hedgePool経由でそのまま
+  // 対象になる)ため、ここでは単に先頭から末尾へ回すだけでよい。
+  const OUTER_AXIS_MARGIN=8;
+  if(candidates.length>=2 && candidates[0].boat>=5){
+    const margin=candidates[0].weight-candidates[1].weight;
+    if(margin<OUTER_AXIS_MARGIN){
+      candidates.push(candidates.shift());
+    }
+  }
+
   const finalAxes=[];
   if(candidates.length){
     finalAxes.push({boat:candidates[0].boat, weight:candidates[0].weight, narrow:false, reason:candidates[0].reason});
@@ -855,7 +867,9 @@ function generateQBets(boats, oddsMap){
   // (CEO指摘: 攻めが起点のレースで①のような無関係な本線を混ぜる意味がない。多摩川10Rの実例、
   // Q本人の実際の買い目が④⑤の2軸のみだったことに合わせる)。
   const top=candidates[0];
-  const topIsAttackerWithBenefit=top && top.isAttacker && identifyBenefitBoat(top.boat);
+  // 2026-08-26追加: 攻め手が2号艇の場合はnarrow軸(恩恵艇が勝つ方)自体を生成しないため、
+  // ここでも「恩恵艇あり」とは扱わない(そうしないと2番目の独立軸も追加されず軸が1つだけになる)。
+  const topIsAttackerWithBenefit=top && top.isAttacker && top.boat!==2 && identifyBenefitBoat(top.boat);
   if(!topIsAttackerWithBenefit && candidates.length>=2){
     finalAxes.push({boat:candidates[1].boat, weight:candidates[1].weight, narrow:false, reason:candidates[1].reason});
   }
@@ -866,9 +880,15 @@ function generateQBets(boats, oddsMap){
   }
   // 3艇目(または攻め手×恩恵艇構成の2艇目): 軸のうちいずれかがST攻め手候補なら、
   // その恩恵艇(スジ)を追加する
+  // 2026-08-26追加(CEO指摘、児島8R): 攻め手が2号艇の場合、恩恵艇(3号艇)が1着で攻め手2号艇が
+  // 2着に回る「narrow軸(3-2-X)」は理論的に成立しない(2号艇の決まり手は8割差しで、1号艇STが
+  // 崩れない限り捲り展開になりにくい。仮に捲っても3号艇は艇を外へ向けるため2号艇を2着に
+  // 従えることはない)。attacker=2の時だけnarrow軸の生成を止める(3号艇自身が独立した攻め手
+  // 候補として検出された場合は別経路〈3号艇自身のST攻め手候補軸〉なのでこの制限を受けない)。
   for(const a of finalAxes.slice()){
     const isAttacker=attackCands.some(c=>c.boat===a.boat);
     if(!isAttacker) continue;
+    if(a.boat===2) continue; // 2号艇攻めのnarrow軸(恩恵艇が勝つ方)は生成しない
     const benefit=identifyBenefitBoat(a.boat);
     if(benefit && !finalAxes.some(x=>x.boat===benefit.boat)){
       const bs=support.find(x=>x.no===benefit.boat);
