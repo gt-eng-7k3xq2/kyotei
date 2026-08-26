@@ -817,11 +817,16 @@ function generateQBets(boats, oddsMap){
   // 軸はrawScore上位2艇まで、3艇目はそのうちST攻め手候補がいて対応する恩恵艇(スジ)が
   // 特定できた場合のみ追加する(最大3艇、CEO指示)。
   // ST攻め手候補は、展示ランクC(最低評価)の場合rawScoreから-3点の信頼度ペナルティを課す。
+  // 2026-08-26追加(CEO指摘、福岡8R): stgapRank(展示ST/本番STのズレの精度)だけでなく、
+  // 5系統評価の「展示」そのものの順位(5-6位=下位)も別途ペナルティ対象にする。STが速くても
+  // 展示(機力・伸び)が下位なら、スリット後の伸びが弱く攻めが完遂しない可能性が高いため。
   const candidates=[];
   support.forEach(s=>{
     const cand=attackCands.find(c=>c.boat===s.no);
     if(cand){
-      const reliabilityPenalty=(cand.stgapRank==='C')?3:0;
+      const stgapPenalty=(cand.stgapRank==='C')?3:0;
+      const exhibitPenalty=(s.detail.exhibit.rank!=null && s.detail.exhibit.rank>=5)?3:0;
+      const reliabilityPenalty=stgapPenalty+exhibitPenalty;
       const effScore=s.rawScore-reliabilityPenalty;
       if(effScore>=NEUTRAL_SCORE-3){
         candidates.push({boat:s.no, weight:effScore, reason:'ST攻め手候補', isAttacker:true});
