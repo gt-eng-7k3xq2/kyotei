@@ -2728,6 +2728,17 @@ async function runYosoQ(){
     // 2026-08-25修正: sg_narutou.html由来のparseData()はd.oddsMapを内部生成しない設計だった
     // (daikibo_archive.html側とは違う作り)。ここで別途extractOddsMap()を呼んで補う。
     d.oddsMap=extractOddsMap(data);
+
+    // 2026-08-26追加: X投稿サマリー(buildXSummary)は場所を#inp-venueセレクトの値から、
+    // レース番号をcurrentCalcData.racenumから読む設計のため、貼り付けたデータの内容と
+    // セレクトの選択値がズレていると投稿文の場・レース番号が実際と食い違う。
+    // 貼り付け内容(d.venue/d.raceNum)でセレクトを上書き同期する。
+    const venueSel=document.getElementById('inp-venue');
+    if(venueSel && d.venue) venueSel.value=d.venue;
+    const racenumSel=document.getElementById('inp-racenum');
+    const racenumPlain=(d.raceNum||'').replace(/R$/,''); // d.raceNumは"7R"形式、セレクトの値は"7"形式
+    if(racenumSel && racenumPlain) racenumSel.value=racenumPlain;
+
     document.getElementById('boat-info-panel').innerHTML=renderBoatInfoTable(d.boats);
     document.getElementById('st-gap-panel').innerHTML=renderSTGapPanel(d.boats)+renderAttackCandidates(d.boats)+renderSupportBreakdown(d.boats);
 
@@ -2753,7 +2764,7 @@ async function runYosoQ(){
     currentParsedData=d;
     currentAreScores=supportSorted.map(s=>({no:s.no, raw:s.rawScore}));
     currentCalcData={
-      racenum:d.raceNum||document.getElementById('inp-racenum').value||'?',
+      racenum:racenumPlain||document.getElementById('inp-racenum').value||'?', // "R"無しの数字のみ(buildXSummary側で"R"を付与するため)
       honme:'1',
       mode:'q', // writeToV2の分岐に無い値のため既定の「通」扱いになる(意図通り)
       suggestedMode:null,
