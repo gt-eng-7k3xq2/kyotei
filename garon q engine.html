@@ -890,10 +890,17 @@ function generateQBets(boats, oddsMap){
     const o=oddsMap[val];
     return (o && o>0) ? Math.log(o)*ODDS_WEIGHT : 0;
   }
-  function tieredFormation(axisBoat, hedgeCandidates, wanted){
+  // forceBoat: 軸が攻め手候補で対応する恩恵艇(スジ)が特定できる場合、スコア上位2艇に加えて
+  // その艇も2着候補へ追加する(2026-08-26追加、CEO指摘: 既存のスコア上位候補〈本線〉は残した
+  // まま、攻め手-恩恵艇の並び〈4-5等〉も「も」追加するべき、との指示)。既にスコア上位2艇に
+  // 入っている場合は重複追加しない。恩恵艇が勝つ側は既存のnarrow軸で2着=攻め手に固定済みだが、
+  // 逆方向〈攻め手が勝つ側〉はスコア任せで恩恵艇が2着候補から漏れることがあった。
+  function tieredFormation(axisBoat, hedgeCandidates, wanted, forceBoat){
     const scoreOf=(no)=>support.find(s=>s.no===no).rawScore;
-    const sortedByScore=[...hedgeCandidates].sort((x,y)=>scoreOf(y)-scoreOf(x));
-    const tier2=sortedByScore.slice(0,2); // 2着候補: 絞る(上位2艇)
+    const tier2=[...hedgeCandidates].sort((x,y)=>scoreOf(y)-scoreOf(x)).slice(0,2); // 2着候補: 絞る(上位2艇)
+    if(forceBoat!=null && hedgeCandidates.includes(forceBoat) && !tier2.includes(forceBoat)){
+      tier2.push(forceBoat); // 攻め手-恩恵艇の並びを追加で保証(既存の上位候補は残す)
+    }
     const tier3=hedgeCandidates; // 3着候補: 広げる(紐プール全体)
     const allPts=[];
     tier2.forEach(b2=>{
@@ -926,7 +933,8 @@ function generateQBets(boats, oddsMap){
     const rankIdx=primaryAxes.findIndex(x=>x.boat===a.boat);
     const ptsWanted=primaryAxes.length<=1 ? 12 : (rankIdx===0 ? 8 : 4);
     const candidates=hedgePool.filter(b=>b!==a.boat);
-    const points=tieredFormation(a.boat, candidates, ptsWanted);
+    const benefit=(a.reason==='ST攻め手候補') ? identifyBenefitBoat(a.boat) : null;
+    const points=tieredFormation(a.boat, candidates, ptsWanted, benefit ? benefit.boat : null);
     return {axis:a.boat, weight:a.weight, points, type:a.reason};
   });
 
