@@ -654,17 +654,24 @@ function renderSTGapPanel(boats){
 //   - global: 場内トップの艇にすら速さで対抗できるか(多摩川10R⑤⑥の主な根拠)
 //   - adjacent: すぐ内側の艇が弱く、そこに隙(穴)ができているか(鳴門5R④の主な根拠)
 // 【暫定・要検証】「特出して速い」の閾値はまだ確定していない(今は差があれば全て候補として列挙する)。
+// 2026-08-26修正: 攻め手候補の対象を4-6号艇から2-6号艇へ拡大(浜名湖7Rの実例、CEO指摘:
+// 3号艇のST・展示が共に際立って優秀なのに、4-6号艇しか見ない設計のため攻め手候補に一度も
+// なれず、恩恵艇4号艇が1着になる軸〈4-3の並び〉が生成されなかった問題)。「内側艇より速いか」
+// の比較基準を、各艇ごとに「自分より内側(番号が若い)艇全員」に変更した(固定の①②③ではなく、
+// 3号艇なら①②、2号艇なら①のみと比較する)。この一般化は元々identifyBenefitBoatの理論
+// (②③④攻めのパターン、下記コメント参照)でカバーされていたが、検出側が4-6号艇に限定されて
+// いたため実際には機械的に当てはまらなかった。
 function identifyAttackCandidates(boats){
   // 内外比較は「速さの生値」(calcAvgST、ズレ抜き)で行う。ズレ・展示ランクは速さではなく
   // その速さの信頼度を表す別軸なので、比較には使わず候補ごとの参考情報として別途付与する。
   const preds=boats.map(b=>({no:b.no, val:calcAvgST(b), gap:b.stgapSec, rank:b.stgapRank}));
-  const inner=preds.slice(0,3).filter(p=>p.val!=null);
-  if(!inner.length) return [];
-  const fastestInner=inner.reduce((a,b)=>a.val<=b.val?a:b);
   const results=[];
-  for(let idx=3; idx<6; idx++){ // 4,5,6号艇(配列index3-5)
+  for(let idx=1; idx<6; idx++){ // 2〜6号艇(配列index1-5)。1号艇(idx=0)は内側艇が存在しないため対象外
     const p=preds[idx];
     if(p.val==null) continue;
+    const inner=preds.slice(0,idx).filter(x=>x.val!=null); // 自分より内側(番号が若い)艇全員
+    if(!inner.length) continue;
+    const fastestInner=inner.reduce((a,b)=>a.val<=b.val?a:b);
     const triggers=[];
     if(p.val<fastestInner.val){
       triggers.push({type:'global', vsBoat:fastestInner.no, vsVal:fastestInner.val, gap:fastestInner.val-p.val});
@@ -679,12 +686,12 @@ function identifyAttackCandidates(boats){
   }
   return results.sort((a,b)=>b.maxGap-a.maxGap);
 }
-// 2026-08-25追加: 追加筋(reference_kyotei_race_development_theoryメモリ)。攻め手が一つ外側艇の
-// まくり差しに飲まれるパターン(②攻めて③-②/③攻めて④-③/④攻めて⑤-④)を、検出済みの攻め手候補に
-// 機械的に当てはめる。②③④攻めのパターンは多摩川10R(④攻めて⑤-④)で実証済みだが、
-// このidentifyAttackCandidatesは4-6号艇しか攻め手候補にしないため、実際に機械的に当てはまるのは
-// 「4号艇攻め→5号艇恩恵」のみ。「5号艇攻め→6号艇恩恵」は同型の類推であり実例未検証、
-// 「6号艇攻め」は一つ外側艇が存在しないため恩恵艇なし。
+// 2026-08-25追加、2026-08-26注記更新: 追加筋(reference_kyotei_race_development_theoryメモリ)。
+// 攻め手が一つ外側艇のまくり差しに飲まれるパターン(②攻めて③-②/③攻めて④-③/④攻めて⑤-④)を、
+// 検出済みの攻め手候補に機械的に当てはめる。④攻めて⑤-④のパターンは多摩川10R(実際の結果
+// 5-4-6)で実証済み。②③攻めのパターンは同型の類推(検出側がidentifyAttackCandidatesの
+// 2-6号艇拡大により2026-08-26以降ようやく機械的に当てはまるようになったが、実例による検証は
+// まだこれから)。「6号艇攻め」は一つ外側艇が存在しないため恩恵艇なし。
 function identifyBenefitBoat(attackerNo){
   if(attackerNo>=2 && attackerNo<=5) return {boat:attackerNo+1, confirmed:attackerNo===4};
   return null; // 6号艇は一つ外側艇が存在しない
