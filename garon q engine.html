@@ -789,7 +789,11 @@ function evaluateBoatSupport(boats){
     systems.forEach(s=>{
       const r=ranks[s][i];
       const w=SYSTEM_WEIGHT[s];
-      const points=(r!=null ? (7-r) : 3.5) * w; // rank1位=6pt〜6位=1pt(重み倍)、情報なしは中立3.5pt×重み
+      let points=(r!=null ? (7-r) : 3.5) * w; // rank1位=6pt〜6位=1pt(重み倍)、情報なしは中立3.5pt×重み
+      // 2026-08-26追加(CEO指摘、唐津3R): スロー勢(1-3号艇)とダッシュ勢(4-6号艇)のSTは
+      // スタート方式が異なり単純な絶対値比較は不公平(前付け・進入変化は基本的に発生しないため
+      // コース番号=型で固定)。スロー勢のST点を一律2点(暫定・要検証)減らす。
+      if(s==='st' && b.no<=3) points-=2;
       detail[s]={rank:r, points};
       rawScore += points;
     });
@@ -965,9 +969,21 @@ function generateQBets(boats, oddsMap){
     // 【暫定・要検証】8:4という比率自体の妥当性は未検証
     // 2026-08-25追記: 単軸(primaryAxes.length<=1)時の点数は「10点にこだわらず12〜13点まで
     // 増やしてよい」とCEO指示、10→12へ拡大
+    // 2026-08-26修正: 恩恵艇軸(narrow、全艇対象なので固定でboats.length-2点)が別途付くため、
+    // 単軸/2軸いずれの構成でも「買い目は最大13点前後」(CEO指示)を超えないよう、恩恵艇軸が
+    // 存在する時だけ主軸側の配分を13点-恩恵艇軸分に縮小する(唐津3Rの16点実例で発覚)。
     const primaryAxes=finalAxes.filter(x=>!x.narrow);
     const rankIdx=primaryAxes.findIndex(x=>x.boat===a.boat);
-    const ptsWanted=primaryAxes.length<=1 ? 12 : (rankIdx===0 ? 8 : 4);
+    const hasNarrowAxis=finalAxes.some(x=>x.narrow);
+    const narrowSize=hasNarrowAxis ? boats.length-2 : 0;
+    let ptsWanted;
+    if(primaryAxes.length<=1){
+      ptsWanted=hasNarrowAxis ? Math.max(13-narrowSize,4) : 12;
+    } else {
+      const multiBudget=hasNarrowAxis ? Math.max(13-narrowSize,6) : 12;
+      const firstShare=Math.round(multiBudget*2/3);
+      ptsWanted=rankIdx===0 ? firstShare : (multiBudget-firstShare);
+    }
     const candidates=hedgePool.filter(b=>b!==a.boat);
     const benefit=(a.reason==='ST攻め手候補') ? identifyBenefitBoat(a.boat) : null;
     const points=tieredFormation(a.boat, candidates, ptsWanted, benefit ? benefit.boat : null);
