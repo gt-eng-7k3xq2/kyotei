@@ -873,7 +873,19 @@ function generateQBets(boats, oddsMap){
   }
 
   // 紐プール: 弱艇(rawScore<15)でない艇。各軸自身は紐から除く。
-  const hedgePool=support.filter(s=>s.rawScore>=15).map(s=>s.no);
+  // 2026-08-26追加(CEO指摘、浜名湖7R): 総合スコアが弱艇ラインは超えていても、平均未満
+  // (NEUTRAL_SCORE未満)かつどの系統でも際立った順位(1-2位)が無い艇は、「根拠なし」として
+  // 紐プールから除外する(5・6号艇のように総合点だけ中位で個別の根拠が無い艇を機械的に
+  // 3着候補へ含めないため)。総合スコアがNEUTRAL_SCORE以上の艇は無条件で残す。
+  const hasStandoutSystem=(no)=>{
+    const s=support.find(x=>x.no===no);
+    return !!(s && Object.values(s.detail).some(d=>d.rank!=null && d.rank<=2));
+  };
+  const hedgePool=support.filter(s=>{
+    if(s.rawScore<15) return false;
+    if(s.rawScore>=NEUTRAL_SCORE) return true;
+    return hasStandoutSystem(s.no);
+  }).map(s=>s.no);
 
   // 2026-08-25再修正: 2・3着を合計スコアだけで一緒くたに選んでいたが、多摩川10Rの実例通り
   // 「2着候補は絞り、3着候補は広く取る」という非対称のティア構成にすべき、とCEOから指摘。
