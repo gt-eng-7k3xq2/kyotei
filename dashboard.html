@@ -86,7 +86,7 @@
 </head>
 <body>
 <h1>GARON 実績ダッシュボード</h1>
-<div class="meta">現行本番閾値: ROI&gt;=91(3,000円均等回収配分ベース) / 最終更新: 2026-08-25T14:25:09.428Z / scripts/update_dashboard.jsが毎晩自動更新</div>
+<div class="meta">現行本番閾値: ROI&gt;=91(3,000円均等回収配分ベース) / 最終更新: 2026-08-26T01:06:51.099Z / scripts/update_dashboard.jsが毎晩自動更新</div>
 
 
 <div class="meta" style="margin-bottom:8px;">自動処理(14個)の状態</div>
@@ -137,11 +137,11 @@
 </tr><tr>
   <td style="padding:6px 10px; border-bottom:1px solid var(--border); white-space:nowrap; color:var(--text-muted);">GARON_RealtimeScreening</td>
   <td style="padding:6px 10px; border-bottom:1px solid var(--border);">レース直前の情報を取り込んで、参加するかしないかを判定する処理</td>
-  <td style="padding:6px 10px; border-bottom:1px solid var(--border); ">正常(待機中)</td>
+  <td style="padding:6px 10px; border-bottom:1px solid var(--border); color:var(--critical); font-weight:600;">無効</td>
 </tr><tr>
   <td style="padding:6px 10px; border-bottom:1px solid var(--border); white-space:nowrap; color:var(--text-muted);">GARON_RealtimeScreeningWatchdog</td>
   <td style="padding:6px 10px; border-bottom:1px solid var(--border);">1番上の処理がちゃんと動き続けているか見張る処理</td>
-  <td style="padding:6px 10px; border-bottom:1px solid var(--border); ">正常(待機中)</td>
+  <td style="padding:6px 10px; border-bottom:1px solid var(--border); color:var(--critical); font-weight:600;">無効</td>
 </tr><tr>
   <td style="padding:6px 10px; border-bottom:1px solid var(--border); white-space:nowrap; color:var(--text-muted);">GARON_ResumeAutomation</td>
   <td style="padding:6px 10px; border-bottom:1px solid var(--border);">止めた自動処理を再び動かす処理(手動で押した時だけ動く)</td>
@@ -158,27 +158,27 @@
 </tbody>
 </table>
 </div>
-
+<p class="empty" style="color:var(--critical);">⚠️ 無効・不明状態の処理があります。確認してください。</p>
 
 
 
 <div class="meta" style="margin-bottom:8px;">過去アーカイブ フィールド穴埋め進捗(scripts/backfill_missing_fields.js。konkiAvgST等5項目+wakuStats等9項目)</div>
 <div class="tiles">
-  <div class="tile"><div class="label">全体進捗</div><div class="value">166 / 6,752件</div></div>
-  <div class="tile"><div class="label">進捗率</div><div class="value ">2.5%</div></div>
-  <div class="tile"><div class="label">処理中の日付</div><div class="value" style="font-size:16px;">2026-07-01 (166/166)</div></div>
+  <div class="tile"><div class="label">全体進捗</div><div class="value">322 / 6,908件</div></div>
+  <div class="tile"><div class="label">進捗率</div><div class="value ">4.7%</div></div>
+  <div class="tile"><div class="label">処理中の日付</div><div class="value" style="font-size:16px;">2026-07-02 (156/156)</div></div>
   <div class="tile"><div class="label">状態</div><div class="value" style="font-size:16px;">待機中</div></div>
 </div>
-<p class="empty" style="margin-bottom:20px;">最終更新: 2026-08-25T14:18:47.588Z</p>
+<p class="empty" style="margin-bottom:20px;">最終更新: 2026-08-26T01:06:47.867Z</p>
 
 
 
 <div class="meta" style="margin-bottom:8px;">シミュレーション(今の閾値で機械的に参入していたら)</div>
 <div class="tiles">
-  <div class="tile"><div class="label">累計参戦件数</div><div class="value">134</div></div>
-  <div class="tile"><div class="label">累計的中率</div><div class="value">44.8%</div></div>
-  <div class="tile"><div class="label">累計ROI</div><div class="value good">108.5%</div></div>
-  <div class="tile"><div class="label">累計純損益</div><div class="value good">+¥34,000</div></div>
+  <div class="tile"><div class="label">累計参戦件数</div><div class="value">133</div></div>
+  <div class="tile"><div class="label">累計的中率</div><div class="value">45.1%</div></div>
+  <div class="tile"><div class="label">累計ROI</div><div class="value good">109.3%</div></div>
+  <div class="tile"><div class="label">累計純損益</div><div class="value good">+¥37,000</div></div>
 </div>
 
 
@@ -204,8 +204,8 @@
 <div class="tooltip" id="tooltip"></div>
 
 <script>
-const PROFIT_DATA = [{"date":"2026-07-01","v":-3000},{"date":"2026-07-02","v":-13900},{"date":"2026-07-03","v":220},{"date":"2026-07-04","v":5540},{"date":"2026-07-05","v":6170},{"date":"2026-07-06","v":2820},{"date":"2026-07-07","v":4020},{"date":"2026-07-10","v":12820},{"date":"2026-07-11","v":15140},{"date":"2026-07-12","v":9140},{"date":"2026-07-13","v":10090},{"date":"2026-07-14","v":20940},{"date":"2026-07-15","v":28030},{"date":"2026-07-17","v":29550},{"date":"2026-07-18","v":24870},{"date":"2026-07-19","v":27240},{"date":"2026-07-20","v":34470},{"date":"2026-07-21","v":43670},{"date":"2026-07-22","v":45470},{"date":"2026-07-23","v":44260},{"date":"2026-07-24","v":53030},{"date":"2026-07-25","v":55330},{"date":"2026-07-26","v":55210},{"date":"2026-07-27","v":43660},{"date":"2026-07-28","v":34660},{"date":"2026-07-29","v":32380},{"date":"2026-07-30","v":33650},{"date":"2026-08-01","v":36560},{"date":"2026-08-02","v":33060},{"date":"2026-08-03","v":30660},{"date":"2026-08-04","v":18660},{"date":"2026-08-05","v":16970},{"date":"2026-08-06","v":41270},{"date":"2026-08-07","v":38270},{"date":"2026-08-08","v":34000}];
-const HITRATE_DATA = [{"date":"2026-07-01","v":0},{"date":"2026-07-02","v":16.7},{"date":"2026-07-03","v":33.3},{"date":"2026-07-04","v":38.5},{"date":"2026-07-05","v":42.9},{"date":"2026-07-06","v":41.2},{"date":"2026-07-07","v":36.4},{"date":"2026-07-10","v":40},{"date":"2026-07-11","v":41.9},{"date":"2026-07-12","v":39.4},{"date":"2026-07-13","v":40.5},{"date":"2026-07-14","v":40.5},{"date":"2026-07-15","v":43.5},{"date":"2026-07-17","v":45.8},{"date":"2026-07-18","v":45.1},{"date":"2026-07-19","v":43.9},{"date":"2026-07-20","v":44.1},{"date":"2026-07-21","v":46},{"date":"2026-07-22","v":46.9},{"date":"2026-07-23","v":47.1},{"date":"2026-07-24","v":47.1},{"date":"2026-07-25","v":47.4},{"date":"2026-07-26","v":46.8},{"date":"2026-07-27","v":44.7},{"date":"2026-07-28","v":43.2},{"date":"2026-07-29","v":43.6},{"date":"2026-07-30","v":44.3},{"date":"2026-08-01","v":45},{"date":"2026-08-02","v":45.2},{"date":"2026-08-03","v":45.6},{"date":"2026-08-04","v":44.1},{"date":"2026-08-05","v":44.8},{"date":"2026-08-06","v":45},{"date":"2026-08-07","v":44.6},{"date":"2026-08-08","v":44.8}];
+const PROFIT_DATA = [{"date":"2026-07-01","v":-3000},{"date":"2026-07-02","v":-10900},{"date":"2026-07-03","v":3220},{"date":"2026-07-04","v":8540},{"date":"2026-07-05","v":9170},{"date":"2026-07-06","v":5820},{"date":"2026-07-07","v":7020},{"date":"2026-07-10","v":15820},{"date":"2026-07-11","v":18140},{"date":"2026-07-12","v":12140},{"date":"2026-07-13","v":13090},{"date":"2026-07-14","v":23940},{"date":"2026-07-15","v":31030},{"date":"2026-07-17","v":32550},{"date":"2026-07-18","v":27870},{"date":"2026-07-19","v":30240},{"date":"2026-07-20","v":37470},{"date":"2026-07-21","v":46670},{"date":"2026-07-22","v":48470},{"date":"2026-07-23","v":47260},{"date":"2026-07-24","v":56030},{"date":"2026-07-25","v":58330},{"date":"2026-07-26","v":58210},{"date":"2026-07-27","v":46660},{"date":"2026-07-28","v":37660},{"date":"2026-07-29","v":35380},{"date":"2026-07-30","v":36650},{"date":"2026-08-01","v":39560},{"date":"2026-08-02","v":36060},{"date":"2026-08-03","v":33660},{"date":"2026-08-04","v":21660},{"date":"2026-08-05","v":19970},{"date":"2026-08-06","v":44270},{"date":"2026-08-07","v":41270},{"date":"2026-08-08","v":37000}];
+const HITRATE_DATA = [{"date":"2026-07-01","v":0},{"date":"2026-07-02","v":20},{"date":"2026-07-03","v":37.5},{"date":"2026-07-04","v":41.7},{"date":"2026-07-05","v":46.2},{"date":"2026-07-06","v":43.8},{"date":"2026-07-07","v":38.1},{"date":"2026-07-10","v":41.7},{"date":"2026-07-11","v":43.3},{"date":"2026-07-12","v":40.6},{"date":"2026-07-13","v":41.7},{"date":"2026-07-14","v":41.5},{"date":"2026-07-15","v":44.4},{"date":"2026-07-17","v":46.8},{"date":"2026-07-18","v":46},{"date":"2026-07-19","v":44.6},{"date":"2026-07-20","v":44.8},{"date":"2026-07-21","v":46.8},{"date":"2026-07-22","v":47.6},{"date":"2026-07-23","v":47.8},{"date":"2026-07-24","v":47.8},{"date":"2026-07-25","v":48},{"date":"2026-07-26","v":47.4},{"date":"2026-07-27","v":45.2},{"date":"2026-07-28","v":43.7},{"date":"2026-07-29","v":44.1},{"date":"2026-07-30","v":44.8},{"date":"2026-08-01","v":45.5},{"date":"2026-08-02","v":45.6},{"date":"2026-08-03","v":46},{"date":"2026-08-04","v":44.4},{"date":"2026-08-05","v":45.2},{"date":"2026-08-06","v":45.3},{"date":"2026-08-07","v":45},{"date":"2026-08-08","v":45.1}];
 
 function renderChart(containerId, data, opts) {
   const container = document.getElementById(containerId);
