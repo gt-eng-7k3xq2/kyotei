@@ -266,15 +266,7 @@
         </table>
       </div>
       <div id="bet-gosei-summary" style="margin-top:8px;font-size:12px;color:var(--muted);"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">📌 投稿選定ログ</div>
-      <div id="selection-log-summary" style="font-size:12px;color:var(--muted);margin-bottom:8px;">記録: 0件</div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="exportSelectionLog()">📥 選定ログを書き出す</button>
-        <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="clearSelectionLog()">🗑 クリア</button>
-      </div>
+      <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:8px;" onclick="openOfficialRaceList()">🌐 公式出走表を開く</button>
     </div>
 
     <div class="card">
@@ -2731,6 +2723,30 @@ async function runYosoQ(){
       return `<tr><td><span class="bet-val">${b.val}</span></td><td><span class="bet-type">${b.type}</span></td><td style="text-align:right;">${o?o.toFixed(1)+'倍':'-'}</td></tr>`;
     }).join('');
 
+    // 2026-08-26追加: X投稿文コピー・gtools連動(kyotei_v2)・保存/結果入力は、いずれも
+    // currentParsedData/currentAreScores/currentCalcData(旧generateBets()経路でのみ設定)を
+    // 参照する設計だった。runYosoQ()はこれらを一切セットしていなかったため、Q予想実行後に
+    // これらのボタンを押しても空文字が返る/正しく動かない状態だったのを修正する。
+    // Qの出力(support/axes/formations)をこれらの旧形式(ranking/betsRaw)へ変換するアダプター。
+    const marks=['◎','○','▲','△','▽','×'];
+    const supportSorted=[...result.support].sort((a,b)=>b.rawScore-a.rawScore);
+    const ranking=supportSorted.map((s,i)=>({rank:i+1, boat:s.no, mark:marks[i]||'×', score:s.rawScore}));
+    currentParsedData=d;
+    currentAreScores=supportSorted.map(s=>({no:s.no, raw:s.rawScore}));
+    currentCalcData={
+      racenum:d.raceNum||document.getElementById('inp-racenum').value||'?',
+      honme:'1',
+      mode:'q', // writeToV2の分岐に無い値のため既定の「通」扱いになる(意図通り)
+      suggestedMode:null,
+      nigeMode:null,
+      nigeRate:null,
+      areIndex:null,
+      betcount:allPts.length,
+      shikin:3000, // Qエンジンは資金入力カードを削除済みのため固定値(保存時のinvestフォールバック用)
+      ranking,
+      betsRaw:allPts,
+    };
+
     // 2026-08-25追加: 買い目全体・軸(1着艇)ごとの合成オッズを表示(既存calcGoseiOddsを流用)
     const goseiEl=document.getElementById('bet-gosei-summary');
     if(goseiEl && d.oddsMap){
@@ -2746,6 +2762,7 @@ async function runYosoQ(){
     if(stripEl) stripEl.textContent=`${d.venue||'?'}${d.raceNum||'?'} ／ 買い目${allPts.length}点 ／ 軸: ${result.axes.map(a=>a.boat).join('・')} ／ 買い目未登場: ${result.actuallyExcluded.join('・')||'なし'}`;
 
     document.getElementById('bet-section').style.display='block';
+    updateXPreview();
     showToast('Q予想を実行しました');
   }catch(e){
     showToast('エラー: '+e.message);
@@ -4632,97 +4649,6 @@ function renderTsudoi(){}
 function saveSettings(){showToast('設定保存しました');}
 function resetAll(){if(!confirm('全データをリセットしますか？')) return;localStorage.removeItem(STORE_KEY);updateLogSummary();showToast('リセットしました');}
 
-// ===== 投稿選定ログ =====
-// 実際にXへ投稿すると決めたレースだけを記録する。夜間検証エンジンの「全レース」ログとは別物で、
-// 「選んだレース」と「選ばなかった残り」を後で比較検証するためのもの。
-const SELECTION_LOG_KEY='sg_selection_log';
-
-function getSelectionLog(){
-  try{ return JSON.parse(localStorage.getItem(SELECTION_LOG_KEY)||'[]'); }catch(e){ return []; }
-}
-function saveSelectionLog(arr){
-  try{ localStorage.setItem(SELECTION_LOG_KEY, JSON.stringify(arr)); }catch(e){}
-}
-
-function logSelection(){
-  if(!currentParsedData||!currentAreScores||!currentCalcData){
-    showToast('先に予想を実行してください');
-    return;
-  }
-  const oddsMap=extractOddsMap(document.getElementById('inp-data').value);
-  const betVals=(currentCalcData.betsRaw||[]).map(b=>b.val);
-  const gosei=calcGoseiOdds(betVals,oddsMap);
-  const scoresSorted=[...currentAreScores].sort((a,b)=>b.raw-a.raw);
-  const gap=scoresSorted.length>=2?Math.round((scoresSorted[0].raw-scoresSorted[1].raw)*10)/10:null;
-  const venueEl=document.getElementById('inp-venue');
-  const venue=venueEl?venueEl.value:(currentParsedData.venue||'');
-  const racenum=(currentCalcData.racenum||currentParsedData.raceNum||'').toString().replace(/R$/,'');
-
-  const entry={
-    id:Date.now(),
-    timestamp:new Date().toISOString(),
-    date:new Date().toISOString().slice(0,10),
-    venue, racenum,
-    mode:currentCalcData.mode||null,
-    nigeMode:currentCalcData.nigeMode||null, // 通常モード内の実際の買い目構成(low/mid/high)。2026-07-27追加
-    himoMode:(typeof selectedHimoMode!=='undefined')?selectedHimoMode:'standard',
-    areIndex:currentCalcData.areIndex??null,
-    nigeRate:currentCalcData.nigeRate??null,
-    scoreVersion:SCORE_ENGINE_VERSION,
-    goseiOdds:gosei?parseFloat(gosei):null,
-    betcount:betVals.length,
-    axisGap:gap,
-    axis:scoresSorted[0]?parseInt(scoresSorted[0].no):null,
-    runnerUp:scoresSorted[1]?parseInt(scoresSorted[1].no):null
-  };
-
-  const arr=getSelectionLog();
-  arr.push(entry);
-  saveSelectionLog(arr);
-  updateSelectionLogSummary();
-  showToast(`📌 記録しました（${venue}${racenum}R / 合成${gosei||'?'}倍）`);
-}
-
-function updateSelectionLogSummary(){
-  const el=document.getElementById('selection-log-summary');
-  if(!el) return;
-  const arr=getSelectionLog();
-  if(!arr.length){ el.textContent='記録: 0件'; return; }
-  const dates=new Set(arr.map(e=>e.date));
-  el.textContent=`記録: ${arr.length}件（${dates.size}日分）`;
-}
-
-function exportSelectionLog(){
-  const arr=getSelectionLog();
-  if(!arr.length){ showToast('選定ログがありません'); return; }
-  const json=JSON.stringify(arr,null,2);
-  try{
-    const blob=new Blob([json],{type:'application/json'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    const ts=new Date().toISOString().slice(0,10);
-    a.href=url;
-    a.download=`sg_selection_log_${ts}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }catch(e){}
-  navigator.clipboard.writeText(json).then(()=>showToast('選定ログをダウンロード＆コピーしました')).catch(()=>{
-    const ta=document.createElement('textarea');ta.value=json;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('選定ログをコピーしました');
-  });
-}
-
-function clearSelectionLog(){
-  const arr=getSelectionLog();
-  if(!arr.length){ showToast('選定ログは空です'); return; }
-  if(confirm(`選定ログ${arr.length}件を削除しますか？（書き出してから消すのを推奨）`)){
-    saveSelectionLog([]);
-    updateSelectionLogSummary();
-    showToast('選定ログをクリアしました');
-  }
-}
-
 function exportSgJSON(){
   const logs=getLogs();
   if(!logs.length){showToast('ログがありません');return;}
@@ -5285,7 +5211,6 @@ function loadVenueRace(){
 window.addEventListener('DOMContentLoaded',function(){
   loadVenueRace();
   updateLogSummary();
-  updateSelectionLogSummary();
 });
 
 // ============================================================
