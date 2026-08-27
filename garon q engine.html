@@ -3771,68 +3771,46 @@ function garonBoatLabel(no,name){
   return `${GARON_LABEL_CIRCLED[no-1]||no+'号艇'}${garonSurname(name)}`;
 }
 
+// 2026-08-27修正(雄大さん指示): sg_narutou.html由来のまま「系統別得点の内訳」ではなく
+// 生の数値(ST・今節得点率等)を出す旧仕様だったのと、本線/抑えの判定がb.type==='本線'という
+// Qでは存在しない値を見ていたため常に空になるバグがあった(Qのbetsraw.typeは
+// 「ST攻め手候補(2軸)」のような文字列で、buildXSummary()と同じ「軸の艇番号で判定」方式に
+// 直す必要がある)。出す内容も「系統別得点の内訳・買い目(本線/抑え)・場・レース番号」の
+// 3点に絞る(雄大さん指示: 他のAIに渡して展開コメントを書かせるための最小限のデータ)。
 function buildClaudeCommentData(){
-  if(!currentCalcData||!currentParsedData) return '⚠️ データがありません。予想を作成してから使ってください。';
+  if(!currentCalcData||!currentQSupport) return '⚠️ データがありません。予想を作成してから使ってください。';
   const ranking=currentCalcData.ranking||[];
   const betsRaw=currentCalcData.betsRaw||[];
   if(!ranking.length) return '⚠️ データがありません。予想を作成してから使ってください。';
 
-  const bd=(no)=>(currentParsedData.boats[no-1])||{};
-
   const venue=document.getElementById('inp-venue')?document.getElementById('inp-venue').value||'':'';
   const racenum=currentCalcData.racenum||'';
-  const shimekiri=currentParsedData.shimekiri?`　締切${currentParsedData.shimekiri}`:'';
-  const dayTag=currentParsedData.day?`　${currentParsedData.day}`:'';
-  const categoryTag=currentParsedData.raceCategory?`　${currentParsedData.raceCategory}`:'';
-
   const maruBoat=ranking[0]?.boat;
 
   const lines=[];
-  lines.push(`【${venue} ${racenum}R】${shimekiri}${dayTag}${categoryTag}`);
+  lines.push(`【${venue}${racenum}R】`);
   lines.push('');
 
-  for(let no=1;no<=6;no++){
-    const b=bd(no);
-    const name=b.name||'(不明)';
-    const st=b.directST>0?b.directST.toFixed(2):(b.sessonAvgST>0?b.sessonAvgST.toFixed(2):'-');
-    const toku=b.sessonPt!=null?b.sessonPt.toFixed(2):'-';
-    const motor=b.motor2ren!=null?b.motor2ren.toFixed(1)+'%':'-';
-    const sashi=b.sashi6m||0, makuri=b.makuri6m||0, makurisashi=b.makurisashi6m||0;
-    const axisTag=(no===maruBoat)?'(軸)':'';
-    const tenji=b.tenji>0?b.tenji.toFixed(2):'-';
-    const avgTenji=b.avgTenji>0?b.avgTenji.toFixed(2):'-';
-    const syukai=b.syukai>0?b.syukai.toFixed(2):'-';
-    const syukaiFoot=b.syukaiFoot>0?b.syukaiFoot.toFixed(2):'-';
-    const avgSyukaiFoot=b.avgSyukaiFoot>0?b.avgSyukaiFoot.toFixed(2):'-';
-    const chokusen=b.chokusen>0?b.chokusen.toFixed(2):'-';
-    lines.push(`${garonBoatLabel(no,name)}${axisTag}　ST${st}　今節得点率${toku}　モーター2連率${motor}　差し${sashi}%/まくり${makuri}%/まくり差し${makurisashi}%`);
-    lines.push(`　展示${tenji}(今節平均${avgTenji})　周回${syukai}　周回足${syukaiFoot}(今節平均${avgSyukaiFoot})　直線${chokusen}`);
-  }
+  lines.push('■系統別得点の内訳');
+  const sysLabels={st:'ST', kimarite:'決まり手', ren:'連対率', motor:'機力', exhibit:'展示'};
+  currentQSupport.forEach(s=>{
+    const parts=Object.keys(sysLabels).map(k=>{
+      const d=s.detail[k];
+      return `${sysLabels[k]}${d.rank==null?'情報無':d.rank+'位'}(${d.points.toFixed(1)}点)`;
+    }).join('、');
+    const axisTag=(s.no===maruBoat)?'(軸)':'';
+    lines.push(`${s.no}号艇${axisTag}: 合計${s.rawScore.toFixed(1)}点 ─ ${parts}`);
+  });
   lines.push('');
 
-  if(currentParsedData.weather){
-    const w=currentParsedData.weather;
-    lines.push(`気象: ${w.condition||'-'}　風速${w.windSpeed||'-'}　波高${w.waveHeight||'-'}　水温${w.waterTemp||'-'}`);
-    lines.push('');
-  }
-
-  const rankText=ranking.map((r,i)=>`${i+1}位:${GARON_LABEL_CIRCLED[r.boat-1]||r.boat}`).join(' ');
-  lines.push(`評価順: ${rankText}`);
-
-  const honsen=betsRaw.filter(b=>b.type==='本線');
-  const osaee=betsRaw.filter(b=>b.type!=='本線');
-  if(honsen.length) lines.push(`本線: ${compressBetsSG(honsen)}`);
-  if(osaee.length) lines.push(`抑え: ${compressBetsSG(osaee)}`);
+  // 本線/抑えはbuildXSummary()と同じ基準: 軸(1番評価の艇)から始まる買い目が本線
+  const honsen=betsRaw.filter(b=>parseInt(String(b.val).split('-')[0],10)===maruBoat);
+  const osaee=betsRaw.filter(b=>parseInt(String(b.val).split('-')[0],10)!==maruBoat);
+  lines.push('■本線');
+  lines.push(honsen.length?compressBetsSG(honsen):'(なし)');
   lines.push('');
-
-  lines.push('→ 上記を踏まえて、的中画像の「根拠」欄用の展開コメントを作って。');
-  lines.push('');
-  lines.push('【必須ルール】');
-  lines.push('・20〜40字程度(目安30字)、体言止めか言い切りの1文');
-  lines.push('・艇の表記は上記と同じ❶田中のような丸数字＋苗字形式で統一する(①②③のような通常の丸数字は使わない)');
-  lines.push('・「〜が予想されます」「〜に注目です」「〜が期待されます」等の定型的な締め文句は使わない。断定で言い切る');
-  lines.push('・丸数字を羅列するだけの構成(「❶は◯◯。❷は◯◯。」)にせず、「❶が◯◯できるかどうか→できなければ❷が◯◯」のように1本の分岐ストーリーにする');
-  lines.push('・上記データに無い着順・決まり手・艇を創作しない。本線・抑えの買い目にある艇のみ言及する');
+  lines.push('■抑え');
+  lines.push(osaee.length?compressBetsSG(osaee):'(なし)');
 
   return lines.join('\n');
 }
@@ -5930,7 +5908,7 @@ window.addEventListener('DOMContentLoaded',function(){
 <div id="claude-data-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:250;padding:16px;align-items:center;justify-content:center;">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;max-width:420px;width:100%;padding:20px;max-height:90vh;overflow-y:auto;">
     <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:6px;">📋 Claude用データ抽出</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6;">このテキストをコピーしてClaudeに貼り付け、展開コメントを書いてもらってください。</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6;">系統別得点の内訳・買い目(本線/抑え)・場・レース番号をコピーします。任意のAIに貼り付けて使ってください。</div>
     <textarea id="claude-data-textarea" readonly style="width:100%;min-height:280px;background:#1A1A1A;color:#FFFFFF;border:1px solid #444;border-radius:6px;padding:10px 12px;font-size:12px;font-family:monospace;box-sizing:border-box;resize:vertical;"></textarea>
     <button id="claude-data-copy-btn" class="eval-save-btn" onclick="copyClaudeData()" style="margin-top:10px;">📋 コピー</button>
     <button onclick="closeClaudeDataModal()" style="width:100%;margin-top:8px;padding:10px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:6px;font-size:12px;-webkit-appearance:none;">閉じる</button>
