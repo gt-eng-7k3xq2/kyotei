@@ -85,8 +85,17 @@
 </style>
 </head>
 <body>
-<h1>GARON 実績ダッシュボード</h1>
-<div class="meta">現行本番閾値: ROI&gt;=91(3,000円均等回収配分ベース) / 最終更新: 2026-08-27T01:41:52.441Z / scripts/update_dashboard.jsが毎晩自動更新</div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+  <h1 style="margin:0;">GARON 実績ダッシュボード</h1>
+  <button onclick="location.reload()" style="padding:8px 16px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-primary);cursor:pointer;">🔄 今すぐ更新</button>
+</div>
+<div class="meta">現行本番閾値: ROI&gt;=91(3,000円均等回収配分ベース) / 最終更新: 2026-08-27T01:50:36.899Z / scripts/update_dashboard.jsが毎晩自動更新</div>
+<script>
+  // 2026-08-27追加(雄大さん指示: リアルタイムで詳細を確認したい): 一括補完バッチ実行中は
+  // 数分おきに内容が変わるため、ページを開きっぱなしでも自動で最新化されるようにする。
+  // データ自体は最短5分間隔でしか変わらないため、それより短い間隔での自動更新は無意味。
+  setTimeout(function(){ location.reload(); }, 120000);
+</script>
 
 
 <div class="meta" style="margin-bottom:8px;">自動処理(14個)の状態</div>
@@ -162,14 +171,25 @@
 
 
 
-<div class="meta" style="margin-bottom:8px;">過去アーカイブ フィールド穴埋め進捗(scripts/backfill_missing_fields.js。konkiAvgST等5項目+wakuStats等9項目)</div>
+<div class="meta" style="margin-bottom:8px;">過去アーカイブ フィールド穴埋め進捗(scripts/backfill_missing_fields.js。konkiAvgST等5項目+wakuStats等9項目+オッズ欠損補完)</div>
 <div class="tiles">
   <div class="tile"><div class="label">全体進捗</div><div class="value">658 / 6,917件</div></div>
   <div class="tile"><div class="label">進捗率</div><div class="value ">9.5%</div></div>
   <div class="tile"><div class="label">処理中の日付</div><div class="value" style="font-size:16px;">2026-07-01 (166/166)</div></div>
   <div class="tile"><div class="label">状態</div><div class="value" style="font-size:16px;">実行中</div></div>
+  <div class="tile"><div class="label">オッズ補完(今回起動分)</div><div class="value">1件</div></div>
+  <div class="tile"><div class="label">失敗(今回起動分)</div><div class="value ">0件</div></div>
 </div>
-<p class="empty" style="margin-bottom:20px;">最終更新: 2026-08-27T01:41:46.069Z</p>
+
+<div class="meta" style="margin:10px 0 4px;">直近の処理(新しい順)</div>
+<table>
+<thead><tr><th>時刻</th><th>日付</th><th>会場/R</th><th>結果</th></tr></thead>
+<tbody>
+<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">10:46:57</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-01</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">唐津 11R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr>
+</tbody>
+</table>
+
+<p class="empty" style="margin-bottom:20px;">最終更新: 2026-08-27T01:46:58.423Z</p>
 
 
 
