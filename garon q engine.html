@@ -2791,7 +2791,10 @@ async function runYosoQ(){
     const tbody=document.getElementById('bet-tbody');
     tbody.innerHTML=allPts.map(b=>{
       const o=d.oddsMap&&d.oddsMap[b.val];
-      return `<tr><td><span class="bet-val">${b.val}</span></td><td><span class="bet-type">${b.type}</span></td><td style="text-align:right;">${o?o.toFixed(1)+'倍':'-'}</td></tr>`;
+      // 2026-08-27追加: saveResultInner()が保存時に各買い目のオッズを`.odds-inp`から読み取る
+      // 設計(合成オッズ算出・ログ記録用)のため、非表示inputで値を保持しておく。
+      // Qエンジンは資金配分UIを削除済み(資金入力カード自体が無い)のため`.amt-cell`は付けない。
+      return `<tr><td><span class="bet-val">${b.val}</span></td><td><span class="bet-type">${b.type}</span></td><td style="text-align:right;">${o?o.toFixed(1)+'倍':'-'}<input type="hidden" class="odds-inp" value="${o||0}"></td></tr>`;
     }).join('');
 
     // 2026-08-26追加: X投稿文コピー・gtools連動(kyotei_v2)・保存/結果入力は、いずれも
@@ -2834,6 +2837,14 @@ async function runYosoQ(){
 
     document.getElementById('bet-section').style.display='block';
     updateXPreview();
+
+    // 2026-08-27追加: 旧runYoso()にはあった「保存ボタンを表示」の配線がrunYosoQ()には
+    // 一切無く、保存できない(→gtools連携・的中画像・結果入力コメントも全て動かない)状態
+    // だった(雄大さん報告、緊急修正)。
+    var sbw=document.getElementById('save-result-btn-wrap-bottom');
+    if(sbw) sbw.style.display='block';
+    if(typeof updateLogSummary==='function') updateLogSummary();
+
     showToast('Q予想を実行しました');
   }catch(e){
     showToast('エラー: '+e.message);
