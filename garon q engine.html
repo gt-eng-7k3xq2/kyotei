@@ -3799,7 +3799,9 @@ function buildClaudeCommentData(){
       return `${sysLabels[k]}${d.rank==null?'情報無':d.rank+'位'}(${d.points.toFixed(1)}点)`;
     }).join('、');
     const axisTag=(s.no===maruBoat)?'(軸)':'';
-    lines.push(`${s.no}号艇${axisTag}: 合計${s.rawScore.toFixed(1)}点 ─ ${parts}`);
+    const rawName=(currentParsedData&&currentParsedData.boats[s.no-1]&&currentParsedData.boats[s.no-1].name)||'';
+    const label=garonBoatLabel(s.no,rawName); // ❶田中のような丸数字＋苗字形式(他のAIへ渡す時と表記を統一)
+    lines.push(`${label}${axisTag}: 合計${s.rawScore.toFixed(1)}点 ─ ${parts}`);
   });
   lines.push('');
 
