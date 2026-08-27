@@ -986,7 +986,17 @@ function generateQBets(boats, oddsMap){
     }
     const candidates=hedgePool.filter(b=>b!==a.boat);
     const benefit=(a.reason==='ST攻め手候補') ? identifyBenefitBoat(a.boat) : null;
-    const points=tieredFormation(a.boat, candidates, ptsWanted, benefit ? benefit.boat : null);
+    // 2026-08-27追加(雄大さん報告、津10R実例): 軸以外の全艇が弱艇(rawScore<15、かつ突出系統
+    // なし)でhedgePoolから漏れると、tieredFormationのtier2候補が2艇未満(0〜1艇)になり、
+    // 軸自身の買い目が0点になるバグがあった(この時、恩恵艇軸〈narrow、hedgePool不使用〉だけは
+    // 通常通り点数が出るため、「本線が空で恩恵艇の買い目だけ表示される」という矛盾した結果に
+    // なっていた)。hedgePoolが軸の買い目を組めないほど少ない時は全艇(軸自身を除く)へ
+    // フォールバックし、恩恵艇は候補プールへ強制的に含める(forceBoatとして機能させるため)。
+    let effectiveCandidates = candidates.length>=2 ? candidates : boats.map(b=>b.no).filter(no=>no!==a.boat);
+    if(benefit && !effectiveCandidates.includes(benefit.boat)){
+      effectiveCandidates=[...effectiveCandidates, benefit.boat];
+    }
+    const points=tieredFormation(a.boat, effectiveCandidates, ptsWanted, benefit ? benefit.boat : null);
     return {axis:a.boat, weight:a.weight, points, type:a.reason};
   });
 
