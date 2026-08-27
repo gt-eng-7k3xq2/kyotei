@@ -661,6 +661,11 @@ function renderSTGapPanel(boats){
 // 3号艇なら①②、2号艇なら①のみと比較する)。この一般化は元々identifyBenefitBoatの理論
 // (②③④攻めのパターン、下記コメント参照)でカバーされていたが、検出側が4-6号艇に限定されて
 // いたため実際には機械的に当てはまらなかった。
+// 2026-08-27追加(雄大さん指摘、蒲郡1R実例): 乖離が0.01秒でも無条件で攻め手候補と
+// 認定していたため、実質誤差レベルの僅差まで拾って軸選定の無条件優先を発動させてしまう
+// 問題があった。最小乖離を設け、これ未満は「攻め手候補」として扱わない。
+// 【暫定・大まかな値、要検証】アーカイブデータでの裏付けはまだ取れていない。
+const ATTACK_MIN_GAP=0.03;
 function identifyAttackCandidates(boats){
   // 内外比較は「速さの生値」(calcAvgST、ズレ抜き)で行う。ズレ・展示ランクは速さではなく
   // その速さの信頼度を表す別軸なので、比較には使わず候補ごとの参考情報として別途付与する。
@@ -674,11 +679,13 @@ function identifyAttackCandidates(boats){
     const fastestInner=inner.reduce((a,b)=>a.val<=b.val?a:b);
     const triggers=[];
     if(p.val<fastestInner.val){
-      triggers.push({type:'global', vsBoat:fastestInner.no, vsVal:fastestInner.val, gap:fastestInner.val-p.val});
+      const g=fastestInner.val-p.val;
+      if(g>=ATTACK_MIN_GAP) triggers.push({type:'global', vsBoat:fastestInner.no, vsVal:fastestInner.val, gap:g});
     }
     const adjacent=preds[idx-1]; // 直前の隣接艇
     if(adjacent && adjacent.val!=null && p.val<adjacent.val && adjacent.no!==fastestInner.no){
-      triggers.push({type:'adjacent', vsBoat:adjacent.no, vsVal:adjacent.val, gap:adjacent.val-p.val});
+      const g=adjacent.val-p.val;
+      if(g>=ATTACK_MIN_GAP) triggers.push({type:'adjacent', vsBoat:adjacent.no, vsVal:adjacent.val, gap:g});
     }
     if(triggers.length){
       results.push({boat:p.no, val:p.val, stgapSec:p.gap, stgapRank:p.rank, triggers, maxGap:Math.max(...triggers.map(t=>t.gap))});
@@ -845,8 +852,18 @@ function generateQBets(boats, oddsMap){
   // 僅差(25>24)で上回り、④が軸から漏れていたことが判明。ST攻め手候補は、GARON/Qの核心である
   // 「関係性・展開」を捉えた具体的シナリオであり、地力だけのセオリー本線より優先すべき
   // (CEO指示)。攻め手候補を先に埋め、余った枠だけセオリー本線で埋める。
+  // 2026-08-27追加(雄大さん指摘、蒲郡1R実例・今朝の参入バックテスト所見): 上記の「無条件優先」を
+  // 非攻め手候補に大差で負けている場合まで適用すると弊害が大きいと判明(今朝のバックテストn=657で
+  // 攻め手候補優先による「逆転」ケースの的中率が5.4%、蒲郡1Rでは18点の攻め手候補が24点の
+  // セオリー本線より優先されていた)。ただし多摩川10Rの実例(差1点)は壊したくないため、僅差
+  // (暫定・大まかにMAX_ATTACKER_DEFICIT=5点)までは従来通り優先し、それ以上大きく負けている
+  // 場合だけ優先しない。【暫定・大まかな値、要検証】
+  const MAX_ATTACKER_DEFICIT=5;
+  const bestNonAttackerWeight=candidates.filter(c=>!c.isAttacker).reduce((m,c)=>Math.max(m,c.weight),0);
   candidates.sort((a,b)=>{
-    if(a.isAttacker!==b.isAttacker) return a.isAttacker?-1:1; // 攻め手候補を常に優先
+    const aQualifies=a.isAttacker && (bestNonAttackerWeight-a.weight)<=MAX_ATTACKER_DEFICIT;
+    const bQualifies=b.isAttacker && (bestNonAttackerWeight-b.weight)<=MAX_ATTACKER_DEFICIT;
+    if(aQualifies!==bQualifies) return aQualifies?-1:1; // 僅差の攻め手候補のみ優先
     return b.weight-a.weight;
   });
 
