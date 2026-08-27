@@ -4,37 +4,9 @@
 <meta charset="utf-8">
 <title>GARON 実績ダッシュボード</title>
 <style>
+  /* 2026-08-27: 雄大さん指示により、prefers-color-schemeの検出待ちにせず常時ダークを既定にする
+     (白背景は見づらいとの報告)。明示的に:root[data-theme="light"]を付けた時だけ明るい配色に戻す。 */
   :root {
-    color-scheme: light;
-    --surface-1: #fcfcfb;
-    --page: #f9f9f7;
-    --text-primary: #0b0b0b;
-    --text-secondary: #52514e;
-    --text-muted: #898781;
-    --gridline: #e1e0d9;
-    --baseline: #c3c2b7;
-    --border: rgba(11,11,11,0.10);
-    --series-1: #2a78d6;
-    --good: #006300;
-    --critical: #d03b3b;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      color-scheme: dark;
-      --surface-1: #1a1a19;
-      --page: #0d0d0d;
-      --text-primary: #ffffff;
-      --text-secondary: #c3c2b7;
-      --text-muted: #898781;
-      --gridline: #2c2c2a;
-      --baseline: #383835;
-      --border: rgba(255,255,255,0.10);
-      --series-1: #3987e5;
-      --good: #0ca30c;
-      --critical: #d03b3b;
-    }
-  }
-  :root[data-theme="dark"] {
     color-scheme: dark;
     --surface-1: #1a1a19;
     --page: #0d0d0d;
@@ -46,6 +18,20 @@
     --border: rgba(255,255,255,0.10);
     --series-1: #3987e5;
     --good: #0ca30c;
+    --critical: #d03b3b;
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --surface-1: #fcfcfb;
+    --page: #f9f9f7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --gridline: #e1e0d9;
+    --baseline: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --series-1: #2a78d6;
+    --good: #006300;
     --critical: #d03b3b;
   }
   * { box-sizing: border-box; }
@@ -89,7 +75,7 @@
   <h1 style="margin:0;">GARON 実績ダッシュボード</h1>
   <button onclick="location.reload()" style="padding:8px 16px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-primary);cursor:pointer;">🔄 今すぐ更新</button>
 </div>
-<div class="meta">現行本番閾値: ROI&gt;=91(3,000円均等回収配分ベース) / 最終更新: 2026-08-27T01:50:36.899Z / scripts/update_dashboard.jsが毎晩自動更新</div>
+<div class="meta">現行本番閾値: ROI&gt;=91(3,000円均等回収配分ベース) / 最終更新: 2026-08-27T01:52:19.101Z / scripts/update_dashboard.jsが毎晩自動更新</div>
 <script>
   // 2026-08-27追加(雄大さん指示: リアルタイムで詳細を確認したい): 一括補完バッチ実行中は
   // 数分おきに内容が変わるため、ページを開きっぱなしでも自動で最新化されるようにする。
@@ -177,7 +163,7 @@
   <div class="tile"><div class="label">進捗率</div><div class="value ">9.5%</div></div>
   <div class="tile"><div class="label">処理中の日付</div><div class="value" style="font-size:16px;">2026-07-01 (166/166)</div></div>
   <div class="tile"><div class="label">状態</div><div class="value" style="font-size:16px;">実行中</div></div>
-  <div class="tile"><div class="label">オッズ補完(今回起動分)</div><div class="value">1件</div></div>
+  <div class="tile"><div class="label">オッズ補完(今回起動分)</div><div class="value">2件</div></div>
   <div class="tile"><div class="label">失敗(今回起動分)</div><div class="value ">0件</div></div>
 </div>
 
@@ -185,11 +171,11 @@
 <table>
 <thead><tr><th>時刻</th><th>日付</th><th>会場/R</th><th>結果</th></tr></thead>
 <tbody>
-<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">10:46:57</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-01</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">唐津 11R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr>
+<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">10:52:11</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-01</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">多摩川 4R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">10:46:57</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-01</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">唐津 11R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr>
 </tbody>
 </table>
 
-<p class="empty" style="margin-bottom:20px;">最終更新: 2026-08-27T01:46:58.423Z</p>
+<p class="empty" style="margin-bottom:20px;">最終更新: 2026-08-27T01:52:12.705Z</p>
 
 
 
