@@ -75,7 +75,7 @@
   <h1 style="margin:0;">GARON 実績ダッシュボード</h1>
   <button onclick="location.reload()" style="padding:8px 16px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-primary);cursor:pointer;">🔄 今すぐ更新</button>
 </div>
-<div class="meta">現行本番閾値: ROI&gt;=91(3,000円均等回収配分ベース) / 最終更新: 2026-08-28T12:38:31.916Z / scripts/update_dashboard.jsが毎晩自動更新</div>
+<div class="meta">現行本番閾値: ROI&gt;=91(3,000円均等回収配分ベース) / 最終更新: 2026-08-28T12:45:48.558Z / scripts/update_dashboard.jsが毎晩自動更新</div>
 <script>
   // 2026-08-27追加(雄大さん指示: リアルタイムで詳細を確認したい): 一括補完バッチ実行中は
   // 数分おきに内容が変わるため、ページを開きっぱなしでも自動で最新化されるようにする。
@@ -196,14 +196,14 @@
 </ul>
 <p class="empty" style="margin-bottom:20px;">状況の最終更新: 2026-08-28T21:10:00.000Z</p>
 
-<div class="meta" style="margin-bottom:8px;">データ収集状況(2026-07-01〜今日、換算)</div>
-<div class="tiles">
-  <div class="tile"><div class="label">総レース数(アーカイブ内)</div><div class="value">7,207</div></div>
-  <div class="tile"><div class="label">フルデータ完備(研究に使える件数)</div><div class="value good">563</div></div>
-  <div class="tile"><div class="label">不備・抜けのあるレース</div><div class="value critical">197</div></div>
-  <div class="tile"><div class="label">収集・補完が必要な残R数</div><div class="value">6,415</div></div>
+<div class="meta" style="margin-bottom:8px;">データ収集状況</div>
+<div class="tiles" style="margin-bottom:8px;">
+  <div class="tile" style="min-width:220px;">
+    <div class="label">研究に今すぐ使えるレース</div>
+    <div class="value good">564<span style="font-size:14px; color:var(--text-muted);"> 件</span></div>
+  </div>
 </div>
-<p class="empty" style="margin-bottom:20px;">丸ごと欠損している日: 9日(2026-07-31, 2026-08-12, 2026-08-13, 2026-08-14, 2026-08-16, 2026-08-17, 2026-08-18, 2026-08-19, 2026-08-20)</p>
+<p class="empty" style="margin-bottom:20px;">全7,207件中7.8%。一括補完バッチが処理を進めるたびに増えていきます(今日時点の残り: 約6,415件)。</p>
 
 
 <div class="meta" style="margin-bottom:8px;">自動処理(14個)の状態</div>
@@ -281,11 +281,11 @@
 
 <div class="meta" style="margin-bottom:8px;">過去アーカイブ フィールド穴埋め進捗(scripts/backfill_missing_fields.js。konkiAvgST等5項目+wakuStats等9項目+オッズ欠損補完)</div>
 <div class="tiles">
-  <div class="tile"><div class="label">本日の処理件数</div><div class="value good">65件</div></div>
+  <div class="tile"><div class="label">本日の処理件数</div><div class="value good">66件</div></div>
   <div class="tile"><div class="label">累計(全期間)</div><div class="value">658 / 7,073件</div></div>
   <div class="tile"><div class="label">処理中の日付</div><div class="value" style="font-size:16px;">2026-07-03 (168/168)</div></div>
   <div class="tile"><div class="label">状態</div><div class="value" style="font-size:16px;">実行中</div></div>
-  <div class="tile"><div class="label">オッズ補完(今回起動分)</div><div class="value">11件</div></div>
+  <div class="tile"><div class="label">オッズ補完(今回起動分)</div><div class="value">12件</div></div>
   <div class="tile"><div class="label">失敗(今回起動分)</div><div class="value ">0件</div></div>
 </div>
 
@@ -293,11 +293,11 @@
 <table>
 <thead><tr><th>時刻</th><th>日付</th><th>会場/R</th><th>結果</th></tr></thead>
 <tbody>
-<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:38:25</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">蒲郡 11R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:31:07</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 4R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:23:51</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">蒲郡 10R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:16:36</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">津 5R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:09:16</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">住之江 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:01:59</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 10R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">20:54:42</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">下関 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">20:47:25</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">津 4R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">20:40:09</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">浜名湖 7R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">20:32:51</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">20:25:46</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">浜名湖 6R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr>
+<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:45:41</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">若松 7R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:38:25</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">蒲郡 11R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:31:07</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 4R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:23:51</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">蒲郡 10R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:16:36</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">津 5R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:09:16</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">住之江 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:01:59</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 10R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">20:54:42</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">下関 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">20:47:25</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">津 4R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">20:40:09</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">浜名湖 7R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">20:32:51</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">20:25:46</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">浜名湖 6R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr>
 </tbody>
 </table>
 
-<p class="empty" style="margin-bottom:20px;">最終更新: 2026-08-28T12:38:25.755Z</p>
+<p class="empty" style="margin-bottom:20px;">最終更新: 2026-08-28T12:45:42.063Z</p>
 
 
 
