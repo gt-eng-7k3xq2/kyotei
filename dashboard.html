@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GARON 実績ダッシュボード</title>
 <style>
   /* 2026-08-27: 雄大さん指示により、prefers-color-schemeの検出待ちにせず常時ダークを既定にする
@@ -144,7 +145,7 @@
   <h1 style="margin:0;">GARON 実績ダッシュボード</h1>
   <button onclick="location.reload()" style="padding:8px 16px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-primary);cursor:pointer;">🔄 今すぐ更新</button>
 </div>
-<div class="meta">現行本番閾値: ROI&gt;=91(3,000円均等回収配分ベース) / 最終更新: 2026-08-28T13:00:17.500Z / scripts/update_dashboard.jsが毎晩自動更新</div>
+<div class="meta">現行本番閾値: ROI&gt;=91(3,000円均等回収配分ベース) / 最終更新: 2026-08-28T13:02:53.233Z / scripts/update_dashboard.jsが毎晩自動更新</div>
 <script>
   // 2026-08-27追加(雄大さん指示: リアルタイムで詳細を確認したい): 一括補完バッチ実行中は
   // 数分おきに内容が変わるため、ページを開きっぱなしでも自動で最新化されるようにする。
@@ -153,115 +154,118 @@
 </script>
 
 
-<div class="meta" style="margin-bottom:8px;">3本の時間軸(会社運営・発信・研究の理想の1日。点線バッジ=未着手の新規提案)</div>
-<div style="overflow-x:auto; margin-bottom:24px;">
-<table style="border-collapse:collapse; width:100%; font-size:13px; min-width:640px;">
-<thead><tr style="text-align:left; color:var(--text-secondary);">
-  <th style="padding:6px 10px; border-bottom:1px solid var(--border); white-space:nowrap;"></th>
-  <th style="padding:6px 10px; border-bottom:1px solid var(--border);">会社運営</th>
-  <th style="padding:6px 10px; border-bottom:1px solid var(--border);">発信</th>
-  <th style="padding:6px 10px; border-bottom:1px solid var(--border);">研究</th>
-</tr></thead>
-<tbody>
-<tr>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); white-space:nowrap; color:var(--text-muted); font-variant-numeric:tabular-nums;">7:00</td>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top;">
-    <div style="font-weight:600;">朝レポート<span style="font-size:10px; padding:1px 6px; border-radius:999px; border:1px dashed var(--text-muted); color:var(--text-muted); margin-left:6px;">新規提案</span></div>
-    <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">前日結果・夜間の研究成果・今日の判断待ち事項を1枚で</div>
-  </td>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top;">
-    <div style="font-weight:600;">朝投稿</div>
-    <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">今日の見どころを一言(gtools既存機能)</div>
-  </td>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top;">
-    <div style="font-weight:600;">昨日の棚卸し<span style="font-size:10px; padding:1px 6px; border-radius:999px; border:1px dashed var(--text-muted); color:var(--text-muted); margin-left:6px;">新規提案</span></div>
-    <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">research_log・cases.mdを見て今日のテーマを選ぶ</div>
-  </td>
-</tr><tr>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); white-space:nowrap; color:var(--text-muted); font-variant-numeric:tabular-nums;">8:00</td>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top;">
-    <div style="font-weight:600;">スクリーニング開始</div>
-    <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">レース直前の参戦判定(既存)</div>
-  </td>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); color:var(--text-muted);">—</td>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); color:var(--text-muted);">—</td>
-</tr><tr>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); white-space:nowrap; color:var(--text-muted); font-variant-numeric:tabular-nums;">日中</td>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top;">
-    <div style="font-weight:600;">都度判断 / 過去データ整備</div>
-    <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">参戦判定の確認、wakuStats等の不足分を2日分ずつ収集(不定期→毎日の定位置) / 現在地: 研究に使えるレース566件(全7,207件中7.9%、残り約6,415件)</div>
-  </td>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top;">
-    <div style="font-weight:600;">予想投稿</div>
-    <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">garon_q_engine.html(現行の主軸エンジン)で手動作成・X投稿</div>
-  </td>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top;">
-    <div style="font-weight:600;">研究ラリー</div>
-    <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">research→devil→auditで1テーマを検証</div>
-  </td>
-</tr><tr>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); white-space:nowrap; color:var(--text-muted); font-variant-numeric:tabular-nums;">21:00</td>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top;">
-    <div style="font-weight:600;">スクリーニング終了</div>
-    <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">日次サマリー通知(既存)</div>
-  </td>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top;">
-    <div style="font-weight:600;">結果まとめ投稿<span style="font-size:10px; padding:1px 6px; border-radius:999px; border:1px dashed var(--text-muted); color:var(--text-muted); margin-left:6px;">新規提案</span></div>
-    <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">的中・不的中を問わず淡々と記録(信用の積み上げ)</div>
-  </td>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); color:var(--text-muted);">—</td>
-</tr><tr>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); white-space:nowrap; color:var(--text-muted); font-variant-numeric:tabular-nums;">22:05〜23:30</td>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top;">
-    <div style="font-weight:600;">夜間の定型処理</div>
-    <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">見送り理由・結果穴埋め・診断・ダッシュボード更新・品質チェック・バックアップ・記録(既存7処理)</div>
-  </td>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); color:var(--text-muted);">—</td>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top;">
-    <div style="font-weight:600;">記録の締め<span style="font-size:10px; padding:1px 6px; border-radius:999px; border:1px dashed var(--text-muted); color:var(--text-muted); margin-left:6px;">新規提案</span></div>
-    <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">research_log・cases.mdを当日分で更新</div>
-  </td>
-</tr><tr>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); white-space:nowrap; color:var(--text-muted); font-variant-numeric:tabular-nums;">23:30〜翌7:00</td>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); color:var(--text-muted);">—</td>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); color:var(--text-muted);">—</td>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top;">
-    <div style="font-weight:600;">研究キューを止めない(必達ルール)<span style="font-size:10px; padding:1px 6px; border-radius:999px; border:1px dashed var(--text-muted); color:var(--text-muted); margin-left:6px;">新規提案</span></div>
-    <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">次の1テーマを必ず動かした状態で夜を越す</div>
-  </td>
-</tr><tr>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); white-space:nowrap; color:var(--text-muted); font-variant-numeric:tabular-nums;">3:00</td>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top;">
-    <div style="font-weight:600;">PC再起動</div>
-    <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">24時間稼働の安定化(既存)</div>
-  </td>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); color:var(--text-muted);">—</td>
-  <td style="padding:8px 10px; border-bottom:1px solid var(--border); color:var(--text-muted);">—</td>
-</tr>
-</tbody>
-</table>
-</div>
-
-
-<div class="meta" style="margin-bottom:8px;">今日の研究テーマ</div>
-<div class="tiles">
-  <div class="tile" style="min-width:280px;">
-    <div class="label">GARON-20260828-003</div>
-    <div class="value" style="font-size:15px; line-height:1.4;">Qエンジンの暫定パラメータOUTER_AXIS_MARGIN(=8)の較正検証</div>
-    <div style="font-size:12px; color:var(--text-secondary); margin-top:6px;">research→devil完了。方向性は支持だが統計的に未決着、CEO判断待ち</div>
+<div class="section-title">3本の時間軸</div>
+<div class="meta" style="margin-top:-6px;">会社運営・発信・研究の理想の1日。点線バッジ=未着手の新規提案</div>
+<div class="timeline-heads"><span>—</span><span>会社運営</span><span>発信</span><span>研究</span></div>
+<div class="timeline-grid">
+<div class="timeline-row">
+  <div class="timeline-time">7:00</div>
+  <div class="chip lane-company">
+    <div class="chip-lane-label">会社運営</div>
+    <div class="chip-title">朝レポート<span class="badge-new">新規提案</span></div>
+    <div class="chip-desc">前日結果・夜間の研究成果・今日の判断待ち事項を1枚で</div>
   </div>
+  <div class="chip lane-sns">
+    <div class="chip-lane-label">発信</div>
+    <div class="chip-title">朝投稿</div>
+    <div class="chip-desc">今日の見どころを一言(gtools既存機能)</div>
+  </div>
+  <div class="chip lane-research">
+    <div class="chip-lane-label">研究</div>
+    <div class="chip-title">昨日の棚卸し<span class="badge-new">新規提案</span></div>
+    <div class="chip-desc">research_log・cases.mdを見て今日のテーマを選ぶ</div>
+  </div>
+</div><div class="timeline-row">
+  <div class="timeline-time">8:00</div>
+  <div class="chip lane-company">
+    <div class="chip-lane-label">会社運営</div>
+    <div class="chip-title">スクリーニング開始</div>
+    <div class="chip-desc">レース直前の参戦判定(既存)</div>
+  </div>
+  <div class="chip-empty">—</div>
+  <div class="chip-empty">—</div>
+</div><div class="timeline-row">
+  <div class="timeline-time">日中</div>
+  <div class="chip lane-company">
+    <div class="chip-lane-label">会社運営</div>
+    <div class="chip-title">都度判断 / 過去データ整備</div>
+    <div class="chip-desc">参戦判定の確認、wakuStats等の不足分を2日分ずつ収集(不定期→毎日の定位置) / 現在地: 研究に使えるレース566件(全7,207件中7.9%、残り約6,415件)</div>
+  </div>
+  <div class="chip lane-sns">
+    <div class="chip-lane-label">発信</div>
+    <div class="chip-title">予想投稿</div>
+    <div class="chip-desc">garon_q_engine.html(現行の主軸エンジン)で手動作成・X投稿</div>
+  </div>
+  <div class="chip lane-research">
+    <div class="chip-lane-label">研究</div>
+    <div class="chip-title">研究ラリー</div>
+    <div class="chip-desc">research→devil→auditで1テーマを検証</div>
+  </div>
+</div><div class="timeline-row">
+  <div class="timeline-time">21:00</div>
+  <div class="chip lane-company">
+    <div class="chip-lane-label">会社運営</div>
+    <div class="chip-title">スクリーニング終了</div>
+    <div class="chip-desc">日次サマリー通知(既存)</div>
+  </div>
+  <div class="chip lane-sns">
+    <div class="chip-lane-label">発信</div>
+    <div class="chip-title">結果まとめ投稿<span class="badge-new">新規提案</span></div>
+    <div class="chip-desc">的中・不的中を問わず淡々と記録(信用の積み上げ)</div>
+  </div>
+  <div class="chip-empty">—</div>
+</div><div class="timeline-row">
+  <div class="timeline-time">22:05〜23:30</div>
+  <div class="chip lane-company">
+    <div class="chip-lane-label">会社運営</div>
+    <div class="chip-title">夜間の定型処理</div>
+    <div class="chip-desc">見送り理由・結果穴埋め・診断・ダッシュボード更新・品質チェック・バックアップ・記録(既存7処理)</div>
+  </div>
+  <div class="chip-empty">—</div>
+  <div class="chip lane-research">
+    <div class="chip-lane-label">研究</div>
+    <div class="chip-title">記録の締め<span class="badge-new">新規提案</span></div>
+    <div class="chip-desc">research_log・cases.mdを当日分で更新</div>
+  </div>
+</div><div class="timeline-row">
+  <div class="timeline-time">23:30〜翌7:00</div>
+  <div class="chip-empty">—</div>
+  <div class="chip-empty">—</div>
+  <div class="chip lane-research">
+    <div class="chip-lane-label">研究</div>
+    <div class="chip-title">研究キューを止めない(必達ルール)<span class="badge-new">新規提案</span></div>
+    <div class="chip-desc">次の1テーマを必ず動かした状態で夜を越す</div>
+  </div>
+</div><div class="timeline-row">
+  <div class="timeline-time">3:00</div>
+  <div class="chip lane-company">
+    <div class="chip-lane-label">会社運営</div>
+    <div class="chip-title">PC再起動</div>
+    <div class="chip-desc">24時間稼働の安定化(既存)</div>
+  </div>
+  <div class="chip-empty">—</div>
+  <div class="chip-empty">—</div>
+</div>
 </div>
 
 
-<div class="meta" style="margin-bottom:8px;">残タスク(CEO判断待ち、3件)</div>
-<ul style="margin:0 0 20px; padding-left:18px; font-size:13px;">
-<li style="margin-bottom:6px;"><span style="color:var(--text-muted); font-variant-numeric:tabular-nums;">GARON-20260828-001</span> 過去データ「まとめツール」の設計(生JSONは保管庫のまま、毎晩作り直す索引方式)。Devil反証はこれから</li><li style="margin-bottom:6px;"><span style="color:var(--text-muted); font-variant-numeric:tabular-nums;">GARON-20260828-003</span> OUTER_AXIS_MARGIN=8は方向性は支持されるが統計的に未決着。本番変更はしないが「較正済み」扱いにもしない</li><li style="margin-bottom:6px;"><span style="color:var(--text-muted); font-variant-numeric:tabular-nums;">orphan_file</span> _heretic_races_cache.json(29.4MB、8日放置・20日分欠落)の削除要否</li>
+<div class="section-title">今日の研究テーマ</div>
+<div class="status-card">
+  <div class="status-caseid">GARON-20260828-003</div>
+  <div class="status-title">Qエンジンの暫定パラメータOUTER_AXIS_MARGIN(=8)の較正検証</div>
+  <div class="status-note">research→devil完了。方向性は支持だが統計的に未決着、CEO判断待ち</div>
+</div>
+
+
+<div class="section-title">残タスク(CEO判断待ち、3件)</div>
+<ul class="status-list">
+<li><span class="status-list-id">GARON-20260828-001</span>過去データ「まとめツール」の設計(生JSONは保管庫のまま、毎晩作り直す索引方式)。Devil反証はこれから</li><li><span class="status-list-id">GARON-20260828-003</span>OUTER_AXIS_MARGIN=8は方向性は支持されるが統計的に未決着。本番変更はしないが「較正済み」扱いにもしない</li><li><span class="status-list-id">orphan_file</span>_heretic_races_cache.json(29.4MB、8日放置・20日分欠落)の削除要否</li>
 </ul>
 
 
-<div class="meta" style="margin-bottom:8px;">本日完了</div>
-<ul style="margin:0 0 20px; padding-left:18px; font-size:13px; color:var(--text-secondary);">
-<li style="margin-bottom:6px;"><span style="color:var(--text-muted); font-variant-numeric:tabular-nums;">GARON-20260828-002</span> kyoteibiyori.comの短時間ブロック(19:35〜20:05)はテザリング切断が原因と確定、バッチ原因説は不採用</li>
+<div class="section-title">本日完了</div>
+<ul class="status-list" style="color:var(--text-secondary);">
+<li><span class="status-list-id">GARON-20260828-002</span>kyoteibiyori.comの短時間ブロック(19:35〜20:05)はテザリング切断が原因と確定、バッチ原因説は不採用</li>
 </ul>
 <p class="empty" style="margin-bottom:20px;">状況の最終更新: 2026-08-28T21:10:00.000Z</p>
 
