@@ -19,6 +19,12 @@
     --series-1: #3987e5;
     --good: #0ca30c;
     --critical: #d03b3b;
+    --accent-company: #d99a4e;
+    --accent-company-soft: rgba(217,154,78,0.14);
+    --accent-sns: #d9678f;
+    --accent-sns-soft: rgba(217,103,143,0.14);
+    --accent-research: #4fb3c9;
+    --accent-research-soft: rgba(79,179,201,0.14);
   }
   :root[data-theme="light"] {
     color-scheme: light;
@@ -33,6 +39,12 @@
     --series-1: #2a78d6;
     --good: #006300;
     --critical: #d03b3b;
+    --accent-company: #a8631a;
+    --accent-company-soft: rgba(168,99,26,0.10);
+    --accent-sns: #b23a72;
+    --accent-sns-soft: rgba(178,58,114,0.10);
+    --accent-research: #0d7a89;
+    --accent-research-soft: rgba(13,122,137,0.10);
   }
   * { box-sizing: border-box; }
   body {
@@ -53,6 +65,63 @@
   .chart-card {
     background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px;
     padding: 16px; margin-bottom: 20px;
+  }
+  .section-title { font-size: 15px; font-weight: 700; margin: 0 0 10px; }
+  .timeline-heads {
+    display: grid; grid-template-columns: 62px repeat(3, 1fr); gap: 8px;
+    font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .timeline-heads span:first-child { visibility: hidden; }
+  .timeline-grid { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+  .timeline-row { display: grid; grid-template-columns: 62px repeat(3, 1fr); gap: 8px; align-items: stretch; }
+  .timeline-time {
+    color: var(--text-muted); font-size: 11.5px; font-variant-numeric: tabular-nums;
+    padding-top: 10px; line-height: 1.3;
+  }
+  .chip {
+    border-radius: 10px; padding: 9px 11px; border: 1px solid; min-height: 100%;
+  }
+  .chip.lane-company { background: var(--accent-company-soft); border-color: var(--accent-company); }
+  .chip.lane-sns { background: var(--accent-sns-soft); border-color: var(--accent-sns); }
+  .chip.lane-research { background: var(--accent-research-soft); border-color: var(--accent-research); }
+  .chip-lane-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    margin-bottom: 3px; display: none;
+  }
+  .lane-company .chip-lane-label { color: var(--accent-company); }
+  .lane-sns .chip-lane-label { color: var(--accent-sns); }
+  .lane-research .chip-lane-label { color: var(--accent-research); }
+  .chip-title { font-weight: 700; font-size: 13px; }
+  .chip-desc { font-size: 12px; color: var(--text-secondary); margin-top: 3px; line-height: 1.5; }
+  .badge-new {
+    font-size: 9.5px; padding: 1px 6px; border-radius: 999px; border: 1px dashed var(--text-muted);
+    color: var(--text-muted); margin-left: 6px; white-space: nowrap;
+  }
+  .chip-empty {
+    border-radius: 10px; padding: 9px 11px; border: 1px dashed var(--border);
+    color: var(--text-muted); font-size: 12px; opacity: 0.55; display: flex; align-items: center;
+  }
+  .status-card {
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; margin-bottom: 24px;
+  }
+  .status-card .status-caseid { font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .status-card .status-title { font-size: 15px; font-weight: 700; margin: 3px 0 6px; }
+  .status-card .status-note { font-size: 12.5px; color: var(--text-secondary); }
+  .status-list { list-style: none; margin: 0 0 24px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .status-list li {
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 12px; font-size: 12.5px;
+  }
+  .status-list .status-list-id { color: var(--text-muted); font-variant-numeric: tabular-nums; margin-right: 6px; }
+  @media (max-width: 680px) {
+    .timeline-heads { display: none; }
+    .timeline-row { grid-template-columns: 1fr; gap: 6px; }
+    .timeline-time {
+      padding-top: 0; font-weight: 700; color: var(--text-secondary); font-size: 12px;
+    }
+    .chip-lane-label { display: block; }
   }
   .chart-card h2 { font-size: 13px; color: var(--text-secondary); margin: 0 0 12px; font-weight: 600; }
   svg.chart { width: 100%; height: 220px; display: block; overflow: visible; }
@@ -75,7 +144,7 @@
   <h1 style="margin:0;">GARON 実績ダッシュボード</h1>
   <button onclick="location.reload()" style="padding:8px 16px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-primary);cursor:pointer;">🔄 今すぐ更新</button>
 </div>
-<div class="meta">現行本番閾値: ROI&gt;=91(3,000円均等回収配分ベース) / 最終更新: 2026-08-28T12:53:59.438Z / scripts/update_dashboard.jsが毎晩自動更新</div>
+<div class="meta">現行本番閾値: ROI&gt;=91(3,000円均等回収配分ベース) / 最終更新: 2026-08-28T13:00:17.500Z / scripts/update_dashboard.jsが毎晩自動更新</div>
 <script>
   // 2026-08-27追加(雄大さん指示: リアルタイムで詳細を確認したい): 一括補完バッチ実行中は
   // 数分おきに内容が変わるため、ページを開きっぱなしでも自動で最新化されるようにする。
@@ -120,7 +189,7 @@
   <td style="padding:8px 10px; border-bottom:1px solid var(--border); white-space:nowrap; color:var(--text-muted); font-variant-numeric:tabular-nums;">日中</td>
   <td style="padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top;">
     <div style="font-weight:600;">都度判断 / 過去データ整備</div>
-    <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">参戦判定の確認、wakuStats等の不足分を2日分ずつ収集(不定期→毎日の定位置) / 現在地: 研究に使えるレース565件(全7,207件中7.8%、残り約6,415件)</div>
+    <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">参戦判定の確認、wakuStats等の不足分を2日分ずつ収集(不定期→毎日の定位置) / 現在地: 研究に使えるレース566件(全7,207件中7.9%、残り約6,415件)</div>
   </td>
   <td style="padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top;">
     <div style="font-weight:600;">予想投稿</div>
@@ -199,11 +268,11 @@
 
 <div class="meta" style="margin-bottom:8px;">過去アーカイブ フィールド穴埋め進捗(scripts/backfill_missing_fields.js。konkiAvgST等5項目+wakuStats等9項目+オッズ欠損補完)</div>
 <div class="tiles">
-  <div class="tile"><div class="label">本日の処理件数</div><div class="value good">67件</div></div>
+  <div class="tile"><div class="label">本日の処理件数</div><div class="value good">68件</div></div>
   <div class="tile"><div class="label">累計(全期間)</div><div class="value">658 / 7,073件</div></div>
   <div class="tile"><div class="label">処理中の日付</div><div class="value" style="font-size:16px;">2026-07-03 (168/168)</div></div>
   <div class="tile"><div class="label">状態</div><div class="value" style="font-size:16px;">実行中</div></div>
-  <div class="tile"><div class="label">オッズ補完(今回起動分)</div><div class="value">13件</div></div>
+  <div class="tile"><div class="label">オッズ補完(今回起動分)</div><div class="value">14件</div></div>
   <div class="tile"><div class="label">失敗(今回起動分)</div><div class="value ">0件</div></div>
 </div>
 
@@ -211,11 +280,11 @@
 <table>
 <thead><tr><th>時刻</th><th>日付</th><th>会場/R</th><th>結果</th></tr></thead>
 <tbody>
-<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:52:57</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">尼崎 6R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:45:41</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">若松 7R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:38:25</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">蒲郡 11R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:31:07</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 4R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:23:51</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">蒲郡 10R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:16:36</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">津 5R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:09:16</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">住之江 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:01:59</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 10R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">20:54:42</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">下関 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">20:47:25</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">津 4R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">20:40:09</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">浜名湖 7R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">20:32:51</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr>
+<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">22:00:13</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">芦屋 2R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:52:57</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">尼崎 6R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:45:41</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">若松 7R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:38:25</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">蒲郡 11R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:31:07</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 4R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:23:51</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">蒲郡 10R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:16:36</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">津 5R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:09:16</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">住之江 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">21:01:59</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 10R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">20:54:42</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">下関 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">20:47:25</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">津 4R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">20:40:09</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">浜名湖 7R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr>
 </tbody>
 </table>
 
-<p class="empty" style="margin-bottom:20px;">最終更新: 2026-08-28T12:52:58.492Z</p>
+<p class="empty" style="margin-bottom:20px;">最終更新: 2026-08-28T13:00:14.504Z</p>
 
 
 
