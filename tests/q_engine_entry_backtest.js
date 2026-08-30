@@ -70,7 +70,6 @@ function hasFullData(r) {
 }
 
 function analyzeRace(engine, r) {
-  const support = engine.evaluateBoatSupport(r.boats);
   const attackCands = engine.identifyAttackCandidates(r.boats);
   const bets = engine.generateQBets(r.boats, r.oddsMap);
   const finalAxes = bets.axes;
@@ -78,9 +77,11 @@ function analyzeRace(engine, r) {
   const topAxis = finalAxes[0];
   const usedAttackTheory = topAxis && topAxis.reason === 'ST攻め手候補';
 
-  const otherBoats = r.boats.map(b => b.no).filter(no => no !== topAxis.boat);
-  const maxOtherScore = Math.max(...otherBoats.map(no => support.find(s => s.no === no).rawScore));
-  const gap = topAxis.weight - maxOtherScore;
+  // 2026-08-30: gapはgenerateQBets自身の返り値(bets.gap/bets.judge)をそのまま使う
+  // (以前はここで独立に再計算していたが、本番〈generateQBets〉とバックテストが同じ式を
+  // 別々の場所に書く=将来ズレるリスクがあったため、本番の計算結果を直接読む形に統一した)。
+  const gap = bets.gap;
+  const judge = bets.judge;
 
   // 買い目の点(全フォーメーションの合算、重複除去)
   const allPoints = new Set();
@@ -96,6 +97,7 @@ function analyzeRace(engine, r) {
   return {
     venue: r.venue, racenum: r.racenum, date: r.date, chakuju: r.chakuju,
     axisBoat: topAxis.boat, axisCount: primaryAxes.length, usedAttackTheory, gap,
+    entered: judge ? judge.entered : (gap >= 0), // judge未定義(旧エンジン)へのフォールバック
     maxGapAttack: attackCands.length ? Math.max(...attackCands.map(c => c.maxGap)) : null,
     betCount: betVals.length, hit, stake, payout, profit: payout - stake,
   };
@@ -145,6 +147,13 @@ function main() {
   ['負(逆転)', '0-3', '3-6', '6-10', '10+'].forEach(b => {
     console.log(`${b}\t${fmt(summarize(rows.filter(r => gapBucket(r.gap) === b)))}`);
   });
+
+  // 2026-08-30: generateQBets自身のjudge(見送り/参戦)による集計。上の「負(逆転)」バケットと
+  // 定義上完全に同一(entered=false ⟺ gap<0)になるはずなので、この2行が一致しない場合は
+  // 本番ロジックとバックテストのgap計算がズレている(配線バグ)のサインとして扱うこと。
+  console.log('\n--- 参入判定(generateQBets.judge)別 ---');
+  console.log(`見送り(gap<0)\t${fmt(summarize(rows.filter(r => !r.entered)))}`);
+  console.log(`参戦\t\t${fmt(summarize(rows.filter(r => r.entered)))}`);
 
   console.log('\n--- 軸の数別 ---');
   console.log(`1個\t${fmt(summarize(rows.filter(r => r.axisCount === 1)))}`);

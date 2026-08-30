@@ -1,0 +1,1081 @@
+{
+  "id": 1787787710865,
+  "date": "2026-08-27",
+  "venue": "三国",
+  "racenum": "1",
+  "shimekiri": "08:48",
+  "boats": [
+    {
+      "no": 1,
+      "name": "高憧四季",
+      "regno": "",
+      "nigerate6m": 64.9,
+      "nigerate1y": 68,
+      "atchiNige": 85.7,
+      "atchiNigeCount": 7,
+      "sgNige": 50,
+      "sashi6m": 16.2,
+      "makuri6m": 10.8,
+      "makurisashi6m": 8.1,
+      "sashi1y": 9.3,
+      "makuri1y": 9.3,
+      "makurisashi1y": 8,
+      "sg1chakuRate": 0,
+      "sg1chakuCount": 0,
+      "ippan2ren": 57.2,
+      "konki2ren": 90.4,
+      "konki3ren": 97.6,
+      "konkiAvgST": 0.15,
+      "wakuAvgST": 0.14,
+      "fCount": 1,
+      "kinsetsu6m": 8.86,
+      "motor2ren": 36.1,
+      "sessonPt": 6.8,
+      "sessonRaces": 3,
+      "sessonAvgST": 0.16,
+      "sgAvgST": 0,
+      "atchiAvgST": 0,
+      "tenji": 6.63,
+      "avgTenji": 6.73,
+      "syukai": 37.1,
+      "syukaiFoot": 5.77,
+      "avgSyukaiFoot": 5.82,
+      "chokusen": 6.65,
+      "directST": 0.07,
+      "isExhibitF": false,
+      "isF": true,
+      "motorRank": 23,
+      "motorContribP": -0.04,
+      "motorTenjiRank": 4.25,
+      "motorRaces": 114,
+      "motorYushutsu": 2,
+      "motorYusho": 1,
+      "motorChukanSeibi": false,
+      "deashiEval": "",
+      "nobiEval": "",
+      "partsExchange": "",
+      "stgapRank": "SS",
+      "stgapSec": 0.08,
+      "stgapRankByCourse": [
+        "SS",
+        "A",
+        "A",
+        "B",
+        "B",
+        "B"
+      ],
+      "stgapSecByCourse": [
+        0.08,
+        0.1,
+        0.1,
+        0.14,
+        0.12,
+        0.13
+      ],
+      "kimariteNige6m": 62.2,
+      "kimariteNigashi6m": 72.7,
+      "kimariteNigashi1y": 63.6,
+      "wakuStats": {
+        "ichiChaku": {
+          "今期": {
+            "rate": 78.6,
+            "n": 42
+          },
+          "直近 6ヶ月": {
+            "rate": 64.9,
+            "n": 37
+          },
+          "直近 3ヶ月": {
+            "rate": 52.9,
+            "n": 17
+          },
+          "直近 1ヶ月": {
+            "rate": 50,
+            "n": 6
+          },
+          "当地": {
+            "rate": 85.7,
+            "n": 7
+          },
+          "一般戦": {
+            "rate": 73.9,
+            "n": 65
+          },
+          "SG/G1": {
+            "rate": 50,
+            "n": 10
+          }
+        },
+        "niren2": {
+          "今期": {
+            "rate": 90.4,
+            "n": 42
+          },
+          "直近 6ヶ月": {
+            "rate": 81.1,
+            "n": 37
+          },
+          "直近 3ヶ月": {
+            "rate": 70.6,
+            "n": 17
+          },
+          "直近 1ヶ月": {
+            "rate": 66.7,
+            "n": 6
+          },
+          "当地": {
+            "rate": 85.7,
+            "n": 7
+          },
+          "一般戦": {
+            "rate": 86.2,
+            "n": 65
+          },
+          "SG/G1": {
+            "rate": 80,
+            "n": 10
+          }
+        },
+        "sanren2": {
+          "今期": {
+            "rate": 97.6,
+            "n": 42
+          },
+          "直近 6ヶ月": {
+            "rate": 89.2,
+            "n": 37
+          },
+          "直近 3ヶ月": {
+            "rate": 76.5,
+            "n": 17
+          },
+          "直近 1ヶ月": {
+            "rate": 83.3,
+            "n": 6
+          },
+          "当地": {
+            "rate": 100,
+            "n": 7
+          },
+          "一般戦": {
+            "rate": 92.3,
+            "n": 65
+          },
+          "SG/G1": {
+            "rate": 80,
+            "n": 10
+          }
+        }
+      },
+      "isJogai": false,
+      "avgSyukai": 37.52
+    },
+    {
+      "no": 2,
+      "name": "森陽多",
+      "regno": "",
+      "nigerate6m": 0,
+      "nigerate1y": 0,
+      "atchiNige": 0,
+      "atchiNigeCount": 3,
+      "sgNige": 0,
+      "sashi6m": 0,
+      "makuri6m": 0,
+      "makurisashi6m": 0,
+      "sashi1y": 0,
+      "makuri1y": 0,
+      "makurisashi1y": 0,
+      "sg1chakuRate": 0,
+      "sg1chakuCount": 0,
+      "ippan2ren": 10.3,
+      "konki2ren": 10,
+      "konki3ren": 10,
+      "konkiAvgST": 0.18,
+      "wakuAvgST": 0.19,
+      "fCount": 0,
+      "kinsetsu6m": 1.73,
+      "motor2ren": 33.1,
+      "sessonPt": 4.5,
+      "sessonRaces": 3,
+      "sessonAvgST": 0.18,
+      "sgAvgST": 0,
+      "atchiAvgST": 0,
+      "tenji": 6.72,
+      "avgTenji": 6.73,
+      "syukai": 37.62,
+      "syukaiFoot": 5.98,
+      "avgSyukaiFoot": 5.98,
+      "chokusen": 6.67,
+      "directST": 0.05,
+      "isExhibitF": true,
+      "isF": false,
+      "motorRank": 36,
+      "motorContribP": -0.42,
+      "motorTenjiRank": 3.03,
+      "motorRaces": 125,
+      "motorYushutsu": 1,
+      "motorYusho": 0,
+      "motorChukanSeibi": false,
+      "deashiEval": "",
+      "nobiEval": "",
+      "partsExchange": "",
+      "stgapRank": "B",
+      "stgapSec": 0.15,
+      "stgapRankByCourse": [
+        "B",
+        "B",
+        "C",
+        "B",
+        "B",
+        "B"
+      ],
+      "stgapSecByCourse": [
+        0.15,
+        0.15,
+        0.16,
+        0.12,
+        0.12,
+        0.12
+      ],
+      "kimariteNige6m": null,
+      "kimariteNigashi6m": null,
+      "kimariteNigashi1y": null,
+      "wakuStats": {
+        "ichiChaku": {
+          "今期": {
+            "rate": 0,
+            "n": 10
+          },
+          "直近 6ヶ月": {
+            "rate": 0,
+            "n": 11
+          },
+          "直近 3ヶ月": {
+            "rate": 0,
+            "n": 8
+          },
+          "直近 1ヶ月": {
+            "rate": 0,
+            "n": 3
+          },
+          "当地": {
+            "rate": 0,
+            "n": 3
+          },
+          "一般戦": {
+            "rate": 0,
+            "n": 22
+          },
+          "SG/G1": null
+        },
+        "niren2": {
+          "今期": {
+            "rate": 10,
+            "n": 10
+          },
+          "直近 6ヶ月": {
+            "rate": 0,
+            "n": 11
+          },
+          "直近 3ヶ月": {
+            "rate": 0,
+            "n": 8
+          },
+          "直近 1ヶ月": {
+            "rate": 0,
+            "n": 3
+          },
+          "当地": {
+            "rate": 0,
+            "n": 3
+          },
+          "一般戦": {
+            "rate": 4.6,
+            "n": 22
+          },
+          "SG/G1": null
+        },
+        "sanren2": {
+          "今期": {
+            "rate": 10,
+            "n": 10
+          },
+          "直近 6ヶ月": {
+            "rate": 9.1,
+            "n": 11
+          },
+          "直近 3ヶ月": {
+            "rate": 12.5,
+            "n": 8
+          },
+          "直近 1ヶ月": {
+            "rate": 33.3,
+            "n": 3
+          },
+          "当地": {
+            "rate": 0,
+            "n": 3
+          },
+          "一般戦": {
+            "rate": 9.1,
+            "n": 22
+          },
+          "SG/G1": null
+        }
+      },
+      "isJogai": false,
+      "avgSyukai": 38.1
+    },
+    {
+      "no": 3,
+      "name": "日隈茜",
+      "regno": "",
+      "nigerate6m": 0,
+      "nigerate1y": 0,
+      "atchiNige": 0,
+      "atchiNigeCount": 1,
+      "sgNige": 0,
+      "sashi6m": 0,
+      "makuri6m": 0,
+      "makurisashi6m": 0,
+      "sashi1y": 0,
+      "makuri1y": 0,
+      "makurisashi1y": 0,
+      "sg1chakuRate": 0,
+      "sg1chakuCount": 0,
+      "ippan2ren": 0.9,
+      "konki2ren": 0,
+      "konki3ren": 0,
+      "konkiAvgST": 0.19,
+      "wakuAvgST": 0,
+      "fCount": 0,
+      "kinsetsu6m": 1,
+      "motor2ren": 29.8,
+      "sessonPt": 1,
+      "sessonRaces": 2,
+      "sessonAvgST": 0.21,
+      "sgAvgST": 0,
+      "atchiAvgST": 0,
+      "tenji": 6.77,
+      "avgTenji": 6.71,
+      "syukai": 38.3,
+      "syukaiFoot": 6.1,
+      "avgSyukaiFoot": 6.31,
+      "chokusen": 6.78,
+      "directST": 0.06,
+      "isExhibitF": true,
+      "isF": false,
+      "motorRank": 45,
+      "motorContribP": -0.21,
+      "motorTenjiRank": 3.05,
+      "motorRaces": 118,
+      "motorYushutsu": 2,
+      "motorYusho": 0,
+      "motorChukanSeibi": false,
+      "deashiEval": "",
+      "nobiEval": "",
+      "partsExchange": "",
+      "stgapRank": "C",
+      "stgapSec": 0.17,
+      "stgapRankByCourse": [
+        "-",
+        "-",
+        "C",
+        "B",
+        "B",
+        "B"
+      ],
+      "stgapSecByCourse": [
+        null,
+        null,
+        0.17,
+        0.12,
+        0.15,
+        0.14
+      ],
+      "kimariteNige6m": null,
+      "kimariteNigashi6m": null,
+      "kimariteNigashi1y": null,
+      "wakuStats": {
+        "ichiChaku": {
+          "今期": {
+            "rate": 0,
+            "n": 0
+          },
+          "直近 6ヶ月": {
+            "rate": 0,
+            "n": 3
+          },
+          "直近 3ヶ月": {
+            "rate": 0,
+            "n": 3
+          },
+          "直近 1ヶ月": {
+            "rate": 0,
+            "n": 2
+          },
+          "当地": {
+            "rate": 0,
+            "n": 1
+          },
+          "一般戦": {
+            "rate": 0,
+            "n": 3
+          },
+          "SG/G1": null
+        },
+        "niren2": {
+          "今期": {
+            "rate": 0,
+            "n": 0
+          },
+          "直近 6ヶ月": {
+            "rate": 0,
+            "n": 3
+          },
+          "直近 3ヶ月": {
+            "rate": 0,
+            "n": 3
+          },
+          "直近 1ヶ月": {
+            "rate": 0,
+            "n": 2
+          },
+          "当地": {
+            "rate": 0,
+            "n": 1
+          },
+          "一般戦": {
+            "rate": 0,
+            "n": 3
+          },
+          "SG/G1": null
+        },
+        "sanren2": {
+          "今期": {
+            "rate": 0,
+            "n": 0
+          },
+          "直近 6ヶ月": {
+            "rate": 0,
+            "n": 3
+          },
+          "直近 3ヶ月": {
+            "rate": 0,
+            "n": 3
+          },
+          "直近 1ヶ月": {
+            "rate": 0,
+            "n": 2
+          },
+          "当地": {
+            "rate": 0,
+            "n": 1
+          },
+          "一般戦": {
+            "rate": 0,
+            "n": 3
+          },
+          "SG/G1": null
+        }
+      },
+      "isJogai": false,
+      "avgSyukai": 38.51
+    },
+    {
+      "no": 4,
+      "name": "伊藤栞",
+      "regno": "",
+      "nigerate6m": 0,
+      "nigerate1y": 0,
+      "atchiNige": 0,
+      "atchiNigeCount": 1,
+      "sgNige": 0,
+      "sashi6m": 0,
+      "makuri6m": 0,
+      "makurisashi6m": 0,
+      "sashi1y": 0,
+      "makuri1y": 0,
+      "makurisashi1y": 0,
+      "sg1chakuRate": 0,
+      "sg1chakuCount": 0,
+      "ippan2ren": 5.2,
+      "konki2ren": 0,
+      "konki3ren": 8.3,
+      "konkiAvgST": 0.18,
+      "wakuAvgST": 0.17,
+      "fCount": 1,
+      "kinsetsu6m": 2,
+      "motor2ren": 37.2,
+      "sessonPt": 4.25,
+      "sessonRaces": 3,
+      "sessonAvgST": 0.12,
+      "sgAvgST": 0,
+      "atchiAvgST": 0,
+      "tenji": 6.73,
+      "avgTenji": 6.8,
+      "syukai": 37.85,
+      "syukaiFoot": 5.78,
+      "avgSyukaiFoot": 6.04,
+      "chokusen": 6.77,
+      "directST": 0.09,
+      "isExhibitF": false,
+      "isF": false,
+      "motorRank": 17,
+      "motorContribP": 0.46,
+      "motorTenjiRank": 3.74,
+      "motorRaces": 117,
+      "motorYushutsu": 0,
+      "motorYusho": 0,
+      "motorChukanSeibi": false,
+      "deashiEval": "",
+      "nobiEval": "",
+      "partsExchange": "",
+      "stgapRank": "B",
+      "stgapSec": 0.13,
+      "stgapRankByCourse": [
+        "B",
+        "B",
+        "B",
+        "B",
+        "S",
+        "B"
+      ],
+      "stgapSecByCourse": [
+        0.12,
+        0.11,
+        0.13,
+        0.13,
+        0.09,
+        0.12
+      ],
+      "kimariteNige6m": null,
+      "kimariteNigashi6m": null,
+      "kimariteNigashi1y": null,
+      "wakuStats": {
+        "ichiChaku": {
+          "今期": {
+            "rate": 0,
+            "n": 12
+          },
+          "直近 6ヶ月": {
+            "rate": 0,
+            "n": 11
+          },
+          "直近 3ヶ月": {
+            "rate": 0,
+            "n": 4
+          },
+          "直近 1ヶ月": {
+            "rate": 0,
+            "n": 1
+          },
+          "当地": {
+            "rate": 0,
+            "n": 1
+          },
+          "一般戦": {
+            "rate": 0,
+            "n": 23
+          },
+          "SG/G1": null
+        },
+        "niren2": {
+          "今期": {
+            "rate": 0,
+            "n": 12
+          },
+          "直近 6ヶ月": {
+            "rate": 0,
+            "n": 11
+          },
+          "直近 3ヶ月": {
+            "rate": 0,
+            "n": 4
+          },
+          "直近 1ヶ月": {
+            "rate": 0,
+            "n": 1
+          },
+          "当地": {
+            "rate": 0,
+            "n": 1
+          },
+          "一般戦": {
+            "rate": 0,
+            "n": 23
+          },
+          "SG/G1": null
+        },
+        "sanren2": {
+          "今期": {
+            "rate": 8.3,
+            "n": 12
+          },
+          "直近 6ヶ月": {
+            "rate": 9.1,
+            "n": 11
+          },
+          "直近 3ヶ月": {
+            "rate": 25,
+            "n": 4
+          },
+          "直近 1ヶ月": {
+            "rate": 0,
+            "n": 1
+          },
+          "当地": {
+            "rate": 0,
+            "n": 1
+          },
+          "一般戦": {
+            "rate": 13,
+            "n": 23
+          },
+          "SG/G1": null
+        }
+      },
+      "isJogai": false,
+      "avgSyukai": 38.09
+    },
+    {
+      "no": 5,
+      "name": "中北涼",
+      "regno": "",
+      "nigerate6m": 8.7,
+      "nigerate1y": 0,
+      "atchiNige": 0,
+      "atchiNigeCount": 2,
+      "sgNige": 0,
+      "sashi6m": 0,
+      "makuri6m": 0,
+      "makurisashi6m": 8.7,
+      "sashi1y": 0,
+      "makuri1y": 0,
+      "makurisashi1y": 4.9,
+      "sg1chakuRate": 0,
+      "sg1chakuCount": 0,
+      "ippan2ren": 19,
+      "konki2ren": 0,
+      "konki3ren": 16.7,
+      "konkiAvgST": 0.17,
+      "wakuAvgST": 0.19,
+      "fCount": 0,
+      "kinsetsu6m": 4.04,
+      "motor2ren": 34.5,
+      "sessonPt": 3,
+      "sessonRaces": 2,
+      "sessonAvgST": 0.15,
+      "sgAvgST": 0,
+      "atchiAvgST": 0,
+      "tenji": 6.78,
+      "avgTenji": 6.83,
+      "syukai": 38.05,
+      "syukaiFoot": 6.07,
+      "avgSyukaiFoot": 5.95,
+      "chokusen": 6.83,
+      "directST": 0.07,
+      "isExhibitF": false,
+      "isF": false,
+      "motorRank": 29,
+      "motorContribP": -0.25,
+      "motorTenjiRank": 3.54,
+      "motorRaces": 123,
+      "motorYushutsu": 1,
+      "motorYusho": 0,
+      "motorChukanSeibi": false,
+      "deashiEval": "",
+      "nobiEval": "",
+      "partsExchange": "",
+      "stgapRank": "B",
+      "stgapSec": 0.12,
+      "stgapRankByCourse": [
+        "A",
+        "S",
+        "B",
+        "B",
+        "B",
+        "B"
+      ],
+      "stgapSecByCourse": [
+        0.1,
+        0.09,
+        0.11,
+        0.11,
+        0.12,
+        0.11
+      ],
+      "kimariteNige6m": null,
+      "kimariteNigashi6m": null,
+      "kimariteNigashi1y": null,
+      "wakuStats": {
+        "ichiChaku": {
+          "今期": {
+            "rate": 0,
+            "n": 18
+          },
+          "直近 6ヶ月": {
+            "rate": 8.7,
+            "n": 23
+          },
+          "直近 3ヶ月": {
+            "rate": 0,
+            "n": 13
+          },
+          "直近 1ヶ月": {
+            "rate": 0,
+            "n": 4
+          },
+          "当地": {
+            "rate": 0,
+            "n": 2
+          },
+          "一般戦": {
+            "rate": 4.9,
+            "n": 41
+          },
+          "SG/G1": null
+        },
+        "niren2": {
+          "今期": {
+            "rate": 0,
+            "n": 18
+          },
+          "直近 6ヶ月": {
+            "rate": 17.4,
+            "n": 23
+          },
+          "直近 3ヶ月": {
+            "rate": 7.7,
+            "n": 13
+          },
+          "直近 1ヶ月": {
+            "rate": 0,
+            "n": 4
+          },
+          "当地": {
+            "rate": 0,
+            "n": 2
+          },
+          "一般戦": {
+            "rate": 9.8,
+            "n": 41
+          },
+          "SG/G1": null
+        },
+        "sanren2": {
+          "今期": {
+            "rate": 16.7,
+            "n": 18
+          },
+          "直近 6ヶ月": {
+            "rate": 26.1,
+            "n": 23
+          },
+          "直近 3ヶ月": {
+            "rate": 15.4,
+            "n": 13
+          },
+          "直近 1ヶ月": {
+            "rate": 25,
+            "n": 4
+          },
+          "当地": {
+            "rate": 0,
+            "n": 2
+          },
+          "一般戦": {
+            "rate": 29.3,
+            "n": 41
+          },
+          "SG/G1": null
+        }
+      },
+      "isJogai": false,
+      "avgSyukai": 38.3
+    },
+    {
+      "no": 6,
+      "name": "加藤奈月",
+      "regno": "",
+      "nigerate6m": 0,
+      "nigerate1y": 0,
+      "atchiNige": 0,
+      "atchiNigeCount": 11,
+      "sgNige": 0,
+      "sashi6m": 0,
+      "makuri6m": 0,
+      "makurisashi6m": 0,
+      "sashi1y": 0,
+      "makuri1y": 0,
+      "makurisashi1y": 0,
+      "sg1chakuRate": 0,
+      "sg1chakuCount": 0,
+      "ippan2ren": 16.5,
+      "konki2ren": 0,
+      "konki3ren": 20,
+      "konkiAvgST": 0.18,
+      "wakuAvgST": 0.19,
+      "fCount": 0,
+      "kinsetsu6m": 3.2,
+      "motor2ren": 43.1,
+      "sessonPt": 5.5,
+      "sessonRaces": 2,
+      "sessonAvgST": 0.18,
+      "sgAvgST": 0,
+      "atchiAvgST": 0,
+      "tenji": 6.79,
+      "avgTenji": 6.85,
+      "syukai": 38.23,
+      "syukaiFoot": 5.87,
+      "avgSyukaiFoot": 6.14,
+      "chokusen": 6.78,
+      "directST": 0.06,
+      "isExhibitF": false,
+      "isF": false,
+      "motorRank": 5,
+      "motorContribP": 0.55,
+      "motorTenjiRank": 2.98,
+      "motorRaces": 120,
+      "motorYushutsu": 3,
+      "motorYusho": 2,
+      "motorChukanSeibi": false,
+      "deashiEval": "",
+      "nobiEval": "",
+      "partsExchange": "",
+      "stgapRank": "B",
+      "stgapSec": 0.11,
+      "stgapRankByCourse": [
+        "B",
+        "B",
+        "B",
+        "A",
+        "A",
+        "B"
+      ],
+      "stgapSecByCourse": [
+        0.11,
+        0.12,
+        0.14,
+        0.1,
+        0.1,
+        0.11
+      ],
+      "kimariteNige6m": null,
+      "kimariteNigashi6m": null,
+      "kimariteNigashi1y": null,
+      "wakuStats": {
+        "ichiChaku": {
+          "今期": {
+            "rate": 0,
+            "n": 15
+          },
+          "直近 6ヶ月": {
+            "rate": 0,
+            "n": 15
+          },
+          "直近 3ヶ月": {
+            "rate": 0,
+            "n": 6
+          },
+          "直近 1ヶ月": {
+            "rate": 0,
+            "n": 3
+          },
+          "当地": {
+            "rate": 0,
+            "n": 11
+          },
+          "一般戦": {
+            "rate": 0,
+            "n": 29
+          },
+          "SG/G1": null
+        },
+        "niren2": {
+          "今期": {
+            "rate": 0,
+            "n": 15
+          },
+          "直近 6ヶ月": {
+            "rate": 6.7,
+            "n": 15
+          },
+          "直近 3ヶ月": {
+            "rate": 0,
+            "n": 6
+          },
+          "直近 1ヶ月": {
+            "rate": 0,
+            "n": 3
+          },
+          "当地": {
+            "rate": 0,
+            "n": 11
+          },
+          "一般戦": {
+            "rate": 3.5,
+            "n": 29
+          },
+          "SG/G1": null
+        },
+        "sanren2": {
+          "今期": {
+            "rate": 20,
+            "n": 15
+          },
+          "直近 6ヶ月": {
+            "rate": 20,
+            "n": 15
+          },
+          "直近 3ヶ月": {
+            "rate": 16.7,
+            "n": 6
+          },
+          "直近 1ヶ月": {
+            "rate": 33.3,
+            "n": 3
+          },
+          "当地": {
+            "rate": 18.2,
+            "n": 11
+          },
+          "一般戦": {
+            "rate": 20.7,
+            "n": 29
+          },
+          "SG/G1": null
+        }
+      },
+      "isJogai": false,
+      "avgSyukai": 38.22
+    }
+  ],
+  "oddsMap": {
+    "1-2-3": 23.4,
+    "1-3-2": 50.8,
+    "1-4-2": 11.4,
+    "1-5-2": 13.9,
+    "1-6-2": 18.9,
+    "1-2-4": 6.4,
+    "1-3-4": 78.5,
+    "1-4-3": 70.7,
+    "1-5-3": 60.7,
+    "1-6-3": 85.5,
+    "1-2-5": 8.3,
+    "1-3-5": 78.4,
+    "1-4-5": 15.5,
+    "1-5-4": 21.5,
+    "1-6-4": 25.8,
+    "1-2-6": 7.5,
+    "1-3-6": 86.4,
+    "1-4-6": 12.9,
+    "1-5-6": 12.7,
+    "1-6-5": 20.6,
+    "2-1-3": 175.2,
+    "2-3-1": 340.9,
+    "2-4-1": 243.1,
+    "2-5-1": 348.8,
+    "2-6-1": 323.2,
+    "2-1-4": 94.8,
+    "2-3-4": 632.7,
+    "2-4-3": 899.5,
+    "2-5-3": 933.2,
+    "2-6-3": 995.4,
+    "2-1-5": 132.6,
+    "2-3-5": 794.2,
+    "2-4-5": 858.1,
+    "2-5-4": 794.2,
+    "2-6-4": 638.1,
+    "2-1-6": 110.1,
+    "2-3-6": 1082,
+    "2-4-6": 533.2,
+    "2-5-6": 544.9,
+    "2-6-5": 761.8,
+    "3-1-2": 288.2,
+    "3-2-1": 466.6,
+    "3-4-1": 491.1,
+    "3-5-1": 649.2,
+    "3-6-1": 1333,
+    "3-1-4": 268.5,
+    "3-2-4": 654.9,
+    "3-4-2": 969.6,
+    "3-5-2": 666.6,
+    "3-6-2": 1204,
+    "3-1-5": 350.5,
+    "3-2-5": 777.7,
+    "3-4-5": 1309,
+    "3-5-4": 1082,
+    "3-6-4": 1736,
+    "3-1-6": 617,
+    "3-2-6": 868.1,
+    "3-4-6": 1148,
+    "3-5-6": 1148,
+    "3-6-5": 1964,
+    "4-1-2": 141.1,
+    "4-2-1": 256.5,
+    "4-3-1": 660.7,
+    "4-5-1": 331.8,
+    "4-6-1": 392.9,
+    "4-1-3": 339.3,
+    "4-2-3": 1435,
+    "4-3-2": 1588,
+    "4-5-2": 829.5,
+    "4-6-2": 654.9,
+    "4-1-5": 171.6,
+    "4-2-5": 769.7,
+    "4-3-5": 1408,
+    "4-5-3": 1148,
+    "4-6-3": 2017,
+    "4-1-6": 177.3,
+    "4-2-6": 607,
+    "4-3-6": 1493,
+    "4-5-6": 544.9,
+    "4-6-5": 933.2,
+    "5-1-2": 150.8,
+    "5-2-1": 327.4,
+    "5-3-1": 739.2,
+    "5-4-1": 395,
+    "5-6-1": 235.5,
+    "5-1-3": 369.6,
+    "5-2-3": 1082,
+    "5-3-2": 1114,
+    "5-4-2": 858.1,
+    "5-6-2": 522.1,
+    "5-1-4": 184.3,
+    "5-2-4": 507.9,
+    "5-3-4": 1223,
+    "5-4-3": 1588,
+    "5-6-3": 1588,
+    "5-1-6": 119,
+    "5-2-6": 478.6,
+    "5-3-6": 1659,
+    "5-4-6": 649.2,
+    "5-6-4": 666.6,
+    "6-1-2": 201.7,
+    "6-2-1": 364.2,
+    "6-3-1": 1309,
+    "6-4-1": 469.5,
+    "6-5-1": 291.6,
+    "6-1-3": 643.6,
+    "6-2-3": 1244,
+    "6-3-2": 1777,
+    "6-4-2": 1051,
+    "6-5-2": 802.8,
+    "6-1-4": 235.5,
+    "6-2-4": 666.6,
+    "6-3-4": 1659,
+    "6-4-3": 2262,
+    "6-5-3": 1821,
+    "6-1-5": 182.1,
+    "6-2-5": 754.1,
+    "6-3-5": 2333,
+    "6-4-5": 1114,
+    "6-5-4": 848.4
+  },
+  "chakuju": "1-4-2",
+  "payout": "¥960",
+  "resulted": true,
+  "_fixtureLabel": "三国1R_2026-08-27(gap-5_skipped)",
+  "_sourceFile": "daikibo_archive_2026-08-27.json"
+}

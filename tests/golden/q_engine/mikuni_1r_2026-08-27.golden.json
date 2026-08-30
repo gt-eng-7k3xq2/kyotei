@@ -1,0 +1,54 @@
+{
+  "_qEngineVersion": 1,
+  "_fixture": "mikuni_1r_2026-08-27.json",
+  "_label": "三国1R_2026-08-27(gap-5_skipped)",
+  "_actualResult": {
+    "chakuju": "1-4-2",
+    "payout": "¥960"
+  },
+  "gap": -5,
+  "judge": {
+    "entered": false,
+    "text": "✗見送り(逆転採用 gap<0)"
+  },
+  "axes": [
+    {
+      "boat": 4,
+      "weight": 25,
+      "narrow": false,
+      "reason": "ST攻め手候補"
+    },
+    {
+      "boat": 5,
+      "weight": 22,
+      "narrow": true,
+      "reason": "恩恵艇(スジ)"
+    }
+  ],
+  "formations": [
+    {
+      "axis": 4,
+      "weight": 25,
+      "type": "ST攻め手候補",
+      "points": [
+        "4-5-1",
+        "4-1-5",
+        "4-1-2",
+        "4-1-6",
+        "4-5-2",
+        "4-5-6"
+      ]
+    },
+    {
+      "axis": 5,
+      "weight": 22,
+      "type": "恩恵艇(スジ)",
+      "points": [
+        "5-4-1",
+        "5-4-2",
+        "5-4-3",
+        "5-4-6"
+      ]
+    }
+  ]
+}

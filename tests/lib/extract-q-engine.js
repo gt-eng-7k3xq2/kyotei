@@ -20,7 +20,8 @@ const FUNCTION_NAMES = [
 // identifyAttackCandidates()の外側(トップレベル)で定義されたconst。関数抽出には含まれないため
 // 別途抜き出す必要がある(2026-08-27、研究部隊GARON-20260827-001が発見したバグの修正。
 // tests/q_engine_entry_backtest.jsが全件ReferenceErrorで機能停止していた)。
-const CONST_NAMES = ['ATTACK_MIN_GAP'];
+// Q_ENGINE_VERSIONは2026-08-30追加(generateQBets内のgap<0見送りルール導入に伴う版数)。
+const CONST_NAMES = ['ATTACK_MIN_GAP', 'Q_ENGINE_VERSION'];
 
 function loadQEngine(htmlPath) {
   const source = fs.readFileSync(htmlPath, 'utf8');
@@ -33,6 +34,7 @@ function loadQEngine(htmlPath) {
     ...funcSources,
     'module.exports = {',
     ...FUNCTION_NAMES.map(name => `  ${name},`),
+    ...CONST_NAMES.map(name => `  ${name},`),
     '};',
   ].join('\n\n');
 
