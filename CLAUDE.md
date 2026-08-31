@@ -174,6 +174,7 @@ Windowsタスクスケジューラに13タスク(日次9・週次1・オンデ�
 | `GARON_NightlyReboot` | 毎日03:00(git commitの後、翌8:00のRealtimeScreeningまで十分な余裕を確保) | `scripts/run_nightly_reboot.cmd`(`shutdown /r /t 60`) | 24時間稼働の安定性のためPCを毎晩自動再起動する(2026-08-17追加)。S4Uログオンのため、再起動後に誰もサインインしなくても他の全タスクは通常通り動く。`GARON_SiteBlockMonitor`のダウンタイムは再起動所要時間(数分程度)のみ。 |
 | `GARON_SiteBlockMonitor` | 毎日0:05から15分間隔で終日反復 | `scripts/monitor_site_block.js`(`run_site_block_monitor.cmd`経由) | kyoteibiyori.comへの軽量な疎通確認(realtime_screening.jsと同じAPIエンドポイント)。状態は`logs/.site_block_state.json`に保存し、「ブロック中→到達可能」に変化した瞬間だけntfy通知する(逆方向は通知せずログのみ)。稼働時間帯に縛られず終日動くため、夜間にブロックが解けても気づける。 |
 | `GARON_NtfyHealthCheck` | 毎週月曜7:30(週次、8:00の稼働開始前) | `scripts/ntfy_health_check.js`(`run_ntfy_health_check.cmd`経由) | ntfy疎通確認専用の軽量テスト通知を1件送るだけ(2026-08-17追加)。トピック誤設定・ntfy.sh側の障害・スマホ側の購読解除などを、実際のレース判断に影響する前に検知する目的。 |
+| `GARON_CodexDailyResearch` | 毎日06:00(2026-08-31追加) | `scripts/run_codex_daily_research.js`(`run_codex_daily_research.cmd`経由) | Codex CLIを非対話モード(`codex exec --sandbox workspace-write`)で起動し、GARON RESEARCH OS(平時モード、`AGENTS_RESEARCH.md`)の日次発想生成を行う。プロンプトは`scripts/codex_daily_research_prompt.txt`(タスク定義には埋め込まない)。実行状態は`logs/codex_daily_research_state.json`(機械可読)・`logs/codex_daily_research.log`(生ログ)に記録し、失敗時のみntfy通知。二重起動防止はPID生死確認ロック(`logs/.codex_daily_research.lock`)。**未登録(2026-08-31時点)**: `Register-ScheduledTask`のS4Uログオン権限付与に管理者権限が必要で、Claude Code側の非昇格PowerShellセッションでは実行不可と判明。CEOの昇格済みPowerShellで`powershell -ExecutionPolicy Bypass -File C:\garon\scripts\setup_scheduled_tasks.ps1`を1回実行すれば登録される(既存14タスクへの影響なし、冪等)。登録後の`schtasks /run`によるオンデマンド実行は非昇格セッションからでも可能と確認済み。 |
 
 各タスクのログは`C:\garon\logs\`配下(タスク名に対応する`*.log`、追記式)。
 
@@ -233,6 +234,7 @@ GARONは「無人稼働インフラの完成度」と「実際に予想を出す
 2. **ブロック状況** — `logs/.site_block_state.json`の`blocked`/`since`/`lastCheckedAt`を確認する。
 3. **ダッシュボード** — `reports/dashboard.html`の最終更新日時・累計参戦件数・的中率・ROI・純損益を確認する。
 4. **現在フェーズの判定と提示** — 上記の結果を踏まえ、上記フェーズ定義のどこにいるか(基本的にはブロック状況で2↔3を判定)を一言で示し、次にすべきことを一言添える。その後で本題に入る。
+4.5. **通知一時停止フラグの確認(2026-08-31〜)** — `node scripts/emergency_diagnose.js`を実行するか`logs/current_status.md`を直接確認し、「⚠️ 通知が一時停止中です」が出ていないか確認する。出ている場合、自動再開は行われない設計(緊急時Codex引き継ぎ体制v3 §9)のため、他の作業より先にCEOへ「通知を再開してよいか」を確認すること。無断で再開しない。
 5. **朝のタスク表提出(2026-08-28〜、CEO指示による恒久ルール)** — その日最初のセッションでは、「3本の時間軸」(会社運営・発信・研究の理想の1日をタイムラインで示すArtifact)を必ず提示する。前日の結果・夜間の研究成果(research_log.md新規分)・今日の判断待ち事項を反映して更新すること。既存のArtifact URLを`action: "list"`または過去のセッション記録から特定し、同じURLで再公開する(新規URLを乱発しない)。完全無人の自動送信は現状できない(ヘッドレス実行の安全性未解消のため)ため、CEOがその日最初にセッションを開始した時点でCOOが提示する運用とする。
 
 ### 原則: 開発作業と実際の予想発信は別物
@@ -260,3 +262,4 @@ GARONは「無人稼働インフラの完成度」と「実際に予想を出す
 1. **実装前に必ずユーザーに確認を取ること。** 提案・合意なしにコードの変更を書き始めない。
 2. **修正後は必ず`node --check`で構文確認すること。** 上記の方法で`<script>`内容を抽出してから実行する。これらは単一HTMLファイルの実運用ツールであり、構文エラーが1つでも入るとファイル全体が読み込み不能になり、本番ツールが即座に使えなくなる。
 3. **n<30のサンプルは信用しないこと。** バックテスト・検証結果でサンプル数(n)が30未満の集計は「傾向」として扱わず、結論の根拠にしない。既存コード内でもn=60〜80を「傾向として信頼できる目安」としている箇所がある(gtools.html, kyotei_backtest.html)。それより緩い閾値で判断を確定させない。
+4. **本番エンジン(sg_narutou.html/garon_q_engine.html等)への変更がCEO承認を得て本番反映された後、回帰テストが通り実際に一定時間本番で問題なく動いたことを確認できたら、`git tag -a verified-YYYY-MM-DD-N`でそのコミットに「正常動作確認済み」の記録を残すこと。** 確認日時・実行したテスト・エンジンバージョン・確認者・本番稼働確認の有無をタグメッセージに含める(緊急時Codex引き継ぎ体制v3 §8.3、`reports/garon_emergency_codex_handoff_design_2026-08-31.md`参照)。この記録は緊急時の復旧先の第一候補として使われるため、省略しないこと。
