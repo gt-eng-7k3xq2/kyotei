@@ -189,7 +189,7 @@
   <h1 style="margin:0;">GARON 実績ダッシュボード</h1>
   <button onclick="location.reload()" style="padding:8px 16px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-primary);cursor:pointer;">🔄 今すぐ更新</button>
 </div>
-<div class="meta">現行本番閾値: ROI&gt;=91(3,000円均等回収配分ベース) / 最終更新: 2026-08-31T07:49:47.629Z / scripts/update_dashboard.jsが毎晩自動更新</div>
+<div class="meta">現行本番閾値: ROI&gt;=91(3,000円均等回収配分ベース) / 最終更新: 2026-08-31T07:57:59.280Z / scripts/update_dashboard.jsが毎晩自動更新</div>
 <script>
   // 2026-08-27追加(雄大さん指示: リアルタイムで詳細を確認したい): 一括補完バッチ実行中は
   // 数分おきに内容が変わるため、ページを開きっぱなしでも自動で最新化されるようにする。
@@ -215,7 +215,7 @@
 <div class="meta" style="margin-top:-6px;">無人運用インフラが実際に動いているか(現在フェーズ: フェーズ3(実機検証))</div>
 <div class="status-chip-row">
 <div class="chip lane-company"><div class="chip-title">✓ 自動処理 15タスク稼働中</div><div class="chip-desc">全てReady/Running(無効化なし)</div></div>
-<div class="chip lane-sns"><div class="chip-title">🟢 到達可能</div><div class="chip-desc">最終確認: 2026-08-31T07:35:03.210Z</div></div>
+<div class="chip lane-sns"><div class="chip-title">🟢 到達可能</div><div class="chip-desc">最終確認: 2026-08-31T07:50:02.997Z</div></div>
 <div class="chip lane-research"><div class="chip-title">本日の参入判定: まだ無し</div></div>
 </div>
 
@@ -248,8 +248,8 @@
       <div class="dept-title">異端研究部門(Heretic Research)報告 — 2026-08-31</div>
     </div><div class="dept-card lane-company">
     <div class="dept-name">COO<span class="dept-live-dot"></span></div>
-    <div class="dept-status">本日完了5件</div>
-    <div class="dept-title">セッション効果、Devil反証完了。部分的支持だが会場集中で証拠は境界的</div>
+    <div class="dept-status">本日完了6件</div>
+    <div class="dept-title">緊急時Codex引き継ぎ体制の実装、Step1(Git運用の安全化)完了</div>
   </div>
 </div>
 
@@ -297,8 +297,8 @@
   </div>
   <div class="chip lane-research">
     <div class="chip-lane-label">研究</div>
-    <div class="chip-title">GARON-20260831-001 セッション効果、Devil反証完了。部分的支持だが会場集中で証拠は境界的</div>
-    <div class="chip-desc">同日・同会場の直前レース1号艇勝敗の自己相関(約3.3pt)は独立再現できたが、Devilが常滑・丸亀の2会場だけで効果の34%を占めることを発見、除外するとp=0.0023→0.0347で非有意化。実装は時期尚早で一致。新リード「市場のオーバーリアクション非対称性」をresearchへ申し送り予定</div>
+    <div class="chip-title">運用 緊急時Codex引き継ぎ体制の実装、Step1(Git運用の安全化)完了</div>
+    <div class="chip-desc">設計書v1→v2→v3(CEO指示計15項目を反映)を経てCEO承認、実装開始。C:\garon直下に新規ローカルgitリポジトリを作成(gt-eng-7k3xq2とは別、内部復旧専用、外部pushなし)。.gitignoreで.env/daikibo_archive_*.json/logs/実行時中間キャッシュ(scripts/_*.csv、188MB超)等を除外。初回commit前チェックリスト5項目を全て実施しクリア。verified-タグ機構(§8.3)・退避ブランチ(§8.1)・git restore(§8.2、PowerShellリダイレクト回避)の3つの復旧メカニズムを実際に動作テスト済み(git restoreはハッシュ一致で日本語content含め完全復元を確認)。次はStep2(AGENTS.md/emergency_runbook.md/emergency_incidents.mdの作成)</div>
   </div>
 </div><div class="timeline-row">
   <div class="timeline-time">21:00</div>
@@ -333,7 +333,7 @@
   <div class="chip lane-research">
     <div class="chip-lane-label">研究</div>
     <div class="chip-title">研究キューを止めない(必達ルール)<span class="badge-new">新規提案</span></div>
-    <div class="chip-desc">今夜: GARON-20260831-001 セッション効果、Devil反証完了。部分的支持だが会場集中で証拠は境界的(同日・同会場の直前レース1号艇勝敗の自己相関(約3.3pt)は独立再現できたが、Devilが常滑・丸亀の2会場だけで効果の34%を占めることを発見、除外するとp=0.0023→0.0347で非有意化。実装は時期尚早で一致。新リード「市場のオーバーリアクション非対称性」をresearchへ申し送り予定)。完了後は次のテーマへ</div>
+    <div class="chip-desc">今夜: 運用 緊急時Codex引き継ぎ体制の実装、Step1(Git運用の安全化)完了(設計書v1→v2→v3(CEO指示計15項目を反映)を経てCEO承認、実装開始。C:\garon直下に新規ローカルgitリポジトリを作成(gt-eng-7k3xq2とは別、内部復旧専用、外部pushなし)。.gitignoreで.env/daikibo_archive_*.json/logs/実行時中間キャッシュ(scripts/_*.csv、188MB超)等を除外。初回commit前チェックリスト5項目を全て実施しクリア。verified-タグ機構(§8.3)・退避ブランチ(§8.1)・git restore(§8.2、PowerShellリダイレクト回避)の3つの復旧メカニズムを実際に動作テスト済み(git restoreはハッシュ一致で日本語content含め完全復元を確認)。次はStep2(AGENTS.md/emergency_runbook.md/emergency_incidents.mdの作成))。完了後は次のテーマへ</div>
   </div>
 </div><div class="timeline-row">
   <div class="timeline-time">3:00</div>
@@ -353,31 +353,31 @@
   <div style="display:flex; align-items:center; gap:8px; margin-bottom:2px;">
     <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">待機中</span>
   </div>
-  <div class="status-caseid">GARON-20260831-001</div>
-  <div class="status-title">セッション効果、Devil反証完了。部分的支持だが会場集中で証拠は境界的</div>
-  <div class="status-note">同日・同会場の直前レース1号艇勝敗の自己相関(約3.3pt)は独立再現できたが、Devilが常滑・丸亀の2会場だけで効果の34%を占めることを発見、除外するとp=0.0023→0.0347で非有意化。実装は時期尚早で一致。新リード「市場のオーバーリアクション非対称性」をresearchへ申し送り予定</div>
+  <div class="status-caseid">運用</div>
+  <div class="status-title">緊急時Codex引き継ぎ体制の実装、Step1(Git運用の安全化)完了</div>
+  <div class="status-note">設計書v1→v2→v3(CEO指示計15項目を反映)を経てCEO承認、実装開始。C:\garon直下に新規ローカルgitリポジトリを作成(gt-eng-7k3xq2とは別、内部復旧専用、外部pushなし)。.gitignoreで.env/daikibo_archive_*.json/logs/実行時中間キャッシュ(scripts/_*.csv、188MB超)等を除外。初回commit前チェックリスト5項目を全て実施しクリア。verified-タグ機構(§8.3)・退避ブランチ(§8.1)・git restore(§8.2、PowerShellリダイレクト回避)の3つの復旧メカニズムを実際に動作テスト済み(git restoreはハッシュ一致で日本語content含め完全復元を確認)。次はStep2(AGENTS.md/emergency_runbook.md/emergency_incidents.mdの作成)</div>
 </div>
 
 
 <div class="section-title">残タスク(CEO判断待ち、3件)</div>
 <ul class="status-list">
-<li><span class="status-list-id">GARON-20260827-001</span>nightly_diagnosis.js/update_dashboard.jsのROIシミュレーションが旧sg_narutou.htmlモデルのまま。Qエンジン基準へ揃えるか</li><li><span class="status-list-id">運用</span>Codex(外部AI)導入。CEOはまだ未課金のため保留</li><li><span class="status-list-id">GARON-20260831-001</span>気象データ収集拡張(2026-08-20から未着手)。Hereticの発見が必要性を独立に補強</li>
+<li><span class="status-list-id">GARON-20260827-001</span>nightly_diagnosis.js/update_dashboard.jsのROIシミュレーションが旧sg_narutou.htmlモデルのまま。Qエンジン基準へ揃えるか</li><li><span class="status-list-id">運用</span>Codex CLIのローカル導入(2026-08-31、課金済みに変わった。CLIがこのPCに既に入っているか未確認、Step5で対応)</li><li><span class="status-list-id">GARON-20260831-001</span>気象データ収集拡張(2026-08-20から未着手)。Hereticの発見が必要性を独立に補強</li>
 </ul>
 
 
 <div class="section-title">本日完了</div>
 <ul class="status-list" style="color:var(--text-secondary);">
-<li><span class="status-list-id">GARON-20260827-001</span>CEO承認によりgap&lt;0見送りルールを本番実装、realtime_screening.jsもQエンジンへ切替、回帰テスト新設</li><li><span class="status-list-id">GARON-20260827-001</span>参戦集合725件の掘り下げ研究3ラウンド完了(軸コース差→恩恵艇バグ→実益なしと判明)</li><li><span class="status-list-id">運用</span>デスクトップショートカット修正、ダッシュボードに稼働状況・6部隊+COO稼働状況・データ品質サマリー・穴埋め進捗バーを新設</li><li><span class="status-list-id">運用</span>ntfy全レース通知バグ修正(軸1号艇は通知しない)。復旧作業でタスク5個無効化事故発生、CEO権限で復旧</li><li><span class="status-list-id">GARON-20260831-001</span>異端研究部門を8日ぶりに再稼働。同日セッション効果を発見しDevilが検証、部分的支持(会場集中あり)。市場オーバーリアクション非対称性という新リードを発見</li>
+<li><span class="status-list-id">GARON-20260827-001</span>CEO承認によりgap&lt;0見送りルールを本番実装、realtime_screening.jsもQエンジンへ切替、回帰テスト新設</li><li><span class="status-list-id">GARON-20260827-001</span>参戦集合725件の掘り下げ研究3ラウンド完了(軸コース差→恩恵艇バグ→実益なしと判明)</li><li><span class="status-list-id">運用</span>デスクトップショートカット修正、ダッシュボードに稼働状況・6部隊+COO稼働状況・データ品質サマリー・穴埋め進捗バーを新設</li><li><span class="status-list-id">運用</span>ntfy全レース通知バグ修正(軸1号艇は通知しない)。復旧作業でタスク5個無効化事故発生、CEO権限で復旧</li><li><span class="status-list-id">GARON-20260831-001</span>異端研究部門を8日ぶりに再稼働。同日セッション効果を発見しDevilが検証、部分的支持(会場集中あり)。市場オーバーリアクション非対称性という新リードを発見</li><li><span class="status-list-id">運用</span>GARON RESEARCH OS設計書・緊急時Codex引き継ぎ体制設計書(v1〜v3)を作成、CEO承認。後者のStep1(Git運用の安全化)を実装完了</li>
 </ul>
-<p class="empty" style="margin-bottom:20px;">状況の最終更新: 2026-08-31T13:10:00.000Z</p>
+<p class="empty" style="margin-bottom:20px;">状況の最終更新: 2026-08-31T14:35:00.000Z</p>
 
 
 <div class="section-title">データ品質サマリー(7/1〜今日)</div>
 <div class="meta" style="margin-top:-6px;">daikibo_archive全レースを3種類に分類。「完全」だけが検証・研究にそのまま使える</div>
 <div class="quality-grid">
-  <div class="quality-tile q-total"><div class="qval">7,395</div><div class="qlabel">全レース</div></div>
-  <div class="quality-tile q-defective"><div class="qval">813</div><div class="qlabel">不備(未確定・欠場・オッズ欠損等)</div></div>
-  <div class="quality-tile q-full"><div class="qval">1,010</div><div class="qlabel">完全(検証に使える)</div></div>
+  <div class="quality-tile q-total"><div class="qval">7,397</div><div class="qlabel">全レース</div></div>
+  <div class="quality-tile q-defective"><div class="qval">815</div><div class="qlabel">不備(未確定・欠場・オッズ欠損等)</div></div>
+  <div class="quality-tile q-full"><div class="qval">1,012</div><div class="qlabel">完全(検証に使える)</div></div>
 </div>
 <div class="quality-bar">
   <div class="seg-defective" style="width:11%;"></div>
@@ -385,9 +385,9 @@
   <div class="seg-full" style="width:14%;"></div>
 </div>
 <div class="quality-legend">
-  <span><span class="dot" style="background:#e05050;"></span>不備 813件(11%)・恒久的に使えない</span>
-  <span><span class="dot" style="background:#c9a84c;"></span>穴埋め待ち 5,572件(75%)・結果は正常、個人成績データが未取得</span>
-  <span><span class="dot" style="background:#4caf7d;"></span>完全 1,010件(14%)・検証にそのまま使える</span>
+  <span><span class="dot" style="background:#e05050;"></span>不備 815件(11%)・恒久的に使えない</span>
+  <span><span class="dot" style="background:#c9a84c;"></span>穴埋め待ち 5,570件(75%)・結果は正常、個人成績データが未取得</span>
+  <span><span class="dot" style="background:#4caf7d;"></span>完全 1,012件(14%)・検証にそのまま使える</span>
 </div>
 
 <div class="section-title">過去データ穴埋めバッチの進捗</div>
@@ -398,21 +398,21 @@
 </div>
 
 <div class="progress-block">
-  <div class="progress-label">現在処理中: 2026-07-05(73 / 168件目)</div>
-  <div class="progress-bar"><div class="progress-fill fill-active" style="width:43%;"></div></div>
+  <div class="progress-label">現在処理中: 2026-07-05(75 / 168件目)</div>
+  <div class="progress-bar"><div class="progress-fill fill-active" style="width:45%;"></div></div>
 </div>
-<p class="empty" style="margin-top:8px;">状態: 実行中 / 本日の処理件数: 100件</p>
+<p class="empty" style="margin-top:8px;">状態: 実行中 / 本日の処理件数: 102件</p>
 
 
 <div class="meta" style="margin:10px 0 4px;">直近の処理(新しい順)</div>
 <table>
 <thead><tr><th>時刻</th><th>日付</th><th>会場/R</th><th>結果</th></tr></thead>
 <tbody>
-<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:49:42</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">唐津 9R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:45:40</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">多摩川 9R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:41:31</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">住之江 11R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:37:28</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">徳山 1R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:33:18</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">浜名湖 1R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:29:16</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">徳山 12R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:25:06</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 1R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:21:04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">浜名湖 4R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:16:54</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">多摩川 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:12:52</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">住之江 12R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:08:40</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">大村 6R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:04:38</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 12R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr>
+<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:57:54</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">芦屋 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:53:52</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">徳山 8R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:49:42</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">唐津 9R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:45:40</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">多摩川 9R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:41:31</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">住之江 11R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:37:28</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">徳山 1R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:33:18</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">浜名湖 1R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:29:16</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">徳山 12R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:25:06</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 1R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:21:04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">浜名湖 4R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:16:54</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">多摩川 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:12:52</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">住之江 12R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr>
 </tbody>
 </table>
 
-<p class="empty" style="margin-bottom:20px;">最終更新: 2026-08-31T07:49:43.141Z</p>
+<p class="empty" style="margin-bottom:20px;">最終更新: 2026-08-31T07:57:55.089Z</p>
 
 
 
