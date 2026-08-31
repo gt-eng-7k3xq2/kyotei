@@ -120,6 +120,10 @@ function renderScreening(data) {
   if (stale) {
     html += `<div class="stale-warning">⚠️ 稼働時間帯中ですが${minutesAgo(data.updatedAt)}分間更新がありません。プロセスが止まっている可能性があります。</div>`;
   }
+  if (data.notificationsPaused) {
+    const np = data.notificationsPaused;
+    html += `<div class="stale-warning">🔕 通知は一時停止中です(停止時刻: ${fmtTime(np.pausedAt)} / 実施者: ${np.pausedBy || '不明'} / 理由: ${np.reason || '不明'})。自動再開はしません。判定・データ保存は継続中です。</div>`;
+  }
   html += `<div class="card">
     <div class="card-title">リアルタイムスクリーニング</div>
     <div class="info-row"><span class="k">データ更新</span><span class="v">${fmtTime(data.updatedAt)}</span></div>
