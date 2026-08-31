@@ -99,6 +99,8 @@
     font-size: 9.5px; padding: 1px 6px; border-radius: 999px; border: 1px dashed var(--text-muted);
     color: var(--text-muted); margin-left: 6px; white-space: nowrap;
   }
+  .status-chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+  .status-chip-row .chip { flex: 1 1 220px; min-height: auto; }
   .chip-empty {
     border-radius: 10px; padding: 9px 11px; border: 1px dashed var(--border);
     color: var(--text-muted); font-size: 12px; opacity: 0.55; display: flex; align-items: center;
@@ -145,14 +147,35 @@
   <h1 style="margin:0;">GARON 実績ダッシュボード</h1>
   <button onclick="location.reload()" style="padding:8px 16px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-primary);cursor:pointer;">🔄 今すぐ更新</button>
 </div>
-<div class="meta">現行本番閾値: ROI&gt;=91(3,000円均等回収配分ベース) / 最終更新: 2026-08-30T11:31:07.149Z / scripts/update_dashboard.jsが毎晩自動更新</div>
+<div class="meta">現行本番閾値: ROI&gt;=91(3,000円均等回収配分ベース) / 最終更新: 2026-08-31T00:47:24.278Z / scripts/update_dashboard.jsが毎晩自動更新</div>
 <script>
   // 2026-08-27追加(雄大さん指示: リアルタイムで詳細を確認したい): 一括補完バッチ実行中は
   // 数分おきに内容が変わるため、ページを開きっぱなしでも自動で最新化されるようにする。
   // データ自体は最短5分間隔でしか変わらないため、それより短い間隔での自動更新は無意味。
   setTimeout(function(){ location.reload(); }, 120000);
+
+  // 2026-08-30追加(デスクトップショートカット2個から特定セクションへ直接ジャンプさせたい):
+  // file://ローカルファイルを既定ブラウザ経由(.urlショートカット)で開く場合、URLの#フラグメント
+  // ジャンプがブラウザ起動経路によっては効かないことがあるため、?view=クエリパラメータを
+  // 自前で読んでscrollIntoViewする(ネイティブのフラグメント挙動に依存しない確実な方式)。
+  window.addEventListener('DOMContentLoaded', function(){
+    var view = new URLSearchParams(location.search).get('view');
+    var targetId = view === 'charts' ? 'charts' : (view === 'status' ? 'status' : null);
+    if (targetId) {
+      var el = document.getElementById(targetId);
+      if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }
+  });
 </script>
 
+
+<div id="status" class="section-title">稼働状況</div>
+<div class="meta" style="margin-top:-6px;">無人運用インフラが実際に動いているか(現在フェーズ: フェーズ3(実機検証))</div>
+<div class="status-chip-row">
+<div class="chip lane-company"><div class="chip-title">✓ 自動処理 15タスク稼働中</div><div class="chip-desc">全てReady/Running(無効化なし)</div></div>
+<div class="chip lane-sns"><div class="chip-title">🟢 到達可能</div><div class="chip-desc">最終確認: 2026-08-31T00:35:02.666Z</div></div>
+<div class="chip lane-research"><div class="chip-title">本日の参入判定: まだ無し</div></div>
+</div>
 
 <div class="section-title">3本の時間軸</div>
 <div class="meta" style="margin-top:-6px;">会社運営・発信・研究の理想の1日。点線バッジ=未着手の新規提案</div>
@@ -189,7 +212,7 @@
   <div class="chip lane-company">
     <div class="chip-lane-label">会社運営</div>
     <div class="chip-title">都度判断 / 過去データ整備</div>
-    <div class="chip-desc">参戦判定の確認、wakuStats等の不足分を2日分ずつ収集(不定期→毎日の定位置) / 現在地: 研究に使えるレース906件(全7,279件中12.4%、残り約6,555件)</div>
+    <div class="chip-desc">参戦判定の確認、wakuStats等の不足分を2日分ずつ収集(不定期→毎日の定位置) / 現在地: 研究に使えるレース913件(全7,290件中12.5%、残り約6,622件)</div>
   </div>
   <div class="chip lane-sns">
     <div class="chip-lane-label">発信</div>
@@ -198,8 +221,8 @@
   </div>
   <div class="chip lane-research">
     <div class="chip-lane-label">研究</div>
-    <div class="chip-title">GARON-20260827-001 gap&lt;0仮説のROI差 統計的有意性検定(research→devil完了)</div>
-    <div class="chip-desc">完了。Devilはgap&lt;0への軸採用を支持しない方向を推奨、CEO最終判断待ち</div>
+    <div class="chip-title">GARON-20260827-001 参戦集合(gap&gt;=0)の質改善: 軸コース差→恩恵艇バグ→固定予算配分の壁</div>
+    <div class="chip-desc">本日いったん区切り。軸コース差(ROI79% vs 45%)は真だがOUTER_AXIS_MARGIN拡張は循環較正で不採用、恩恵艇の番号近接バグは実在するが修正シミュレーションでROI-0.09pt(実益なし、固定買い目予算の希薄化が原因)。次候補は固定予算配分ロジックの再設計</div>
   </div>
 </div><div class="timeline-row">
   <div class="timeline-time">21:00</div>
@@ -234,7 +257,7 @@
   <div class="chip lane-research">
     <div class="chip-lane-label">研究</div>
     <div class="chip-title">研究キューを止めない(必達ルール)<span class="badge-new">新規提案</span></div>
-    <div class="chip-desc">今夜: GARON-20260827-001 gap&lt;0仮説のROI差 統計的有意性検定(research→devil完了)(完了。Devilはgap&lt;0への軸採用を支持しない方向を推奨、CEO最終判断待ち)。完了後は次のテーマへ</div>
+    <div class="chip-desc">今夜: GARON-20260827-001 参戦集合(gap&gt;=0)の質改善: 軸コース差→恩恵艇バグ→固定予算配分の壁(本日いったん区切り。軸コース差(ROI79% vs 45%)は真だがOUTER_AXIS_MARGIN拡張は循環較正で不採用、恩恵艇の番号近接バグは実在するが修正シミュレーションでROI-0.09pt(実益なし、固定買い目予算の希薄化が原因)。次候補は固定予算配分ロジックの再設計)。完了後は次のテーマへ</div>
   </div>
 </div><div class="timeline-row">
   <div class="timeline-time">3:00</div>
@@ -255,43 +278,43 @@
     <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">待機中</span>
   </div>
   <div class="status-caseid">GARON-20260827-001</div>
-  <div class="status-title">gap&lt;0仮説のROI差 統計的有意性検定(research→devil完了)</div>
-  <div class="status-note">完了。Devilはgap&lt;0への軸採用を支持しない方向を推奨、CEO最終判断待ち</div>
+  <div class="status-title">参戦集合(gap&gt;=0)の質改善: 軸コース差→恩恵艇バグ→固定予算配分の壁</div>
+  <div class="status-note">本日いったん区切り。軸コース差(ROI79% vs 45%)は真だがOUTER_AXIS_MARGIN拡張は循環較正で不採用、恩恵艇の番号近接バグは実在するが修正シミュレーションでROI-0.09pt(実益なし、固定買い目予算の希薄化が原因)。次候補は固定予算配分ロジックの再設計</div>
 </div>
 
 
-<div class="section-title">残タスク(CEO判断待ち、1件)</div>
+<div class="section-title">残タスク(CEO判断待ち、2件)</div>
 <ul class="status-list">
-<li><span class="status-list-id">GARON-20260827-001</span>gap&lt;0(逆転採用)を軸から外すか。Devil判定: 的中率有意劣位+ROI一貫した負の点推定+ROI非有意は検出力不足が真因(必要nは現状の6.5倍)、gap&lt;0採用を積極支持しない方向を推奨。配当構成見直し案の並行検証も推奨</li>
+<li><span class="status-list-id">GARON-20260827-001</span>参戦集合の質改善研究を継続するか(次候補: 買い目の固定点数配分ロジック自体の見直し)。それとも他テーマへ切り替えるか</li><li><span class="status-list-id">GARON-20260827-001</span>nightly_diagnosis.js/update_dashboard.jsのROIシミュレーションが旧sg_narutou.htmlモデルのまま(実際の本番判定=Qエンジンのgap&lt;0ルールとは別基準)。こちらもQエンジン基準へ揃えるか</li>
 </ul>
 
 
 <div class="section-title">本日完了</div>
 <ul class="status-list" style="color:var(--text-secondary);">
-<li><span class="status-list-id">GARON-20260828-001</span>Devil反証: アーカイブ整理ツール設計に4点の欠陥。COO判断で改訂版設計を低優先度で承認</li><li><span class="status-list-id">GARON-20260828-004</span>Devil横断チェック: 母集団条件付け問題は1案件のみに限定</li><li><span class="status-list-id">GARON-20260827-001</span>gap&lt;0のROI差検定→Devil反証完了。検出力不足が非有意の真因と判明、Devilはgap&lt;0非採用の方向を推奨</li><li><span class="status-list-id">GARON-20260828-003</span>COO判断: OUTER_AXIS_MARGIN=8は現状維持</li><li><span class="status-list-id">orphan_file</span>COO判断: _heretic_races_cache.json(29.4MB)を削除実行済み</li><li><span class="status-list-id">運用</span>Remote Control自動復帰は技術的に不可能と判明し見送り確定</li>
+<li><span class="status-list-id">GARON-20260827-001</span>CEO承認によりgap&lt;0見送りルールを本番実装(Q_ENGINE_VERSION=1)。realtime_screening.jsもQエンジンへ切替、回帰テスト新設。ただし切替日は稼働中プロセスに未反映、8/31 8:00起動分から実際に反映</li><li><span class="status-list-id">GARON-20260827-001</span>参戦集合725件の掘り下げ研究3ラウンド完了。軸艇コース差(有意)発見→改善案は循環較正で反証→恩恵艇の番号近接バグ発見(コード確認済み)→修正シミュレーションで実益なしと判明</li><li><span class="status-list-id">運用</span>デスクトップショートカット2件を正しい場所(OneDriveデスクトップ)・正しい行き先(status.html等)へ修正</li><li><span class="status-list-id">運用</span>settings.local.jsonに安全な読み取り専用コマンドの許可ルールを追加、承認プロンプトの頻度を軽減</li>
 </ul>
-<p class="empty" style="margin-bottom:20px;">状況の最終更新: 2026-08-30T13:10:00.000Z</p>
+<p class="empty" style="margin-bottom:20px;">状況の最終更新: 2026-08-31T09:34:00.000Z</p>
 
 
 <div class="meta" style="margin-bottom:8px;">過去アーカイブ フィールド穴埋め進捗(scripts/backfill_missing_fields.js。konkiAvgST等5項目+wakuStats等9項目+オッズ欠損補完)</div>
 <div class="tiles">
-  <div class="tile"><div class="label">本日の処理件数</div><div class="value good">22件</div></div>
-  <div class="tile"><div class="label">累計(全期間)</div><div class="value">658 / 7,213件</div></div>
+  <div class="tile"><div class="label">本日の処理件数</div><div class="value good">3件</div></div>
+  <div class="tile"><div class="label">累計(全期間)</div><div class="value">658 / 7,280件</div></div>
   <div class="tile"><div class="label">処理中の日付</div><div class="value" style="font-size:16px;">2026-07-04 (168/168)</div></div>
-  <div class="tile"><div class="label">状態</div><div class="value" style="font-size:16px;">⚠️ブロック中断</div></div>
-  <div class="tile"><div class="label">オッズ補完(今回起動分)</div><div class="value">21件</div></div>
-  <div class="tile"><div class="label">失敗(今回起動分)</div><div class="value critical">1件</div></div>
+  <div class="tile"><div class="label">状態</div><div class="value" style="font-size:16px;">実行中</div></div>
+  <div class="tile"><div class="label">オッズ補完(今回起動分)</div><div class="value">3件</div></div>
+  <div class="tile"><div class="label">失敗(今回起動分)</div><div class="value ">0件</div></div>
 </div>
 
 <div class="meta" style="margin:10px 0 4px;">直近の処理(新しい順)</div>
 <table>
 <thead><tr><th>時刻</th><th>日付</th><th>会場/R</th><th>結果</th></tr></thead>
 <tbody>
-<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">20:16:10</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">下関 8R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--critical);">❌ 失敗(取得失敗)</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">20:01:07</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">徳山 8R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">19:46:12</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">常滑 9R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">19:31:11</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">常滑 6R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">19:16:16</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">尼崎 7R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">19:01:22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 4R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">18:46:29</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">唐津 12R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">18:31:35</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 9R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">18:16:44</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">常滑 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">18:01:52</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">常滑 1R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">17:46:56</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 8R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">17:32:03</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 10R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr>
+<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">09:47:19</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">浜名湖 11R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">09:43:33</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">住之江 2R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">09:39:47</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">下関 8R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr>
 </tbody>
 </table>
 
-<p class="empty" style="margin-bottom:20px;">最終更新: 2026-08-30T11:31:04.143Z</p>
+<p class="empty" style="margin-bottom:20px;">最終更新: 2026-08-31T00:47:20.454Z</p>
 
 
 
@@ -304,7 +327,7 @@
 </div>
 
 
-<div class="meta" style="margin-bottom:8px;">実績(gtoolsの実際の記録。取得日時: 2026-08-29T13:45:04.587Z)</div>
+<div class="meta" style="margin-bottom:8px;">実績(gtoolsの実際の記録。取得日時: 2026-08-30T13:45:07.609Z)</div>
 <div class="tiles">
   <div class="tile"><div class="label">実際の記録件数</div><div class="value">828</div></div>
   <div class="tile"><div class="label">実際の的中率</div><div class="value">32.2%</div></div>
@@ -313,7 +336,7 @@
 
 
 
-<div class="chart-card">
+<div id="charts" class="chart-card">
   <h2>累積純損益の推移(¥)</h2>
   <div id="chart-profit"></div>
 </div>
