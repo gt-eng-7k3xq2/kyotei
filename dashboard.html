@@ -119,6 +119,30 @@
   @media (max-width: 680px) {
     .dept-grid { grid-template-columns: 1fr 1fr; }
   }
+  .quality-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
+  .quality-tile { border-radius: 10px; padding: 14px; text-align: center; border: 1px solid var(--border); }
+  .quality-tile .qval { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .quality-tile .qlabel { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+  .quality-tile.q-total { background: var(--surface-1); }
+  .quality-tile.q-defective { background: rgba(224,80,80,0.1); border-color: #e05050; }
+  .quality-tile.q-defective .qval { color: #e05050; }
+  .quality-tile.q-full { background: rgba(76,175,125,0.1); border-color: #4caf7d; }
+  .quality-tile.q-full .qval { color: #4caf7d; }
+  .quality-bar { display: flex; height: 14px; border-radius: 7px; overflow: hidden; margin: 4px 0 20px; border: 1px solid var(--border); }
+  .quality-bar .seg-defective { background: #e05050; }
+  .quality-bar .seg-pending { background: #c9a84c; }
+  .quality-bar .seg-full { background: #4caf7d; }
+  .quality-legend { display: flex; gap: 16px; font-size: 11.5px; color: var(--text-secondary); margin-bottom: 24px; flex-wrap: wrap; }
+  .quality-legend span { display: flex; align-items: center; gap: 5px; }
+  .quality-legend .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  @media (max-width: 680px) {
+    .quality-grid { grid-template-columns: 1fr; }
+  }
+  .progress-block { margin-bottom: 14px; }
+  .progress-label { font-size: 12.5px; color: var(--text-primary); margin-bottom: 5px; }
+  .progress-bar { height: 12px; border-radius: 6px; background: var(--surface-1); overflow: hidden; border: 1px solid var(--border); }
+  .progress-fill { height: 100%; background: #4caf7d; }
+  .progress-fill.fill-active { background: #c9a84c; }
   .chip-empty {
     border-radius: 10px; padding: 9px 11px; border: 1px dashed var(--border);
     color: var(--text-muted); font-size: 12px; opacity: 0.55; display: flex; align-items: center;
@@ -165,7 +189,7 @@
   <h1 style="margin:0;">GARON 実績ダッシュボード</h1>
   <button onclick="location.reload()" style="padding:8px 16px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-primary);cursor:pointer;">🔄 今すぐ更新</button>
 </div>
-<div class="meta">現行本番閾値: ROI&gt;=91(3,000円均等回収配分ベース) / 最終更新: 2026-08-31T02:05:19.189Z / scripts/update_dashboard.jsが毎晩自動更新</div>
+<div class="meta">現行本番閾値: ROI&gt;=91(3,000円均等回収配分ベース) / 最終更新: 2026-08-31T02:13:31.502Z / scripts/update_dashboard.jsが毎晩自動更新</div>
 <script>
   // 2026-08-27追加(雄大さん指示: リアルタイムで詳細を確認したい): 一括補完バッチ実行中は
   // 数分おきに内容が変わるため、ページを開きっぱなしでも自動で最新化されるようにする。
@@ -264,7 +288,7 @@
   <div class="chip lane-company">
     <div class="chip-lane-label">会社運営</div>
     <div class="chip-title">都度判断 / 過去データ整備</div>
-    <div class="chip-desc">参戦判定の確認、wakuStats等の不足分を2日分ずつ収集(不定期→毎日の定位置) / 現在地: 研究に使えるレース926件(全7,302件中12.7%、残り約6,622件)</div>
+    <div class="chip-desc">参戦判定の確認、wakuStats等の不足分を2日分ずつ収集(不定期→毎日の定位置) / 詳細は下部「データ品質サマリー」参照</div>
   </div>
   <div class="chip lane-sns">
     <div class="chip-lane-label">発信</div>
@@ -348,27 +372,47 @@
 <p class="empty" style="margin-bottom:20px;">状況の最終更新: 2026-08-31T09:34:00.000Z</p>
 
 
-<div class="meta" style="margin-bottom:8px;">過去アーカイブ フィールド穴埋め進捗(scripts/backfill_missing_fields.js。konkiAvgST等5項目+wakuStats等9項目+オッズ欠損補完)</div>
-<div class="tiles">
-  <div class="tile"><div class="label">研究に使えるレース(実態)</div><div class="value good">926 / 7,302件</div></div>
-  <div class="tile"><div class="label">本日の処理件数</div><div class="value good">16件</div></div>
-  <div class="tile"><div class="label">穴埋めバッチ処理済み<span style="font-weight:400;">(※下記注記参照)</span></div><div class="value">658 / 7,280件</div></div>
-  <div class="tile"><div class="label">処理中の日付</div><div class="value" style="font-size:16px;">2026-07-04 (168/168)</div></div>
-  <div class="tile"><div class="label">状態</div><div class="value" style="font-size:16px;">実行中</div></div>
-  <div class="tile"><div class="label">オッズ補完(今回起動分)</div><div class="value">3件</div></div>
-  <div class="tile"><div class="label">失敗(今回起動分)</div><div class="value ">0件</div></div>
+<div class="section-title">データ品質サマリー(7/1〜今日)</div>
+<div class="meta" style="margin-top:-6px;">daikibo_archive全レースを3種類に分類。「完全」だけが検証・研究にそのまま使える</div>
+<div class="quality-grid">
+  <div class="quality-tile q-total"><div class="qval">7,304</div><div class="qlabel">全レース</div></div>
+  <div class="quality-tile q-defective"><div class="qval">767</div><div class="qlabel">不備(未確定・欠場・オッズ欠損等)</div></div>
+  <div class="quality-tile q-full"><div class="qval">928</div><div class="qlabel">完全(検証に使える)</div></div>
 </div>
-<p class="empty" style="margin:2px 0 12px;">※「穴埋めバッチ処理済み」は過去データ再取得バッチが明示的に処理した件数のみを数えており、リアルタイムスクリーニングで直接取得済み(穴埋め不要)のレースは含まれません。実際に研究で使える件数は「研究に使えるレース」を参照してください。</p>
+<div class="quality-bar">
+  <div class="seg-defective" style="width:11%;"></div>
+  <div class="seg-pending" style="width:77%;"></div>
+  <div class="seg-full" style="width:13%;"></div>
+</div>
+<div class="quality-legend">
+  <span><span class="dot" style="background:#e05050;"></span>不備 767件(11%)・恒久的に使えない</span>
+  <span><span class="dot" style="background:#c9a84c;"></span>穴埋め待ち 5,609件(77%)・結果は正常、個人成績データが未取得</span>
+  <span><span class="dot" style="background:#4caf7d;"></span>完全 928件(13%)・検証にそのまま使える</span>
+</div>
+
+<div class="section-title">過去データ穴埋めバッチの進捗</div>
+<div class="meta" style="margin-top:-6px;">scripts/run_field_backfill_batch.js(サイトブロック検知で自動停止・手動再開が必要)</div>
+<div class="progress-block">
+  <div class="progress-label">全52日分のうち完了済み: 3日(6%)</div>
+  <div class="progress-bar"><div class="progress-fill" style="width:6%;"></div></div>
+</div>
+
+<div class="progress-block">
+  <div class="progress-label">現在処理中: 2026-07-04(159 / 168件目)</div>
+  <div class="progress-bar"><div class="progress-fill fill-active" style="width:95%;"></div></div>
+</div>
+<p class="empty" style="margin-top:8px;">状態: 実行中 / 本日の処理件数: 18件</p>
+
 
 <div class="meta" style="margin:10px 0 4px;">直近の処理(新しい順)</div>
 <table>
 <thead><tr><th>時刻</th><th>日付</th><th>会場/R</th><th>結果</th></tr></thead>
 <tbody>
-<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">11:05:14</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">平和島 1R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">11:01:12</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">徳山 1R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">10:57:10</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">徳山 4R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr>
+<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">11:13:26</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">尼崎 9R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">11:09:24</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">唐津 11R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">11:05:14</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">平和島 1R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">11:01:12</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">徳山 1R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">10:57:10</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">徳山 4R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr>
 </tbody>
 </table>
 
-<p class="empty" style="margin-bottom:20px;">最終更新: 2026-08-31T02:05:15.310Z</p>
+<p class="empty" style="margin-bottom:20px;">最終更新: 2026-08-31T02:13:26.964Z</p>
 
 
 
