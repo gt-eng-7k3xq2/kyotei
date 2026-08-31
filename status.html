@@ -140,48 +140,6 @@ function renderScreening(data) {
   return html;
 }
 
-// 2026-08-31追加(雄大さん指示: PowerShellを都度操作せずCodex/Claudeの連携状況をiPhoneで
-// 確認したい)。garon_status_screening.jsonのresearchOsフィールド(scripts/lib/research_os_status.js
-// のsummarizePublic()が生成)は公開してよい項目だけに絞られている設計。本番ロジック詳細・
-// 具体的な研究数値・ローカルパス・エラー全文はサーバー側で既に除外済み、ここでは追加の加工なし。
-function codexStatusBadge(status) {
-  if (status === 'success') return '<span class="badge badge-green">成功</span>';
-  if (status === 'failure') return '<span class="badge badge-red">失敗</span>';
-  if (status === 'running') return '<span class="badge badge-gold">実行中</span>';
-  return '<span class="badge badge-muted">未起動</span>';
-}
-
-function caseStageBadge(stage) {
-  if (stage === '完了' || stage === '採用') return `<span class="badge badge-green">${stage}</span>`;
-  if (stage === '却下') return '<span class="badge badge-red">却下</span>';
-  if (stage === 'CEO判断待ち') return '<span class="badge badge-gold">CEO判断待ち</span>';
-  return `<span class="badge badge-muted">${stage || '不明'}</span>`;
-}
-
-function renderResearchOs(data) {
-  const ro = data.researchOs || {};
-  const codex = ro.codex;
-  const c = ro.latestCase;
-  let html = '<div class="card"><div class="card-title">GARON RESEARCH OS</div>';
-  html += `<div class="info-row"><span class="k">Codex発想部隊</span><span class="v">${codex ? codexStatusBadge(codex.status) : '<span class="badge badge-muted">未起動</span>'}</span></div>`;
-  if (codex) {
-    html += `<div class="info-row"><span class="k">前回終了</span><span class="v">${fmtTime(codex.lastFinishedAt)}</span></div>`;
-    html += `<div class="info-row"><span class="k">次回起動予定</span><span class="v">${fmtTime(codex.nextScheduledAt)}</span></div>`;
-    if (codex.proposalCount != null) html += `<div class="info-row"><span class="k">直近の提案件数</span><span class="v">${codex.proposalCount}件</span></div>`;
-  } else {
-    html += '<div class="info-row"><span class="k">備考</span><span class="v">日次自動起動は登録待ち</span></div>';
-  }
-  if (c) {
-    html += `<div class="info-row"><span class="k">進行中の案件</span><span class="v">${c.id}</span></div>`;
-    html += `<div class="info-row"><span class="k">段階</span><span class="v">${caseStageBadge(c.stage)}</span></div>`;
-    if (c.ceoPending) html += `<div class="info-row"><span class="k">CEO判断</span><span class="v"><span class="badge badge-gold">判断待ち</span></span></div>`;
-  } else {
-    html += '<div class="empty-note">進行中の案件はありません</div>';
-  }
-  html += '</div>';
-  return html;
-}
-
 function renderJudgments(data) {
   const list = (data.judgments || []).slice().reverse(); // 新しい順
   let html = '<div class="card"><div class="card-title">本日の判定一覧(参戦・見送り全件)</div>';
@@ -241,7 +199,7 @@ async function loadAll() {
       fetchGistFile('garon_status_screening.json'),
       fetchGistFile('garon_status_tasks.json'),
     ]);
-    app.innerHTML = renderScreening(screening) + renderResearchOs(screening) + renderJudgments(screening) + renderTasks(tasks);
+    app.innerHTML = renderScreening(screening) + renderJudgments(screening) + renderTasks(tasks);
     document.getElementById('lastFetched').textContent = `最終取得: ${new Date().toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour12: false })}`;
   } catch (e) {
     app.innerHTML = `<div class="card"><div class="card-title" style="color:var(--red);">読み込みエラー</div><div style="font-size:12px;color:var(--muted);">${e.message}</div></div>`;
