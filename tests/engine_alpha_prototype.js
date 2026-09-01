@@ -208,4 +208,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { computeAllComboProbs, pickBetsByEV, pickBetsByEdge, analyzeRace, summarize };
+module.exports = { computeAllComboProbs, pickBetsByEV, pickBetsByEdge, marketImpliedProbs, analyzeRace, summarize };

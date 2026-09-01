@@ -1,51 +1,51 @@
 {
-  "_qEngineVersion": 1,
+  "_qEngineVersion": 2,
   "_fixture": "tokuyama_1r_2026-08-27.json",
   "_label": "徳山1R_2026-08-27(gap1_entered_境界近傍)",
   "_actualResult": {
     "chakuju": "1-2-4",
     "payout": "¥2,890"
   },
-  "gap": 1,
+  "gap": 2,
   "judge": {
     "entered": true,
     "text": "◎参戦"
   },
   "axes": [
     {
-      "boat": 1,
+      "boat": 2,
       "weight": 28,
       "narrow": false,
-      "reason": "本命"
+      "reason": "セオリー本線"
     },
     {
-      "boat": 2,
-      "weight": 27,
+      "boat": 1,
+      "weight": 26,
       "narrow": false,
-      "reason": "セオリー本線"
+      "reason": "本命"
     }
   ],
   "formations": [
     {
-      "axis": 1,
+      "axis": 2,
       "weight": 28,
+      "type": "セオリー本線",
+      "points": [
+        "2-5-1",
+        "2-1-5",
+        "2-5-3",
+        "2-1-3"
+      ]
+    },
+    {
+      "axis": 1,
+      "weight": 26,
       "type": "本命",
       "points": [
         "1-5-2",
         "1-2-5",
         "1-2-3",
         "1-5-3"
-      ]
-    },
-    {
-      "axis": 2,
-      "weight": 27,
-      "type": "セオリー本線",
-      "points": [
-        "2-5-1",
-        "2-1-5",
-        "2-1-3",
-        "2-5-3"
       ]
     }
   ]

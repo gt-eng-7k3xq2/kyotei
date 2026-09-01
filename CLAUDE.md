@@ -92,6 +92,31 @@ GARON COMPANY構想を「5部隊が本当に案件を追跡できる組織」に
 
 **現時点でできないこと**: ①CEOが何も操作しない完全無人の夜間自動起動(2026-08-19に既存記載の通り、ヘッドレスClaude Code実行時の安全性警告が未解消のため見送り中。CEOが一言メッセージを送ることが起点として必要) ②サブエージェントによる自律的な部隊間ラリー(未検証)。**将来的な完全自動化(スケジューラ→COO起動→案件確認→テーマ選定→部隊稼働→ラリー→検証→日次報告→CEO確認)へ移行する条件**: COOプロトコルが実運用で安定/部隊間ラリーが安定/案件記録漏れがない/CEO承認ゲートが確実に機能/本番環境と研究環境の分離が維持される/ヘッドレス自動実行環境の安全性が確認される、の全てを満たしてから検討する。
 
+### GARON RESEARCH OS(2026-08-31設計、2026-09-01実装。初回有人パイロット1回実施→失敗→判定パケット方式へ再設計・2回目パイロット準備完了)
+
+CodexをClaude以外の発想源として正式に組み込む仕組み。全体設計は[reports/garon_research_os_design_2026-08-31.md](reports/garon_research_os_design_2026-08-31.md)参照(Phase 0〜4のロードマップ、cases.md/research_log.mdを置き換えない方針等)。
+
+- **往路(Codex→Claude、自動・LLM不使用)**: `GARON_CodexDailyResearch`タスクがCodexに研究課題を書かせた後(`reports/codex_research_ideas_YYYY-MM-DD.md`)、`scripts/research_os_ingest_codex.js`を自動呼び出しし、「## 研究課題N」見出しを`research_os/tasks/codex-YYYYMMDD-NN.json`(NEW状態)へ変換する。taskIdは日付+見出し番号から決定論的に作るため、再実行しても重複作成されない(冪等)。
+- **復路(自動・LLM不使用)**: `scripts/research_os_generate_codex_briefing.js`が`research_os/tasks/`全件から`research_os/codex_briefing.md`を自動生成し(タスク更新のたびに再生成)、cases.mdへ正式登録されなかった却下・保留の理由も含めてCodexが毎日読めるようにしている。NEW以外は直近5件のみ詳細表示、残りは1行要約に圧縮(過去の詳細は`research_os/tasks/*.json`にそのまま残る、削除はしない)。
+- **重複候補抽出(`scripts/lib/research_os_dedup.js`、LLM不使用)**: `reports/cases.md`を決定論的にパースした`research_os/index.json`(`scripts/research_os_generate_index.js`が生成、CASE ID・タイトル・起点部隊・結論・要旨・キーワード・最終更新日)から、キーワード重なり・案件ID明示参照等でスコアリングし、最大3件の重複候補を抽出する。**極めて確度が高いケース**(本文に明示された案件IDがただ1件、かつその案件の結論が明確に「却下」)は、決定論コードだけで自動的にREJECTED確定し、Claudeを一切呼び出さない(`checkAutoResolve`。「完了」は採用ケースも含み得るため対象外、誤判定リスクがある場合は必ずClaude判定に委ねる)。
+- **Claude側の採否判定(`scripts/run_research_os_processor.js`)**: 2026-09-01、初回パイロットの実測結果(935文字のプロンプトでcache_creation 49,013+cache_read 208,707トークン・6ターン消費)を受け、「プロジェクト探索そのものをさせない」設計へ全面改訂した。
+  - Node.js側が`scripts/lib/research_os_packet.js`で「判定パケット」(taskId・提案タイトル・要旨・Codexの根拠・重複候補最大3件、通常1KB未満)を組み立て、ヘッドレスClaudeにはこれだけを渡す。cases.md・research_log.md・CLAUDE.md・index.json全文は読ませない。
+  - ヘッドレスClaudeには`--tools ""`で**ツールを一切与えない**(Bash/Read/Write/Edit/Agent全て不可)。cwdは実行ごとに新規作成する隔離一時ディレクトリ(`os.tmpdir()`配下、`C:\garon`の外)にし、`--setting-sources user`でproject/local設定源も除外、CLAUDE.mdの自動読み込みを防ぐ。ツールが無いため通常1ターンで応答が返る(claude --helpに明示的な`--max-turns`相当のフラグは無い。ツール0個という構造的制約で単一ターンを担保する設計)。
+  - `claude.exe`(ネイティブexe、`.cmd`シムではない)を直接spawnSyncする(cmd.exe経由のラッパーは廃止。`--json-schema`のJSON文字列引数がcmd.exeのメタ文字解釈に晒されるリスクを避けるため)。`--json-schema`(claude --helpで確認済みの正式な構造化出力機能)を使用しつつ、応答が確認文・コードフェンス混在になった場合に備え、「応答全体がJSON」または「応答全体が単一のコードフェンスで囲まれたJSON」のみを許容する正規化をコード側でも行う(それ以外は拒否)。
+  - Claudeは`{taskId, decision, reason, duplicateCaseIds, confidence}`のJSON1個だけを返す(プロンプトは`scripts/research_os_packet_decision_prompt.txt`)。**状態変更は必ずこのNode.jsラッパー自身が行う**(taskId一致・decision許可値・必須項目・出力サイズ上限を決定論コードで検証し、通過した場合のみ`research_os_task_cli.js update`を呼ぶ。検証失敗時はタスク状態を一切変更しない)。
+  - ACCEPTEDになっても本格研究(research→devil)は自動着手しない。CEO承認または明示的な研究枠で、従来通りCOOの対話セッションから着手するかを別途判断する。
+- **段階的な研究フロー(2026-09-01方針)**: ①決定論コードによる重複候補抽出・自動確定判定(上記) ②Claude本体による短い採否判定(ツールなし、上記) ③ACCEPTED案件の軽量予備調査(必要と判断された場合のみ) ④research部隊による本調査(既存の対話セッションで人が着手を判断) ⑤本調査で有望だった案件だけdevil部隊で反証。research・devilを最初から両方起動しない。
+- **【2026-09-01 CEO緊急指示: 追加従量課金全面禁止】実クラウド呼び出しはfail-closed**。以下**全て**が揃わない限り、常にスキップしてコスト0円で終了する:
+  1. 環境変数`RESEARCH_OS_ALLOW_REAL_CLAUDE=1`
+  2. `ANTHROPIC_API_KEY`・`OPENAI_API_KEY`のいずれも環境変数に存在しない
+  3. `claude auth status`で`authMethod=claude.ai`(OAuth月額プラン、値ではなく方式のみ確認、秘密情報は表示しない)
+  4. (パイロット試行のみ)環境変数`RESEARCH_OS_PILOT_RUN=1`、かつ`RESEARCH_OS_PILOT_ATTEMPT=<N>`が次に許可される試行番号と一致。失敗履歴は`logs/.research_os_pilot_used.json`に配列として保持し続け(上書き削除しない)、試行回数の絶対上限は3回(`MAX_PILOT_ATTEMPTS`)
+- **その他の安全装置(`scripts/lib/research_os_safety.js`)**: 同時起動防止ロック・5分タイムアウト(判定パケット方式のため旧30分から短縮)・タスクあたりリトライ上限3回・日次起動上限1回・**Pro週間枠温存の一時停止フラグ**(`logs/.research_os_usage_pause`)・taskId許可パターン限定・本番HTML6ファイルのSHA-256整合性チェック(変更検知で即キルスイッチ・ntfy最優先通知)・呼び出し中は本番HTMLファイルを`attrib +r`で読み取り専用化・実行前後の監査ログ(`logs/research_os_processor_audit.log`)・処理規模ログ(`logs/research_os_usage.log`)。モックモード(`RESEARCH_OS_MOCK_CLAUDE=1`)で全項目E2E検証済み。
+- **初回パイロットの実施結果(2026-09-01)**: 安全装置(認証確認・ツール制限・整合性チェック・失敗時の状態不変)は全て設計通り機能したが、**ヘッドレスClaudeが確認文+コードフェンスで応答したため決定の適用自体は失敗**(`test-pilot-20260901-01`はNEWのまま、失敗記録は`logs/.research_os_pilot_used.json`に保持)。上記の判定パケット方式・ツールなし・正規化強化はこの結果を受けた再設計であり、**2回目パイロット(`RESEARCH_OS_PILOT_ATTEMPT=2`)は準備完了・未実施**。
+- **タスクスケジューラへの登録は未実施**。
+- **正式な案件ID(GARON-YYYYMMDD-NNN)はこのタスク管理では採番しない**。ACCEPTED時にCOOが従来通りcases.mdの当日最大値を見て採番し、`--case=GARON-...`でタスクへ紐付ける。
+- **範囲外(未実装)**: `research_os/base/snapshot.json`(設計書3節)、ダッシュボードへのタスク状況表示(同11節)、タスクスケジューラ設定の修正(`GARON_CodexDailyResearch`の起動時刻00:15→06:00、Interactive→S4U。2026-09-01発見済みだがCEO判断で見送り)。
+
 ## ファイル構成と役割
 
 - **sg_narutou.html** — 本番予想エンジン。BM抽出データを貼り付けてスコア計算・モード判定・買い目生成・X投稿文生成までを行う。Gemini API (`generativelanguage.googleapis.com`) を呼び出して展開コメントを生成する。
@@ -174,7 +199,7 @@ Windowsタスクスケジューラに13タスク(日次9・週次1・オンデ�
 | `GARON_NightlyReboot` | 毎日03:00(git commitの後、翌8:00のRealtimeScreeningまで十分な余裕を確保) | `scripts/run_nightly_reboot.cmd`(`shutdown /r /t 60`) | 24時間稼働の安定性のためPCを毎晩自動再起動する(2026-08-17追加)。S4Uログオンのため、再起動後に誰もサインインしなくても他の全タスクは通常通り動く。`GARON_SiteBlockMonitor`のダウンタイムは再起動所要時間(数分程度)のみ。 |
 | `GARON_SiteBlockMonitor` | 毎日0:05から15分間隔で終日反復 | `scripts/monitor_site_block.js`(`run_site_block_monitor.cmd`経由) | kyoteibiyori.comへの軽量な疎通確認(realtime_screening.jsと同じAPIエンドポイント)。状態は`logs/.site_block_state.json`に保存し、「ブロック中→到達可能」に変化した瞬間だけntfy通知する(逆方向は通知せずログのみ)。稼働時間帯に縛られず終日動くため、夜間にブロックが解けても気づける。 |
 | `GARON_NtfyHealthCheck` | 毎週月曜7:30(週次、8:00の稼働開始前) | `scripts/ntfy_health_check.js`(`run_ntfy_health_check.cmd`経由) | ntfy疎通確認専用の軽量テスト通知を1件送るだけ(2026-08-17追加)。トピック誤設定・ntfy.sh側の障害・スマホ側の購読解除などを、実際のレース判断に影響する前に検知する目的。 |
-| `GARON_CodexDailyResearch` | 毎日06:00(2026-08-31追加) | `scripts/run_codex_daily_research.js`(`run_codex_daily_research.cmd`経由) | Codex CLIを非対話モード(`codex exec --sandbox workspace-write`)で起動し、GARON RESEARCH OS(平時モード、`AGENTS_RESEARCH.md`)の日次発想生成を行う。プロンプトは`scripts/codex_daily_research_prompt.txt`(タスク定義には埋め込まない)。実行状態は`logs/codex_daily_research_state.json`(機械可読)・`logs/codex_daily_research.log`(生ログ)に記録し、失敗時のみntfy通知。二重起動防止はPID生死確認ロック(`logs/.codex_daily_research.lock`)。**未登録(2026-08-31時点)**: `Register-ScheduledTask`のS4Uログオン権限付与に管理者権限が必要で、Claude Code側の非昇格PowerShellセッションでは実行不可と判明。CEOの昇格済みPowerShellで`powershell -ExecutionPolicy Bypass -File C:\garon\scripts\setup_scheduled_tasks.ps1`を1回実行すれば登録される(既存14タスクへの影響なし、冪等)。登録後の`schtasks /run`によるオンデマンド実行は非昇格セッションからでも可能と確認済み。 |
+| `GARON_CodexDailyResearch` | **実際は毎日00:15(2026-09-01判明、意図は06:00)** | `scripts/run_codex_daily_research.js`(`run_codex_daily_research.cmd`経由) | Codex CLIを非対話モード(`codex exec --sandbox workspace-write`)で起動し、GARON RESEARCH OS(平時モード、`AGENTS_RESEARCH.md`)の日次発想生成を行う。プロンプトは`scripts/codex_daily_research_prompt.txt`(タスク定義には埋め込まない)。実行状態は`logs/codex_daily_research_state.json`(機械可読)・`logs/codex_daily_research.log`(生ログ)に記録し、失敗時のみntfy通知。二重起動防止はPID生死確認ロック(`logs/.codex_daily_research.lock`)。**登録済み(2026-09-01確認)だが2点の設定ズレが判明**: ①起動時刻が00:15になっている(意図は06:00) ②ログオン方式がInteractive(他15タスクは全てS4U=無人ログオン不要)。無人運用の信頼性に関わる問題だが、2026-09-01時点でCEO判断により修正は見送り、`setup_scheduled_tasks.ps1`側の登録定義修正が今後の対応候補として残っている。**2026-09-01追加**: 実行成功後、`scripts/research_os_ingest_codex.js`を自動呼び出しし、生成された`codex_research_ideas_*.md`の「## 研究課題N」をGARON RESEARCH OSタスク(`research_os/tasks/`、NEW状態)へ変換する(Codex→Claudeの往路自動化、詳細は「GARON RESEARCH OS」節参照)。同日、2つの不具合を修正済み: (a) 「今日の日付」をUTCで計算していたため日本時間0時台の実行で1日ズレて成功を失敗と誤判定するバグ(JST基準の`todayStrJST()`に統一)、(b) 別途、Codex CLI自体の内部エラー(`Failed to create unified exec process: timed out...`)による実行失敗が8/31午後に5回中4回発生(Codex側の問題でこちらのコードでは直接対処不可、現状はリトライ頼み)。 |
 
 各タスクのログは`C:\garon\logs\`配下(タスク名に対応する`*.log`、追記式)。
 
@@ -230,6 +255,7 @@ GARONは「無人稼働インフラの完成度」と「実際に予想を出す
 新しいセッションを開始したら、本題に入る前に以下の順で確認し、要点(あれば)と「現在フェーズ・次にすべきこと」を一度提示する。
 
 1. **提案レポート等** — `reports/`内の`proposal_*.md`・`data_quality_*.md`・`skip_reason_*.md`・`research_findings_*.md`・`devil_findings_*.md`・`hr_findings_*.md`・`sns_research_findings_*.md`・`audit_findings_*.md`・`company_report_*.md`(5部隊の統合レポート、2026-08-19〜)・`cost_benefit_*.md`のうち、また`reports/research_log.md`(仮説トラッカー、2026-08-19〜)に新規追記が無いかも確認する。`reports/.last_presented`(日付文字列のみのマーカーファイル。無ければ「まだ何も提示していない」扱い)の日付より新しいものが無いか確認。あれば要点を提示し、`reports/.last_presented`をその日付で更新する。(2026-08-19、人事部が発見: 5部隊の成果物ファイル名パターンが元々このチェック対象から漏れていた)
+1.5. **GARON RESEARCH OSタスク(2026-09-01〜)** — `node scripts/research_os_task_cli.js list --status=NEW`で、Codex発の未処理研究提案(`research_os/tasks/`、`GARON_CodexDailyResearch`実行後に`research_os_ingest_codex.js`が自動でタスク化する)が無いか確認する。あれば、既存の`cases.md`・`research_log.md`との重複を確認した上でCOOが選別し、採用する場合は1晩最大1件までを研究テーマとして着手する(却下・保留の場合も`update --task=ID --status=REJECTED/HOLD --note=理由`で必ず記録する)。採用してcases.mdへ正式登録する際は、そのタスクを`--status=ACCEPTED --case=GARON-YYYYMMDD-NNN`で更新し、研究完了後に`--status=DONE`にする(NEWから直接DONEには遷移できない設計)。詳細は`reports/garon_research_os_design_2026-08-31.md`・`scripts/lib/research_os.js`参照。
 2. **13タスクの有効化状態** — `Get-ScheduledTask -TaskName "GARON_*"`で全13タスクが`Ready`になっているか確認する(2026-08-19、人事部が発見: 8/17のEmergencyStop以降、この確認がセッション開始チェックに含まれておらず約8時間の無効化に気づけなかった実例あり)。
 2. **ブロック状況** — `logs/.site_block_state.json`の`blocked`/`since`/`lastCheckedAt`を確認する。
 3. **ダッシュボード** — `reports/dashboard.html`の最終更新日時・累計参戦件数・的中率・ROI・純損益を確認する。
@@ -256,6 +282,7 @@ GARONは「無人稼働インフラの完成度」と「実際に予想を出す
 - リポジトリ側のファイル名は**スペース区切り**(例: `sg narutou.html`)。ローカルはアンダースコア区切り(`sg_narutou.html`)なので、push前に名前を対応させて手動コピーする必要がある(自動リネームの仕組みは無い)。
 - `daikibo_archive_*.json`(実データ)はリポジトリに含めない(`.gitignore`で除外)。GitHub Pagesは公開サイトのため、生のレースデータを載せない方針。
 - `tests/`・`CLAUDE.md`はリポジトリにも含める。
+- **公開ページ(dashboard.html)の自動push認証(2026-09-01〜)**: `scripts/backfill_missing_fields.js`の`refreshAndPublishDashboard()`が毎回`git push`する仕組みだが、従来のGit Credential Manager(ブラウザ認証)は無人実行中に認証切れすると無期限にハングし、バッチ全体を止める事故が起きた(2026-09-01発見・修正、execSyncに30秒timeoutを追加済み)。恒久対策として、このリポジトリだけに絞ったfine-grained PAT(Contents: Read and write、2026-11-30失効)を発行し、`gt-eng-7k3xq2/.git/config`の`remote.origin.url`に埋め込み済み(`.git/config`はリポジトリの追跡対象外なので漏洩しない)。**トークン発行時の既知の罠**: PowerShellの`git remote set-url`にトークンを直接引数として渡すと、コマンドライン経由の文字コード変換で文字列が破損することを確認した(93文字のトークンが263文字の破損データに化ける)。この種の設定は`.git/config`をテキストファイルとして直接編集する方が安全。トークンの期限が切れたら同じ手順(fine-grained PAT新規発行→`.git/config`の該当行を直接書き換え)で更新する。
 
 ## 厳守ルール
 
@@ -263,3 +290,18 @@ GARONは「無人稼働インフラの完成度」と「実際に予想を出す
 2. **修正後は必ず`node --check`で構文確認すること。** 上記の方法で`<script>`内容を抽出してから実行する。これらは単一HTMLファイルの実運用ツールであり、構文エラーが1つでも入るとファイル全体が読み込み不能になり、本番ツールが即座に使えなくなる。
 3. **n<30のサンプルは信用しないこと。** バックテスト・検証結果でサンプル数(n)が30未満の集計は「傾向」として扱わず、結論の根拠にしない。既存コード内でもn=60〜80を「傾向として信頼できる目安」としている箇所がある(gtools.html, kyotei_backtest.html)。それより緩い閾値で判断を確定させない。
 4. **本番エンジン(sg_narutou.html/garon_q_engine.html等)への変更がCEO承認を得て本番反映された後、回帰テストが通り実際に一定時間本番で問題なく動いたことを確認できたら、`git tag -a verified-YYYY-MM-DD-N`でそのコミットに「正常動作確認済み」の記録を残すこと。** 確認日時・実行したテスト・エンジンバージョン・確認者・本番稼働確認の有無をタグメッセージに含める(緊急時Codex引き継ぎ体制v3 §8.3、`reports/garon_emergency_codex_handoff_design_2026-08-31.md`参照)。この記録は緊急時の復旧先の第一候補として使われるため、省略しないこと。
+5. **追加の従量課金を一切禁止する(2026-09-01、CEO緊急指示・恒久方針)。** GARONで許容する費用はClaude Pro(月額約3,000円)とCodex Pro(月額約3,000円)の月額固定料金のみ。Anthropic API・OpenAI APIその他一切の従量課金(APIキー経由の利用)を使わない。月額プランの利用上限に達したら処理を停止・延期し、APIキーへ自動または手動でフォールバックしない。**この方針は今後変更しない。** 実務上の要件:
+   - AI呼び出し(ヘッドレスclaude -p等)を行うコードは、月額プラン(OAuth)認証であることをコード側で確認できない限りfail-closed(実行拒否)で書くこと。「動くはずだから」という推測で従量課金経路を許可しない
+   - `ANTHROPIC_API_KEY`・`OPENAI_API_KEY`等のAPIキー環境変数は、GARONのどのスクリプト・タスクからも設定・参照・フォールバック利用しないこと。もし将来これらのキーが(他用途で)このPC上に存在するようになっても、GARON側のコードから使ってはいけない
+   - 課金を伴う可能性のあるテスト(実クラウドAI呼び出し)は、CEOの明示的な承認を得てからのみ実行する。自動実行・スケジュール実行に組み込まない
+   - 実装例: `scripts/run_research_os_processor.js`(2026-09-01実装)は、環境変数`RESEARCH_OS_ALLOW_REAL_CLAUDE=1`が明示的に設定され、かつ月額プラン認証をコードで確認できた場合のみ実クラウド呼び出しを行う。無人スケジュール実行では常にこのフラグを設定せず、fail-closedでスキップする設計とすること
+   - 既知の例外(2026-09-01時点で確認済み、今回の方針とは別に元から存在する経路): `sg_narutou.html`(展開コメント生成)・`gtools.html`(朝投稿生成)がブラウザ側でGemini API(`kyotei_gemini_key`/`gemini_key`、クライアント側平文保存)を呼び出す機能が既存する。これはCEOが手動で使う既存の生産機能であり、Windowsタスクスケジューラの無人実行タスクからは呼ばれない。本方針の対象(Anthropic/OpenAI等の自動化経路)とは性質が異なるが、存在自体は認識しておくこと
+6. **開発作業自体もトークン消費を意識すること(2026-09-01、CEO指示。Claude Pro週間枠の節約が目的で、品質・安全性の検証を省略する意味ではない)。**
+   - 調査前に対象ファイルを絞る。関係ないファイルまで先回りして読まない
+   - 同じ大容量ファイル(cases.md・research_log.md・daikibo_archive_*.json等)を同一セッション内で繰り返し全文読み込みしない。一度読んだ内容は覚えておく
+   - まず`rg`(Grep)等で該当箇所を特定してから、必要な範囲だけ`Read`する。ファイル全文を先に読んでから絞り込まない
+   - 既にセッション内で確認済みの内容(過去の調査結果・既存コードの挙動等)を、思い出せば済むのに再調査しない
+   - 数行の小さな修正のために、不要なサブエージェント(Agent tool)を起動しない。サブエージェントは相応の規模の独立した調査・検証が必要な時だけ使う
+   - 回帰テストは変更が影響する必要な範囲から実行する(無関係な広範囲のテストまで毎回全部流さない。ただし品質確認として必要なテストは省略しない)
+   - ユーザーへの進捗説明・報告は簡潔にし、同じ内容を何度も言い換えて繰り返さない
+   - **これらは効率化のためのルールであり、品質・安全性のために必要な検証(node --checkでの構文確認、回帰テスト、本番ファイルへの影響確認等)を省略してよいという意味ではない。** 省略してよいのは「無駄な読み込み・無駄な繰り返し」であって「必要な確認」ではない
