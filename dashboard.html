@@ -192,7 +192,7 @@
   <button onclick="location.reload()" style="padding:8px 16px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-primary);cursor:pointer;">🔄 今すぐ更新</button>
 </div>
 <div class="meta" style="color:var(--critical);font-weight:600;">⚠️ 下記のシミュレーション値は旧モデル(sg_narutou.html、ROI&gt;=91閾値、3,000円均等回収配分ベース)によるバックテストです。現行の本番エンジン(garon_q_engine.html、gap&gt;=0判定)とは異なるロジックで計算されており、「現在の実運用成績」ではありません(2026-09-01追記、詳細はreports/research_findings_2026-09-01_hitrate_roi_baseline_and_decomposition.md参照)。</div>
-<div class="meta">最終更新: 2026-09-02T14:25:34.348Z / scripts/update_dashboard.jsが毎晩自動更新</div>
+<div class="meta">最終更新: 2026-09-02T22:08:33.213Z / scripts/update_dashboard.jsが毎晩自動更新</div>
 <script>
   // 2026-08-27追加(雄大さん指示: リアルタイムで詳細を確認したい): 一括補完バッチ実行中は
   // 数分おきに内容が変わるため、ページを開きっぱなしでも自動で最新化されるようにする。
@@ -218,7 +218,7 @@
 <div class="meta" style="margin-top:-6px;">無人運用インフラが実際に動いているか(現在フェーズ: フェーズ3(実機検証))</div>
 <div class="status-chip-row">
 <div class="chip lane-company"><div class="chip-title">✓ 自動処理 18タスク稼働中</div><div class="chip-desc">全てReady/Running(無効化なし)</div></div>
-<div class="chip lane-sns"><div class="chip-title">🟢 到達可能</div><div class="chip-desc">最終確認: 2026-09-02T14:20:02.731Z</div></div>
+<div class="chip lane-sns"><div class="chip-title">🟢 到達可能</div><div class="chip-desc">最終確認: 2026-09-02T22:05:02.629Z</div></div>
 <div class="chip lane-research"><div class="chip-title">本日の参入判定: 評価154件</div><div class="chip-desc">参戦123件 / 見送り31件</div></div>
 </div>
 
@@ -259,8 +259,8 @@
 <div class="section-title">GARON RESEARCH OS 運用状況</div>
 <div class="meta" style="margin-top:-6px;">Codex日次発想生成の実行状態ファイルとcases.md最新行から自動集計(手動入力なし)</div>
 <div class="status-chip-row">
-<div class="chip lane-research"><div class="chip-title">✓ Codex発想部隊: 稼働中</div><div class="chip-desc">前回終了: 2026-09-01T15:18:16.496Z / 提案0件</div></div>
-<div class="chip lane-research"><div class="chip-title">次回自動起動予定</div><div class="chip-desc">2026-09-01T21:00:00.000Z</div></div>
+<div class="chip lane-research"><div class="chip-title">⚠️ Codex発想部隊: 前回失敗</div><div class="chip-desc">今日付のreports/codex_research_ideas_*.mdが生成されなかった(Codex内部の実行環境エラーの疑い、logs/codex_dai… / 最終試行: 2026-09-02T21:04:56.372Z</div></div>
+<div class="chip lane-research"><div class="chip-title">次回自動起動予定</div><div class="chip-desc">2026-09-03T21:00:00.000Z</div></div>
 <div class="chip lane-company"><div class="chip-title">GARON-20260910-001</div><div class="chip-desc">フルデータ(hasFullData、約1,300件)を使い、Qとは別の研究用予測…(CEO直接指示→COO単独(決定論コード、既存のエンジンα試作資産を再利用))<br>状態: 完了(4段階、モデル系列を終了)。第1段階: 予測性能はQの軸的中率39.9% &lt; モデル57.6% &lt; 人気順60.1%だが買い目成績は低配当シフトで目的未達。第2段階: 帯制約付き選択(方式C)は…</div></div>
 </div>
 
@@ -387,52 +387,52 @@
 <div class="meta" style="margin-top:-6px;">daikibo_archive全レースを3種類に分類。「完全」だけが検証・研究にそのまま使える</div>
 <div class="quality-grid">
   <div class="quality-tile q-total"><div class="qval">7,720</div><div class="qlabel">全レース</div></div>
-  <div class="quality-tile q-defective"><div class="qval">525</div><div class="qlabel">不備(未確定・欠場・オッズ欠損等)</div></div>
-  <div class="quality-tile q-full"><div class="qval">1,944</div><div class="qlabel">完全(検証に使える)</div></div>
+  <div class="quality-tile q-defective"><div class="qval">506</div><div class="qlabel">不備(未確定・欠場・オッズ欠損等)</div></div>
+  <div class="quality-tile q-full"><div class="qval">1,992</div><div class="qlabel">完全(検証に使える)</div></div>
 </div>
 <div class="quality-bar">
   <div class="seg-defective" style="width:7%;"></div>
   <div class="seg-pending" style="width:68%;"></div>
-  <div class="seg-full" style="width:25%;"></div>
+  <div class="seg-full" style="width:26%;"></div>
 </div>
 <div class="quality-legend">
-  <span><span class="dot" style="background:#e05050;"></span>不備 525件(7%)・恒久的に使えない</span>
-  <span><span class="dot" style="background:#c9a84c;"></span>穴埋め待ち 5,251件(68%)・結果は正常、個人成績データが未取得</span>
-  <span><span class="dot" style="background:#4caf7d;"></span>完全 1,944件(25%)・検証にそのまま使える</span>
+  <span><span class="dot" style="background:#e05050;"></span>不備 506件(7%)・恒久的に使えない</span>
+  <span><span class="dot" style="background:#c9a84c;"></span>穴埋め待ち 5,222件(68%)・結果は正常、個人成績データが未取得</span>
+  <span><span class="dot" style="background:#4caf7d;"></span>完全 1,992件(26%)・検証にそのまま使える</span>
 </div>
 
 <div class="section-title">過去データ穴埋めバッチの進捗</div>
 <div class="meta" style="margin-top:-6px;">scripts/run_field_backfill_batch.js(サイトブロック検知で自動停止・手動再開が必要)</div>
 <div class="progress-block">
-  <div class="progress-label">全54日分のうち完了済み: 7日(13%)</div>
-  <div class="progress-bar"><div class="progress-fill" style="width:13%;"></div></div>
+  <div class="progress-label">全54日分のうち完了済み: 8日(15%)</div>
+  <div class="progress-bar"><div class="progress-fill" style="width:15%;"></div></div>
 </div>
 
 <div class="progress-block">
-  <div class="progress-label">現在処理中: 2026-07-08(130 / 132件目)</div>
-  <div class="progress-bar"><div class="progress-fill fill-active" style="width:98%;"></div></div>
+  <div class="progress-label">現在処理中: 2026-07-09(142 / 143件目)</div>
+  <div class="progress-bar"><div class="progress-fill fill-active" style="width:99%;"></div></div>
 </div>
-<p class="empty" style="margin-top:8px;">状態: 実行中 / 本日の処理件数: 209件</p>
+<p class="empty" style="margin-top:8px;">状態: 停止中(手動起動が必要) / 本日の処理件数: 256件</p>
 
 
 <div class="meta" style="margin:10px 0 4px;">直近の処理(新しい順)</div>
 <table>
 <thead><tr><th>時刻</th><th>日付</th><th>会場/R</th><th>結果</th></tr></thead>
 <tbody>
-<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">23:25:28</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-09</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">多摩川 10R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">23:21:23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-09</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">戸田 4R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">23:17:09</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-09</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">多摩川 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">23:13:05</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-09</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">びわこ 8R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">23:08:52</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-09</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">桐生 2R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">23:04:47</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-09</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">丸亀 4R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">23:00:34</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-09</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">多摩川 8R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">22:56:29</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-09</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">大村 1R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">22:52:16</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-09</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">若松 7R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">22:48:10</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-09</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">三国 4R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">22:43:57</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-09</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">丸亀 6R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">22:39:51</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-09</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">鳴門 4R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr>
+<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">07:04:24</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">大村 9R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">07:00:18</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">多摩川 11R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr>
 </tbody>
 </table>
 
-<p class="empty" style="margin-bottom:20px;">最終更新: 2026-09-02T14:25:29.460Z</p>
+<p class="empty" style="margin-bottom:20px;">最終更新: 2026-09-02T22:08:27.117Z</p>
 
 
 
 <div class="meta" style="margin-bottom:8px;">旧モデル(sg_narutou.html)バックテスト・シミュレーション(今の閾値で機械的に参入していたら。<strong>現行Qエンジンの実績ではありません</strong>)</div>
 <div class="tiles">
-  <div class="tile"><div class="label">旧モデル・累計参戦件数</div><div class="value">151</div></div>
-  <div class="tile"><div class="label">旧モデル・累計的中率</div><div class="value">43.0%</div></div>
-  <div class="tile"><div class="label">旧モデル・累計ROI</div><div class="value good">101.1%</div></div>
-  <div class="tile"><div class="label">旧モデル・累計純損益</div><div class="value good">+¥4,960</div></div>
+  <div class="tile"><div class="label">旧モデル・累計参戦件数</div><div class="value">152</div></div>
+  <div class="tile"><div class="label">旧モデル・累計的中率</div><div class="value">43.4%</div></div>
+  <div class="tile"><div class="label">旧モデル・累計ROI</div><div class="value good">101.4%</div></div>
+  <div class="tile"><div class="label">旧モデル・累計純損益</div><div class="value good">+¥6,320</div></div>
 </div>
 
 
@@ -458,8 +458,8 @@
 <div class="tooltip" id="tooltip"></div>
 
 <script>
-const PROFIT_DATA = [{"date":"2026-07-01","v":-2280},{"date":"2026-07-02","v":-8770},{"date":"2026-07-03","v":2350},{"date":"2026-07-04","v":-12120},{"date":"2026-07-05","v":-17490},{"date":"2026-07-06","v":-27320},{"date":"2026-07-07","v":-26120},{"date":"2026-07-09","v":-25020},{"date":"2026-07-10","v":-16220},{"date":"2026-07-11","v":-13900},{"date":"2026-07-12","v":-19900},{"date":"2026-07-13","v":-18950},{"date":"2026-07-14","v":-8100},{"date":"2026-07-15","v":-1010},{"date":"2026-07-17","v":510},{"date":"2026-07-18","v":-4170},{"date":"2026-07-19","v":-1800},{"date":"2026-07-20","v":5430},{"date":"2026-07-21","v":14630},{"date":"2026-07-22","v":16430},{"date":"2026-07-23","v":15220},{"date":"2026-07-24","v":23990},{"date":"2026-07-25","v":26290},{"date":"2026-07-26","v":26170},{"date":"2026-07-27","v":14620},{"date":"2026-07-28","v":5620},{"date":"2026-07-29","v":3340},{"date":"2026-07-30","v":4610},{"date":"2026-08-01","v":7520},{"date":"2026-08-02","v":4020},{"date":"2026-08-03","v":1620},{"date":"2026-08-04","v":-10380},{"date":"2026-08-05","v":-12070},{"date":"2026-08-06","v":12230},{"date":"2026-08-07","v":9230},{"date":"2026-08-08","v":4960}];
-const HITRATE_DATA = [{"date":"2026-07-01","v":50},{"date":"2026-07-02","v":42.9},{"date":"2026-07-03","v":45.5},{"date":"2026-07-04","v":36.4},{"date":"2026-07-05","v":36},{"date":"2026-07-06","v":33.3},{"date":"2026-07-07","v":31.6},{"date":"2026-07-09","v":33.3},{"date":"2026-07-10","v":35.7},{"date":"2026-07-11","v":37.5},{"date":"2026-07-12","v":36},{"date":"2026-07-13","v":37},{"date":"2026-07-14","v":37.3},{"date":"2026-07-15","v":39.7},{"date":"2026-07-17","v":41.5},{"date":"2026-07-18","v":41.2},{"date":"2026-07-19","v":40.5},{"date":"2026-07-20","v":40.8},{"date":"2026-07-21","v":42.5},{"date":"2026-07-22","v":43.2},{"date":"2026-07-23","v":43.5},{"date":"2026-07-24","v":43.7},{"date":"2026-07-25","v":44.1},{"date":"2026-07-26","v":43.8},{"date":"2026-07-27","v":42.2},{"date":"2026-07-28","v":41},{"date":"2026-07-29","v":41.4},{"date":"2026-07-30","v":42.1},{"date":"2026-08-01","v":42.7},{"date":"2026-08-02","v":43},{"date":"2026-08-03","v":43.5},{"date":"2026-08-04","v":42.2},{"date":"2026-08-05","v":43},{"date":"2026-08-06","v":43.2},{"date":"2026-08-07","v":42.9},{"date":"2026-08-08","v":43}];
+const PROFIT_DATA = [{"date":"2026-07-01","v":-2280},{"date":"2026-07-02","v":-8770},{"date":"2026-07-03","v":2350},{"date":"2026-07-04","v":-12120},{"date":"2026-07-05","v":-17490},{"date":"2026-07-06","v":-27320},{"date":"2026-07-07","v":-26120},{"date":"2026-07-09","v":-23660},{"date":"2026-07-10","v":-14860},{"date":"2026-07-11","v":-12540},{"date":"2026-07-12","v":-18540},{"date":"2026-07-13","v":-17590},{"date":"2026-07-14","v":-6740},{"date":"2026-07-15","v":350},{"date":"2026-07-17","v":1870},{"date":"2026-07-18","v":-2810},{"date":"2026-07-19","v":-440},{"date":"2026-07-20","v":6790},{"date":"2026-07-21","v":15990},{"date":"2026-07-22","v":17790},{"date":"2026-07-23","v":16580},{"date":"2026-07-24","v":25350},{"date":"2026-07-25","v":27650},{"date":"2026-07-26","v":27530},{"date":"2026-07-27","v":15980},{"date":"2026-07-28","v":6980},{"date":"2026-07-29","v":4700},{"date":"2026-07-30","v":5970},{"date":"2026-08-01","v":8880},{"date":"2026-08-02","v":5380},{"date":"2026-08-03","v":2980},{"date":"2026-08-04","v":-9020},{"date":"2026-08-05","v":-10710},{"date":"2026-08-06","v":13590},{"date":"2026-08-07","v":10590},{"date":"2026-08-08","v":6320}];
+const HITRATE_DATA = [{"date":"2026-07-01","v":50},{"date":"2026-07-02","v":42.9},{"date":"2026-07-03","v":45.5},{"date":"2026-07-04","v":36.4},{"date":"2026-07-05","v":36},{"date":"2026-07-06","v":33.3},{"date":"2026-07-07","v":31.6},{"date":"2026-07-09","v":35},{"date":"2026-07-10","v":37.2},{"date":"2026-07-11","v":38.8},{"date":"2026-07-12","v":37.3},{"date":"2026-07-13","v":38.2},{"date":"2026-07-14","v":38.3},{"date":"2026-07-15","v":40.6},{"date":"2026-07-17","v":42.4},{"date":"2026-07-18","v":42},{"date":"2026-07-19","v":41.3},{"date":"2026-07-20","v":41.6},{"date":"2026-07-21","v":43.2},{"date":"2026-07-22","v":43.9},{"date":"2026-07-23","v":44.2},{"date":"2026-07-24","v":44.3},{"date":"2026-07-25","v":44.7},{"date":"2026-07-26","v":44.3},{"date":"2026-07-27","v":42.7},{"date":"2026-07-28","v":41.5},{"date":"2026-07-29","v":42},{"date":"2026-07-30","v":42.6},{"date":"2026-08-01","v":43.2},{"date":"2026-08-02","v":43.4},{"date":"2026-08-03","v":43.9},{"date":"2026-08-04","v":42.6},{"date":"2026-08-05","v":43.4},{"date":"2026-08-06","v":43.5},{"date":"2026-08-07","v":43.2},{"date":"2026-08-08","v":43.4}];
 
 function renderChart(containerId, data, opts) {
   const container = document.getElementById(containerId);
