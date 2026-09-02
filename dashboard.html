@@ -192,7 +192,7 @@
   <button onclick="location.reload()" style="padding:8px 16px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-primary);cursor:pointer;">🔄 今すぐ更新</button>
 </div>
 <div class="meta" style="color:var(--critical);font-weight:600;">⚠️ 下記のシミュレーション値は旧モデル(sg_narutou.html、ROI&gt;=91閾値、3,000円均等回収配分ベース)によるバックテストです。現行の本番エンジン(garon_q_engine.html、gap&gt;=0判定)とは異なるロジックで計算されており、「現在の実運用成績」ではありません(2026-09-01追記、詳細はreports/research_findings_2026-09-01_hitrate_roi_baseline_and_decomposition.md参照)。</div>
-<div class="meta">最終更新: 2026-09-02T07:26:29.011Z / scripts/update_dashboard.jsが毎晩自動更新</div>
+<div class="meta">最終更新: 2026-09-02T07:34:48.431Z / scripts/update_dashboard.jsが毎晩自動更新</div>
 <script>
   // 2026-08-27追加(雄大さん指示: リアルタイムで詳細を確認したい): 一括補完バッチ実行中は
   // 数分おきに内容が変わるため、ページを開きっぱなしでも自動で最新化されるようにする。
@@ -386,9 +386,9 @@
 <div class="section-title">データ品質サマリー(7/1〜今日)</div>
 <div class="meta" style="margin-top:-6px;">daikibo_archive全レースを3種類に分類。「完全」だけが検証・研究にそのまま使える</div>
 <div class="quality-grid">
-  <div class="quality-tile q-total"><div class="qval">7,675</div><div class="qlabel">全レース</div></div>
-  <div class="quality-tile q-defective"><div class="qval">665</div><div class="qlabel">不備(未確定・欠場・オッズ欠損等)</div></div>
-  <div class="quality-tile q-full"><div class="qval">1,704</div><div class="qlabel">完全(検証に使える)</div></div>
+  <div class="quality-tile q-total"><div class="qval">7,678</div><div class="qlabel">全レース</div></div>
+  <div class="quality-tile q-defective"><div class="qval">667</div><div class="qlabel">不備(未確定・欠場・オッズ欠損等)</div></div>
+  <div class="quality-tile q-full"><div class="qval">1,706</div><div class="qlabel">完全(検証に使える)</div></div>
 </div>
 <div class="quality-bar">
   <div class="seg-defective" style="width:9%;"></div>
@@ -396,9 +396,9 @@
   <div class="seg-full" style="width:22%;"></div>
 </div>
 <div class="quality-legend">
-  <span><span class="dot" style="background:#e05050;"></span>不備 665件(9%)・恒久的に使えない</span>
-  <span><span class="dot" style="background:#c9a84c;"></span>穴埋め待ち 5,306件(69%)・結果は正常、個人成績データが未取得</span>
-  <span><span class="dot" style="background:#4caf7d;"></span>完全 1,704件(22%)・検証にそのまま使える</span>
+  <span><span class="dot" style="background:#e05050;"></span>不備 667件(9%)・恒久的に使えない</span>
+  <span><span class="dot" style="background:#c9a84c;"></span>穴埋め待ち 5,305件(69%)・結果は正常、個人成績データが未取得</span>
+  <span><span class="dot" style="background:#4caf7d;"></span>完全 1,706件(22%)・検証にそのまま使える</span>
 </div>
 
 <div class="section-title">過去データ穴埋めバッチの進捗</div>
@@ -409,21 +409,21 @@
 </div>
 
 <div class="progress-block">
-  <div class="progress-label">現在処理中: 2026-07-08(126 / 132件目)</div>
-  <div class="progress-bar"><div class="progress-fill fill-active" style="width:95%;"></div></div>
+  <div class="progress-label">現在処理中: 2026-07-08(128 / 132件目)</div>
+  <div class="progress-bar"><div class="progress-fill fill-active" style="width:97%;"></div></div>
 </div>
-<p class="empty" style="margin-top:8px;">状態: 実行中 / 本日の処理件数: 108件</p>
+<p class="empty" style="margin-top:8px;">状態: 実行中 / 本日の処理件数: 110件</p>
 
 
 <div class="meta" style="margin:10px 0 4px;">直近の処理(新しい順)</div>
 <table>
 <thead><tr><th>時刻</th><th>日付</th><th>会場/R</th><th>結果</th></tr></thead>
 <tbody>
-<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:26:23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">徳山 6R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:22:19</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">三国 10R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:18:06</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">大村 9R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:14:01</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">若松 8R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:09:48</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">若松 12R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:05:44</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">多摩川 5R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:01:32</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">大村 8R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">15:57:27</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">桐生 10R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">15:53:15</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">桐生 5R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">15:49:10</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">常滑 10R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">15:44:58</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">徳山 7R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">15:40:53</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">若松 6R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr>
+<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:34:43</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">三国 8R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:30:38</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">戸田 12R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:26:23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">徳山 6R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:22:19</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">三国 10R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:18:06</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">大村 9R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:14:01</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">若松 8R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:09:48</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">若松 12R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:05:44</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">多摩川 5R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">16:01:32</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">大村 8R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">15:57:27</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">桐生 10R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">15:53:15</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">桐生 5R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">15:49:10</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-08</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">常滑 10R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr>
 </tbody>
 </table>
 
-<p class="empty" style="margin-bottom:20px;">最終更新: 2026-09-02T07:26:24.085Z</p>
+<p class="empty" style="margin-bottom:20px;">最終更新: 2026-09-02T07:34:43.729Z</p>
 
 
 
