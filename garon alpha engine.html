@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>αエンジン</title>
+<style>
+  :root{--bg:#141b2e;--surface:#1e2a47;--surface2:#283a5e;--border:#3d5580;--gold:#c9a84c;--gold2:#f0d080;--red:#e05050;--blue:#4a9eff;--green:#4caf7d;--text:#eef2f8;--muted:#8fa3c9;--font:-apple-system,'Hiragino Sans',sans-serif;}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;padding-bottom:40px;}
+  .header{background:linear-gradient(135deg,#24345c,#141b2e);border-bottom:1px solid var(--gold);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;}
+  .header-title{font-size:15px;font-weight:700;color:var(--gold);letter-spacing:.05em;}
+  .header-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+  .page{padding:16px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;}
+  .card-title{font-size:12px;color:var(--gold);font-weight:700;margin-bottom:10px;letter-spacing:.08em;}
+  label{font-size:12px;color:var(--muted);display:block;margin-bottom:5px;}
+  textarea,select{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:14px;padding:10px 12px;border-radius:8px;-webkit-appearance:none;font-family:var(--font);margin-bottom:10px;}
+  textarea{height:130px;resize:none;font-size:12px;}
+  select{height:42px;}
+  .btn{width:100%;padding:13px;border-radius:10px;font-size:15px;font-weight:700;border:none;-webkit-appearance:none;margin-bottom:8px;letter-spacing:.05em;}
+  .btn-gold{background:linear-gradient(135deg,#c9a84c,#f0d080);color:#0a0a0f;}
+  .btn-ghost{background:var(--surface2);border:1px solid var(--border);color:var(--text);}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .info-strip{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+  .info-chip{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:3px 10px;font-size:11px;color:var(--muted);}
+  .info-chip span{color:var(--text);font-weight:700;}
+  .bet-table{width:100%;border-collapse:collapse;margin-bottom:8px;font-size:13px;}
+  .bet-table th{font-size:10px;color:var(--muted);padding:5px 4px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;}
+  .bet-table td{padding:8px 4px;border-bottom:1px solid var(--border);}
+  .bet-table tr:last-child td{border-bottom:none;}
+  .bet-val{font-weight:700;font-size:14px;white-space:nowrap;}
+  .green{color:var(--green)!important;}.red{color:var(--red)!important;}.gold{color:var(--gold)!important;}
+  .status-banner{border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:13px;line-height:1.6;}
+  .status-entry{background:#1a3a1a;border:1px solid var(--green);color:var(--green);}
+  .status-skip{background:var(--surface2);border:1px solid var(--border);color:var(--muted);}
+  .status-warn{background:#3a2a1a;border:1px solid #d0a050;color:#e0b060;}
+  .status-error{background:#3a1a1a;border:1px solid var(--red);color:var(--red);}
+  .warn-list{font-size:12px;color:#e0b060;line-height:1.7;margin-top:6px;}
+  .caution{font-size:11px;color:var(--muted);line-height:1.6;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);}
+  .loading{color:var(--muted);text-align:center;padding:16px;font-size:13px;}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--gold);color:#000;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:700;opacity:0;transition:opacity .3s;z-index:999;pointer-events:none;white-space:nowrap;}
+  .toast.show{opacity:1;}
+  .model-status{font-size:10px;color:var(--muted);text-align:center;padding:4px 0 10px;}
+  .model-status.err{color:var(--red);}
+  .model-status.ok{color:var(--green);}
+</style>
+</head>
+<body>
+<div class="header">
+  <div><div class="header-title">🅰️ αエンジン</div><div class="header-sub">form_market05_band50_150_8pt_candidate_v1(GARON基本エンジン)</div></div>
+</div>
+
+<div class="page">
+  <div id="model-status" class="model-status">モデルを読み込み中...</div>
+
+  <div class="card">
+    <div class="card-title">📋 レース情報</div>
+    <div style="font-size:12px;color:var(--muted);">貼り付けたデータから自動判定します(場所・レース番号・日付・締切は手入力不要)</div>
+    <div id="race-info-display" style="margin-top:8px;"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📊 競艇日和データ（全文貼付け）</div>
+    <textarea id="inp-data" placeholder="競艇日和のページ全体をコピー＆ペースト"></textarea>
+    <div style="font-size:11px;color:var(--muted);">買い目は8点固定です(αの仕様、変更できません)</div>
+  </div>
+
+  <button class="btn btn-gold" id="btn-run" onclick="runYosoAlpha()">⚡ 予想実行</button>
+  <button class="btn btn-ghost" onclick="clearYosoAlpha()">クリア</button>
+
+  <div id="yoso-result"></div>
+
+  <div class="card">
+    <div class="card-title" style="color:var(--muted);">ℹ️ この画面について</div>
+    <div class="caution">
+      ・この結果は「今この貼り付けデータでαを再計算した結果」です。自動巡回で実際にntfy通知として送信された買い目とは、取得時刻やオッズが異なる場合、一致しません。<br>
+      ・オッズ取得時刻は貼り付けデータに含まれないため、「予想実行」を押した時刻で代用しています。実際に競艇日和からコピーした時刻とズレがある場合、この代用時刻をもとにした締切前判定(20分以内)がずれることがあります。<br>
+      ・ページを開いたり計算したりするだけでは、ntfy通知は一切送信されません。<br>
+      ・旧Qエンジンは<a href="garon%20q%20engine%20(rollback).html" style="color:var(--gold);">切戻し用にこちら</a>で維持しています。
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+/* ============================================================
+   αエンジン(ブラウザ版) — Node.js版 scripts/lib/alpha_engine/ の
+   alpha.js / features.js / relations_features.js / form_features.js を
+   アルゴリズムを一切変更せず移植したもの。
+   モデル・8点固定・50-150倍帯・参入閾値(1.440209615716716、丸めない)は
+   本番自動巡回(realtime_screening.js)と完全に同じ。
+   一致確認: tests/alpha_manual_engine_verification_*.js 参照。
+   ============================================================ */
+const AlphaEngineWeb = (function(){
+  const MODEL_ID='garon_alpha_form_market05_band50_150_8pt_candidate_v1';
+  const ENTRY_THRESHOLD=1.440209615716716;
+  const MODEL_URL='./garon_alpha_engine_model/form_model.json.gz';
+  const MODEL_SHA256='6132949d0d5551f13f5597299e2b30d22fd30787703525288c2da62b4572c9ed';
+  let model=null, modelLoadError=null, modelLoadPromise=null;
+
+  // ---- features.js 移植(算出ロジックは無変更) ----
+  const finite=x=>typeof x==='number'&&Number.isFinite(x);
+  const pos=x=>finite(x)&&x>0?x:null;
+  const mean=a=>a.reduce((s,x)=>s+x,0)/a.length;
+  const FEATURE_NAMES=['st','kimarite','ren','motor','tenji','syukai','syukaiFoot','chokusen'];
+  function coreFeatures(input){
+    const boats=input.slice().sort((a,b)=>a.no-b.no);
+    if(boats.map(b=>b.no).join()!=='1,2,3,4,5,6') throw new Error('FEATURE_BOAT_ORDER_MISMATCH');
+    const raw=boats.map(b=>{
+      const sts=[pos(b.sessonAvgST),pos(b.sessonAvgST),pos(b.konkiAvgST),pos(b.wakuAvgST)].filter(x=>x!==null);
+      const ks=[b.sashi6m,b.makuri6m,b.makurisashi6m].filter(finite);
+      const rates=['今期','直近 6ヶ月','直近 3ヶ月','一般戦'].map(p=>b.wakuStats&&b.wakuStats.niren2?b.wakuStats.niren2[p]:undefined).filter(v=>v&&v.n>=8&&finite(v.rate)).map(v=>v.rate);
+      return [sts.length?mean(sts):null, b.no===1?(finite(b.kimariteNige6m)?b.kimariteNige6m:null):(ks.length?Math.max(...ks):null), rates.length?mean(rates):null, finite(b.motor2ren)?b.motor2ren:null, ...FEATURE_NAMES.slice(4).map(k=>pos(b[k]))];
+    });
+    const centers=FEATURE_NAMES.map((_,j)=>{const a=raw.map(r=>r[j]).filter(x=>x!==null);return a.length?mean(a):0;});
+    return boats.map((b,i)=>[...[2,3,4,5,6].map(n=>+(b.no===n)),...FEATURE_NAMES.flatMap((_,j)=>raw[i][j]===null?[0,1]:[(raw[i][j]-centers[j])*([0,4,5,6,7].includes(j)?-1:1),0])]);
+  }
+
+  // ---- relations_features.js 移植 ----
+  const validNum=finite;
+  const timeVal=x=>validNum(x)&&x>0?x:null;
+  const rateVal=x=>validNum(x)&&x>=0&&x<=100?x/100:null;
+  function meanST(b){const x=[timeVal(b.sessonAvgST),timeVal(b.sessonAvgST),timeVal(b.konkiAvgST),timeVal(b.wakuAvgST)].filter(v=>v!==null);return x.length?x.reduce((s,v)=>s+v,0)/x.length:null;}
+  function relationsFeatures(input){
+    const base=coreFeatures(input).flatMap(v=>v.slice(5)), boats=input.slice().sort((a,b)=>a.no-b.no);
+    const styles=boats.map(b=>[rateVal(b.sashi6m),rateVal(b.makuri6m),rateVal(b.makurisashi6m)]);
+    const rates=base.concat(styles.flatMap(v=>v.flatMap(x=>x===null?[0,1]:[x,0])));
+    const st=boats.map(meanST), tenji=boats.map(b=>timeVal(b.tenji)), pair=[];
+    function interaction(gap,r){return gap===null||r===null?[0,1]:[Math.max(gap,0)*r,0];}
+    for(let i=0;i<6;i++)for(let j=i+1;j<6;j++){
+      const gap=st[i]===null||st[j]===null?null:st[i]-st[j];
+      const tg=tenji[i]===null||tenji[j]===null?null:tenji[i]-tenji[j];
+      pair.push(gap??0, +(gap===null), tg??0, +(tg===null), ...interaction(gap,styles[j][1]), ...interaction(gap,styles[j][2]), ...interaction(gap===null?null:-gap,styles[i][0]));
+    }
+    return {base, rates, relations:rates.concat(pair)};
+  }
+
+  // ---- form_features.js 移植 ----
+  const positive=x=>finite(x)&&x>0?x:null;
+  const FORM_FIELDS=['sessonAvgST','konkiAvgST','wakuAvgST','motor2ren','tenji','syukai','syukaiFoot','chokusen'];
+  const encode=x=>x===null?[0,1]:[x,0];
+  const diffVal=(a,b)=>positive(a)===null||positive(b)===null?null:a-b;
+  function formFeatures(input){
+    const boats=input.slice().sort((a,b)=>a.no-b.no), relations=relationsFeatures(boats).relations;
+    const absolute=boats.flatMap(b=>FORM_FIELDS.flatMap(k=>encode(k==='motor2ren'?(finite(b[k])&&b[k]>=0&&b[k]<=100?b[k]:null):positive(b[k]))));
+    const extra=boats.flatMap(b=>[finite(b.sessonPt)&&b.sessonPt!==0?b.sessonPt:null, diffVal(b.tenji,b.avgTenji), diffVal(b.syukai,b.avgSyukai), diffVal(b.syukaiFoot,b.avgSyukaiFoot), diffVal(b.sessonAvgST,b.konkiAvgST)].flatMap(encode));
+    return {relations, levels:relations.concat(absolute), form:relations.concat(absolute,extra)};
+  }
+
+  // ---- alpha.js 移植(load()のみブラウザ向けにfetch+DecompressionStream+crypto.subtleへ差し替え。
+  //     それ以外のdistribution()/predict()のロジックは一切変更していない) ----
+  function getModelOrThrow(){
+    if(!model){
+      if(modelLoadError) throw new Error(modelLoadError);
+      throw new Error('MODEL_NOT_LOADED');
+    }
+    return model;
+  }
+  function distribution(boats){
+    const m=getModelOrThrow(), base=formFeatures(boats).form;
+    function probs(stage,prior){
+      const x=[...base, ...prior.flatMap(p=>[0,1,2,3,4,5].map(c=>+(p===c)))], s=stage.baseline.slice();
+      for(const group of stage.trees) for(let c=0;c<6;c++){
+        const t=group[c]; let n=t[0];
+        while(!n.is_leaf){
+          if(n.is_categorical) throw new Error('CATEGORICAL_SPLIT');
+          const v=x[n.feature_idx];
+          n = t[Number.isNaN(v) ? (n.missing_go_to_left?n.left:n.right) : (v<=n.num_threshold?n.left:n.right)];
+        }
+        s[c]+=n.value;
+      }
+      const items=[0,1,2,3,4,5].filter(c=>!prior.includes(c)), max=Math.max(...items.map(i=>s[i])), e=items.map(i=>Math.exp(s[i]-max)), sum=e.reduce((a,b)=>a+b,0);
+      if(!(sum>0 && Number.isFinite(sum))) throw new Error('INVALID_PROBABILITY');
+      return Object.fromEntries(items.map((i,k)=>[i, e[k]/sum]));
+    }
+    const p1=probs(m.stages[0],[]), out=[];
+    for(let i=0;i<6;i++){
+      const p2=probs(m.stages[1],[i]);
+      for(let j=0;j<6;j++) if(j!==i){
+        const p3=probs(m.stages[2],[i,j]);
+        for(let k=0;k<6;k++) if(k!==i&&k!==j) out.push({val:`${i+1}-${j+1}-${k+1}`, p:p1[i]*p2[j]*p3[k]});
+      }
+    }
+    return out;
+  }
+  function predict(input, nowMs){
+    nowMs = typeof nowMs==='number' ? nowMs : Date.now();
+    const skip=reason=>({modelId:MODEL_ID, entered:false, reason, points:[], researchCandidate:true});
+    if(!input || !Array.isArray(input.boats) || input.boats.length!==6 || input.boats.some(b=>!b||b.isJogai) || input.boats.map(b=>b.no).sort().join()!=='1,2,3,4,5,6') return skip('INVALID_BOATS');
+    const timeParse=s=>typeof s==='string' && /(Z|[+-]\d\d:\d\d)$/.test(s) ? Date.parse(s) : NaN;
+    const deadline=timeParse(input.deadlineAt), captured=timeParse(input.oddsCapturedAt);
+    if(!Number.isFinite(nowMs) || !Number.isFinite(deadline) || !Number.isFinite(captured)) return skip('INVALID_TIMESTAMP');
+    if(captured>nowMs || deadline<=nowMs || captured>=deadline || deadline-captured>1200000) return skip('OUTSIDE_PREDEADLINE_WINDOW');
+    const entries=Object.entries(input.oddsMap||{}).map(([val,v])=>({val, odds: typeof v==='number' || (typeof v==='string' && v.trim()!=='') ? Number(v) : NaN}));
+    if(entries.length!==120 || entries.some(c=>!(/^[1-6]-[1-6]-[1-6]$/.test(c.val)) || new Set(c.val.split('-')).size!==3 || !Number.isFinite(c.odds) || c.odds<=0)) return skip('INVALID_ODDS');
+    try{
+      const dist=distribution(input.boats), pm=new Map(dist.map(c=>[c.val,c.p]));
+      if(Math.abs(dist.reduce((s,c)=>s+c.p,0)-1)>1e-10) return skip('INVALID_DISTRIBUTION');
+      const all=entries.sort((a,b)=>a.val.localeCompare(b.val)).map(c=>({...c, mass:Math.sqrt(Math.max(pm.get(c.val),Number.MIN_VALUE)/c.odds)})), den=all.reduce((s,c)=>s+c.mass,0);
+      const points=all.filter(c=>c.odds>=50 && c.odds<=150).map(c=>({...c, p:c.mass/den})).sort((a,b)=>b.p-a.p || a.val.localeCompare(b.val)).slice(0,8);
+      if(points.length!==8) return skip('INSUFFICIENT_BAND_CANDIDATES');
+      const estimate=points.reduce((s,c)=>s+c.p*c.odds,0)/8;
+      return {modelId:MODEL_ID, entered: estimate>=ENTRY_THRESHOLD, reason: estimate>=ENTRY_THRESHOLD?'CANDIDATE_ENTRY':'BELOW_THRESHOLD', points: points.map(c=>({combination:c.val, odds:c.odds, amount:100})), estimatedReturn:estimate, entryThreshold:ENTRY_THRESHOLD, researchCandidate:true, stake:800};
+    } catch(e){
+      return skip(e.message||'INFERENCE_ERROR');
+    }
+  }
+
+  async function ensureModelLoaded(){
+    if(model) return {ok:true};
+    if(modelLoadPromise) return modelLoadPromise;
+    modelLoadPromise = (async () => {
+      try{
+        if(typeof fetch==='undefined') throw new Error('FETCH_UNSUPPORTED');
+        const res = await fetch(MODEL_URL);
+        if(!res.ok) throw new Error('MODEL_FETCH_FAILED_'+res.status);
+        const resForHash = res.clone();
+        const rawBuf = await resForHash.arrayBuffer();
+        if(typeof crypto==='undefined' || !crypto.subtle) throw new Error('SUBTLECRYPTO_UNSUPPORTED');
+        const hashBuf = await crypto.subtle.digest('SHA-256', rawBuf);
+        const hashHex = Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+        if(hashHex !== MODEL_SHA256) throw new Error('PACKAGE_HASH_MISMATCH');
+        if(typeof DecompressionStream==='undefined') throw new Error('DECOMPRESSION_UNSUPPORTED');
+        const decompressedText = await new Response(new Blob([rawBuf]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+        const modelObj = JSON.parse(decompressedText);
+        if(modelObj.arm !== 'form') throw new Error('MODEL_ARM_MISMATCH');
+        model = modelObj;
+        modelLoadError = null;
+        return {ok:true};
+      } catch(e){
+        modelLoadError = (e && e.message) || String(e);
+        return {ok:false, reason: modelLoadError};
+      }
+    })();
+    return modelLoadPromise;
+  }
+
+  return { predict, ensureModelLoaded, MODEL_ID, ENTRY_THRESHOLD, isModelLoaded: () => !!model, getModelLoadError: () => modelLoadError };
+})();
+
+/* 通常スキップ理由(自動巡回側 scripts/lib/alpha_engine_judgment.js の NORMAL_SKIP_REASONS と同じ分類) */
+const NORMAL_SKIP_REASONS = new Set(['INVALID_BOATS','INVALID_TIMESTAMP','OUTSIDE_PREDEADLINE_WINDOW','INVALID_ODDS','INSUFFICIENT_BAND_CANDIDATES','BELOW_THRESHOLD']);
+function isStructuralFailure(reason){ return !NORMAL_SKIP_REASONS.has(reason) && reason!=='CANDIDATE_ENTRY'; }
+const SKIP_REASON_LABELS = {
+  INVALID_BOATS:'6艇分のデータが揃っていません(欠場艇がある場合はαは参入見送りとして扱います)',
+  INVALID_TIMESTAMP:'締切または実行時刻の形式が不正です',
+  OUTSIDE_PREDEADLINE_WINDOW:'締切前20分以内のデータではありません(締切超過、または実行時刻から20分以上前の締切です)',
+  INVALID_ODDS:'3連単オッズが120通り分そろっていません(オッズセクションの貼り付け漏れの可能性)',
+  INSUFFICIENT_BAND_CANDIDATES:'予想時点オッズ50〜150倍の候補が8点未満です',
+  BELOW_THRESHOLD:'参入閾値未満のため見送りです',
+};
+
+/* ============================================================
+   以下、garon_q_engine.html の parseData()/extractOddsMap() を
+   そのまま複製(このファイル専用のコピー。garon_q_engine.html 本体・
+   Q由来の抽出処理を行う既存スクリプトへは一切手を入れていない)。
+   ============================================================ */
+function parseData(text){
+  const d={boats:[]};
+  for(let i=1;i<=6;i++) d.boats.push({no:i,name:'',regno:'',nigerate6m:0,nigerate1y:0,atchiNige:0,atchiNigeCount:0,sgNige:0,sashi6m:0,makuri6m:0,makurisashi6m:0,sashi1y:0,makuri1y:0,makurisashi1y:0,sg1chakuRate:0,sg1chakuCount:0,ippan2ren:0,konki2ren:0,konki3ren:0,konkiAvgST:0,wakuAvgST:0,fCount:0,kinsetsu6m:0,motor2ren:0,sessonPt:0,sessonRaces:0,sessonAvgST:0,sgAvgST:0,atchiAvgST:0,tenji:0,avgTenji:0,syukai:0,syukaiFoot:0,avgSyukaiFoot:0,chokusen:0,directST:0,isExhibitF:false,isF:false,motorRank:0,motorContribP:0,motorTenjiRank:0,motorRaces:0,motorYushutsu:0,motorYusho:0,motorChukanSeibi:false,deashiEval:'',nobiEval:'',partsExchange:'',stgapRank:'',stgapSec:null,stgapRankByCourse:[],stgapSecByCourse:[],kimariteNige6m:null,kimariteNigashi6m:null,kimariteNigashi1y:null,wakuStats:null});
+
+  const nigeSection=text.match(/直近 6ヶ月\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)/);
+  if(nigeSection){
+    [1,3,5,7,9,11].forEach((idx,i)=>{d.boats[i].nigerate6m=parseFloat(nigeSection[idx])||0;});
+  }
+  (function(){
+    var lines3=text.split('\n');
+    var inAre=false;
+    for(var li=0;li<lines3.length;li++){
+      var ln=lines3[li];
+      if(ln.includes('1着率')&&!inAre){inAre=true;continue;}
+      if(!inAre)continue;
+      if(ln.includes('当地')){
+        var vals=[], counts=[];
+        var re2=/([\d.]+)%\s*\((\d+)\)/g, m3;
+        while((m3=re2.exec(ln))!==null){vals.push(parseFloat(m3[1]));counts.push(parseInt(m3[2]));}
+        if(!vals.length){var re=/([\d.]+)%/g,m2;while((m2=re.exec(ln))!==null)vals.push(parseFloat(m2[1]));}
+        for(var j=0;j<Math.min(vals.length,6);j++){
+          d.boats[j].atchiNige=vals[j];
+          d.boats[j].atchiNigeCount=counts[j]||0;
+        }
+        break;
+      }
+      if(ln.includes('直近')&&inAre&&ln.includes('%')) continue;
+      if(ln.includes('2連対率')) break;
+    }
+  })();
+  (function(){
+    var lines4=text.split('\n');
+    var inAre=false;
+    for(var li=0;li<lines4.length;li++){
+      var ln=lines4[li];
+      if(ln.includes('1着率')&&!inAre){inAre=true;continue;}
+      if(!inAre)continue;
+      if(/^SG\/G1/.test(ln.trim())||ln.trim().startsWith('SG/G1')){
+        var vals=[];
+        var re=/([\d.]+)%/g,m2;
+        while((m2=re.exec(ln))!==null) vals.push(parseFloat(m2[1]));
+        for(var j=0;j<Math.min(vals.length,6);j++) d.boats[j].sgNige=vals[j];
+        break;
+      }
+      if(ln.includes('2連対率')) break;
+    }
+  })();
+
+  (function(){
+    function parsePeriodTable(blockText){
+      var periods=['今期','直近 6ヶ月','直近 3ヶ月','直近 1ヶ月','当地','一般戦','SG/G1'];
+      var out={};
+      for(var pi=0;pi<periods.length;pi++){
+        var p=periods[pi];
+        var esc=p.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+        var lineM=blockText.match(new RegExp('(?:^|\\n)'+esc+'\\t([^\\n]+)'));
+        if(!lineM) continue;
+        var cells=lineM[1].split('\t');
+        var vals=[];
+        for(var i=0;i<6;i++){
+          var cell=(cells[i]||'').trim();
+          var cm=cell.match(/([\d.]+)%\s*\((\d+)\)/);
+          vals.push(cm?{rate:parseFloat(cm[1]),n:parseInt(cm[2])}:null);
+        }
+        out[p]=vals;
+      }
+      return out;
+    }
+    var wakuSection=text.match(/=== 枠別勝率 ===([\s\S]*?)(?:\n着順別直近成績|\n=== )/);
+    if(wakuSection){
+      var wb=wakuSection[1];
+      var ichiM=wb.match(/1着率\n([\s\S]*?)(?=\n2連対率)/);
+      var nirenM=wb.match(/2連対率\n([\s\S]*?)(?=\n3連対率)/);
+      var sanrenM=wb.match(/3連対率\n([\s\S]*)$/);
+      var ichi=ichiM?parsePeriodTable(ichiM[1]):{};
+      var niren=nirenM?parsePeriodTable(nirenM[1]):{};
+      var sanren=sanrenM?parsePeriodTable(sanrenM[1]):{};
+      for(var bi=0;bi<6;bi++){
+        var ws={ichiChaku:{},niren2:{},sanren2:{}};
+        Object.keys(ichi).forEach(function(p){ws.ichiChaku[p]=ichi[p][bi];});
+        Object.keys(niren).forEach(function(p){ws.niren2[p]=niren[p][bi];});
+        Object.keys(sanren).forEach(function(p){ws.sanren2[p]=sanren[p][bi];});
+        d.boats[bi].wakuStats=ws;
+      }
+    }
+  })();
+
+  (function(){
+    function kv6(line){
+      var cols=line.split('\t'),out=[];
+      for(var ci=0;ci<cols.length&&out.length<6;ci++){
+        var v=(cols[ci]||'').trim().replace(/%/,'');
+        var n=parseFloat(v);
+        out.push(isNaN(n)?null:n);
+      }
+      while(out.length<6)out.push(null);
+      return out;
+    }
+    function parseKimariteBlock(periodMarkers, otherMarkers){
+      var lines2=text.split('\n');
+      var inBlock=false,nextIsBlock=false,kType='';
+      var result={nige:null,nigashi:null,sashi:[null,null,null,null,null,null],makuri:[null,null,null,null,null,null],makuriSashi:[null,null,null,null,null,null]};
+      for(var li=0;li<lines2.length;li++){
+        var ln=lines2[li].trim();
+        if(ln.startsWith('===')){inBlock=false;nextIsBlock=false;kType='';continue;}
+        var lb=(ln.split('\t')[0]||'').trim().replace(/\s+/g,'');
+        if(lb==='決まり手'){inBlock=false;nextIsBlock=true;kType='';continue;}
+        if(nextIsBlock){
+          if(periodMarkers.some(function(pm){return ln.includes(pm);})){inBlock=true;nextIsBlock=false;}
+          continue;
+        }
+        if(!inBlock)continue;
+        if(otherMarkers.some(function(om){return ln.includes(om);})){inBlock=false;kType='';continue;}
+        var fullLb=ln.split('\t').join('');
+        if(fullLb.includes('逃げ')&&fullLb.includes('逃し')){kType='nige';continue;}
+        if(fullLb.includes('差し')&&!fullLb.includes('捲り')){kType='sashi';continue;}
+        if(fullLb.includes('捲り')&&!fullLb.includes('差し')){kType='makuri';continue;}
+        if(fullLb.includes('捲り')&&fullLb.includes('差し')){kType='makuriSashi';continue;}
+        if(kType){
+          var kvals=kv6(ln);
+          if(kType==='nige'){
+            result.nige=kvals[0];
+            result.nigashi=kvals[1];
+          } else if(kType==='sashi'){
+            for(var j=0;j<6;j++) if(kvals[j]!==null) result.sashi[j]=kvals[j];
+          } else if(kType==='makuri'){
+            for(var j2=0;j2<6;j2++) if(kvals[j2]!==null) result.makuri[j2]=kvals[j2];
+          } else if(kType==='makuriSashi'){
+            for(var j3=0;j3<6;j3++) if(kvals[j3]!==null) result.makuriSashi[j3]=kvals[j3];
+          }
+          kType='';
+        }
+      }
+      return result;
+    }
+    var k6=parseKimariteBlock(['直近6ヶ月','直近 6ヶ月'],['直近1年','直近 1年','直近3ヶ月','直近 3ヶ月']);
+    var k1y=parseKimariteBlock(['直近1年','直近 1年'],['直近6ヶ月','直近 6ヶ月','直近3ヶ月','直近 3ヶ月']);
+    for(var i=0;i<6;i++){
+      if(k6.sashi[i]!==null) d.boats[i].sashi6m=k6.sashi[i];
+      if(k6.makuri[i]!==null) d.boats[i].makuri6m=k6.makuri[i];
+      if(k6.makuriSashi[i]!==null) d.boats[i].makurisashi6m=k6.makuriSashi[i];
+      if(k1y.sashi[i]!==null) d.boats[i].sashi1y=k1y.sashi[i];
+      if(k1y.makuri[i]!==null) d.boats[i].makuri1y=k1y.makuri[i];
+      if(k1y.makuriSashi[i]!==null) d.boats[i].makurisashi1y=k1y.makuriSashi[i];
+    }
+    if(k6.nige!==null) d.boats[0].kimariteNige6m=k6.nige;
+    if(k6.nigashi!==null) d.boats[0].kimariteNigashi6m=k6.nigashi;
+    if(k1y.nige!==null) d.boats[0].nigerate1y=k1y.nige;
+    if(k1y.nigashi!==null) d.boats[0].kimariteNigashi1y=k1y.nigashi;
+  })();
+
+  const raceMeta=text.match(/=== レース情報 ===\n([^\t\n]+)\t(\d+R)(?:\t(\d+))?(?:\t締切(\d{1,2}:\d{2}))?(?:\t([^\t\n]+))?(?:\t([^\t\n]+))?/);
+  if(raceMeta){
+    d.venue=raceMeta[1].trim();
+    d.raceNum=raceMeta[2].trim();
+    if(raceMeta[3]) d.hiduke=raceMeta[3].trim();
+    if(raceMeta[4]) d.shimekiri=raceMeta[4].trim();
+    if(raceMeta[5]) d.day=raceMeta[5].trim();
+    if(raceMeta[6]) d.raceCategory=raceMeta[6].trim();
+  }
+
+  const regnoLine=text.match(/\t(\d{4,5})\t(\d{4,5})\t(\d{4,5})\t(\d{4,5})\t(\d{4,5})\t(\d{4,5})/);
+  if(regnoLine){
+    for(let i=0;i<6;i++) d.boats[i].regno=regnoLine[i+1]||'';
+  }
+  (function(){
+    var lines=text.split('\n');
+    var inOdds=false;
+    for(var li=0;li<lines.length;li++){
+      var ln=lines[li];
+      if(ln.includes('=== オッズ ===')) {inOdds=true;continue;}
+      if(!inOdds) continue;
+      var m=ln.match(/^([1-6])\t([^\t\d][^\t]+)$/);
+      if(m){
+        var no=parseInt(m[1]);
+        var name=m[2].trim();
+        if(/[一-龥]/.test(name)&&no>=1&&no<=6) d.boats[no-1].name=name;
+      }
+    }
+    if(d.boats.every(b=>!b.name)){
+      for(var li2=0;li2<lines.length;li2++){
+        var parts=lines[li2].split('\t').map(p=>p.trim()).filter(p=>p);
+        if(parts.length>=6&&parts.slice(0,6).every(p=>/[一-龥]/.test(p))&&!parts[0].includes('期')&&!parts[0].includes('号艇')){
+          for(var j=0;j<6;j++) d.boats[j].name=parts[j]||'';
+          break;
+        }
+      }
+    }
+  })();
+
+  const sgSection=text.match(/SG\/G1\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)\s+([\d.]+)%\s*\((\d+)\)/);
+  if(sgSection){
+    [1,3,5,7,9,11].forEach((idx,i)=>{
+      d.boats[i].sg1chakuRate=parseFloat(sgSection[idx])||0;
+      d.boats[i].sg1chakuCount=parseInt(sgSection[idx+1])||0;
+    });
+  }
+
+  const ippanRenSection=text.match(/一般戦\s+([\d.]+)%[\t ]+([\d.]+)%[\t ]+([\d.]+)%[\t ]+([\d.]+)%[\t ]+([\d.]+)%[\t ]+([\d.]+)%/);
+  if(ippanRenSection){
+    for(let i=0;i<6;i++) d.boats[i].ippan2ren=parseFloat(ippanRenSection[i+1])||0;
+  }
+
+  const konkiRenSection=text.match(/2連対率\s*\n今期[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)/);
+  if(konkiRenSection){
+    for(let i=0;i<6;i++) d.boats[i].konki2ren=parseFloat(konkiRenSection[i+1])||0;
+  }
+
+  const konki3RenSection=text.match(/3連対率\s*\n今期[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)[\t ]+([\d.]+)%\s*\(\d+\)/);
+  if(konki3RenSection){
+    for(let i=0;i<6;i++) d.boats[i].konki3ren=parseFloat(konki3RenSection[i+1])||0;
+  }
+
+  const konkiAvgSTSection=text.match(/基本情報[\s\S]*?平均ST\s*\n今期[\t ]+([\d.]+|-)[\t ]+([\d.]+|-)[\t ]+([\d.]+|-)[\t ]+([\d.]+|-)[\t ]+([\d.]+|-)[\t ]+([\d.]+|-)/);
+  if(konkiAvgSTSection){
+    for(let i=0;i<6;i++) d.boats[i].konkiAvgST=parseFloat(konkiAvgSTSection[i+1])||0;
+  }
+
+  const wakuAvgSTSection=text.match(/枠別勝率[\s\S]*?平均ST\s*\n今期[\t ]+([\d.]+|-)[\t ]+([\d.]+|-)[\t ]+([\d.]+|-)[\t ]+([\d.]+|-)[\t ]+([\d.]+|-)[\t ]+([\d.]+|-)/);
+  if(wakuAvgSTSection){
+    for(let i=0;i<6;i++) d.boats[i].wakuAvgST=parseFloat(wakuAvgSTSection[i+1])||0;
+  }
+
+  const fCountSection=text.match(/フライング\s*\n今期[\t ]+(\d+)[\t ]+(\d+)[\t ]+(\d+)[\t ]+(\d+)[\t ]+(\d+)[\t ]+(\d+)/);
+  if(fCountSection){
+    for(let i=0;i<6;i++) d.boats[i].fCount=parseInt(fCountSection[i+1],10)||0;
+  }
+
+  const kinsetsuSection=text.match(/直近 6ヵ月\s+([\d.]+)\s*\(\d+\)\s+([\d.]+)\s*\(\d+\)\s+([\d.]+)\s*\(\d+\)\s+([\d.]+)\s*\(\d+\)\s+([\d.]+)\s*\(\d+\)\s+([\d.]+)\s*\(\d+\)/);
+  if(kinsetsuSection){
+    for(let i=0;i<6;i++) d.boats[i].kinsetsu6m=parseFloat(kinsetsuSection[i+1])||0;
+  }
+
+  const motorSection=text.match(/モーター[\s\S]*?2連対率\s+([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%/);
+  if(motorSection){
+    for(let i=0;i<6;i++) d.boats[i].motor2ren=parseFloat(motorSection[i+1])||0;
+  }
+
+  const sessonSection=text.match(/^得点率[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)/m);
+  if(sessonSection){
+    for(let i=0;i<6;i++){
+      const v=(sessonSection[i+1]||'').trim();
+      d.boats[i].sessonPt=(v==='-'||v==='')?0:parseFloat(v)||0;
+      d.boats[i].isJogai=false;
+    }
+  }
+
+  const gentenSection=text.match(/^減点[\t ]([^\n]+)/m);
+  if(gentenSection){
+    const cols=gentenSection[1].split(/[\t ]+/);
+    for(let i=0;i<6;i++){
+      const v=(cols[i]||'').trim();
+      if(v==='99') d.boats[i].isJogai=true;
+    }
+  }
+
+  const sessonStSection=text.match(/今節成績[\s\S]*?平均ST[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)/m);
+  if(sessonStSection){
+    for(let i=0;i<6;i++) d.boats[i].sessonAvgST=parseFloat(sessonStSection[i+1])||0;
+  }
+
+  const commentLine=text.match(/^コメント[\t ]([^\n]+)/m);
+  if(commentLine){
+    const cells=commentLine[1].split('\t');
+    for(let i=0;i<6&&i<cells.length;i++){
+      const cell=cells[i]||'';
+      const dm=cell.match(/出足([◎○▲])/);
+      const nm=cell.match(/伸び([◎○▲])/);
+      if(dm) d.boats[i].deashiEval=dm[1];
+      if(nm) d.boats[i].nobiEval=nm[1];
+    }
+  }
+
+  const partsLine=text.match(/^部品交換[\t ]([^\n]+)/m);
+  if(partsLine){
+    const cells=partsLine[1].split('\t');
+    for(let i=0;i<6&&i<cells.length;i++){
+      const v=(cells[i]||'').trim();
+      d.boats[i].partsExchange=(v&&v!=='-')?v:'';
+    }
+  }
+
+  const motorInfoBlock=text.match(/番号[\t ][^\n]*\n[\s\S]*?中間整備[^\n]*/);
+  if(motorInfoBlock){
+    const mb=motorInfoBlock[0];
+    const rankM=mb.match(/(?:通算[\s]*)?ランク[\t ]([^\t\n]+)[\t ]([^\t\n]+)[\t ]([^\t\n]+)[\t ]([^\t\n]+)[\t ]([^\t\n]+)[\t ]([^\t\n]+)/);
+    if(rankM){ for(let i=0;i<6;i++) d.boats[i].motorRank=parseInt((rankM[i+1]||'').replace('位',''))||0; }
+    const contribM=mb.match(/貢献P[\t ]([\-\d.]+)[\t ]([\-\d.]+)[\t ]([\-\d.]+)[\t ]([\-\d.]+)[\t ]([\-\d.]+)[\t ]([\-\d.]+)/);
+    if(contribM){ for(let i=0;i<6;i++) d.boats[i].motorContribP=parseFloat(contribM[i+1])||0; }
+    const tenjiRankM=mb.match(/展示順位[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)[\t ]([\d.]+)/);
+    if(tenjiRankM){ for(let i=0;i<6;i++) d.boats[i].motorTenjiRank=parseFloat(tenjiRankM[i+1])||0; }
+    const racesM=mb.match(/出走数[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)/);
+    if(racesM){ for(let i=0;i<6;i++) d.boats[i].motorRaces=parseInt(racesM[i+1])||0; }
+    const yushutsuM=mb.match(/優出数[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)/);
+    if(yushutsuM){ for(let i=0;i<6;i++) d.boats[i].motorYushutsu=parseInt(yushutsuM[i+1])||0; }
+    const yushoM=mb.match(/優勝数[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)[\t ]([\d]+)/);
+    if(yushoM){ for(let i=0;i<6;i++) d.boats[i].motorYusho=parseInt(yushoM[i+1])||0; }
+    const chukanM=mb.match(/中間整備[\t ]([^\n]+)/);
+    if(chukanM){
+      const cells=chukanM[1].split('\t');
+      for(let i=0;i<6&&i<cells.length;i++){
+        d.boats[i].motorChukanSeibi=(cells[i]||'').trim()!=='-';
+      }
+    }
+  }
+
+  const stBlockMatch=text.match(/基本情報[\s\S]*?\n平均ST\n([\s\S]*?)\nST順位/);
+  if(stBlockMatch){
+    const sgStSection=stBlockMatch[1].match(/\nSG\/G1[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)/);
+    if(sgStSection){
+      for(let i=0;i<6;i++){
+        const v=sgStSection[i+1];
+        d.boats[i].sgAvgST=(v&&v!=='-')?parseFloat(v)||0:0;
+      }
+    }
+  }
+  if(stBlockMatch){
+    const atchiStSection2=stBlockMatch[1].match(/\n当地[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)[\t ]([\d.\-]+)/);
+    if(atchiStSection2){
+      for(let i=0;i<6;i++){
+        const v=atchiStSection2[i+1];
+        d.boats[i].atchiAvgST=(v&&v!=='-')?parseFloat(v)||0:0;
+      }
+    }
+  }
+
+  const tenjiSection=text.match(/(?:^|\n)展示\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/m);
+  if(tenjiSection){
+    for(let i=0;i<6;i++) d.boats[i].tenji=parseFloat(tenjiSection[i+1])||0;
+  }
+  const avgTenjiSection=text.match(/^平均展示\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/m);
+  if(avgTenjiSection){
+    for(let i=0;i<6;i++) d.boats[i].avgTenji=parseFloat(avgTenjiSection[i+1])||0;
+  }
+  const syukaiFootSection=text.match(/(?:^|\n)周り足\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/m);
+  if(syukaiFootSection){
+    for(let i=0;i<6;i++) d.boats[i].syukaiFoot=parseFloat(syukaiFootSection[i+1])||0;
+  }
+  const chokusenSection=text.match(/(?:^|\n)直線\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/m);
+  if(chokusenSection){
+    for(let i=0;i<6;i++) d.boats[i].chokusen=parseFloat(chokusenSection[i+1])||0;
+  }
+  const syukaiTimeSection=text.match(/(?:^|\n)周回\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/m);
+  if(syukaiTimeSection){
+    for(let i=0;i<6;i++) d.boats[i].syukai=parseFloat(syukaiTimeSection[i+1])||0;
+  }
+  const avgSyukaiSection=text.match(/^(?:平均周回|平均周り回)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/m);
+  if(avgSyukaiSection){
+    for(let i=0;i<6;i++) d.boats[i].avgSyukai=parseFloat(avgSyukaiSection[i+1])||0;
+  }
+  const avgSyukaiFootSection=text.match(/^(?:平均周足|平均周り足)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/m);
+  if(avgSyukaiFootSection){
+    for(let i=0;i<6;i++) d.boats[i].avgSyukaiFoot=parseFloat(avgSyukaiFootSection[i+1])||0;
+  }
+
+  const stSection=text.match(/(?:^|\n)ST\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)\s+([\w.]+)/);
+  if(stSection){
+    for(let i=0;i<6;i++){
+      const stStr=stSection[i+1];
+      d.boats[i].isExhibitF=stStr.startsWith('F');
+      d.boats[i].directST=parseFloat(stStr.replace('F',''))||0.20;
+    }
+  }
+
+  const fRestSection=text.match(/F休み\s+([\-\d\/～]+)\s+([\-\d\/～]+)\s+([\-\d\/～]+)\s+([\-\d\/～]+)\s+([\-\d\/～]+)\s+([\-\d\/～]+)/);
+  if(fRestSection){
+    for(let i=0;i<6;i++){
+      d.boats[i].isF=(fRestSection[i+1]!=='-');
+    }
+  }
+
+  return d;
+}
+
+function extractOddsMap(text){
+  const map={};
+  const oddsSection=text.match(/=== オッズ ===([\s\S]*?)(?:===|$)/);
+  if(!oddsSection) return map;
+  const rawLines=oddsSection[1].split('\n').map(l=>l.replace(/\t/g,' ').trim()).filter(l=>l);
+  let f=0,secOrder=[],blockLines=[];
+  const flushBlock=()=>{
+    for(const bl of blockLines){
+      const t=bl.split(/\s+/).filter(x=>x&&/^[\d.]+$/.test(x));
+      if(t.length===secOrder.length*2){
+        for(let col=0;col<secOrder.length;col++){
+          const trd=parseInt(t[col*2]),odds=parseFloat(t[col*2+1]);
+          if(trd>=1&&trd<=6&&trd!==f&&trd!==secOrder[col]&&odds>0){
+            const key=`${f}-${secOrder[col]}-${trd}`;
+            if(!map[key]) map[key]=odds;
+          }
+        }
+      }
+    }
+    blockLines=[];
+  };
+  for(const line of rawLines){
+    const hm=line.match(/^([1-6])\s+[^\d]/);
+    if(hm){flushBlock();f=parseInt(hm[1]);secOrder=[];continue;}
+    if(!f||/合成|2単/.test(line)) continue;
+    const tokens=line.split(/\s+/).filter(t=>t&&/^[\d.]+$/.test(t));
+    if(!tokens.length) continue;
+    if(!secOrder.length){
+      for(let i=0;i+2<tokens.length;i+=3){
+        const s=parseInt(tokens[i]),r=parseInt(tokens[i+1]),o=parseFloat(tokens[i+2]);
+        if(s>=1&&s<=6&&s!==f&&r>=1&&r<=6&&r!==f&&r!==s&&o>0){
+          if(!secOrder.includes(s)) secOrder.push(s);
+          const key=`${f}-${s}-${r}`;
+          if(!map[key]) map[key]=o;
+        }
+      }
+    } else {
+      blockLines.push(line);
+    }
+  }
+  flushBlock();
+  return map;
+}
+
+/* ============================================================
+   画面ロジック
+   ============================================================ */
+let toastTimer=null;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+function fmtHiduke(h){
+  if(!h||h.length!==8) return h||'不明';
+  return `${h.slice(0,4)}-${h.slice(4,6)}-${h.slice(6,8)}`;
+}
+
+// d.hiduke(YYYYMMDD)+d.shimekiri(HH:MM)からJST基準のISO締切時刻を組み立てる。
+// 自動巡回側(scripts/lib/alpha_engine_judgment.js の evaluateAlphaEntry)と同じ組み立て方。
+function buildDeadlineIso(hiduke, shimekiri){
+  if(!hiduke||hiduke.length!==8) return null;
+  const m=String(shimekiri||'').match(/(\d{1,2}):(\d{2})/);
+  if(!m) return null;
+  const y=hiduke.slice(0,4), mo=hiduke.slice(4,6), da=hiduke.slice(6,8);
+  const hh=m[1].padStart(2,'0'), mm=m[2];
+  const ms=Date.parse(`${y}-${mo}-${da}T${hh}:${mm}:00.000+09:00`);
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
+}
+
+function checkSufficiency(d, oddsMap){
+  const missing=[];
+  if(!d.venue) missing.push('場所(=== レース情報 === の1列目)');
+  if(!d.raceNum) missing.push('レース番号');
+  if(!d.hiduke) missing.push('日付(=== レース情報 === の3列目、YYYYMMDD形式)');
+  if(!d.shimekiri) missing.push('締切時刻(=== レース情報 === の「締切HH:MM」列)');
+  const jogaiCount=d.boats.filter(b=>b.isJogai).length;
+  if(jogaiCount>0) missing.push(`欠場艇あり(${jogaiCount}艇。αは欠場ありのレースを参入見送りとして扱います)`);
+  const oddsCount=Object.keys(oddsMap||{}).length;
+  if(oddsCount!==120) missing.push(`3連単オッズが${oddsCount}/120通り(=== オッズ === セクションの貼り付け漏れの可能性)`);
+  return missing;
+}
+
+async function runYosoAlpha(){
+  const btn=document.getElementById('btn-run');
+  const resultEl=document.getElementById('yoso-result');
+  const raceInfoEl=document.getElementById('race-info-display');
+  const rawText=document.getElementById('inp-data').value;
+  if(!rawText || !rawText.trim()){ showToast('データを貼り付けてください'); return; }
+
+  btn.disabled=true;
+  resultEl.innerHTML='<div class="loading">計算中...</div>';
+
+  try{
+    const modelState = await AlphaEngineWeb.ensureModelLoaded();
+    if(!modelState.ok){
+      resultEl.innerHTML=`<div class="card"><div class="status-banner status-error">
+        ⚠️ モデルの読み込みに失敗しました(${modelState.reason})。ページを再読み込みしてもう一度お試しください。それでも失敗する場合は、ネットワーク環境またはブラウザの対応状況(gzip解凍API)をご確認ください。
+      </div></div>`;
+      return;
+    }
+
+    const d = parseData(rawText);
+    const oddsMap = extractOddsMap(rawText);
+    d.oddsMap = oddsMap;
+
+    raceInfoEl.innerHTML = `
+      <div class="info-strip">
+        <div class="info-chip">場所 <span>${d.venue||'不明'}</span></div>
+        <div class="info-chip">レース <span>${d.raceNum||'不明'}</span></div>
+        <div class="info-chip">日付 <span>${fmtHiduke(d.hiduke)}</span></div>
+        <div class="info-chip">締切 <span>${d.shimekiri||'不明'}</span></div>
+      </div>`;
+
+    const missing = checkSufficiency(d, oddsMap);
+    if(missing.length){
+      resultEl.innerHTML = `<div class="card"><div class="status-banner status-warn">
+        ⚠️ このデータではαの参入判定を計算できません。以下を確認してください。
+        <div class="warn-list">${missing.map(m=>'・'+m).join('<br>')}</div>
+      </div></div>`;
+      return;
+    }
+
+    const deadlineAt = buildDeadlineIso(d.hiduke, d.shimekiri);
+    const nowMs = Date.now();
+    const oddsCapturedAt = new Date(nowMs).toISOString(); // 予想実行を押した時刻で代用(画面下部の注記参照)
+
+    const result = AlphaEngineWeb.predict({ boats: d.boats, oddsMap: d.oddsMap, deadlineAt, oddsCapturedAt }, nowMs);
+
+    renderResult(result, d, deadlineAt, nowMs);
+  } catch(e){
+    resultEl.innerHTML = `<div class="card"><div class="status-banner status-error">⚠️ 予期しないエラーが発生しました: ${(e&&e.message)||e}</div></div>`;
+  } finally {
+    btn.disabled=false;
+  }
+}
+
+function renderResult(result, d, deadlineAt, nowMs){
+  const resultEl=document.getElementById('yoso-result');
+  const remainMinRaw = deadlineAt ? Math.round((Date.parse(deadlineAt)-nowMs)/60000) : null;
+  const remainMinLabel = remainMinRaw===null ? '不明' : (remainMinRaw>=0 ? `約${remainMinRaw}分` : `${Math.abs(remainMinRaw)}分超過`);
+
+  if(isStructuralFailure(result.reason)){
+    resultEl.innerHTML = `<div class="card"><div class="status-banner status-error">
+      ❌ モデル計算で継続的な障害を検知しました(${result.reason})。この結果は表示しません。原因確認をお願いします(自動巡回側でも同じ理由が出ている場合はモデルパッケージ自体の問題の可能性があります)。
+    </div></div>`;
+    return;
+  }
+
+  if(!result.entered){
+    const label = SKIP_REASON_LABELS[result.reason] || result.reason;
+    resultEl.innerHTML = `<div class="card"><div class="status-banner status-skip">
+      📊 α判定: 見送り<br><span style="font-size:12px;">理由: ${label}</span>
+      ${deadlineAt ? `<br><span style="font-size:11px;color:var(--muted);">締切${remainMinLabel}</span>` : ''}
+    </div></div>`;
+    return;
+  }
+
+  const ptsRows = result.points.map(p=>`<tr><td class="bet-val">${p.combination}</td><td style="text-align:right;">${p.odds}倍</td></tr>`).join('');
+  resultEl.innerHTML = `
+    <div class="card">
+      <div class="status-banner status-entry">
+        🅰️ α判定: 参入<br>
+        <span style="font-size:12px;">締切${remainMinLabel}</span>
+      </div>
+      <table class="bet-table">
+        <thead><tr><th>買い目(8点)</th><th style="text-align:right;">取得時オッズ</th></tr></thead>
+        <tbody>${ptsRows}</tbody>
+      </table>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;">
+        推定値(未較正): ${result.estimatedReturn.toFixed(3)} ／ 参入閾値: ${result.entryThreshold}<br>
+        ※この推定値は真のEV(期待回収率)として較正されたものではありません。「期待回収率○%」「利益保証」を意味するものではないと明記します。
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:8px;">モデル: ${result.modelId}</div>
+    </div>
+    <div class="card">
+      <div class="status-banner status-warn" style="font-size:12px;">
+        ℹ️ この結果はntfy通知として送信されたものではありません。「今この貼り付けデータで再計算した結果」です。実際に自動巡回から通知が届いていた場合、取得時刻の違いにより買い目が異なることがあります。
+      </div>
+    </div>`;
+}
+
+function clearYosoAlpha(){
+  document.getElementById('inp-data').value='';
+  document.getElementById('yoso-result').innerHTML='';
+  document.getElementById('race-info-display').innerHTML='';
+}
+
+// ページ読み込み時にモデルを先読みしておく(予想実行時の待ち時間を減らす)。
+// typeof document チェックは、この<script>全体をNode.js側の一致検証テスト
+// (tests/lib/extract-alpha-engine-web.js)がrequire()する際、DOMが無い環境でも
+// 例外を出さずに読み込めるようにするための安全策(本番のブラウザ実行には影響しない)。
+if(typeof document !== 'undefined'){
+  (async function initModel(){
+    const statusEl=document.getElementById('model-status');
+    const state = await AlphaEngineWeb.ensureModelLoaded();
+    if(state.ok){
+      statusEl.textContent='✅ モデル読み込み完了('+AlphaEngineWeb.MODEL_ID+')';
+      statusEl.className='model-status ok';
+    } else {
+      statusEl.textContent='⚠️ モデル読み込み失敗: '+state.reason+'(予想実行時に再試行します)';
+      statusEl.className='model-status err';
+    }
+  })();
+}
+</script>
+</body>
+</html>
