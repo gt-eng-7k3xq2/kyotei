@@ -16,7 +16,7 @@ function loadAlphaEngineWeb(htmlPath) {
   const moduleSource = [
     scriptSource,
     '',
-    'module.exports = { AlphaEngineWeb, parseData, extractOddsMap, buildDeadlineIso, checkSufficiency, isStructuralFailure, NORMAL_SKIP_REASONS, SKIP_REASON_LABELS };',
+    'module.exports = { AlphaEngineWeb, parseData, extractOddsMap, buildDeadlineIso, checkSufficiency, isStructuralFailure, NORMAL_SKIP_REASONS, SKIP_REASON_LABELS, renderResult };',
   ].join('\n');
 
   const tmpDir = path.join(os.tmpdir(), 'garon-alpha-engine-web-extract');
