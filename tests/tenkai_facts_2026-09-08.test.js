@@ -82,7 +82,13 @@ function main() {
     nonIdempotent: 0,
     honsenEmptyBug: 0, // computeTenkaiFactsのb.type==='本線'バグが再発していないかの検証
     missingDataCrash: 0,
+    // 2026-09-08 CEO修正指示(役割候補の意味付け訂正)の再検証用
+    tenkaiTsukiStillExists: 0, // 「展開突き候補」ラベルが出ていないか(廃止済みのはず)
+    symmetricNotMoved: 0, // 対称買い目がbetStructureへ正しく移動しているか
+    uchisashiWithoutSashi: 0, // 差し実績0/欠損の2号艇に内差し候補が付いていないか
   };
+  const roleTally = {}; // 役割ラベルの出現回数(集計用、CEOへの報告に使う)
+  let betStructureCount = 0, positionInfoCount = 0;
 
   function checkOne(r, label) {
     const boats = r.boats;
@@ -126,6 +132,44 @@ function main() {
     const roles = engine.buildRoleCandidates(boats, attackCands, dbg, maruBoat);
     roles.forEach(rr => { if (!boatsInBets.has(rr.no) || rr.no === maruBoat) { counters.extraneousBoat++; fail++; } });
 
+    // --- 2026-09-08 CEO修正指示#1の再検証: 「展開突き候補」という役割ラベルが二度と出ないこと
+    roles.forEach(rr => { if (rr.role === '展開突き候補') { counters.tenkaiTsukiStillExists++; fail++; if (fail < 8) console.log(`[FAIL tenkai-tsuki] ${label}`); } });
+    // 対称構造が検出された艇は、役割ではなくbetStructureとして出ていること(役割に混入していないこと)
+    const branches2ForSym = engine.buildBetBranches(dbg);
+    dbg.selectedPoints.forEach(v => {
+      const parts = v.split('-').map(Number);
+      const f = parts[0], s = parts[1], t = parts[2];
+      if (s === t) return;
+      if (new Set(dbg.selectedPoints).has(`${f}-${t}-${s}`)) {
+        [s, t].forEach(no => {
+          if (no === maruBoat) return;
+          const rr = roles.find(x => x.no === no);
+          if (!rr || !rr.betStructure || rr.betStructure.type !== '2着・3着入れ替わり候補') { counters.symmetricNotMoved++; fail++; }
+        });
+      }
+    });
+
+    // --- 2026-09-08 CEO修正指示#2の再検証: 差し実績が0または欠損の2号艇に「内差し候補」が付かないこと
+    const bd2 = boats[1] || {};
+    const uchisashiRole = roles.find(rr => rr.no === 2 && rr.role === '内差し候補');
+    if (uchisashiRole) {
+      const sashi = bd2.sashi6m;
+      if (!(typeof sashi === 'number' && sashi > 0)) { counters.uchisashiWithoutSashi++; fail++; if (fail < 8) console.log(`[FAIL uchisashi] ${label}: sashi6m=${sashi}`); }
+      // 差し実績ありでも、2号艇が実際に「1号艇1着×2号艇2着」の買い目上の2着候補でなければ付与してはいけない
+      if (!(branches2ForSym[1] && branches2ForSym[1][2])) { counters.uchisashiWithoutSashi++; fail++; }
+      if (maruBoat !== 1) { counters.uchisashiWithoutSashi++; fail++; }
+    }
+
+    // --- 役割候補の全件に直接根拠があること(根拠不足以外は必ずreasonが非空。役割が根拠不足でも
+    //     betStructure/positionInfoは別項目であり役割自体のreasonとは無関係)
+    roles.forEach(rr => {
+      if (rr.role !== '根拠不足' && (!rr.reason || !rr.reason.length)) { counters.roleNoReason++; fail++; }
+      if (rr.betStructure && (!rr.betStructure.reason || !rr.betStructure.reason.length)) { counters.roleNoReason++; fail++; }
+      roleTally[rr.role] = (roleTally[rr.role] || 0) + 1;
+      if (rr.betStructure) betStructureCount++;
+      if (rr.positionInfo) positionInfoCount++;
+    });
+
     // --- 必須テスト#7: データにない決まり手が出力されていない(GARON_COURSE_KIMARITEの
     //     コース対応外のキーが出ていない、かつ1号艇に決まり手が付与されていない)
     commentFacts.forEach(f => {
@@ -137,10 +181,8 @@ function main() {
       }
     });
 
-    // --- 必須テスト#8: 役割候補には必ず根拠が付いている(根拠不足以外は理由文字列が空でない)
-    roles.forEach(rr => {
-      if (rr.role !== '根拠不足' && (!rr.reason || !rr.reason.length)) { counters.roleNoReason++; fail++; }
-    });
+    // --- 必須テスト#8: 役割候補には必ず根拠が付いている → 上のCEO修正指示の再検証ブロックで
+    //     まとめて実施済み(roleNoReasonカウンタ)。
 
     // --- 必須テスト#9: 同じ入力を複数回処理して同じ結果になる(決定性)
     const orderFacts1 = engine.buildBetOrderFacts(dbg);
@@ -175,6 +217,9 @@ function main() {
 
   console.log('\n' + '='.repeat(70));
   console.log(`counters: ${JSON.stringify(counters, null, 2)}`);
+  console.log(`役割ラベル出現回数(全${quickSample.length + target.length}件、非軸艇のべ件数ベース): ${JSON.stringify(roleTally, null, 2)}`);
+  console.log(`買い目構造(2着・3着入れ替わり候補)の出現数: ${betStructureCount}`);
+  console.log(`位置情報のみ(差し実績なしの2号艇2着候補)の出現数: ${positionInfoCount}`);
   console.log(`検証対象合計: ${quickSample.length + target.length}件`);
   console.log(`validation+confirmation(n=${target.length})内のfail件数: ${targetFail}`);
   console.log(`総fail件数: ${fail}`);
