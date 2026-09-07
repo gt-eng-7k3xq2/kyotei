@@ -1,69 +1,49 @@
 {
-  "_qEngineVersion": 2,
+  "_qEngineVersion": 3,
   "_fixture": "naruto_1r_2026-08-27.json",
   "_label": "鳴門1R_2026-08-27(gap8_entered)",
   "_actualResult": {
     "chakuju": "1-3-4",
     "payout": "¥650"
   },
-  "gap": 8,
+  "gap": 0,
   "judge": {
     "entered": true,
-    "text": "◎参戦"
+    "text": "Qv2: 全レース予想(点数選択のみ、参入見送りロジックなし)"
   },
   "axes": [
     {
       "boat": 1,
       "weight": 29,
       "narrow": false,
-      "reason": "本命"
+      "reason": "Qv2予測"
     },
     {
       "boat": 3,
       "weight": 21,
       "narrow": false,
       "reason": "ST攻め手候補"
-    },
-    {
-      "boat": 4,
-      "weight": 20,
-      "narrow": true,
-      "reason": "恩恵艇(スジ)"
     }
   ],
   "formations": [
     {
       "axis": 1,
       "weight": 29,
-      "type": "本命",
+      "type": "Qv2予測",
       "points": [
-        "1-4-3",
-        "1-3-4",
-        "1-4-2",
+        "1-2-3",
+        "1-2-4",
         "1-3-2",
-        "1-3-6",
-        "1-4-6"
+        "1-4-2"
       ]
     },
     {
       "axis": 3,
       "weight": 21,
-      "type": "ST攻め手候補",
+      "type": "Qv2予測",
       "points": [
-        "3-4-1",
-        "3-1-4",
-        "3-1-2"
-      ]
-    },
-    {
-      "axis": 4,
-      "weight": 20,
-      "type": "恩恵艇(スジ)",
-      "points": [
-        "4-3-1",
-        "4-3-2",
-        "4-3-5",
-        "4-3-6"
+        "3-1-2",
+        "3-1-4"
       ]
     }
   ]

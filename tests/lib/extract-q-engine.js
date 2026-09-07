@@ -14,6 +14,21 @@ const FUNCTION_NAMES = [
   'identifyBenefitBoat',
   'rankBoatsBySystem',
   'evaluateBoatSupport',
+  // 2026-09-07追加(GARON-20260907-003、Q v2統合): qv2*ヘルパー群はgenerateQBetsから呼ばれる
+  // ため、generateQBetsより前に配列へ入れる必要はない(関数宣言はホイスティングされるため実行順は
+  // 問題ないが、可読性のためヘルパー→本体の順で記載する)。
+  'qv2GetPath',
+  'qv2BaseFeatures',
+  'qv2Onehot',
+  'qv2Concat',
+  'qv2WalkTree',
+  'qv2PredictRaw',
+  'qv2SoftmaxTemp',
+  'qv2PredictProbaTemp',
+  'qv2ComputeRaceProbabilities',
+  'qv2SelectPoints',
+  'qv2GenerateBets',
+  'generateQBetsLegacyV1',
   'generateQBets',
 ];
 
@@ -21,7 +36,8 @@ const FUNCTION_NAMES = [
 // 別途抜き出す必要がある(2026-08-27、研究部隊GARON-20260827-001が発見したバグの修正。
 // tests/q_engine_entry_backtest.jsが全件ReferenceErrorで機能停止していた)。
 // Q_ENGINE_VERSIONは2026-08-30追加(generateQBets内のgap<0見送りルール導入に伴う版数)。
-const CONST_NAMES = ['ATTACK_MIN_GAP', 'Q_ENGINE_VERSION'];
+// Q_V2_TREESは2026-09-07追加(GARON-20260907-003、Q v2の木構造モデルデータ、約700KB)。
+const CONST_NAMES = ['ATTACK_MIN_GAP', 'Q_ENGINE_VERSION', 'Q_V2_TREES'];
 
 function loadQEngine(htmlPath) {
   const source = fs.readFileSync(htmlPath, 'utf8');
