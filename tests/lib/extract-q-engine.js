@@ -30,6 +30,22 @@ const FUNCTION_NAMES = [
   'qv2GenerateBets',
   'generateQBetsLegacyV1',
   'generateQBets',
+  // 2026-09-08追加(展開コメント用「確定事実」抽出、CEO指示): 予測確率・買い目選定には
+  // 一切触れず、result._dbg(選択済み買い目・確率map)とevaluateBoatSupport/
+  // identifyAttackCandidates/identifyBenefitBoatの出力だけを加工する追加関数群。
+  'buildBetOrderFacts',
+  'buildSecondCandidateRanking',
+  'buildBetBranches',
+  'reconstructBetsFromBranches',
+  'buildBetCommentFacts',
+  'buildRoleCandidates',
+  'garonSurname',
+  'garonBoatLabel',
+  // parseData/extractOddsMap/compressBetsSGはBM生テキストからの一連の再現テスト
+  // (verify_races.js方式)用。抽出情報の検証自体はboats/oddsMap経由でも可能。
+  'parseData',
+  'extractOddsMap',
+  'compressBetsSG',
 ];
 
 // identifyAttackCandidates()の外側(トップレベル)で定義されたconst。関数抽出には含まれないため
@@ -37,7 +53,8 @@ const FUNCTION_NAMES = [
 // tests/q_engine_entry_backtest.jsが全件ReferenceErrorで機能停止していた)。
 // Q_ENGINE_VERSIONは2026-08-30追加(generateQBets内のgap<0見送りルール導入に伴う版数)。
 // Q_V2_TREESは2026-09-07追加(GARON-20260907-003、Q v2の木構造モデルデータ、約700KB)。
-const CONST_NAMES = ['ATTACK_MIN_GAP', 'Q_ENGINE_VERSION', 'Q_V2_TREES'];
+// GARON_*は2026-09-08追加(buildBetCommentFacts/buildRoleCandidatesがgaronBoatLabel経由で必要とする)。
+const CONST_NAMES = ['ATTACK_MIN_GAP', 'Q_ENGINE_VERSION', 'Q_V2_TREES', 'GARON_COURSE_KIMARITE', 'GARON_LABEL_CIRCLED', 'GARON_ONE_CHAR_SURNAMES', 'GARON_THREE_CHAR_SURNAMES', 'GARON_NAME_OVERRIDES'];
 
 function loadQEngine(htmlPath) {
   const source = fs.readFileSync(htmlPath, 'utf8');

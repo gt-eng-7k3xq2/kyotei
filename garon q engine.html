@@ -1323,6 +1323,11 @@ let currentAreScores=null; // スコア保持
 let currentQSupport=null; // evaluateBoatSupport()の生の戻り値(艇ごとのdetail.st/kimarite/ren/motor/exhibit)
 let currentQAttackCands=null; // identifyAttackCandidates()の戻り値
 let currentQAxes=null; // generateQBets()が実際に選んだ軸構成(result.axes)
+// 2026-09-08追加(展開コメント用データ抽出、CEO指示): generateQBets()が返すresult._dbg
+// (Qv2の120通り確率map・確率降順で選ばれた買い目リスト)をそのまま保持する。
+// 買い目順位・2着候補順位・買い目分岐は全てこの_dbgだけから機械的に導出し、予測確率・
+// 買い目選定ロジック自体には一切触れない(既存のsel/probabilitiesを読むだけ)。
+let currentQDbg=null; // generateQBets()の戻り値result._dbg({selectedPoints, selectedMass, probabilities})
 let naturalAreScores=null; // 2026-07-29追加: モードで軸を強制入替する前の「素の評価順位」を保持（逃げ固定解除時の復元用）
 
 // ============================================================
@@ -3056,6 +3061,7 @@ async function runYosoQ(){
     currentQSupport=result.support;
     currentQAttackCands=attackCandsForRationale;
     currentQAxes=result.axes;
+    currentQDbg=result._dbg||null;
     currentCalcData={
       racenum:racenumPlain||document.getElementById('inp-racenum').value||'?', // "R"無しの数字のみ(buildXSummary側で"R"を付与するため)
       honme:'1',
@@ -3916,6 +3922,191 @@ function garonBoatLabel(no,name){
   return `${GARON_LABEL_CIRCLED[no-1]||no+'号艇'}${garonSurname(name)}`;
 }
 
+// ============================================================
+// 展開コメント用「確定事実」抽出(2026-09-08追加、CEO指示、GARON-20260908系)
+// 目的: 買い目と完全一致した展開コメントを書くための「確定事実」を機械的に抽出する。
+// 【絶対条件】Qv2の予測確率・買い目選定・点数・順位・モデル・学習データには一切触れない。
+// ここに置く関数は全てresult._dbg(qv2GenerateBetsが計算済みの確率map・選択済み買い目)、
+// evaluateBoatSupport()の結果、identifyAttackCandidates()/identifyBenefitBoat()という
+// 既存の確定判定だけを読み取って加工する(新しい閾値・新しい判定ロジックは一切追加しない)。
+// オッズによる候補の追加・並べ替え・差し替えも行わない(引数にoddsMapを取らない設計で担保)。
+// ============================================================
+
+// COURSE_KIMARITE(コース別に実績のある決まり手の種類)は元々computeTenkaiFacts()内の
+// ローカル定数だったが、buildRoleCandidates()等でも同じ定義を使う必要があるため
+// トップレベルへ引き上げた(値は無変更、GARON_で始まる名前は他のconstとの衝突回避)。
+const GARON_COURSE_KIMARITE={2:['差し'],3:['差し','まくり','まくり差し'],4:['まくり','まくり差し'],5:['まくり','まくり差し'],6:['まくり差し']};
+
+// 選択済み買い目(dbg.selectedPoints)は、qv2SelectPoints()が確率降順(同率はコンボ文字列昇順)で
+// 並べたorderの先頭から採用したものそのものなので、追加のソートをせず配列の並び=確率順位として
+// 扱ってよい(qv2SelectPoints/qv2GenerateBetsのソート済み結果を読むだけ、計算のやり直しをしない)。
+function buildBetOrderFacts(dbg){
+  if(!dbg||!dbg.selectedPoints) return [];
+  return dbg.selectedPoints.map((val,i)=>({rank:i+1, val, prob:(dbg.probabilities&&dbg.probabilities[val])||0}));
+}
+
+// 1着候補ごとの2着候補優先順位。順位は、その(1着,2着)組に属する選択済み買い目のQv2確率の
+// 合計で決める(依頼仕様どおり)。同順位は「その中の最上位買い目のQv2順位」→それも同じなら
+// 艇番昇順で固定する(決定論的にするため)。
+function buildSecondCandidateRanking(dbg){
+  if(!dbg||!dbg.selectedPoints) return {};
+  const orderIndex={};
+  dbg.selectedPoints.forEach((v,i)=>{orderIndex[v]=i;});
+  const byFirst={};
+  dbg.selectedPoints.forEach(v=>{
+    const parts=v.split('-').map(Number);
+    const f=parts[0], s=parts[1];
+    if(!byFirst[f]) byFirst[f]={};
+    if(!byFirst[f][s]) byFirst[f][s]={boat:s, mass:0, bestRank:Infinity};
+    byFirst[f][s].mass += (dbg.probabilities&&dbg.probabilities[v])||0;
+    byFirst[f][s].bestRank = Math.min(byFirst[f][s].bestRank, orderIndex[v]);
+  });
+  const out={};
+  Object.keys(byFirst).forEach(f=>{
+    const arr=Object.values(byFirst[f]);
+    arr.sort((a,b)=> (b.mass-a.mass) || (a.bestRank-b.bestRank) || (a.boat-b.boat));
+    out[f]=arr.map((x,i)=>({rank:i+1, boat:x.boat, mass:x.mass}));
+  });
+  return out;
+}
+
+// 買い目分岐: 実在する組み合わせだけを{1着艇:{2着艇:[3着艇...]}}へ厳密に分解する。
+// 存在しない直積(1着×2着×3着の総当たり)は絶対に生成しない(selectedPointsに実在する
+// トリプレットのみを読み取って積み上げる)。3着艇の並びは艇番昇順で固定(決定論)。
+function buildBetBranches(dbg){
+  if(!dbg||!dbg.selectedPoints) return {};
+  const branches={};
+  dbg.selectedPoints.forEach(v=>{
+    const parts=v.split('-').map(Number);
+    const f=parts[0], s=parts[1], t=parts[2];
+    if(!branches[f]) branches[f]={};
+    if(!branches[f][s]) branches[f][s]=[];
+    if(!branches[f][s].includes(t)) branches[f][s].push(t);
+  });
+  Object.keys(branches).forEach(f=>{
+    Object.keys(branches[f]).forEach(s=>{ branches[f][s].sort((a,b)=>a-b); });
+  });
+  return branches;
+}
+
+// buildBetBranches()の逆変換(テスト専用): 分岐構造から買い目文字列集合を再構築する。
+// これがselectedPointsと完全一致することを回帰テストで確認する(必須テスト#4)。
+function reconstructBetsFromBranches(branches){
+  const out=[];
+  Object.keys(branches).forEach(f=>{
+    Object.keys(branches[f]).forEach(s=>{
+      branches[f][s].forEach(t=>out.push(`${f}-${s}-${t}`));
+    });
+  });
+  return out;
+}
+
+// 買い目に登場する各艇(位置を問わず)について、コメント文章化に使える確定事実だけを抽出する。
+// 系統別得点(evaluateBoatSupport)とは別に、実値・データ元・欠損有無まで機械的に出す。
+function buildBetCommentFacts(boats, support, attackCands, dbg, ranking){
+  if(!dbg||!dbg.selectedPoints) return [];
+  const bd=(no)=>boats[no-1]||{};
+  const attackSet=new Set(attackCands.map(c=>c.boat));
+  const supportMap={}; support.forEach(s=>{supportMap[s.no]=s;});
+  const rankOf=(no)=>{
+    const idx=ranking.findIndex(r=>String(r.boat)===String(no));
+    return idx>=0?idx+1:null;
+  };
+  const posByBoat={};
+  dbg.selectedPoints.forEach(v=>{
+    v.split('-').map(Number).forEach((no,posIdx)=>{
+      if(!posByBoat[no]) posByBoat[no]=new Set();
+      posByBoat[no].add(posIdx+1); // 1=1着 2=2着 3=3着
+    });
+  });
+  const posLabel={1:'1着',2:'2着',3:'3着'};
+  return Object.keys(posByBoat).map(Number).sort((a,b)=>a-b).map(no=>{
+    const s=supportMap[no];
+    const rawName=bd(no).name||'';
+    const label=garonBoatLabel(no, rawName);
+    const positions=[...posByBoat[no]].sort((a,b)=>a-b).map(p=>posLabel[p]);
+    const stVal=(()=>{ const b=bd(no); return b.directST>0?b.directST:(b.sessonAvgST>0?b.sessonAvgST:null); })();
+    const tenjiVal=(()=>{ const b=bd(no); if(typeof b.tenji==='number'&&b.tenji>0) return b.tenji; if(typeof b.avgTenji==='number'&&b.avgTenji>0) return b.avgTenji; return null; })();
+    const validKimarite=GARON_COURSE_KIMARITE[no]||[];
+    const kimariteVals={};
+    if(validKimarite.includes('差し')) kimariteVals['差し']=bd(no).sashi6m||0;
+    if(validKimarite.includes('まくり')) kimariteVals['まくり']=bd(no).makuri6m||0;
+    if(validKimarite.includes('まくり差し')) kimariteVals['まくり差し']=bd(no).makurisashi6m||0;
+    const motorVal=(typeof bd(no).motor2ren==='number'&&bd(no).motor2ren>0)?bd(no).motor2ren:null;
+    return {
+      no, label,
+      買い目上の位置:positions,
+      総合評価順位:rankOf(no),
+      ST:{順位:s?s.detail.st.rank:null, 実値:stVal},
+      展示:{順位:s?s.detail.exhibit.rank:null, 実値:tenjiVal},
+      機力:{順位:s?s.detail.motor.rank:null, 元データ:'motor2ren(モーター2連対率、直近成績)', 実値:motorVal},
+      連対率順位:s?s.detail.ren.rank:null,
+      決まり手:Object.keys(kimariteVals).length?{コース:no, 実績:kimariteVals}:null,
+      攻め手候補:attackSet.has(no),
+      データ欠損:{
+        ST: stVal==null,
+        展示: tenjiVal==null,
+        機力: motorVal==null,
+        連対率: !s || s.detail.ren.rank==null,
+      }
+    };
+  });
+}
+
+// 展開上の役割候補。既存の確定判定(identifyAttackCandidates/identifyBenefitBoat/
+// GARON_COURSE_KIMARITEのコース対応/買い目分岐そのものの対称構造)だけを根拠にする。
+// 結果を見ながら新しい閾値を探索することは絶対に行わない(依頼の重要事項どおり)。
+// 判定規則(優先順位順、根拠が無ければ必ず「根拠不足」):
+//   1. 自身がidentifyAttackCandidates()の攻め手候補 → 4号艇なら「カド攻め候補」、それ以外は「自力攻め候補」
+//   2. identifyBenefitBoat()の受益艇に該当 → 確定パターン(攻め手=4号艇)なら「まくり差し候補」、
+//      未確定パターン(攻め手=2/3/5号艇)なら「攻め艇追走候補」(いずれも既存関数の出力そのものを使うだけ)
+//   3. 1号艇かつ軸(◎)ではないが買い目に残っている → 「イン残し候補」
+//   4. 2号艇(GARON_COURSE_KIMARITEで「差し」が定石の位置)かつ軸が1号艇 → 「内差し候補」
+//   5. 同じ1着候補に対し2着⇔3着の並びが両方選ばれている(買い目分岐が対称) → 「展開突き候補」
+//   6. 上記いずれにも該当しない → 「根拠不足」
+function buildRoleCandidates(boats, attackCands, dbg, maruBoat){
+  if(!dbg||!dbg.selectedPoints) return [];
+  const attackByBoat={}; attackCands.forEach(c=>{attackByBoat[c.boat]=c;});
+  const benefitMap={}; // 受益艇no -> {attacker, confirmed}
+  attackCands.forEach(c=>{
+    const benefit=identifyBenefitBoat(c.boat);
+    if(benefit) benefitMap[benefit.boat]={attacker:c.boat, confirmed:benefit.confirmed};
+  });
+  const selSet=new Set(dbg.selectedPoints);
+  const swapBoats=new Set();
+  dbg.selectedPoints.forEach(v=>{
+    const parts=v.split('-').map(Number);
+    const f=parts[0], s=parts[1], t=parts[2];
+    if(s===t) return;
+    if(selSet.has(`${f}-${t}-${s}`)){ swapBoats.add(s); swapBoats.add(t); }
+  });
+  const boatsInBets=new Set();
+  dbg.selectedPoints.forEach(v=>v.split('-').map(Number).forEach(n=>boatsInBets.add(n)));
+
+  return [...boatsInBets].filter(no=>no!==maruBoat).sort((a,b)=>a-b).map(no=>{
+    let role='根拠不足', reason='該当する既存判定なし';
+    if(attackByBoat[no]){
+      const c=attackByBoat[no];
+      role = (no===4) ? 'カド攻め候補' : '自力攻め候補';
+      reason = `identifyAttackCandidates()で${no}号艇が攻め手候補(乖離+${c.maxGap.toFixed(2)})`;
+    } else if(benefitMap[no]){
+      const b=benefitMap[no];
+      role = b.confirmed ? 'まくり差し候補' : '攻め艇追走候補';
+      reason = `identifyBenefitBoat(): ${b.attacker}号艇の攻めに対する一つ外側艇(${b.confirmed?'確定パターン':'類推・実例未検証'})`;
+    } else if(no===1 && maruBoat!==1){
+      role='イン残し候補';
+      reason='1号艇が軸(◎)ではないが買い目に残存';
+    } else if(no===2 && maruBoat===1){
+      role='内差し候補';
+      reason='2コース(GARON_COURSE_KIMARITEで「差し」が定石の位置)、軸が1号艇';
+    } else if(swapBoats.has(no)){
+      role='展開突き候補';
+      reason='同じ1着候補に対し2着⇔3着の並びが両方選ばれている(買い目分岐が対称)';
+    }
+    return {no, label:garonBoatLabel(no,(boats[no-1]&&boats[no-1].name)||''), role, reason};
+  });
+}
+
 // 2026-08-27修正(雄大さん指示): sg_narutou.html由来のまま「系統別得点の内訳」ではなく
 // 生の数値(ST・今節得点率等)を出す旧仕様だったのと、本線/抑えの判定がb.type==='本線'という
 // Qでは存在しない値を見ていたため常に空になるバグがあった(Qのbetsraw.typeは
@@ -3931,9 +4122,15 @@ function buildClaudeCommentData(){
   const venue=document.getElementById('inp-venue')?document.getElementById('inp-venue').value||'':'';
   const racenum=currentCalcData.racenum||'';
   const maruBoat=ranking[0]?.boat;
+  const boats=(currentParsedData&&currentParsedData.boats)||[];
+  const labelOf=(no)=>garonBoatLabel(no,(boats[no-1]&&boats[no-1].name)||'');
 
   const lines=[];
   lines.push(`【${venue}${racenum}R】`);
+  lines.push('');
+
+  lines.push('■軸');
+  lines.push(labelOf(maruBoat));
   lines.push('');
 
   lines.push('■系統別得点の内訳');
@@ -3944,16 +4141,87 @@ function buildClaudeCommentData(){
       return `${sysLabels[k]}${d.rank==null?'情報無':d.rank+'位'}(${d.points.toFixed(1)}点)`;
     }).join('、');
     const axisTag=(s.no===maruBoat)?'(軸)':'';
-    const rawName=(currentParsedData&&currentParsedData.boats[s.no-1]&&currentParsedData.boats[s.no-1].name)||'';
-    const label=garonBoatLabel(s.no,rawName); // ❶田中のような丸数字＋苗字形式(他のAIへ渡す時と表記を統一)
+    const label=labelOf(s.no); // ❶田中のような丸数字＋苗字形式(他のAIへ渡す時と表記を統一)
     lines.push(`${label}${axisTag}: 合計${s.rawScore.toFixed(1)}点 ─ ${parts}`);
   });
   lines.push('');
 
+  lines.push('■最終買い目');
+  lines.push(betsRaw.length?compressBetsSG(betsRaw):'(なし)');
+  lines.push('');
+
+  // 2026-09-08追加: currentQDbg(generateQBets()のresult._dbg)が無い場合(Q以外の経路・
+  // 予想未実行時)は新セクションを出さず、系統別得点・本線/抑えのみの従来出力に留める
+  // (壊れたデータで断定的に見える出力を作らないため)。
+  const dbg=currentQDbg;
+  if(dbg && dbg.selectedPoints && dbg.selectedPoints.length){
+    const axisOrder=(currentQAxes||[]).map(a=>a.boat);
+    const orderFacts=buildBetOrderFacts(dbg);
+    lines.push('■買い目順位(Qv2内部の確率順位、公開用%は含まない)');
+    orderFacts.forEach(f=>lines.push(`${f.rank}位 ${f.val}`));
+    lines.push('');
+
+    const secondRanking=buildSecondCandidateRanking(dbg);
+    const branches=buildBetBranches(dbg);
+    const firstKeys=Object.keys(secondRanking).map(Number).sort((a,b)=>{
+      const ia=axisOrder.indexOf(a), ib=axisOrder.indexOf(b);
+      if(ia===-1&&ib===-1) return a-b;
+      if(ia===-1) return 1;
+      if(ib===-1) return -1;
+      return ia-ib;
+    });
+
+    lines.push('■2着候補順位(Qv2確率合計、オッズ不使用)');
+    firstKeys.forEach(f=>{
+      lines.push(`${labelOf(f)}1着時`);
+      secondRanking[f].forEach(r=>lines.push(`${r.rank}位 ${labelOf(r.boat)}`));
+    });
+    lines.push('');
+
+    lines.push('■買い目分岐(実在する組み合わせのみ、直積補完なし)');
+    firstKeys.forEach(f=>{
+      lines.push(`${labelOf(f)}1着`);
+      secondRanking[f].forEach(r=>{
+        const thirds=(branches[f]&&branches[f][r.boat])||[];
+        lines.push(`・2着${labelOf(r.boat)} → 3着${thirds.map(t=>labelOf(t)).join('・')}`);
+      });
+    });
+    lines.push('');
+
+    const commentFacts=buildBetCommentFacts(boats, currentQSupport, currentQAttackCands||[], dbg, ranking).filter(f=>f.no!==maruBoat);
+    lines.push('■コメント用参考事実');
+    commentFacts.forEach(f=>{
+      lines.push(`${f.label}`);
+      lines.push(`買い目上の位置：${f.買い目上の位置.join('・')}`);
+      lines.push(`総合評価：${f.総合評価順位==null?'情報無':f.総合評価順位+'位'}`);
+      lines.push(`ST：${f.ST.順位==null?'情報無':f.ST.順位+'位'}${f.ST.実値==null?'':`、実値${f.ST.実値.toFixed(2)}`}`);
+      lines.push(`展示：${f.展示.順位==null?'情報無':f.展示.順位+'位'}${f.展示.実値==null?'':`、実値${f.展示.実値.toFixed(2)}`}`);
+      if(f.決まり手){
+        const kv=Object.entries(f.決まり手.実績).map(([k,v])=>`${k}${v}%`).join('、');
+        lines.push(`決まり手：${f.決まり手.コース}コース${kv}`);
+      }
+      lines.push(`機力：${f.機力.順位==null?'情報無':f.機力.順位+'位'}${f.機力.実値==null?'':`(${f.機力.元データ}${f.機力.実値}%)`}`);
+      lines.push(`連対率：${f.連対率順位==null?'情報無':f.連対率順位+'位'}`);
+      lines.push(`攻め手候補：${f.攻め手候補?'該当':'非該当'}`);
+      const missing=Object.entries(f.データ欠損).filter(([,v])=>v).map(([k])=>k);
+      lines.push(`データ欠損：${missing.length?missing.join('・'):'なし'}`);
+      lines.push('');
+    });
+
+    const roles=buildRoleCandidates(boats, currentQAttackCands||[], dbg, maruBoat);
+    lines.push('■展開上の役割候補');
+    roles.forEach(r=>{
+      lines.push(r.role==='根拠不足' ? `${r.label}：根拠不足` : `${r.label}：${r.role}／根拠：${r.reason}`);
+    });
+    lines.push('');
+  }
+
   // 本線/抑えはbuildXSummary()と同じ基準: 軸(1番評価の艇)から始まる買い目が本線
+  // (雄大さん指示による明記: これは展開上の重要度の判定ではなく、軸判定だけによる機械的な
+  // 表示振り分けであり、内部の点数配分・買い目生成ロジック自体には一切影響しない)
   const honsen=betsRaw.filter(b=>parseInt(String(b.val).split('-')[0],10)===maruBoat);
   const osaee=betsRaw.filter(b=>parseInt(String(b.val).split('-')[0],10)!==maruBoat);
-  lines.push('■本線');
+  lines.push('■本線(軸から始まる買い目、機械的な表示分けのみ)');
   lines.push(honsen.length?compressBetsSG(honsen):'(なし)');
   lines.push('');
   lines.push('■抑え');
@@ -3995,8 +4263,14 @@ function computeTenkaiFacts(){
   const bd=(no)=>(currentParsedData&&currentParsedData.boats[no-1])||{};
   const label=(no)=>garonBoatLabel(no,bd(no).name);
 
+  // 2026-09-08修正(CEO指示で確認: Q経路のbetsRaw.typeは「Qv2予測(1軸)」のような文字列で
+  // 「本線」という値は一度も入らないため、b.type==='本線'は常にfalseになり honsenBets が
+  // 常に空配列になっていた〈本関数固有のバグ。buildClaudeCommentData/buildXSummaryは既に
+  // 2026-08-27修正済みで軸ベース判定だったが、本関数だけ未修正のまま残っていた〉。
+  // buildClaudeCommentData()/buildXSummary()と同じ「軸(1番評価の艇)から始まる買い目が本線」
+  // という基準に統一する。
   const boatsInBets=new Set();
-  const honsenBets=betsRaw.filter(b=>b.type==='本線');
+  const honsenBets=betsRaw.filter(b=>parseInt(String(b.val).split('-')[0],10)===maruBoat);
   honsenBets.forEach(b=>String(b.val).split('-').forEach(n=>boatsInBets.add(parseInt(n))));
 
   // 【荒れモード対応】本線で1着位置に実際に使われている艇を検出。
@@ -4341,6 +4615,16 @@ function saveResultInner(resultType){
     scoreVersion:SCORE_ENGINE_VERSION,
     qEngineVersion:Q_ENGINE_VERSION,
     goseiOdds:goseiOddsMain,
+    // 2026-09-08追加(展開コメント用「確定事実」抽出、CEO指示): 保存時点のQv2内部順位・
+    // 分岐構造・コメント用参考事実・役割候補をスナップショット保存し、後から検証できるように
+    // する。currentQDbgが無い(Q以外の経路・予想未実行)場合はnullのまま(旧ログとの後方互換、
+    // 新項目が無い旧ログもnullキーが増えるだけで従来通り表示できる)。買い目生成・保存の他の
+    // 処理を止めないようtry/catchで包む(tenkaiLine保存と同じ方針)。
+    betOrderFacts:(function(){ try{ return currentQDbg?buildBetOrderFacts(currentQDbg):null; }catch(e){ return null; } })(),
+    secondCandidateRanking:(function(){ try{ return currentQDbg?buildSecondCandidateRanking(currentQDbg):null; }catch(e){ return null; } })(),
+    betBranches:(function(){ try{ return currentQDbg?buildBetBranches(currentQDbg):null; }catch(e){ return null; } })(),
+    commentFacts:(function(){ try{ return currentQDbg&&currentQSupport?buildBetCommentFacts((currentParsedData&&currentParsedData.boats)||[], currentQSupport, currentQAttackCands||[], currentQDbg, ranking):null; }catch(e){ return null; } })(),
+    roleCandidates:(function(){ try{ return currentQDbg?buildRoleCandidates((currentParsedData&&currentParsedData.boats)||[], currentQAttackCands||[], currentQDbg, maruBoat):null; }catch(e){ return null; } })(),
     // 的中画像生成用に6艇分のフルネームをスナップショット保存（結果入力時には
     // currentParsedDataが別レースのものに変わっている場合があるため、保存時点で確保する）
     boatNames:(currentParsedData&&currentParsedData.boats||[]).map(b=>b&&b.name||''),
