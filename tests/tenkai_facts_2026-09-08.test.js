@@ -28,12 +28,13 @@ function period(d) {
 }
 
 // runYosoQ()と同じ手順でrankingを組み立てる(currentCalcData.ranking相当)。
-function buildRanking(support, axes) {
+// 2026-09-08修正: rankOrder自体の構築は本体のbuildRankOrder()をそのまま使う(テスト側で
+// 別ロジックを再実装すると、本体を直しても気づかずテストだけ古いロジックのままになるため)。
+function buildRanking(engine, support, axes, dbg) {
   const marks = ['◎', '○', '▲', '△', '▽', '×'];
   const supportSorted = [...support].sort((a, b) => b.rawScore - a.rawScore);
   const axisBoatsInOrder = axes.map(a => a.boat);
-  const remainingBoats = supportSorted.map(s => s.no).filter(no => !axisBoatsInOrder.includes(no));
-  const rankOrder = [...axisBoatsInOrder, ...remainingBoats];
+  const rankOrder = engine.buildRankOrder(supportSorted, axisBoatsInOrder, dbg);
   return rankOrder.map((no, i) => {
     const s = support.find(x => x.no === no);
     return { rank: i + 1, boat: no, mark: marks[i] || '×', score: s.rawScore };
@@ -96,7 +97,7 @@ function main() {
     const attackCands = engine.identifyAttackCandidates(boats);
     const result = engine.generateQBets(boats, r.oddsMap);
     const dbg = result._dbg;
-    const ranking = buildRanking(support, result.axes);
+    const ranking = buildRanking(engine, support, result.axes, dbg);
     const maruBoat = ranking[0].boat;
     const betsRaw = buildBetsRaw(result);
 

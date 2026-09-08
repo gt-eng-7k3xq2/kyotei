@@ -3053,11 +3053,15 @@ async function runYosoQ(){
     // 従来はrawScore降順だけでrankingを作っていたため、攻め手候補理論でrawScore2位以下の艇が
     // 軸(◎)に選ばれた場合、◎表示(軸)と評価順1位が食い違う矛盾があった。実際に軸として
     // 選ばれた順(result.axes)を評価順の先頭に反映し、残りをrawScore降順で埋める。
+    // 2026-09-08再修正(雄大さん指摘、大村6R実例): 上記の「軸は全員rawScoreより先」方式だと、
+    // 自分の軸の買い目点数が少ない艇(例:自分の軸2〜3点のみ)が、実際には他の軸の買い目に
+    // 2着・3着として頻繁に登場している艇(買い目全体12点中10点に絡む等)より上位に来てしまう
+    // 矛盾があった。軸(1位=maruBoat、本線/抑えの分岐基準はこれまで通り不変)以外は、
+    // buildRankOrder()で「その艇が登場する全選択済み買い目の確率合計」で並べ替える。
     const marks=['◎','○','▲','△','▽','×'];
     const supportSorted=[...result.support].sort((a,b)=>b.rawScore-a.rawScore);
     const axisBoatsInOrder=result.axes.map(a=>a.boat);
-    const remainingBoats=supportSorted.map(s=>s.no).filter(no=>!axisBoatsInOrder.includes(no));
-    const rankOrder=[...axisBoatsInOrder, ...remainingBoats];
+    const rankOrder=buildRankOrder(supportSorted, axisBoatsInOrder, result._dbg);
     const ranking=rankOrder.map((no,i)=>{
       const s=result.support.find(x=>x.no===no);
       return {rank:i+1, boat:no, mark:marks[i]||'×', score:s.rawScore};
@@ -3960,6 +3964,38 @@ function garonBoatLabel(no,name){
 // 既存の確定判定だけを読み取って加工する(新しい閾値・新しい判定ロジックは一切追加しない)。
 // オッズによる候補の追加・並べ替え・差し替えも行わない(引数にoddsMapを取らない設計で担保)。
 // ============================================================
+
+// 評価順(◎○▲△▽×の並び)を決める。軸(rankOrder[0]=axisBoatsInOrder[0])は本線/抑えの
+// 分岐基準そのものなので不変。それ以外の5艇は「その艇が登場する全選択済み買い目の
+// 確率合計(dbg.probabilities)」で並べ替える(2026-09-08修正、CEO指摘: 従来は「軸になった艇は
+// 全員rawScore勢より先」という2段階方式で、自分の軸の点数が少ない艇が、実際には他の軸の
+// 買い目に2着・3着として頻繁に登場している艇より上位表示される矛盾があった)。
+// dbgが無い(Q以外の経路)場合は従来通りrawScore降順のみにフォールバックする。
+function buildRankOrder(supportSorted, axisBoatsInOrder, dbg){
+  const maruBoat=axisBoatsInOrder[0];
+  if(maruBoat==null) return supportSorted.map(s=>s.no);
+  if(!dbg||!dbg.selectedPoints||!dbg.selectedPoints.length){
+    const remaining=supportSorted.map(s=>s.no).filter(no=>!axisBoatsInOrder.includes(no));
+    return [...axisBoatsInOrder, ...remaining];
+  }
+  const others=supportSorted.map(s=>s.no).filter(no=>no!==maruBoat);
+  const massByBoat={};
+  others.forEach(no=>{massByBoat[no]=0;});
+  dbg.selectedPoints.forEach(v=>{
+    const prob=dbg.probabilities[v]||0;
+    new Set(v.split('-').map(Number)).forEach(no=>{ if(massByBoat[no]!=null) massByBoat[no]+=prob; });
+  });
+  const rawScoreOf={};
+  supportSorted.forEach(s=>{ rawScoreOf[s.no]=s.rawScore; });
+  const sortedOthers=[...others].sort((a,b)=>{
+    const d=massByBoat[b]-massByBoat[a];
+    if(Math.abs(d)>1e-12) return d;
+    const d2=rawScoreOf[b]-rawScoreOf[a];
+    if(d2!==0) return d2;
+    return a-b;
+  });
+  return [maruBoat, ...sortedOthers];
+}
 
 // COURSE_KIMARITE(コース別に実績のある決まり手の種類)は元々computeTenkaiFacts()内の
 // ローカル定数だったが、buildRoleCandidates()等でも同じ定義を使う必要があるため

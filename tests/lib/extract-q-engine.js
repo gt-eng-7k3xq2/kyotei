@@ -41,6 +41,7 @@ const FUNCTION_NAMES = [
   'buildRoleCandidates',
   'garonSurname',
   'garonBoatLabel',
+  'buildRankOrder',
   // parseData/extractOddsMap/compressBetsSGはBM生テキストからの一連の再現テスト
   // (verify_races.js方式)用。抽出情報の検証自体はboats/oddsMap経由でも可能。
   'parseData',
