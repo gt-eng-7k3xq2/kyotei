@@ -3367,6 +3367,31 @@ function compressBetsSG(bets){
     });
   }
 
+  // 2026-09-08追加(雄大さん指摘): 2着-3着固定で1着をまとめる版(1着を跨ぐ抑え等、
+  // 複数の1着候補に散らばった買い目で有効。natural/byFirstThirdはどちらも1着を固定して
+  // 別の位置をまとめる方式のため、1着だけが違う組み合わせ〈例: 1-2-4と3-2-4〉を
+  // 見落としていた)。例: 1-2-4/3-2-4 → 13-2-4
+  function compressBySecondThird(vals){
+    const g={},order=[];
+    for(const v of vals){
+      const p=v.split('-');if(p.length!==3)continue;
+      const key=p[1]+'|'+p[2];
+      if(!g[key]){g[key]=[];order.push(key);}
+      if(!g[key].includes(p[0]))g[key].push(p[0]);
+    }
+    return order.map(key=>{
+      const[second,third]=key.split('|');
+      return g[key].sort((a,b)=>parseInt(a)-parseInt(b)).join('')+'-'+second+'-'+third;
+    });
+  }
+
+  // natural/byFirstThird/bySecondThirdの3方式のうち、最もセグメント数が少ないものを選ぶ
+  // (同数の場合は natural > byFirstThird > bySecondThird の順を優先=既存の見た目を維持)
+  function bestOfThree(vals){
+    const candidates=[compressNatural(vals), compressByFirstThird(vals), compressBySecondThird(vals)];
+    return candidates.reduce((a,b)=>b.length<a.length?b:a);
+  }
+
   function compressWithFold(vals){
     const valSet=new Set(vals);
     const used=new Set();
@@ -3440,17 +3465,14 @@ function compressBetsSG(bets){
       }
     }
 
-    // ステップ3: 残りは1着-2着固定(3着可変)と1着-3着固定(2着可変)の両方を試し、より圧縮できた方を採用
+    // ステップ3: 残りは1着-2着固定(3着可変)・1着-3着固定(2着可変)・2着-3着固定(1着可変)の
+    // 3通りを試し、最も圧縮できたものを採用
     const remaining=vals.filter(v=>!used.has(v));
-    const remNatural=compressNatural(remaining);
-    const remByFirstThird=compressByFirstThird(remaining);
-    const remBest=remByFirstThird.length<remNatural.length?remByFirstThird:remNatural;
+    const remBest=bestOfThree(remaining);
     return [...swapResults, ...remBest];
   }
 
-  const natural=compressNatural(vals);
-  const byFirstThird=compressByFirstThird(vals);
-  const naturalBest=byFirstThird.length<natural.length?byFirstThird:natural;
+  const naturalBest=bestOfThree(vals);
   const folded=compressWithFold(vals);
   // セグメント数が少ない方を採用（同数なら折り返し無しを優先=見やすさ重視）
   const best = folded.length < naturalBest.length ? folded : naturalBest;
