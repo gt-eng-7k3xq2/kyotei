@@ -1328,6 +1328,7 @@ let currentQAxes=null; // generateQBets()が実際に選んだ軸構成(result.a
 // 買い目順位・2着候補順位・買い目分岐は全てこの_dbgだけから機械的に導出し、予測確率・
 // 買い目選定ロジック自体には一切触れない(既存のsel/probabilitiesを読むだけ)。
 let currentQDbg=null; // generateQBets()の戻り値result._dbg({selectedPoints, selectedMass, probabilities})
+let currentQGenAt=null; // 2026-09-08新設(Q監査ログ用): currentQDbgが設定された時刻(予想生成時刻)
 let naturalAreScores=null; // 2026-07-29追加: モードで軸を強制入替する前の「素の評価順位」を保持（逃げ固定解除時の復元用）
 
 // ============================================================
@@ -3072,6 +3073,7 @@ async function runYosoQ(){
     currentQAttackCands=attackCandsForRationale;
     currentQAxes=result.axes;
     currentQDbg=result._dbg||null;
+    currentQGenAt=Date.now(); // 2026-09-08新設(Q監査ログ用): 予想生成時刻。保存時刻(entry.id)とは別に記録する。
     currentCalcData={
       racenum:racenumPlain||document.getElementById('inp-racenum').value||'?', // "R"無しの数字のみ(buildXSummary側で"R"を付与するため)
       honme:'1',
@@ -4753,6 +4755,9 @@ function saveResultInner(resultType){
   // kyotei_v2にも書き込み（gtools連携）
   writeToV2(entry);
 
+  // 2026-09-08新設: Q専用監査ログを同時保存(fire-and-forget、失敗してもGTOOLログ保存には影響しない)
+  garonSaveQAuditEntry(entry);
+
   if(!saveOk){
     // ここで失敗を握りつぶすと「保存できたのに結果入力に出てこない」という今回の不具合を繰り返すため、
     // 成功トーストで上書きせず、失敗を明確に伝える
@@ -4768,6 +4773,887 @@ function saveResultInner(resultType){
 // ============================================================
 // kyotei_v2 書き込み（gtools連携）
 // ============================================================
+// ============================================================
+// GARON自動共有(Gist同期) — 2026-09-08新設・非本番ステージング版。
+// gtools.htmlの既存のGist同期(トークン/ID保存キー・エンドポイント・ファイル名)をそのまま
+// 再利用する(新しい認証情報は作らない)。手動「今すぐ同期」ボタンと自動同期は
+// garonBuildKyoteiV2SyncPayload()という同じ純粋関数からペイロードを生成する。
+// マージロジックはresearch/nightly_verification_system_2026-09-08/code/lib/kyotei_v2_merge.js
+// でテスト済みのものをそのまま書き写している(本体はNode側、ここはブラウザ側の複製)。
+// ============================================================
+const GARON_SYNC_TOKEN_KEY='garon_gist_sync_token';
+const GARON_SYNC_ID_KEY='garon_gist_sync_id';
+const GARON_SYNC_PENDING_KEY='garon_sync_pending';
+const GARON_SYNC_STATUS_KEY='garon_sync_status';
+const GARON_SYNC_FILENAME='kyotei_v2_sync.json';
+const GARON_SYNC_DEBOUNCE_MS=2500;
+const GARON_SYNC_MAX_RETRY=5;
+let garonSyncTimer=null;
+let garonSyncInFlight=false;
+let garonSyncRerunNeeded=false;
+
+// 重要(2026-09-08 ステージング実装中に発見): このファイル(garon_q_engine.html)には
+// 既にgetLogs()という関数が存在するが、それはSTORE_KEY('sg_narutou_v1')を読む、この
+// 自動共有機能とは無関係の別の関数(garon_q_engine.html独自の詳細ログ用、本番で以前から
+// 正常稼働している既存コード)。本番へは一度も反映していないステージング実装の初期案で
+// このgetLogs()を誤って流用し、同期対象を取り違えるバグを作り込んだが、ステージング内の
+// テストで検出し本番反映前に修正済み(本番で稼働していた不具合ではない)。
+// 再発防止のため、保存先が名前から判別できるgaronGetKyoteiV2Logs()を専用に新設し、
+// 同期対象は必ずkyotei_v2キーをこの関数経由で直接読み書きする(getLogs()を呼ばない)。
+// なお、gtools.html側は逆にgetLogs()自体がkyotei_v2を読む関数であり(そちらは元から
+// 正しい)、ファイルをまたいで同名getLogs()が異なるストレージを指す状態が存在する。
+// 両ファイルは別スコープ(別HTML、同時に同一グローバルへ読み込まれることは無い)のため
+// 実行時の衝突は無いが、可読性の罠として残るためこのコメントで明示しておく。
+function garonGetKyoteiV2Logs(){ try{ return JSON.parse(localStorage.getItem('kyotei_v2')||'[]'); }catch(e){ return []; } }
+
+function garonBuildKyoteiV2SyncPayload(logs){
+  return {
+    description:'GARON kyotei_v2 予想ログ自動同期(非公開・共有関数から生成)',
+    public:false,
+    files:{ [GARON_SYNC_FILENAME]: { content: JSON.stringify(logs,null,2) } }
+  };
+}
+
+function garonMergeKyoteiV2Logs(local, remote){
+  local = Array.isArray(local)?local:[];
+  remote = Array.isArray(remote)?remote:[];
+  const byId=new Map();
+  local.forEach(function(l){ if(l&&l.id!=null) byId.set(l.id,l); });
+  remote.forEach(function(l){ if(l&&l.id!=null && !byId.has(l.id)) byId.set(l.id,l); });
+  const groups=new Map();
+  byId.forEach(function(l){
+    const key=l.date+'|'+l.venue+'|'+l.raceNum;
+    if(!groups.has(key)) groups.set(key,[]);
+    groups.get(key).push(l);
+  });
+  const merged=[];
+  groups.forEach(function(entries){
+    if(entries.length===1){ merged.push(entries[0]); return; }
+    const finalized=entries.filter(function(l){ return l.result && l.result!==''; });
+    const pending=entries.filter(function(l){ return !(l.result && l.result!==''); });
+    if(finalized.length>0){
+      merged.push.apply(merged, finalized);
+    } else {
+      pending.sort(function(a,b){ return (b.id||0)-(a.id||0); });
+      merged.push(pending[0]);
+    }
+  });
+  merged.sort(function(a,b){ return (b.id||0)-(a.id||0); });
+  return merged;
+}
+
+async function garonFetchRemoteKyoteiV2(token, gistId){
+  if(!gistId) return [];
+  const res=await fetch('https://api.github.com/gists/'+gistId, {
+    headers:{ 'Authorization':'token '+token, 'Accept':'application/vnd.github+json' }
+  });
+  if(!res.ok){ if(res.status===404) return []; throw new Error('Gist取得失敗: HTTP '+res.status); }
+  const data=await res.json();
+  const file=data.files && data.files[GARON_SYNC_FILENAME];
+  if(!file) return [];
+  let text=file.content;
+  if(file.truncated){
+    const rawRes=await fetch(file.raw_url, { headers:{ 'Authorization':'token '+token } });
+    if(!rawRes.ok) throw new Error('raw_url取得失敗: HTTP '+rawRes.status);
+    text=await rawRes.text();
+  }
+  try{ return JSON.parse(text); }catch(e){ throw new Error('Gist内容のJSON解析に失敗: '+e.message); }
+}
+
+function garonSetSyncStatus(patch){
+  try{
+    const cur=JSON.parse(localStorage.getItem(GARON_SYNC_STATUS_KEY)||'{}');
+    localStorage.setItem(GARON_SYNC_STATUS_KEY, JSON.stringify(Object.assign(cur,patch)));
+  }catch(e){}
+}
+
+async function garonDoAutoSync(){
+  const token=localStorage.getItem(GARON_SYNC_TOKEN_KEY);
+  if(!token) return;
+  if(garonSyncInFlight){
+    // 実行中に次の保存が発生した場合は、今回の実行完了後に最新内容で必ず再同期する
+    // (2026-09-08 偽時計テストで発見: 従来はここで無条件returnしていたため、実行中に
+    // 発生した保存が一度もGistへ送られないまま放置される欠陥があった)。
+    garonSyncRerunNeeded=true;
+    return;
+  }
+  garonSyncInFlight=true;
+  try{
+    const gistId=localStorage.getItem(GARON_SYNC_ID_KEY);
+    const localLogs=garonGetKyoteiV2Logs();
+    const remoteLogs=await garonFetchRemoteKyoteiV2(token, gistId);
+    const merged=garonMergeKyoteiV2Logs(localLogs, remoteLogs);
+    if(JSON.stringify(merged)!==JSON.stringify(localLogs)){
+      localStorage.setItem('kyotei_v2', JSON.stringify(merged));
+      if(typeof renderLogs==='function'){ try{ renderLogs(); }catch(e){} }
+      if(typeof updateLogSummary==='function'){ try{ updateLogSummary(); }catch(e){} }
+    }
+    const payload=garonBuildKyoteiV2SyncPayload(merged);
+    const method=gistId?'PATCH':'POST';
+    const url=gistId?('https://api.github.com/gists/'+gistId):'https://api.github.com/gists';
+    const res=await fetch(url, {
+      method:method,
+      headers:{ 'Authorization':'token '+token, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if(!res.ok){ const err=await res.json().catch(function(){return {};}); throw new Error(err.message||('HTTP '+res.status)); }
+    const data=await res.json();
+    if(!gistId && data.id){ localStorage.setItem(GARON_SYNC_ID_KEY, data.id); }
+    localStorage.removeItem(GARON_SYNC_PENDING_KEY);
+    let hashHex='';
+    try{
+      const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(merged)));
+      hashHex=Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('').slice(0,16);
+    }catch(e){}
+    garonSetSyncStatus({ lastSuccessAt:new Date().toISOString(), lastSuccessCount:merged.length, lastSuccessHash:hashHex, lastFailureAt:null, lastFailureReason:null });
+  }catch(e){
+    let msg=String(e&&e.message||e);
+    const token2=localStorage.getItem(GARON_SYNC_TOKEN_KEY);
+    if(token2 && msg.indexOf(token2)>=0) msg=msg.split(token2).join('***');
+    const pending=JSON.parse(localStorage.getItem(GARON_SYNC_PENDING_KEY)||'{"retryCount":0}');
+    pending.retryCount=(pending.retryCount||0)+1;
+    pending.lastAttemptAt=new Date().toISOString();
+    localStorage.setItem(GARON_SYNC_PENDING_KEY, JSON.stringify(pending));
+    garonSetSyncStatus({ lastFailureAt:new Date().toISOString(), lastFailureReason:msg });
+  } finally {
+    garonSyncInFlight=false;
+    if(garonSyncRerunNeeded){
+      garonSyncRerunNeeded=false;
+      garonScheduleAutoSync();
+    }
+  }
+}
+
+// デバウンス付きスケジューラ。保存のたびに毎回呼んでよい(既存のscheduleGistSync()と同じ設計)。
+// 規定回数(GARON_SYNC_MAX_RETRY)失敗が続いた後は、同じ日のうちは再試行を間引く
+// (無限・高頻度の再試行をしない、CEO要求)。
+function garonScheduleAutoSync(){
+  const token=localStorage.getItem(GARON_SYNC_TOKEN_KEY);
+  if(!token) return;
+  const pending=JSON.parse(localStorage.getItem(GARON_SYNC_PENDING_KEY)||'null');
+  if(pending && pending.retryCount>=GARON_SYNC_MAX_RETRY){
+    const lastDate=(pending.lastAttemptAt||'').slice(0,10);
+    const today=new Date().toISOString().slice(0,10);
+    if(lastDate===today) return;
+  }
+  if(garonSyncTimer) clearTimeout(garonSyncTimer);
+  garonSyncTimer=setTimeout(garonDoAutoSync, GARON_SYNC_DEBOUNCE_MS);
+}
+
+// ページ起動時: 保留分の再送、および「新しい予想を保存しなくても既存kyotei_v2を初回同期
+// できる」ようにするため、起動のたびに1回だけ同期を試みる(CEO要求、§8)。
+window.addEventListener('load', function(){ garonScheduleAutoSync(); });
+
+// ============================================================
+// Q専用監査ログ(garon_q_audit_v1) — 2026-09-08新設・非本番ステージング版。
+// CEO指示: 既存kyotei_v2(GTOOLログ)の構造は一切変更せず、Qエンジン保存時に別の軽量な
+// 監査ログを同時生成する。既存キー('daikibo_archive_v1'/'kyotei_backtest_v1'/
+// 'kyotei_gemini_key'/'garon_gist_sync_id'/'garon_gist_sync_token'/'overlay_notebox_v9'/
+// 'sg_selection_log'/'sg_narutou_settings'/'sg_narutou_v1'/'kyotei_v2'/'gemini_key'/
+// 'kyotei_honsenUnit'/'kyotei_osaeeUnit'/'sg_raceType'/'sg_racenum'/'sg_venue'/
+// 'tekichu_base_image'/'tekichu_layers'/今回新設の'garon_sync_pending'/'garon_sync_status')
+// と2026-09-08時点で全て突き合わせ、重複が無いことを確認した専用名を使う。
+// ============================================================
+const Q_AUDIT_VERSION=1;
+const Q_AUDIT_STORE_KEY='garon_q_audit_v1'; // 旧localStorage監査ログ。2026-09-09よりIndexedDB移行元・
+// ロールバック用の読み取り専用として残す(新規保存はここへは行わない。garonGetQAuditLogs()は
+// ロールバック時に旧データを読むためだけに残す)。
+// 2026-09-08再設計: 単一ファイルへの無期限蓄積(約1週間でGist 1MB切り詰めに到達することが
+// 実測で判明)をやめ、日付別ファイル+月別Gistローテーションへ変更。GitHub Gist APIは1Gist
+// あたり300ファイルを超えると一覧がtruncateされる制約があるため、月単位(最大31ファイル/月)で
+// 新しいGistへ切り替える。日次ファイルはkyotei_v2と同じ主Gist(garon_gist_sync_id)には置かず、
+// 月別Gist側に格納する(主Gistにはmanifestだけを置き、肥大化させない)。
+const GARON_AUDIT_MANIFEST_FILENAME='q_audit_manifest.json'; // 主Gist(garon_gist_sync_id)に置く索引
+const GARON_AUDIT_LEGACY_SYNC_FILENAME='q_audit_sync.json'; // 旧単一ファイル(移行元、読み取り専用・削除しない)
+const GARON_AUDIT_GIST_MAP_KEY='garon_audit_gist_map'; // {"YYYY-MM": monthGistId}
+const GARON_AUDIT_DATE_HASH_KEY='garon_audit_date_hashes'; // {"YYYY-MM-DD": 直近同期済みローカル内容のsha256}
+const GARON_AUDIT_DATE_PENDING_KEY='garon_audit_date_pending'; // {"YYYY-MM-DD": {retryCount,lastAttemptAt,lastError}}
+const GARON_AUDIT_SYNC_STATUS_KEY='garon_audit_sync_status';
+const GARON_AUDIT_FILE_SIZE_LIMIT=750*1024; // 750KiB(圧縮前UTF-8実測、Gist1MB切り詰め閾値に十分な余裕)
+
+// 2026-09-09新設: 監査ログの保存先をlocalStorage(garon_q_audit_v1)からIndexedDBへ移行する。
+// 理由(前回検証セッションで実行確認により発見): garon_q_audit_v1がlocalStorageの容量を
+// 圧迫すると、同じオリジンを共有するkyotei_v2自体の保存(saveV2Logs)までQuotaExceededErrorで
+// 巻き込まれて失敗しうる。IndexedDBはlocalStorageと別のクォータ機構のため、これを構造的に断つ。
+// kyotei_v2自体はlocalStorageのまま変更しない(CEO指示)。
+const GARON_AUDIT_DB_NAME='garon_q_audit_db';
+const GARON_AUDIT_DB_VERSION=1;
+const GARON_AUDIT_STORE_ENTRIES='entries';           // 監査レコード本体
+const GARON_AUDIT_STORE_SYNC_STATE='syncState';       // 日付ごとの同期状態(将来の拡張用、現状はlocalStorageのdateHashes/datePendingと役割分担)
+const GARON_AUDIT_STORE_MIGRATION_STATE='migrationState'; // localStorage→IndexedDB移行の進捗
+const GARON_AUDIT_STORE_SCHEMA_INFO='schemaInfo';     // IndexedDBスキーマ自体のバージョン情報
+
+// IndexedDBが利用不能・書き込み拒否・容量不足等で完全に使えない場合の「緊急保留キュー」。
+// 監査ログ本体は絶対にここへ入れない(捏造禁止・無制限フォールバック禁止、CEO要求)。
+// 保存に失敗した事実(id・raceId・時刻・理由)だけを、件数・バイト数の両方に固定上限を設けて
+// 保持し、ユーザー(トースト)と夜間検証側(garon_audit_sync_status経由)の両方が判別できるようにする。
+const GARON_AUDIT_EMERGENCY_QUEUE_KEY='garon_audit_emergency_queue';
+const GARON_AUDIT_EMERGENCY_QUEUE_MAX_COUNT=20;
+const GARON_AUDIT_EMERGENCY_QUEUE_MAX_BYTES=8*1024; // 8KiB
+
+let garonAuditSyncTimer=null;
+let garonAuditSyncInFlight=false;
+let garonAuditSyncRerunNeeded=false;
+let garonAuditLegacyMigrated=false; // 旧単一ファイル(Gist側)の読み込みは1ページセッションにつき1回だけ試みる
+let garonAuditDbPromise=null; // IndexedDB接続の使い回し(毎回openし直さない)
+let garonAuditLocalMigrationPromise=null; // localStorage→IndexedDB移行の多重起動防止(1ページセッション内で共有)
+
+function garonGetQAuditLogs(){ try{ return JSON.parse(localStorage.getItem(Q_AUDIT_STORE_KEY)||'[]'); }catch(e){ return []; } } // ロールバック用(旧データの読み取り専用アクセス)
+
+// ============================================================
+// IndexedDBアダプタ層(2026-09-09新設)
+// ============================================================
+function garonAuditDbOpen(){
+  if(garonAuditDbPromise) return garonAuditDbPromise;
+  garonAuditDbPromise=new Promise(function(resolve,reject){
+    if(typeof indexedDB==='undefined'){ reject(new Error('IndexedDB利用不可')); return; }
+    let req;
+    try{ req=indexedDB.open(GARON_AUDIT_DB_NAME, GARON_AUDIT_DB_VERSION); }
+    catch(e){ reject(e); return; }
+    req.onupgradeneeded=function(ev){
+      const db=ev.target.result;
+      if(!db.objectStoreNames.contains(GARON_AUDIT_STORE_ENTRIES)){
+        const store=db.createObjectStore(GARON_AUDIT_STORE_ENTRIES, { keyPath:'predictionVersionId' });
+        store.createIndex('by_raceId','raceId',{unique:false});
+        store.createIndex('by_dateJst','dateJst',{unique:false});
+        store.createIndex('by_savedAt','savedAt',{unique:false});
+        store.createIndex('by_syncStatus','syncStatus',{unique:false});
+      }
+      if(!db.objectStoreNames.contains(GARON_AUDIT_STORE_SYNC_STATE)){
+        db.createObjectStore(GARON_AUDIT_STORE_SYNC_STATE, { keyPath:'dateJst' });
+      }
+      if(!db.objectStoreNames.contains(GARON_AUDIT_STORE_MIGRATION_STATE)){
+        db.createObjectStore(GARON_AUDIT_STORE_MIGRATION_STATE, { keyPath:'key' });
+      }
+      if(!db.objectStoreNames.contains(GARON_AUDIT_STORE_SCHEMA_INFO)){
+        db.createObjectStore(GARON_AUDIT_STORE_SCHEMA_INFO, { keyPath:'key' });
+      }
+    };
+    req.onsuccess=function(ev){
+      const db=ev.target.result;
+      db.onversionchange=function(){ try{ db.close(); }catch(e){} garonAuditDbPromise=null; };
+      resolve(db);
+    };
+    req.onerror=function(){ reject(req.error||new Error('IndexedDBオープン失敗')); };
+    req.onblocked=function(){ reject(new Error('IndexedDBオープンがblocked状態')); };
+  }).catch(function(e){ garonAuditDbPromise=null; throw e; }); // 失敗時は次回呼び出しで再度open試行できるようにする
+  return garonAuditDbPromise;
+}
+
+function garonAuditReqToPromise(req){
+  return new Promise(function(resolve,reject){
+    req.onsuccess=function(){ resolve(req.result); };
+    req.onerror=function(){ reject(req.error||new Error('IndexedDB操作失敗')); };
+  });
+}
+
+async function garonAuditDbPutEntry(entry){
+  const db=await garonAuditDbOpen();
+  return new Promise(function(resolve,reject){
+    const tx=db.transaction([GARON_AUDIT_STORE_ENTRIES],'readwrite');
+    tx.oncomplete=function(){ resolve(); };
+    tx.onerror=function(){ reject(tx.error||new Error('監査レコードput失敗')); };
+    tx.onabort=function(){ reject(tx.error||new Error('トランザクション中断')); };
+    tx.objectStore(GARON_AUDIT_STORE_ENTRIES).put(entry); // predictionVersionIdキーで自動的に重複排除(同一idは上書き)
+  });
+}
+
+async function garonAuditDbGetEntry(id){
+  const db=await garonAuditDbOpen();
+  const tx=db.transaction([GARON_AUDIT_STORE_ENTRIES],'readonly');
+  return garonAuditReqToPromise(tx.objectStore(GARON_AUDIT_STORE_ENTRIES).get(id));
+}
+
+async function garonAuditDbGetAllEntries(){
+  const db=await garonAuditDbOpen();
+  const tx=db.transaction([GARON_AUDIT_STORE_ENTRIES],'readonly');
+  return garonAuditReqToPromise(tx.objectStore(GARON_AUDIT_STORE_ENTRIES).getAll());
+}
+
+async function garonAuditDbGetByDate(dateJst){
+  const db=await garonAuditDbOpen();
+  const tx=db.transaction([GARON_AUDIT_STORE_ENTRIES],'readonly');
+  const idx=tx.objectStore(GARON_AUDIT_STORE_ENTRIES).index('by_dateJst');
+  return garonAuditReqToPromise(idx.getAll(IDBKeyRange.only(dateJst)));
+}
+
+// 未同期(pending/failed)だけを取得する。全件取得後にJS側でフィルタする方式
+// (by_syncStatusインデックスは値ごとの完全一致検索のみのため、'synced'以外という条件には
+// 全件走査の方が単純で確実。現実的な件数規模〈1日あたり数十件〉では性能上問題にならない)。
+async function garonAuditDbGetUnsynced(){
+  const all=await garonAuditDbGetAllEntries();
+  return all.filter(function(e){ return e.syncStatus!=='synced'; });
+}
+
+async function garonAuditDbMarkSynced(ids){
+  if(!ids || !ids.length) return;
+  const db=await garonAuditDbOpen();
+  return new Promise(function(resolve,reject){
+    const tx=db.transaction([GARON_AUDIT_STORE_ENTRIES],'readwrite');
+    const store=tx.objectStore(GARON_AUDIT_STORE_ENTRIES);
+    tx.oncomplete=function(){ resolve(); };
+    tx.onerror=function(){ reject(tx.error); };
+    ids.forEach(function(id){
+      const getReq=store.get(id);
+      getReq.onsuccess=function(){
+        const rec=getReq.result;
+        if(rec){ rec.syncStatus='synced'; rec.syncedAt=new Date().toISOString(); rec.lastSyncError=null; store.put(rec); }
+      };
+    });
+  });
+}
+
+async function garonAuditDbMarkSyncFailed(ids, reason){
+  if(!ids || !ids.length) return;
+  const db=await garonAuditDbOpen();
+  return new Promise(function(resolve,reject){
+    const tx=db.transaction([GARON_AUDIT_STORE_ENTRIES],'readwrite');
+    const store=tx.objectStore(GARON_AUDIT_STORE_ENTRIES);
+    tx.oncomplete=function(){ resolve(); };
+    tx.onerror=function(){ reject(tx.error); };
+    ids.forEach(function(id){
+      const getReq=store.get(id);
+      getReq.onsuccess=function(){
+        const rec=getReq.result;
+        if(rec && rec.syncStatus!=='synced'){ rec.syncStatus='failed'; rec.lastSyncError=String(reason||''); store.put(rec); }
+      };
+    });
+  });
+}
+
+async function garonAuditDbCount(){
+  const db=await garonAuditDbOpen();
+  const tx=db.transaction([GARON_AUDIT_STORE_ENTRIES],'readonly');
+  return garonAuditReqToPromise(tx.objectStore(GARON_AUDIT_STORE_ENTRIES).count());
+}
+
+async function garonAuditDbGetMigrationState(){
+  const db=await garonAuditDbOpen();
+  const tx=db.transaction([GARON_AUDIT_STORE_MIGRATION_STATE],'readonly');
+  return garonAuditReqToPromise(tx.objectStore(GARON_AUDIT_STORE_MIGRATION_STATE).get('localStorageMigration'));
+}
+async function garonAuditDbSetMigrationState(patch){
+  const db=await garonAuditDbOpen();
+  return new Promise(function(resolve,reject){
+    const tx=db.transaction([GARON_AUDIT_STORE_MIGRATION_STATE],'readwrite');
+    const store=tx.objectStore(GARON_AUDIT_STORE_MIGRATION_STATE);
+    tx.oncomplete=function(){ resolve(); };
+    tx.onerror=function(){ reject(tx.error); };
+    const getReq=store.get('localStorageMigration');
+    getReq.onsuccess=function(){
+      const cur=getReq.result || { key:'localStorageMigration' };
+      store.put(Object.assign({}, cur, patch, { key:'localStorageMigration' }));
+    };
+  });
+}
+
+async function garonAuditDbEnsureSchemaInfo(){
+  const db=await garonAuditDbOpen();
+  return new Promise(function(resolve,reject){
+    const tx=db.transaction([GARON_AUDIT_STORE_SCHEMA_INFO],'readwrite');
+    const store=tx.objectStore(GARON_AUDIT_STORE_SCHEMA_INFO);
+    tx.oncomplete=function(){ resolve(); };
+    tx.onerror=function(){ reject(tx.error); };
+    const getReq=store.get('schemaVersion');
+    getReq.onsuccess=function(){
+      if(!getReq.result){ store.put({ key:'schemaVersion', value:GARON_AUDIT_DB_VERSION, createdAt:new Date().toISOString() }); }
+    };
+  });
+}
+
+// ---- 緊急保留キュー(IndexedDB完全不能時のみ、localStorageへ上限固定で少数件だけ) ----
+function garonAuditEmergencyQueuePush(record){
+  try{
+    let q=JSON.parse(localStorage.getItem(GARON_AUDIT_EMERGENCY_QUEUE_KEY)||'[]');
+    if(!Array.isArray(q)) q=[];
+    q.push(record);
+    while(q.length>GARON_AUDIT_EMERGENCY_QUEUE_MAX_COUNT) q.shift(); // 件数上限(古い順に間引く)
+    while(q.length>0 && new TextEncoder().encode(JSON.stringify(q)).length>GARON_AUDIT_EMERGENCY_QUEUE_MAX_BYTES) q.shift(); // バイト数上限
+    localStorage.setItem(GARON_AUDIT_EMERGENCY_QUEUE_KEY, JSON.stringify(q));
+  }catch(e){ /* ここで失敗しても握りつぶす(予想保存自体は既に完了済みのため) */ }
+}
+function garonAuditEmergencyQueueGet(){
+  try{ const q=JSON.parse(localStorage.getItem(GARON_AUDIT_EMERGENCY_QUEUE_KEY)||'[]'); return Array.isArray(q)?q:[]; }catch(e){ return []; }
+}
+
+// 監査ログ保存失敗時の警告記録。ユーザー(トースト、10分に1回まで)と夜間検証側
+// (garon_audit_sync_statusのlastSaveFailure*フィールド)の両方から判別できるようにする。
+// 監査ログ本体はここには一切含めない(緊急保留キューはid・理由・時刻のみ)。
+function garonAuditRecordSaveFailure(gtoolEntry, err){
+  const now=new Date().toISOString();
+  const cur=(function(){ try{ return JSON.parse(localStorage.getItem(GARON_AUDIT_SYNC_STATUS_KEY)||'{}'); }catch(e){ return {}; } })();
+  const lastWarnAt=cur.lastSaveFailureToastAt ? Date.parse(cur.lastSaveFailureToastAt) : 0;
+  const shouldToast=(Date.now()-lastWarnAt) > 10*60*1000;
+  garonSetAuditSyncStatus({
+    lastSaveFailureAt: now,
+    lastSaveFailureReason: String(err&&err.message||err),
+    saveFailureCount: (cur.saveFailureCount||0)+1,
+    lastSaveFailureToastAt: shouldToast?now:(cur.lastSaveFailureToastAt||null),
+  });
+  garonAuditEmergencyQueuePush({ predictionVersionId:gtoolEntry.id, raceId:`${gtoolEntry.date}|${gtoolEntry.venue}|${gtoolEntry.racenum}`, ts:now, reason:String(err&&err.message||err) });
+  if(shouldToast && typeof showToast==='function'){
+    try{ showToast('⚠️ Q監査ログの保存に失敗しました(予想自体は保存済みです)'); }catch(e){}
+  }
+}
+
+async function garonAuditComputeSourceHash(arr){
+  const ids=arr.map(function(e){return e&&e.predictionVersionId;}).filter(function(v){return v!=null;}).sort(function(a,b){return a-b;});
+  return garonSha256Hex(JSON.stringify(ids));
+}
+
+// localStorage(garon_q_audit_v1)→IndexedDBへの一度限りの移行。中断後の再開・複数回実行時の
+// 冪等性・一部失敗時の未完了扱い・移行後の件数照合を満たす。元localStorageは削除しない。
+async function garonAuditMigrateFromLocalStorageOnce(){
+  if(garonAuditLocalMigrationPromise) return garonAuditLocalMigrationPromise;
+  garonAuditLocalMigrationPromise=(async function(){
+    let raw;
+    try{ raw=localStorage.getItem(Q_AUDIT_STORE_KEY); }catch(e){ raw=null; }
+    let sourceArr=[];
+    try{ sourceArr = raw ? JSON.parse(raw) : []; if(!Array.isArray(sourceArr)) sourceArr=[]; }catch(e){ sourceArr=[]; }
+
+    const existingState=await garonAuditDbGetMigrationState();
+    const sourceHash=await garonAuditComputeSourceHash(sourceArr);
+
+    if(existingState && existingState.status==='completed'){
+      if(existingState.sourceHash!==sourceHash){
+        // 移行完了後にlocalStorage側の内容が変わっている(想定外)。自動再移行はせず記録のみ。
+        garonSetAuditSyncStatus({ migrationSourceChangedAfterCompleteAt:new Date().toISOString() });
+      }
+      return existingState;
+    }
+
+    let cursor=0;
+    if(existingState && existingState.status==='in_progress' && existingState.sourceHash===sourceHash){
+      cursor=existingState.resumeCursor||0; // 中断からの再開
+    } else {
+      await garonAuditDbSetMigrationState({ status:'in_progress', sourceCount:sourceArr.length, sourceHash, migratedCount:0, resumeCursor:0, startedAt:new Date().toISOString(), lastError:null });
+    }
+
+    for(; cursor<sourceArr.length; cursor++){
+      const item=sourceArr[cursor];
+      if(!item || item.predictionVersionId==null) continue;
+      try{
+        const entry=Object.assign({}, item);
+        entry.dateJst = entry.dateJst || garonJstDateStr(entry.savedAt||entry.predictionVersionId);
+        entry.syncStatus = entry.syncStatus || 'pending'; // 旧データは同期状態不明のため要再送扱い(Gist側でも重複排除される)
+        entry.migratedFromLocalStorageAt = new Date().toISOString();
+        await garonAuditDbPutEntry(entry); // predictionVersionIdキーで重複排除(再実行しても重複しない)
+        await garonAuditDbSetMigrationState({ resumeCursor:cursor+1, migratedCount:cursor+1 });
+      }catch(e){
+        await garonAuditDbSetMigrationState({ status:'failed_partial', lastError:String(e&&e.message||e), resumeCursor:cursor });
+        throw e; // 一部失敗時は完了扱いにしない
+      }
+    }
+
+    // 移行後照合: 移行元の各predictionVersionIdがDBに存在するかを確認する(DBには移行前からの
+    // 新規保存分が既に混ざっている可能性があるため、DB全体件数ではなくid単位で照合する)。
+    for(const item of sourceArr){
+      if(!item || item.predictionVersionId==null) continue;
+      const rec=await garonAuditDbGetEntry(item.predictionVersionId);
+      if(!rec){
+        await garonAuditDbSetMigrationState({ status:'failed_partial', lastError:'移行後照合で一部idがDBに見つからない' });
+        throw new Error('移行後照合失敗');
+      }
+    }
+
+    await garonAuditDbSetMigrationState({ status:'completed', completedAt:new Date().toISOString(), migratedCount:sourceArr.length, resumeCursor:sourceArr.length, lastError:null });
+    // 元localStorageのgaron_q_audit_v1は今回削除しない(CEO要求、ロールバック用に残す)
+    return garonAuditDbGetMigrationState();
+  })().catch(function(e){
+    garonAuditLocalMigrationPromise=null; // 失敗時は次回呼び出しで再試行できるようにする
+    throw e;
+  });
+  return garonAuditLocalMigrationPromise;
+}
+
+// 監査ログの本体組み立て。gtoolEntry(saveResultInner()が既に組み立てたentryそのもの)から
+// 転記できるものは転記し、Qエンジン固有の生データ(全120通り確率等)はcurrentQDbgから取る。
+// 存在しない情報は結果取得後に補作せず、必ずnullのままにする(捏造禁止)。
+async function buildQAuditEntryAsync(gtoolEntry){
+  const dbg=currentQDbg;
+  const cpd=currentParsedData||{};
+  const raceId=`${gtoolEntry.date}|${gtoolEntry.venue}|${gtoolEntry.racenum}`;
+
+  // 予想時点入力のハッシュ(boats・oddsMapの内容をそのままハッシュ化。結果取得後の再計算は行わない)
+  let inputHash=null;
+  try{
+    const inputForHash=JSON.stringify({boats:cpd.boats||null, oddsMap:cpd.oddsMap||null});
+    const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(inputForHash));
+    inputHash=Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+  }catch(e){}
+
+  // 入力欠損・警告(既存のcommentFacts内「データ欠損」を艇横断で要約するだけ。新しい閾値は作らない)
+  const missingWarnings=(function(){
+    try{
+      if(!gtoolEntry.commentFacts) return null;
+      const boatsWithMissing=gtoolEntry.commentFacts.map(function(f){
+        const flags=Object.entries(f.データ欠損||{}).filter(function(e){return e[1];}).map(function(e){return e[0];});
+        return flags.length?{no:f.no, missing:flags}:null;
+      }).filter(Boolean);
+      return {hasMissing:boatsWithMissing.length>0, boats:boatsWithMissing};
+    }catch(e){ return null; }
+  })();
+
+  // 本線・抑えの分類(computeTenkaiFacts()と同じ、軸(maru)の位置による判定。表記の新設なし)
+  const honsenOsaeeBets=(gtoolEntry.bets||[]).map(function(b){
+    const firstBoat=parseInt(String(b.val).split('-')[0],10);
+    return Object.assign({}, b, {group: firstBoat===gtoolEntry.maru?'honsen':'osaee'});
+  });
+
+  const generatedCombos=(gtoolEntry.bets||[]).map(function(b){return b.val;});
+
+  return {
+    auditSchemaVersion:Q_AUDIT_VERSION,
+    raceId,
+    predictionVersionId:gtoolEntry.id,
+    date:gtoolEntry.date,
+    venue:gtoolEntry.venue,
+    racenum:gtoolEntry.racenum,
+    shimekiri:cpd.shimekiri||null,
+    generatedAt:currentQGenAt,
+    savedAt:gtoolEntry.id,
+    qEngineVersion:gtoolEntry.qEngineVersion??null,
+    commentFactsVersion:gtoolEntry.commentFactsVersion??null,
+    axisBoat:gtoolEntry.maru,
+    inputHash,
+    missingWarnings,
+    // 全120通りのQ確率(qv2ComputeRaceProbabilities()の出力そのもの、正規化済み)
+    probabilities:dbg?dbg.probabilities:null,
+    // Q内部確率順のselectedPoints(確率降順、qv2SelectPoints()の選定結果)
+    selectedPoints:dbg?dbg.selectedPoints:null,
+    selectedMass:dbg?dbg.selectedMass:null,
+    // 内部生成買い目/オッズ削除前買い目: 現行Q v2にはオッズ削除ステップが存在しない
+    // (generateQBets()のoddsMap引数は未使用)ため、両者は常に同一・削除買い目は常に空。
+    // 将来Q v2にオッズ削除ステップが追加された場合は、ここを実際の削除前後の値に分離すること。
+    internalGeneratedBets:dbg?generatedCombos:null,
+    preOddsRemovalBets:dbg?generatedCombos:null,
+    oddsRemovedBets:dbg?[]:null,
+    oddsRemovalReason:dbg?'現行Q v2にオッズ削除ステップは存在しないため削除は発生しない(oddsMap未使用)':null,
+    finalDisplayedBets:gtoolEntry.bets||null,
+    honsenOsaeeBets,
+    // 買い目ごとの投資額を再現できる情報: 実際の投資額(bets[].amount、既に保存時点で記録済み)に
+    // 加え、3,000円均等回収配分を再現する場合に必要な固定資金額とselectedPoints(確率降順)の順序。
+    shikin:3000,
+    betOrderFacts:gtoolEntry.betOrderFacts??null,
+    secondCandidateRanking:gtoolEntry.secondCandidateRanking??null,
+    betBranches:gtoolEntry.betBranches??null,
+    commentFacts:gtoolEntry.commentFacts??null,
+    roleCandidates:gtoolEntry.roleCandidates??null,
+    // 最終表示コメント: 保存時点でtenkaiLineが未生成(展開コメントを手入力する前)ならnullのまま。
+    finalDisplayedComment:gtoolEntry.tenkaiLine||null,
+  };
+}
+
+// 監査ログ保存はfire-and-forget(呼び出し元をawaitさせない)。失敗しても例外を外へ投げず、
+// 既存のGTOOLログ保存(writeToV2、既にこの時点で完了/試行済み)には一切影響しない。
+// 2026-09-09変更: 保存先をlocalStorage(garon_q_audit_v1)からIndexedDBへ変更。新規レコードは
+// IndexedDBだけへ保存し、localStorageへの二重保存はしない(CEO要求)。IndexedDB自体が利用不能・
+// 書き込み拒否・容量不足等で失敗した場合もGTOOLログには一切影響させず、失敗の事実だけを
+// garonAuditRecordSaveFailure()で警告として残す(監査ログ本体のlocalStorageフォールバックはしない)。
+async function garonSaveQAuditEntry(gtoolEntry){
+  try{
+    if(!currentQDbg) return; // Qエンジン未実行(旧経路等)の保存では監査ログを作らない
+    const auditEntry=await buildQAuditEntryAsync(gtoolEntry);
+    auditEntry.dateJst=garonJstDateStr(auditEntry.savedAt||auditEntry.predictionVersionId);
+    auditEntry.syncStatus='pending';
+    await garonAuditDbPutEntry(auditEntry); // predictionVersionIdキーで重複排除、異なる版は保持
+    garonScheduleQAuditSync();
+  }catch(e){
+    console.error('Q監査ログの保存に失敗しました(GTOOLログへの影響なし):', e);
+    garonAuditRecordSaveFailure(gtoolEntry, e);
+  }
+}
+
+function garonSetAuditSyncStatus(patch){
+  try{
+    const cur=JSON.parse(localStorage.getItem(GARON_AUDIT_SYNC_STATUS_KEY)||'{}');
+    localStorage.setItem(GARON_AUDIT_SYNC_STATUS_KEY, JSON.stringify(Object.assign(cur,patch)));
+  }catch(e){}
+}
+function garonGetAuditGistMap(){ try{ return JSON.parse(localStorage.getItem(GARON_AUDIT_GIST_MAP_KEY)||'{}'); }catch(e){ return {}; } }
+function garonSetAuditGistMap(m){ localStorage.setItem(GARON_AUDIT_GIST_MAP_KEY, JSON.stringify(m)); }
+function garonGetAuditDateHashes(){ try{ return JSON.parse(localStorage.getItem(GARON_AUDIT_DATE_HASH_KEY)||'{}'); }catch(e){ return {}; } }
+function garonSetAuditDateHashes(m){ localStorage.setItem(GARON_AUDIT_DATE_HASH_KEY, JSON.stringify(m)); }
+function garonGetAuditDatePending(){ try{ return JSON.parse(localStorage.getItem(GARON_AUDIT_DATE_PENDING_KEY)||'{}'); }catch(e){ return {}; } }
+function garonSetAuditDatePending(m){ localStorage.setItem(GARON_AUDIT_DATE_PENDING_KEY, JSON.stringify(m)); }
+
+// 日付は必ず日本時間(JST、夏時間なし)の予想保存日を使う(CEO要求)。predictionVersionId
+// (=Date.now()、kyotei_v2のidと同一)を基準に算出する。
+function garonJstDateStr(ms){
+  return new Date(ms).toLocaleString('sv-SE', { timeZone:'Asia/Tokyo' }).slice(0,10);
+}
+function garonAuditMonthKeyOf(dateStr){ return dateStr.slice(0,7); }
+
+async function garonSha256Hex(str){
+  const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+}
+
+function garonMergeQAuditLogs(local, remote){
+  local=Array.isArray(local)?local:[];
+  remote=Array.isArray(remote)?remote:[];
+  const byId=new Map();
+  local.forEach(function(l){ if(l&&l.predictionVersionId!=null) byId.set(l.predictionVersionId,l); });
+  remote.forEach(function(l){ if(l&&l.predictionVersionId!=null&&!byId.has(l.predictionVersionId)) byId.set(l.predictionVersionId,l); });
+  return Array.from(byId.values()).sort(function(a,b){ return (b.predictionVersionId||0)-(a.predictionVersionId||0); });
+}
+
+// 指定日付分のentriesを、predictionVersionId昇順・重複排除・不要な空白の無いコンパクトJSONへ
+// まとめ、750KiB(圧縮前UTF-8実測)を超える場合は複数パートへ貪欲分割する。同じ内容なら常に
+// 同じ並び・同じ文字列になる(=同じSHA-256になる、CEO要求)。
+function garonBuildAuditDateParts(entries){
+  const byId=new Map();
+  entries.forEach(function(e){ if(e&&e.predictionVersionId!=null) byId.set(e.predictionVersionId, e); });
+  const sorted=Array.from(byId.values()).sort(function(a,b){ return (a.predictionVersionId||0)-(b.predictionVersionId||0); });
+  const parts=[]; let cur=[]; let curBytes=2;
+  sorted.forEach(function(e){
+    const s=JSON.stringify(e);
+    // 2026-09-09修正(実行検証で発覚): s.lengthはUTF-16コード単位数であり、日本語を含む
+    // 実データではUTF-8実バイト数を大きく下回る(実測で約2倍の乖離)。コメント通りの
+    // 「750KiB圧縮前UTF-8実測」を保証するため、実際にUTF-8エンコードしたバイト長で計測する。
+    const addBytes=new TextEncoder().encode(s).length+(cur.length?1:0);
+    if(cur.length && (curBytes+addBytes)>GARON_AUDIT_FILE_SIZE_LIMIT){ parts.push(cur); cur=[]; curBytes=2; }
+    cur.push(e); curBytes+=addBytes;
+  });
+  if(cur.length || !parts.length) parts.push(cur);
+  return parts.map(function(p){ return JSON.stringify(p); });
+}
+function garonAuditFileNameFor(dateStr, partIndex, totalParts){
+  return totalParts<=1 ? `q_audit_${dateStr}.json` : `q_audit_${dateStr}_part${String(partIndex+1).padStart(3,'0')}.json`;
+}
+
+// 月別Gistを既存トークンだけで新規作成する(新しい認証情報は作らない)。作成済みならローカルの
+// 対応表(GARON_AUDIT_GIST_MAP_KEY)から返す。GitHub Gist APIは1Gistあたりファイル一覧が300件を
+// 超えると切り詰められる制約があるため、月単位(最大31ファイル/月)で分ける。
+async function garonEnsureAuditMonthGist(token, monthKey){
+  const map=garonGetAuditGistMap();
+  if(map[monthKey]) return map[monthKey];
+  const res=await fetch('https://api.github.com/gists', {
+    method:'POST',
+    headers:{ 'Authorization':'token '+token, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' },
+    body: JSON.stringify({ description:`GARON Q監査ログ ${monthKey}(非公開・自動生成)`, public:false, files:{ '.garon_audit_month_gist':{ content: monthKey } } })
+  });
+  if(!res.ok){ const err=await res.json().catch(function(){return {};}); throw new Error(err.message||('月別Gist作成失敗: HTTP '+res.status)); }
+  const data=await res.json();
+  map[monthKey]=data.id;
+  garonSetAuditGistMap(map);
+  return data.id;
+}
+
+async function garonFetchGistFiles(token, gistId){
+  const res=await fetch('https://api.github.com/gists/'+gistId, { headers:{ 'Authorization':'token '+token, 'Accept':'application/vnd.github+json' } });
+  if(!res.ok){ if(res.status===404) return {}; throw new Error('Gist取得失敗: HTTP '+res.status); }
+  const data=await res.json();
+  const out={};
+  for(const name of Object.keys(data.files||{})){
+    const file=data.files[name];
+    let text=file.content;
+    if(file.truncated){
+      const rawRes=await fetch(file.raw_url, { headers:{ 'Authorization':'token '+token } });
+      if(!rawRes.ok) throw new Error('raw_url取得失敗: HTTP '+rawRes.status);
+      text=await rawRes.text();
+    }
+    out[name]=text;
+  }
+  return out;
+}
+
+// 旧単一ファイル(q_audit_sync.json、主Gist内)を移行元として1回だけ読み込む。削除はしない
+// (CEO要求「既存単一ファイルを自動削除しない」)。
+async function garonMigrateLegacyAuditOnce(token, primaryGistId, primaryFiles){
+  if(garonAuditLegacyMigrated) return [];
+  garonAuditLegacyMigrated=true;
+  try{
+    const legacy=primaryFiles[GARON_AUDIT_LEGACY_SYNC_FILENAME];
+    if(!legacy) return [];
+    const arr=JSON.parse(legacy);
+    return Array.isArray(arr)?arr:[];
+  }catch(e){ return []; }
+}
+
+// 監査ログの同期状態はkyotei_v2側(garonSyncInFlight等)と完全に独立させる。片方が失敗しても
+// もう片方の再送を妨げない(CEO要求)。主Gist(kyotei_v2用、garon_gist_sync_id)にはmanifestだけを
+// 置き、実データ(日次ファイル)は月別Gistへ格納する(主Gistを肥大化させないため)。
+async function garonDoQAuditSync(){
+  const token=localStorage.getItem(GARON_SYNC_TOKEN_KEY);
+  if(!token) return;
+  if(garonAuditSyncInFlight){ garonAuditSyncRerunNeeded=true; return; }
+  garonAuditSyncInFlight=true;
+  try{
+    const primaryGistId=localStorage.getItem(GARON_SYNC_ID_KEY);
+    if(!primaryGistId) return; // kyotei_v2側の初回Gist作成待ち(既存設計を踏襲、次回機会に自動再試行)
+
+    // 2026-09-09変更: 同期対象はIndexedDBを正とする。同期のたびにlocalStorage→IndexedDB移行を
+    // 試みておくことで(冪等・完了済みなら即return)、旧データと新規IndexedDBデータが同じ
+    // entriesストアへpredictionVersionIdキーで重複排除された状態になってから同期を組み立てる。
+    // 移行自体が失敗しても同期処理は継続する(IndexedDBに既にある分だけで進める)。
+    await garonAuditMigrateFromLocalStorageOnce().catch(function(e){ console.error('localStorage→IndexedDB移行に失敗(次回再試行):', e); });
+
+    let localAll=await garonAuditDbGetAllEntries();
+    const primaryFiles=await garonFetchGistFiles(token, primaryGistId);
+    const legacyEntries=await garonMigrateLegacyAuditOnce(token, primaryGistId, primaryFiles);
+    if(legacyEntries.length){
+      const seen=new Set(localAll.map(function(e){return e.predictionVersionId;}));
+      for(const e of legacyEntries){
+        if(e&&e.predictionVersionId!=null&&!seen.has(e.predictionVersionId)){
+          const entry=Object.assign({}, e);
+          entry.dateJst=entry.dateJst||garonJstDateStr(entry.savedAt||entry.predictionVersionId);
+          entry.syncStatus=entry.syncStatus||'pending';
+          await garonAuditDbPutEntry(entry); // IndexedDBへ格納(localStorageへは二重保存しない)
+          localAll.push(entry); seen.add(entry.predictionVersionId);
+        }
+      }
+    }
+
+    const byDate={};
+    localAll.forEach(function(e){
+      if(!e||e.predictionVersionId==null) return;
+      const d=e.dateJst||garonJstDateStr(e.predictionVersionId);
+      (byDate[d]=byDate[d]||[]).push(e);
+    });
+
+    const dateHashes=garonGetAuditDateHashes();
+    const datePending=garonGetAuditDatePending();
+    let manifest={ updatedAt:new Date().toISOString(), dates:{} };
+    try{
+      if(primaryFiles[GARON_AUDIT_MANIFEST_FILENAME]){
+        const parsed=JSON.parse(primaryFiles[GARON_AUDIT_MANIFEST_FILENAME]);
+        if(parsed&&parsed.dates) manifest.dates=parsed.dates;
+      }
+    }catch(e){}
+
+    let anyDateSynced=false, anyDateFailed=false;
+    for(const dateStr of Object.keys(byDate)){
+      const entries=byDate[dateStr];
+      const localHash=await garonSha256Hex(JSON.stringify(entries.map(function(e){return e.predictionVersionId;}).sort(function(a,b){return a-b;})));
+      if(dateHashes[dateStr]===localHash) continue; // 前回同期以降ローカルに変化が無い日付は送信しない
+
+      try{
+        const monthKey=garonAuditMonthKeyOf(dateStr);
+        const monthGistId=await garonEnsureAuditMonthGist(token, monthKey);
+        const remoteFiles=await garonFetchGistFiles(token, monthGistId);
+        const remoteEntries=[];
+        Object.keys(remoteFiles).forEach(function(name){
+          if(name.indexOf('q_audit_'+dateStr)===0){
+            try{ const arr=JSON.parse(remoteFiles[name]); if(Array.isArray(arr)) remoteEntries.push.apply(remoteEntries, arr); }catch(e){}
+          }
+        });
+        const merged=garonMergeQAuditLogs(entries, remoteEntries);
+        const mergedIds=merged.map(function(e){return e.predictionVersionId;}).sort(function(a,b){return a-b;});
+        const localIds=entries.map(function(e){return e.predictionVersionId;}).sort(function(a,b){return a-b;});
+        if(JSON.stringify(mergedIds)!==JSON.stringify(localIds)){
+          // リモート(Gist)側にのみ存在した版をIndexedDBへ取り込む(重複排除はpredictionVersionId
+          // キーで自動的に行われる。localStorageへは書き戻さない)。
+          const seen2=new Set(localAll.map(function(e){return e.predictionVersionId;}));
+          for(const e of merged){
+            if(!seen2.has(e.predictionVersionId)){
+              const entry=Object.assign({}, e);
+              entry.dateJst=entry.dateJst||dateStr;
+              entry.syncStatus=entry.syncStatus||'pending';
+              await garonAuditDbPutEntry(entry);
+              localAll.push(entry); seen2.add(entry.predictionVersionId);
+            }
+          }
+        }
+
+        const partStrings=garonBuildAuditDateParts(merged);
+        const filesPayload={};
+        const partHashes=[];
+        for(let i=0;i<partStrings.length;i++){
+          const name=garonAuditFileNameFor(dateStr, i, partStrings.length);
+          filesPayload[name]={ content: partStrings[i] };
+          // 2026-09-09修正: bytesもUTF-8実バイト数で記録する(.lengthは上記と同じ理由で不正確)。
+          partHashes.push({ name, bytes: new TextEncoder().encode(partStrings[i]).length, sha256: await garonSha256Hex(partStrings[i]) });
+        }
+        const res=await fetch('https://api.github.com/gists/'+monthGistId, {
+          method:'PATCH',
+          headers:{ 'Authorization':'token '+token, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' },
+          body: JSON.stringify({ files: filesPayload })
+        });
+        if(!res.ok){ const err=await res.json().catch(function(){return {};}); throw new Error(err.message||('HTTP '+res.status)); }
+
+        dateHashes[dateStr]=localHash;
+        delete datePending[dateStr];
+        await garonAuditDbMarkSynced(mergedIds).catch(function(){}); // IndexedDB側のsyncStatusも更新(PC側・夜間検証からの可観測性用)
+        const savedAts=merged.map(function(e){return e.savedAt||e.predictionVersionId;}).filter(Boolean).sort(function(a,b){return a-b;});
+        manifest.dates[dateStr]={
+          gistId: monthGistId, files: partHashes, count: merged.length,
+          firstSavedAt: savedAts.length?new Date(savedAts[0]).toISOString():null,
+          lastSavedAt: savedAts.length?new Date(savedAts[savedAts.length-1]).toISOString():null,
+        };
+        anyDateSynced=true;
+      }catch(e){
+        anyDateFailed=true;
+        const p=datePending[dateStr]||{retryCount:0};
+        p.retryCount=(p.retryCount||0)+1;
+        p.lastAttemptAt=new Date().toISOString();
+        let msg=String(e&&e.message||e);
+        const token2=localStorage.getItem(GARON_SYNC_TOKEN_KEY);
+        if(token2&&msg.indexOf(token2)>=0) msg=msg.split(token2).join('***');
+        p.lastError=msg;
+        datePending[dateStr]=p;
+        await garonAuditDbMarkSyncFailed(entries.map(function(e){return e.predictionVersionId;}), msg).catch(function(){});
+      }
+    }
+
+    garonSetAuditDatePending(datePending);
+
+    if(anyDateSynced){
+      // manifest更新に失敗しても、既に成功した日次ファイル自体はロールバックしない(CEO要求)。
+      // 2026-09-09修正(実行検証で発覚・再現確認済み): 従来はdateHashesをここより前で無条件に
+      // 確定させていたため、月別Gistへの日次ファイル保存は成功したのにmanifest PATCHだけ失敗
+      // した場合、その日付が「既に同期済み」扱いになってしまい、以降の同期呼び出しで
+      // dateHashes一致によりスキップされ続け、manifestへ二度と反映されない不具合があった。
+      // dateHashesの確定(localStorageへの保存)をmanifest更新の成否確認の後に移し、
+      // 失敗時はdateHashesを確定させない(=次回同期でこの回に処理した日付が再び対象になり、
+      // 月別Gistへの同一内容の再PATCH〈無害〉とmanifest再送の両方が自動的に行われる)。
+      try{
+        const res2=await fetch('https://api.github.com/gists/'+primaryGistId, {
+          method:'PATCH',
+          headers:{ 'Authorization':'token '+token, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' },
+          body: JSON.stringify({ files:{ [GARON_AUDIT_MANIFEST_FILENAME]:{ content: JSON.stringify(manifest) } } })
+        });
+        if(!res2.ok) throw new Error('manifest更新失敗: HTTP '+res2.status);
+        garonSetAuditDateHashes(dateHashes);
+        garonSetAuditSyncStatus({ manifestUpdateFailedAt:null, manifestUpdateError:null });
+      }catch(e){
+        garonSetAuditSyncStatus({ manifestUpdateFailedAt:new Date().toISOString(), manifestUpdateError:String(e&&e.message||e) });
+      }
+    } else {
+      garonSetAuditDateHashes(dateHashes); // このケースはdateHashes不変(全日付スキップ)のため無害
+    }
+
+    garonSetAuditSyncStatus({
+      lastSyncAttemptAt:new Date().toISOString(),
+      lastSuccessAt: anyDateSynced ? new Date().toISOString() : (JSON.parse(localStorage.getItem(GARON_AUDIT_SYNC_STATUS_KEY)||'{}').lastSuccessAt||null),
+      datesPendingCount: Object.keys(datePending).length,
+      lastFailureReason: anyDateFailed ? '一部の日付で同期失敗('+GARON_AUDIT_DATE_PENDING_KEY+'参照)' : null,
+    });
+  }catch(e){
+    let msg=String(e&&e.message||e);
+    const token2=localStorage.getItem(GARON_SYNC_TOKEN_KEY);
+    if(token2&&msg.indexOf(token2)>=0) msg=msg.split(token2).join('***');
+    garonSetAuditSyncStatus({ lastFailureAt:new Date().toISOString(), lastFailureReason:msg });
+  } finally {
+    garonAuditSyncInFlight=false;
+    if(garonAuditSyncRerunNeeded){
+      garonAuditSyncRerunNeeded=false;
+      garonScheduleQAuditSync();
+    }
+  }
+}
+
+function garonScheduleQAuditSync(){
+  const token=localStorage.getItem(GARON_SYNC_TOKEN_KEY);
+  if(!token) return;
+  if(garonAuditSyncTimer) clearTimeout(garonAuditSyncTimer);
+  garonAuditSyncTimer=setTimeout(garonDoQAuditSync, GARON_SYNC_DEBOUNCE_MS);
+}
+
+// ページ起動時: kyotei_v2と同様、監査ログも保留分の再送・初回同期を試みる(主Gist未作成の場合は
+// garonDoQAuditSync()内で待機し、kyotei_v2側の同期完了後の次回機会に自動的に再試行される)。
+window.addEventListener('load', function(){ garonScheduleQAuditSync(); });
+
 function writeToV2(entry){
   try{
     const betsV2=(entry.bets||[]).map(b=>({val:b.val,type:b.type==='本線'?'honsen':'osaee'}));
@@ -4800,6 +5686,7 @@ function writeToV2(entry){
     v2logs=v2logs.filter(l=>!(l.venue===v2entry.venue&&l.raceNum===v2entry.raceNum&&l.date===v2entry.date&&!l.result));
     v2logs.unshift(v2entry);
     saveV2Logs(v2logs);
+    garonScheduleAutoSync(); // 2026-09-08新設: kyotei_v2保存成功後にだけ自動同期をスケジュールする
   }catch(e){
     console.error('writeToV2 error:',e);
     showToast('⚠️ 保存に失敗しました: '+(e&&e.message||'不明なエラー'));
@@ -4870,6 +5757,7 @@ function updateV2Result(entryId, chakuju, payout, isHit, maruBoat){
       }
     }
     saveV2Logs(v2logs);
+    garonScheduleAutoSync(); // 2026-09-08新設: 結果入力による更新後にも自動同期をスケジュールする
   }catch(e){console.error('updateV2Result error:',e);}
 }
 
