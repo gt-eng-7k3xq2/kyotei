@@ -3565,6 +3565,21 @@ function compressBetsSG(bets){
   return best.join('/');
 }
 
+// 2026-09-10緊急修正(雄大さん報告、全レースでコメントの買い目が実際の買い目と食い違う):
+// compressBetsSG()はQ v3のtieredFormation()由来の規則的な買い目集合(1着固定でbox/nagashi
+// 構造を持つ)を前提にした複数の圧縮方式から最短のものを選ぶ設計。R06の買い目(R03の
+// モデル得点で個別に選ばれた上位6点、またはR01構造の12点)はこの規則的な構造を持たないため、
+// compressBetsSGに通すと実際には無い組み合わせを生成したり、実在する組み合わせを
+// 表示から欠落させたりする(尼崎1R等で確認: 実際の6点と圧縮後の展開結果が一致しない)。
+// compressBetsSG自体はQ v3保護対象(21関数の1つ)のため変更せず、R06モードの時だけ
+// 圧縮を行わない単純な列挙(必ず実際の買い目と1対1で一致する)に切り替える。
+function garonFormatBetsForComment(arr){
+  if(currentCalcData && currentCalcData.mode==='r06'){
+    return (arr||[]).map(b=>typeof b==='string'?b:b.val).join('/');
+  }
+  return compressBetsSG(arr);
+}
+
 function buildXSummary(mode,withAmount){
   if(!currentCalcData) return '';
   const racenum=currentCalcData.racenum||'?';
@@ -3645,11 +3660,11 @@ function buildXSummary(mode,withAmount){
       // 金額降順でグループを並べる
       return Object.entries(amtGroups)
         .sort((a,b)=>parseInt(b[0])-parseInt(a[0]))
-        .map(([amt,vals])=>compressBetsSG(vals.map(v=>({val:v})))+`　¥${parseInt(amt).toLocaleString()}`)
+        .map(([amt,vals])=>garonFormatBetsForComment(vals.map(v=>({val:v})))+`　¥${parseInt(amt).toLocaleString()}`)
         .join('\n　　　');
     }
     // 圧縮表示
-    return compressBetsSG(arr);
+    return garonFormatBetsForComment(arr);
   };
 
   // 展示・機力・展開：スコア内訳(currentAreScores)から各項目トップ艇を抽出してヒント文を自動生成
@@ -4328,7 +4343,7 @@ function buildClaudeCommentData(){
   lines.push('');
 
   lines.push('■最終買い目');
-  lines.push(betsRaw.length?compressBetsSG(betsRaw):'(なし)');
+  lines.push(betsRaw.length?garonFormatBetsForComment(betsRaw):'(なし)');
   lines.push('');
 
   // 2026-09-08追加: currentQDbg(generateQBets()のresult._dbg)が無い場合(Q以外の経路・
@@ -4406,10 +4421,10 @@ function buildClaudeCommentData(){
   const honsen=betsRaw.filter(b=>parseInt(String(b.val).split('-')[0],10)===maruBoat);
   const osaee=betsRaw.filter(b=>parseInt(String(b.val).split('-')[0],10)!==maruBoat);
   lines.push('■本線(軸から始まる買い目、機械的な表示分けのみ)');
-  lines.push(honsen.length?compressBetsSG(honsen):'(なし)');
+  lines.push(honsen.length?garonFormatBetsForComment(honsen):'(なし)');
   lines.push('');
   lines.push('■抑え');
-  lines.push(osaee.length?compressBetsSG(osaee):'(なし)');
+  lines.push(osaee.length?garonFormatBetsForComment(osaee):'(なし)');
 
   return lines.join('\n');
 }
