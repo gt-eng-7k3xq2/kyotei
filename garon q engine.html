@@ -3573,9 +3573,28 @@ function compressBetsSG(bets){
 // 表示から欠落させたりする(尼崎1R等で確認: 実際の6点と圧縮後の展開結果が一致しない)。
 // compressBetsSG自体はQ v3保護対象(21関数の1つ)のため変更せず、R06モードの時だけ
 // 圧縮を行わない単純な列挙(必ず実際の買い目と1対1で一致する)に切り替える。
+// 2026-09-10再修正(雄大さん報告): 単純列挙は正しいが「まとまっていない」との指摘。
+// compressBetsSG()の複数の圧縮戦略(折り返し・1-3着固定等)はQ v3のtieredFormation由来の
+// 規則構造を前提にしており、R06の集合に対しては不可逆(実在しない組み合わせを生成/実在する
+// 組み合わせを欠落)になり得ることが2回の実地検証で確認済み。唯一、常に可逆(数学的に必ず
+// 元の集合と1対1で一致する)なのは「1着-2着を固定して3着だけを集合として並べる」方式
+// (compressBetsSG内部のcompressNatural相当)のみのため、これだけを独立に再実装して使う。
+// compressBetsSG自体は変更しない(Q v3保護対象)。
+function garonNaturalGroupBets(vals){
+  const g12={}, order12=[];
+  vals.forEach(v=>{
+    const p=String(v).split('-');
+    if(p.length!==3) return;
+    const key=p[0]+'-'+p[1];
+    if(!g12[key]){ g12[key]=[]; order12.push(key); }
+    if(!g12[key].includes(p[2])) g12[key].push(p[2]);
+  });
+  return order12.map(key=>key+'-'+g12[key].sort((a,b)=>parseInt(a,10)-parseInt(b,10)).join(''));
+}
 function garonFormatBetsForComment(arr){
   if(currentCalcData && currentCalcData.mode==='r06'){
-    return (arr||[]).map(b=>typeof b==='string'?b:b.val).join('/');
+    const vals=(arr||[]).map(b=>typeof b==='string'?b:b.val);
+    return garonNaturalGroupBets(vals).join('/');
   }
   return compressBetsSG(arr);
 }
