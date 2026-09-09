@@ -7962,6 +7962,11 @@ function garonApplyEngineMode(){
       const goseiEl=document.getElementById('bet-gosei-summary');
       if(goseiEl) goseiEl.innerHTML='';
       setButtonsEnabled(false);
+      // 見送り中はcurrentCalcDataが更新されない(Q v3当時の値が残ったまま)ため、
+      // updateXPreview()経由だとQ v3の内容が誤って表示され続ける。見送り時は
+      // 投稿用買い目を生成しない(CEO指示)ため、プレビュー欄も明示的に空にする。
+      const previewEl=document.getElementById('x-summary-preview');
+      if(previewEl) previewEl.value='R06判定：見送り(逃げ・非逃げ判定の中間のため、投稿用データはありません)';
     } else {
       garonRenderBetTable(currentR06State.betsRaw, oddsMap);
       const stripEl=document.getElementById('race-info-strip');
@@ -7971,6 +7976,15 @@ function garonApplyEngineMode(){
       setButtonsEnabled(true);
     }
   }
+
+  // 2026-09-10緊急修正(雄大さん報告): runYosoQ()内のupdateXPreview()(既存Q v3処理の一部、
+  // 無変更)は、R06計算(このgaronApplyEngineMode()より前)の時点でしか呼ばれておらず、
+  // R06選択中でもプレビュー欄(#x-summary-preview)がQ v3当時の内容のまま更新されない
+  // バグがあった(尼崎11R等で確認: 表示買い目は1号艇頭6点なのにプレビューは別の艇が
+  // 混ざったQ v3ベースの文言のままだった)。モード確定後に必ずここで再生成し、
+  // 現在選択中のモード(R06/Q v3どちらでも)の内容へ同期させる。見送り中は直前のブロックで
+  // 専用メッセージを設定済みのため、ここで上書きしない(holdModeはQV3モードでは常にfalse)。
+  if(!holdMode) updateXPreview();
 }
 
 // ------------------------------------------------------------
