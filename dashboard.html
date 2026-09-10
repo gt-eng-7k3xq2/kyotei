@@ -192,7 +192,7 @@
   <button onclick="location.reload()" style="padding:8px 16px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-primary);cursor:pointer;">🔄 今すぐ更新</button>
 </div>
 <div class="meta" style="font-weight:600;">ℹ️ 下記のシミュレーション値は現行の本番エンジン(garon_q_engine.html、Q_ENGINE_VERSION=3、全レース参加・確率上位45%質量で点数選択)による「完全データ(isUsable&amp;&amp;hasFullData)全件に機械的に参加していたら」のバックテストです。実際に参戦したかどうか(gtoolsの実績)は下段の別セクションで示します(2026-09-07更新、GARON-20260907-003でQ v2〈汎用シナリオエンジン〉へ切替)。<strong>2026-07-16以前(モデルの学習期間)は集計から除外しています</strong>(学習データの記憶効果で成績が実力より高く見えるため、Codexの検証報告で確認済み)。それでも新エンジンでの実運用実績が蓄積するまでは参考値として扱ってください。</div>
-<div class="meta">最終更新: 2026-09-10T10:15:10.008Z / scripts/update_dashboard.jsが毎晩自動更新</div>
+<div class="meta">最終更新: 2026-09-10T10:23:41.110Z / scripts/update_dashboard.jsが毎晩自動更新</div>
 <script>
   // 2026-08-27追加(雄大さん指示: リアルタイムで詳細を確認したい): 一括補完バッチ実行中は
   // 数分おきに内容が変わるため、ページを開きっぱなしでも自動で最新化されるようにする。
@@ -218,7 +218,7 @@
 <div class="meta" style="margin-top:-6px;">無人運用インフラが実際に動いているか(現在フェーズ: フェーズ3(実機検証))</div>
 <div class="status-chip-row">
 <div class="chip lane-company"><div class="chip-title">✓ 自動処理 20タスク稼働中</div><div class="chip-desc">全てReady/Running(無効化なし)</div></div>
-<div class="chip lane-sns"><div class="chip-title">🟢 到達可能</div><div class="chip-desc">最終確認: 2026-09-10T10:05:02.528Z</div></div>
+<div class="chip lane-sns"><div class="chip-title">🟢 到達可能</div><div class="chip-desc">最終確認: 2026-09-10T10:20:02.527Z</div></div>
 <div class="chip lane-research"><div class="chip-title">本日の参入判定: まだ無し</div></div>
 </div>
 
@@ -386,9 +386,9 @@
 <div class="section-title">データ品質サマリー(7/1〜今日)</div>
 <div class="meta" style="margin-top:-6px;">daikibo_archive全レースを3種類に分類。「完全」だけが検証・研究にそのまま使える</div>
 <div class="quality-grid">
-  <div class="quality-tile q-total"><div class="qval">8,835</div><div class="qlabel">全レース</div></div>
-  <div class="quality-tile q-defective"><div class="qval">482</div><div class="qlabel">不備(未確定・欠場・オッズ欠損等)</div></div>
-  <div class="quality-tile q-full"><div class="qval">5,062</div><div class="qlabel">完全(検証に使える)</div></div>
+  <div class="quality-tile q-total"><div class="qval">8,836</div><div class="qlabel">全レース</div></div>
+  <div class="quality-tile q-defective"><div class="qval">483</div><div class="qlabel">不備(未確定・欠場・オッズ欠損等)</div></div>
+  <div class="quality-tile q-full"><div class="qval">5,064</div><div class="qlabel">完全(検証に使える)</div></div>
 </div>
 <div class="quality-bar">
   <div class="seg-defective" style="width:5%;"></div>
@@ -396,9 +396,9 @@
   <div class="seg-full" style="width:57%;"></div>
 </div>
 <div class="quality-legend">
-  <span><span class="dot" style="background:#e05050;"></span>不備 482件(5%)・恒久的に使えない</span>
-  <span><span class="dot" style="background:#c9a84c;"></span>穴埋め待ち 3,291件(37%)・結果は正常、個人成績データが未取得</span>
-  <span><span class="dot" style="background:#4caf7d;"></span>完全 5,062件(57%)・検証にそのまま使える</span>
+  <span><span class="dot" style="background:#e05050;"></span>不備 483件(5%)・恒久的に使えない</span>
+  <span><span class="dot" style="background:#c9a84c;"></span>穴埋め待ち 3,289件(37%)・結果は正常、個人成績データが未取得</span>
+  <span><span class="dot" style="background:#4caf7d;"></span>完全 5,064件(57%)・検証にそのまま使える</span>
 </div>
 
 <div class="section-title">過去データ穴埋めバッチの進捗</div>
@@ -409,30 +409,30 @@
 </div>
 
 <div class="progress-block">
-  <div class="progress-label">現在処理中: 2026-07-22(93 / 143件目)</div>
-  <div class="progress-bar"><div class="progress-fill fill-active" style="width:65%;"></div></div>
+  <div class="progress-label">現在処理中: 2026-07-22(95 / 143件目)</div>
+  <div class="progress-bar"><div class="progress-fill fill-active" style="width:66%;"></div></div>
 </div>
-<p class="empty" style="margin-top:8px;">状態: 実行中 / 本日の処理件数: 144件</p>
+<p class="empty" style="margin-top:8px;">状態: 実行中 / 本日の処理件数: 146件</p>
 
 
 <div class="meta" style="margin:10px 0 4px;">直近の処理(新しい順)</div>
 <table>
 <thead><tr><th>時刻</th><th>日付</th><th>会場/R</th><th>結果</th></tr></thead>
 <tbody>
-<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">19:14:52</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 8R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">19:10:44</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">津 1R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">19:06:17</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">大村 7R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">19:02:10</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">尼崎 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">18:57:39</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">下関 9R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">18:53:32</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">児島 1R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">18:49:09</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">大村 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">18:45:02</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">唐津 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">18:40:29</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">唐津 10R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">18:36:22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">多摩川 11R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">18:31:58</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">丸亀 5R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">18:27:52</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">津 8R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr>
+<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">19:23:23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">大村 10R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">19:19:17</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 6R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">19:14:52</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 8R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ+オッズ補完</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">19:10:44</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">津 1R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">19:06:17</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">大村 7R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">19:02:10</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">尼崎 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">18:57:39</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">下関 9R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">18:53:32</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">児島 1R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">18:49:09</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">大村 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">18:45:02</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">唐津 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">18:40:29</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">唐津 10R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">18:36:22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-22</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">多摩川 11R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr>
 </tbody>
 </table>
 
-<p class="empty" style="margin-bottom:20px;">最終更新: 2026-09-10T10:14:55.214Z</p>
+<p class="empty" style="margin-bottom:20px;">最終更新: 2026-09-10T10:23:26.248Z</p>
 
 
 
 <div class="meta" style="margin-bottom:8px;">現行Qエンジン バックテスト・シミュレーション(完全データ全件に機械的に参入していたら。<strong>実際の参戦実績は下段「実績」セクション参照</strong>)</div>
 <div class="tiles">
-  <div class="tile"><div class="label">Qエンジン・累計参戦件数</div><div class="value">2,584</div></div>
+  <div class="tile"><div class="label">Qエンジン・累計参戦件数</div><div class="value">2,586</div></div>
   <div class="tile"><div class="label">Qエンジン・累計的中率</div><div class="value">40.4%</div></div>
   <div class="tile"><div class="label">Qエンジン・累計ROI</div><div class="value ">73.6%</div></div>
-  <div class="tile"><div class="label">Qエンジン・累計純損益</div><div class="value critical">¥-2,046,610</div></div>
+  <div class="tile"><div class="label">Qエンジン・累計純損益</div><div class="value critical">¥-2,048,770</div></div>
 </div>
 
 
@@ -458,8 +458,8 @@
 <div class="tooltip" id="tooltip"></div>
 
 <script>
-const PROFIT_DATA = [{"date":"2026-07-17","v":-106030},{"date":"2026-07-18","v":-273330},{"date":"2026-07-19","v":-431100},{"date":"2026-07-20","v":-534270},{"date":"2026-07-21","v":-636840},{"date":"2026-07-22","v":-755830},{"date":"2026-08-11","v":-759610},{"date":"2026-08-26","v":-770330},{"date":"2026-08-27","v":-923890},{"date":"2026-08-28","v":-1015390},{"date":"2026-08-29","v":-1016900},{"date":"2026-08-30","v":-1127500},{"date":"2026-08-31","v":-1275280},{"date":"2026-09-01","v":-1368790},{"date":"2026-09-02","v":-1467760},{"date":"2026-09-03","v":-1596070},{"date":"2026-09-04","v":-1644480},{"date":"2026-09-05","v":-1767890},{"date":"2026-09-06","v":-1868520},{"date":"2026-09-07","v":-1941850},{"date":"2026-09-08","v":-2046610}];
-const HITRATE_DATA = [{"date":"2026-07-17","v":37.3},{"date":"2026-07-18","v":38},{"date":"2026-07-19","v":37.9},{"date":"2026-07-20","v":38.7},{"date":"2026-07-21","v":39.7},{"date":"2026-07-22","v":39},{"date":"2026-08-11","v":38.9},{"date":"2026-08-26","v":39},{"date":"2026-08-27","v":39},{"date":"2026-08-28","v":39.1},{"date":"2026-08-29","v":39.1},{"date":"2026-08-30","v":38.6},{"date":"2026-08-31","v":38.9},{"date":"2026-09-01","v":39},{"date":"2026-09-02","v":39.6},{"date":"2026-09-03","v":39.5},{"date":"2026-09-04","v":40.1},{"date":"2026-09-05","v":40.1},{"date":"2026-09-06","v":40},{"date":"2026-09-07","v":40.4},{"date":"2026-09-08","v":40.4}];
+const PROFIT_DATA = [{"date":"2026-07-17","v":-106030},{"date":"2026-07-18","v":-273330},{"date":"2026-07-19","v":-431100},{"date":"2026-07-20","v":-534270},{"date":"2026-07-21","v":-636840},{"date":"2026-07-22","v":-757990},{"date":"2026-08-11","v":-761770},{"date":"2026-08-26","v":-772490},{"date":"2026-08-27","v":-926050},{"date":"2026-08-28","v":-1017550},{"date":"2026-08-29","v":-1019060},{"date":"2026-08-30","v":-1129660},{"date":"2026-08-31","v":-1277440},{"date":"2026-09-01","v":-1370950},{"date":"2026-09-02","v":-1469920},{"date":"2026-09-03","v":-1598230},{"date":"2026-09-04","v":-1646640},{"date":"2026-09-05","v":-1770050},{"date":"2026-09-06","v":-1870680},{"date":"2026-09-07","v":-1944010},{"date":"2026-09-08","v":-2048770}];
+const HITRATE_DATA = [{"date":"2026-07-17","v":37.3},{"date":"2026-07-18","v":38},{"date":"2026-07-19","v":37.9},{"date":"2026-07-20","v":38.7},{"date":"2026-07-21","v":39.7},{"date":"2026-07-22","v":39},{"date":"2026-08-11","v":38.9},{"date":"2026-08-26","v":39},{"date":"2026-08-27","v":39},{"date":"2026-08-28","v":39.1},{"date":"2026-08-29","v":39.2},{"date":"2026-08-30","v":38.6},{"date":"2026-08-31","v":38.9},{"date":"2026-09-01","v":39},{"date":"2026-09-02","v":39.6},{"date":"2026-09-03","v":39.5},{"date":"2026-09-04","v":40.1},{"date":"2026-09-05","v":40.1},{"date":"2026-09-06","v":40},{"date":"2026-09-07","v":40.4},{"date":"2026-09-08","v":40.4}];
 
 function renderChart(containerId, data, opts) {
   const container = document.getElementById(containerId);
