@@ -129,7 +129,7 @@ function renderScreening(data) {
     <div class="info-row"><span class="k">データ更新</span><span class="v">${fmtTime(data.updatedAt)}</span></div>
     <div class="info-row"><span class="k">稼働時間帯</span><span class="v">${data.activeHourStart ?? '?'}時〜${(data.activeHourEnd ?? 22) - 1}時台</span></div>
     <div class="info-row"><span class="k">kyoteibiyori.com</span><span class="v">${data.siteBlocked ? '<span class="badge badge-red">アクセス制限中</span>' : '<span class="badge badge-green">到達可能</span>'}</span></div>
-    <div class="info-row"><span class="k">判定エンジン</span><span class="v">${data.activeEngine === 'ALPHA' ? (data.engineVersion ?? 'ALPHA(情報取得失敗)') : `Q v${data.engineVersion ?? '?'}(gap≥${data.thresholds?.gapSkipThreshold ?? '?'})`}</span></div>
+    <div class="info-row"><span class="k">判定エンジン</span><span class="v">${data.activeEngine === 'ALPHA' ? (data.engineVersion ?? 'ALPHA(情報取得失敗)') : `R07(pEscape≥${data.thresholds?.escapeThreshold != null ? Math.round(data.thresholds.escapeThreshold * 100) : '?'}%逃げ/≤${data.thresholds?.nonescapeThreshold != null ? Math.round(data.thresholds.nonescapeThreshold * 100) : '?'}%非逃げ)`}</span></div>
     <div class="info-row"><span class="k">追跡中レース数</span><span class="v">${data.trackedRaces ?? '?'}件</span></div>
     <div class="grid3" style="margin-top:10px;">
       <div class="stat-item"><div class="stat-val">${ds.evaluated}</div><div class="stat-label">チェック件数</div></div>
