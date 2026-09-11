@@ -192,7 +192,7 @@
   <button onclick="location.reload()" style="padding:8px 16px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-primary);cursor:pointer;">🔄 今すぐ更新</button>
 </div>
 <div class="meta" style="font-weight:600;">ℹ️ 下記のシミュレーション値は現行の本番エンジン(garon_q_engine.html、Q_ENGINE_VERSION=3、R07仕様: R01のpEscape判定による逃げ/非逃げ/見送りの3分岐、逃げ側は学習済みランカーで6点・非逃げは固定12点)による「完全データ(isUsable&amp;&amp;hasFullData)全件に機械的に参加していたら」のバックテストです。実際に参戦したかどうか(gtoolsの実績)は下段の別セクションで示します(2026-09-11更新、リアルタイムスクリーニングの09-10 R07化に追従)。<strong>2026-07-16以前は集計から除外しています</strong>(Q v2モデルの学習期間終了日を暫定的に流用。R07のescape rankerモデル自身の学習期間は未確認)。それでも新エンジンでの実運用実績が蓄積するまでは参考値として扱ってください。</div>
-<div class="meta">最終更新: 2026-09-11T06:23:47.758Z / scripts/update_dashboard.jsが毎晩自動更新</div>
+<div class="meta">最終更新: 2026-09-11T06:32:32.217Z / scripts/update_dashboard.jsが毎晩自動更新</div>
 <script>
   // 2026-08-27追加(雄大さん指示: リアルタイムで詳細を確認したい): 一括補完バッチ実行中は
   // 数分おきに内容が変わるため、ページを開きっぱなしでも自動で最新化されるようにする。
@@ -261,7 +261,7 @@
 <div class="status-chip-row">
 <div class="chip lane-research"><div class="chip-title">✓ Codex発想部隊: 稼働中</div><div class="chip-desc">前回終了: 2026-09-10T22:58:46.354Z / 提案0件</div></div>
 <div class="chip lane-research"><div class="chip-title">次回自動起動予定</div><div class="chip-desc">2026-09-11T21:00:00.000Z</div></div>
-<div class="chip lane-company"><div class="chip-title">GARON-20260911-005</div><div class="chip-desc">garon_q_engine.html(スマホ)でログ保存が「容量超過等で保存で…(CEO報告(スクリーンショット)→COO単独対応)<br>状態: 修正・公開完了。原因はSTORE_KEY(sg_narutou_v1)側の段階的間引き(14→7→3→1→0日)は既にあったが、同一オリジンで容量を共有する`kyotei_v2`(gtools/sg_… / CEO判断: 該当なし(CEO報告への対応完了、次回保存時の動作確認待ち)</div></div>
+<div class="chip lane-company"><div class="chip-title">GARON-20260911-005</div><div class="chip-desc">garon_q_engine.html(スマホ)・gtools.html両方でロ…(CEO報告(スクリーンショット→実践保存はgtools側との指摘)→COO単独対応)<br>状態: 修正・公開完了(2ファイル)。①garon_q_engine.html: STORE_KEY(sg_narutou_v1)側の段階的間引き(14→7→3→1→0日)は既にあったが、共有キー`kyote… / CEO判断: 該当なし(CEO報告への対応完了、次回保存時の動作確認待ち)</div></div>
 </div>
 
 <div class="section-title">3本の時間軸</div>
@@ -386,9 +386,9 @@
 <div class="section-title">データ品質サマリー(7/1〜今日)</div>
 <div class="meta" style="margin-top:-6px;">daikibo_archive全レースを3種類に分類。「完全」だけが検証・研究にそのまま使える</div>
 <div class="quality-grid">
-  <div class="quality-tile q-total"><div class="qval">8,938</div><div class="qlabel">全レース</div></div>
-  <div class="quality-tile q-defective"><div class="qval">501</div><div class="qlabel">不備(未確定・欠場・オッズ欠損等)</div></div>
-  <div class="quality-tile q-full"><div class="qval">5,329</div><div class="qlabel">完全(検証に使える)</div></div>
+  <div class="quality-tile q-total"><div class="qval">8,942</div><div class="qlabel">全レース</div></div>
+  <div class="quality-tile q-defective"><div class="qval">505</div><div class="qlabel">不備(未確定・欠場・オッズ欠損等)</div></div>
+  <div class="quality-tile q-full"><div class="qval">5,331</div><div class="qlabel">完全(検証に使える)</div></div>
 </div>
 <div class="quality-bar">
   <div class="seg-defective" style="width:6%;"></div>
@@ -396,9 +396,9 @@
   <div class="seg-full" style="width:60%;"></div>
 </div>
 <div class="quality-legend">
-  <span><span class="dot" style="background:#e05050;"></span>不備 501件(6%)・恒久的に使えない</span>
-  <span><span class="dot" style="background:#c9a84c;"></span>穴埋め待ち 3,108件(35%)・結果は正常、個人成績データが未取得</span>
-  <span><span class="dot" style="background:#4caf7d;"></span>完全 5,329件(60%)・検証にそのまま使える</span>
+  <span><span class="dot" style="background:#e05050;"></span>不備 505件(6%)・恒久的に使えない</span>
+  <span><span class="dot" style="background:#c9a84c;"></span>穴埋め待ち 3,106件(35%)・結果は正常、個人成績データが未取得</span>
+  <span><span class="dot" style="background:#4caf7d;"></span>完全 5,331件(60%)・検証にそのまま使える</span>
 </div>
 
 <div class="section-title">過去データ穴埋めバッチの進捗</div>
@@ -409,21 +409,21 @@
 </div>
 
 <div class="progress-block">
-  <div class="progress-label">現在処理中: 2026-07-23(145 / 156件目)</div>
-  <div class="progress-bar"><div class="progress-fill fill-active" style="width:93%;"></div></div>
+  <div class="progress-label">現在処理中: 2026-07-23(147 / 156件目)</div>
+  <div class="progress-bar"><div class="progress-fill fill-active" style="width:94%;"></div></div>
 </div>
-<p class="empty" style="margin-top:8px;">状態: 実行中 / 本日の処理件数: 87件</p>
+<p class="empty" style="margin-top:8px;">状態: 実行中 / 本日の処理件数: 89件</p>
 
 
 <div class="meta" style="margin:10px 0 4px;">直近の処理(新しい順)</div>
 <table>
 <thead><tr><th>時刻</th><th>日付</th><th>会場/R</th><th>結果</th></tr></thead>
 <tbody>
-<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">15:23:19</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 8R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">15:19:11</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">大村 7R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">15:14:13</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">大村 4R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">15:10:06</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">津 10R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">15:05:30</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">芦屋 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">15:01:23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">鳴門 2R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">14:56:46</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">唐津 4R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">14:52:39</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 6R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">14:48:04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">丸亀 7R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">14:43:56</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">江戸川 5R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">14:38:59</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">下関 7R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">14:34:52</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">多摩川 4R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr>
+<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">15:32:02</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">芦屋 11R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">15:27:55</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">常滑 6R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">15:23:19</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 8R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">15:19:11</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">大村 7R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">15:14:13</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">大村 4R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">15:10:06</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">津 10R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">15:05:30</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">芦屋 3R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">15:01:23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">鳴門 2R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">14:56:46</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">唐津 4R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">14:52:39</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">福岡 6R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">14:48:04</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">丸亀 7R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr><tr><td style="padding:4px 10px;border-bottom:1px solid var(--border);">14:43:56</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">2026-07-23</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);">江戸川 5R</td><td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--good);">✅ マージ</td></tr>
 </tbody>
 </table>
 
-<p class="empty" style="margin-bottom:20px;">最終更新: 2026-09-11T06:23:21.697Z</p>
+<p class="empty" style="margin-bottom:20px;">最終更新: 2026-09-11T06:32:04.951Z</p>
 
 
 
@@ -436,11 +436,11 @@
 </div>
 
 
-<div class="meta" style="margin-bottom:8px;">実績(gtoolsの実際の記録。取得日時: 2026-09-10T13:45:04.210Z)</div>
+<div class="meta" style="margin-bottom:8px;">実績(gtoolsの実際の記録。取得日時: 2026-09-11T06:24:40.377Z)</div>
 <div class="tiles">
-  <div class="tile"><div class="label">実際の記録件数</div><div class="value">875</div></div>
-  <div class="tile"><div class="label">実際の的中率</div><div class="value">32.2%</div></div>
-  <div class="tile"><div class="label">的中時配当合計(概算)</div><div class="value">¥596,450</div></div>
+  <div class="tile"><div class="label">実際の記録件数</div><div class="value">897</div></div>
+  <div class="tile"><div class="label">実際の的中率</div><div class="value">32.4%</div></div>
+  <div class="tile"><div class="label">的中時配当合計(概算)</div><div class="value">¥607,690</div></div>
 </div>
 
 
