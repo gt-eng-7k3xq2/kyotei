@@ -186,4 +186,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { main, analyzeRace, isUsable, hasFullData, loadAllRaces, allocateStakesEqualRet, gapBucket };
+module.exports = { main, analyzeRace, isUsable, hasFullData, loadAllRaces, allocateStakesEqualRet, gapBucket, parsePayout100 };
