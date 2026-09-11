@@ -1427,6 +1427,30 @@ function manualCompactSgLogs(){
   }
 }
 
+// 2026-09-11追加(CEO報告: スマホでの保存失敗)。指定のlocalStorageキーへ、直近14→7→3→1→0日まで
+// 段階的にscores明細だけ間引きながら保存を試みる共通処理(isRareCaseV2用にキー・レア判定関数を
+// 差し替え可能にした、saveLogs/saveV2Logsで共有)。レアケース(逃げ固定)は常に明細を保持する。
+// 保存できればcompacted配列を返す、全滅すればnullを返す。
+function tryCompactAndSave(key, entries, isRareFn){
+  const dates=entries.map(x=>x.date).filter(Boolean).sort();
+  const latest=dates.length?new Date(dates[dates.length-1]):new Date();
+  for(const keepDays of [14,7,3,1,0]){
+    const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-keepDays);
+    const compacted=entries.map(entry=>{
+      if(entry.date && new Date(entry.date)<cutoff && entry.scores && !isRareFn(entry)){
+        const {scores, ...rest}=entry;
+        return rest;
+      }
+      return entry;
+    });
+    try{
+      localStorage.setItem(key,JSON.stringify(compacted));
+      return compacted;
+    }catch(e){ /* まだ超過。さらに絞る */ }
+  }
+  return null;
+}
+
 function saveLogs(l){
   try{
     localStorage.setItem(STORE_KEY,JSON.stringify(l));
@@ -1434,23 +1458,34 @@ function saveLogs(l){
   }catch(e){
     if(e && (e.name==='QuotaExceededError' || /quota/i.test(e.message||''))){
       // 古いログのscores明細だけ間引いて再試行する(結果・買い目などの基本情報は保持)
-      // 14日で足りなければ7→3→1→0日と段階的に絞り込む
-      const dates=l.map(x=>x.date).filter(Boolean).sort();
-      const latest=dates.length?new Date(dates[dates.length-1]):new Date();
-      for(const keepDays of [14,7,3,1,0]){
-        const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-keepDays);
-        const compacted=l.map(entry=>{
-          if(entry.date && new Date(entry.date)<cutoff && entry.scores && !isRareCase(entry)){
-            const {scores, ...rest}=entry;
-            return rest;
-          }
-          return entry;
-        });
-        try{
-          localStorage.setItem(STORE_KEY,JSON.stringify(compacted));
-          return true; // 間引いて保存できたので、結果自体は保持されている
-        }catch(e2){ /* まだ超過。さらに絞る */ }
-      }
+      if(tryCompactAndSave(STORE_KEY, l, isRareCase)) return true;
+      // 2026-09-11追加: STORE_KEY(sg_narutou_v1)側を0日まで間引いても保存できない場合、
+      // 同一オリジンの容量を共有するkyotei_v2(gtools/sg_narutou共有、履歴が長く最大の
+      // キーであることが多い)側の容量不足が真因の可能性が高い。kyotei_v2を14→7→3→1→0日と
+      // 段階的に間引き、その都度STORE_KEYの保存を再試行する(kyotei_v2自身の書き込みは
+      // 元々収まるサイズのまま=間引き無しでも成功してしまうため、tryCompactAndSaveをそのまま
+      // 使うと最初の段階で「成功」と誤判定してしまう。ここではSTORE_KEYが実際に収まるまで
+      // 明示的にループする)。
+      try{
+        const v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+        const v2dates=v2logs.map(x=>x.date).filter(Boolean).sort();
+        const v2latest=v2dates.length?new Date(v2dates[v2dates.length-1]):new Date();
+        for(const keepDays of [14,7,3,1,0]){
+          const cutoff=new Date(v2latest); cutoff.setDate(cutoff.getDate()-keepDays);
+          const compactedV2=v2logs.map(entry=>{
+            if(entry.date && new Date(entry.date)<cutoff && entry.scores && !isRareCaseV2(entry)){
+              const {scores, ...rest}=entry;
+              return rest;
+            }
+            return entry;
+          });
+          try{ localStorage.setItem('kyotei_v2',JSON.stringify(compactedV2)); }catch(ev2){ continue; }
+          try{
+            localStorage.setItem(STORE_KEY,JSON.stringify(l));
+            return true; // kyotei_v2側を空けたことでSTORE_KEYが収まった
+          }catch(e3){ /* まだ足りない。kyotei_v2をさらに絞る */ }
+        }
+      }catch(e4){ console.error('kyotei_v2側の緊急間引きに失敗', e4); }
       console.error('saveLogs 容量超過・全明細間引いても保存失敗');
       return false;
     } else {
@@ -5964,20 +5999,13 @@ function saveV2Logs(v2logs){
     localStorage.setItem('kyotei_v2',JSON.stringify(v2logs));
   }catch(e){
     if(e && (e.name==='QuotaExceededError' || /quota/i.test(e.message||''))){
-      const dates=v2logs.map(l=>l.date).filter(Boolean).sort();
-      const latest=dates.length?new Date(dates[dates.length-1]):new Date();
-      const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-14);
-      const compacted=v2logs.map(l=>{
-        if(l.date && new Date(l.date)<cutoff && l.scores && !isRareCaseV2(l)){
-          const {scores, ...rest}=l;
-          return rest;
-        }
-        return l;
-      });
-      try{
-        localStorage.setItem('kyotei_v2',JSON.stringify(compacted));
+      // 2026-09-11修正: 以前は14日カットオフを1回試すだけで諦めていたが(saveLogs側は
+      // 14→7→3→1→0日と段階的に絞り込む一方こちらは1段階のみ、という非対称があった)、
+      // kyotei_v2はgtools/sg_narutou共有で最も履歴が長く容量を食いやすいキーのため、
+      // 共通ヘルパーtryCompactAndSaveで同じ段階まで絞り込めるようにする。
+      if(tryCompactAndSave('kyotei_v2', v2logs, isRareCaseV2)){
         showToast('⚠️ 容量超過のため古いログの明細だけ間引いて保存しました（結果・逃げ固定の明細は保持）');
-      }catch(e2){
+      } else {
         showToast('⚠️ 容量超過で保存できませんでした。gtoolsで書き出し後、ログを整理してください');
       }
     } else {
