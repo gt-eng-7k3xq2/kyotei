@@ -504,7 +504,13 @@ function saveLogs(logs){
 const GIST_SYNC_TOKEN_KEY='garon_gist_sync_token';
 const GIST_SYNC_ID_KEY='garon_gist_sync_id';
 const GIST_SYNC_FILENAME='kyotei_v2_sync.json';
-const GIST_SYNC_DEBOUNCE_MS=2500;
+// 2026-09-11修正(CEO報告: レース当日に結果を都度保存しているのに同期が丸一日止まる):
+// 元は2500msだったが、レース観戦中は「1件保存→すぐアプリを離れる/画面ロック」という
+// 使い方が普通で、モバイルSafariはタブが非アクティブになるとsetTimeoutを遅延・停止する
+// ことがあるため、待機時間が長いほど同期が一度も走らないまま終わるリスクが高い。
+// 待ち時間を大幅短縮し、さらにページが隠れる瞬間(visibilitychange/pagehide)に保留中の
+// 同期があれば即座に実行するようにして、バックグラウンド化される前に間に合わせる。
+const GIST_SYNC_DEBOUNCE_MS=400;
 let gistSyncTimer=null;
 
 function scheduleGistSync(){
@@ -513,6 +519,15 @@ function scheduleGistSync(){
   if(gistSyncTimer) clearTimeout(gistSyncTimer);
   gistSyncTimer=setTimeout(doGistSync,GIST_SYNC_DEBOUNCE_MS);
 }
+
+function flushGistSyncIfPending(){
+  if(!gistSyncTimer) return;
+  clearTimeout(gistSyncTimer);
+  gistSyncTimer=null;
+  doGistSync();
+}
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') flushGistSyncIfPending(); });
+window.addEventListener('pagehide',flushGistSyncIfPending);
 
 async function doGistSync(){
   const token=localStorage.getItem(GIST_SYNC_TOKEN_KEY);

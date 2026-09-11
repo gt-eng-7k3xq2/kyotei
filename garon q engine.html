@@ -5059,7 +5059,12 @@ const GARON_SYNC_ID_KEY='garon_gist_sync_id';
 const GARON_SYNC_PENDING_KEY='garon_sync_pending';
 const GARON_SYNC_STATUS_KEY='garon_sync_status';
 const GARON_SYNC_FILENAME='kyotei_v2_sync.json';
-const GARON_SYNC_DEBOUNCE_MS=2500;
+// 2026-09-11修正(CEO報告): 元は2500msだったが、レース観戦中は「1件保存→すぐ画面を
+// 離れる/ロック」という使い方が普通で、モバイルSafariはタブが非アクティブになると
+// setTimeoutを遅延・停止することがあるため、待機時間が長いほど同期が一度も走らないまま
+// 終わるリスクが高い。gtools.html側と同じ理由・同じ対処(短縮+visibilitychange/pagehideで
+// 即時flush)。
+const GARON_SYNC_DEBOUNCE_MS=400;
 const GARON_SYNC_MAX_RETRY=5;
 let garonSyncTimer=null;
 let garonSyncInFlight=false;
@@ -5212,6 +5217,15 @@ function garonScheduleAutoSync(){
   if(garonSyncTimer) clearTimeout(garonSyncTimer);
   garonSyncTimer=setTimeout(garonDoAutoSync, GARON_SYNC_DEBOUNCE_MS);
 }
+
+function garonFlushAutoSyncIfPending(){
+  if(!garonSyncTimer) return;
+  clearTimeout(garonSyncTimer);
+  garonSyncTimer=null;
+  garonDoAutoSync();
+}
+document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='hidden') garonFlushAutoSyncIfPending(); });
+window.addEventListener('pagehide', garonFlushAutoSyncIfPending);
 
 // ページ起動時: 保留分の再送、および「新しい予想を保存しなくても既存kyotei_v2を初回同期
 // できる」ようにするため、起動のたびに1回だけ同期を試みる(CEO要求、§8)。
