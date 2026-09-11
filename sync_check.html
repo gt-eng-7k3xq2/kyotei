@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gist同期診断</title>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0a0e1a;color:#e8e8f0;margin:0;padding:20px;}
+  h1{font-size:18px;}
+  .row{background:#151a2a;border:1px solid #2a2f45;border-radius:10px;padding:14px;margin-bottom:12px;font-size:14px;line-height:1.6;word-break:break-all;}
+  .ok{border-color:#44c47a;background:#0f2418;}
+  .ng{border-color:#e05566;background:#2a1218;}
+  .label{color:#8080a8;font-size:11px;letter-spacing:0.05em;margin-bottom:4px;}
+  button{width:100%;padding:16px;font-size:16px;font-weight:700;border:none;border-radius:10px;background:#c9a84c;color:#0a0e1a;margin-top:10px;}
+  #result{font-size:16px;font-weight:700;padding:16px;border-radius:10px;margin-top:14px;text-align:center;}
+</style>
+</head>
+<body>
+<h1>Gist同期診断(このページだけの使い捨てツール)</h1>
+
+<div class="row">
+  <div class="label">保存されているトークン</div>
+  <div id="token-state"></div>
+</div>
+<div class="row">
+  <div class="label">保存されているGist ID</div>
+  <div id="gistid-state"></div>
+</div>
+
+<button onclick="runCheck()">今すぐGistへ書き込みテスト</button>
+
+<div id="result" style="display:none;"></div>
+
+<script>
+const TOKEN_KEY='garon_gist_sync_token';
+const ID_KEY='garon_gist_sync_id';
+
+function describeToken(t){
+  if(!t) return '(未設定・空)';
+  return '設定あり(' + t.length + '文字、先頭: ' + t.slice(0,4) + '…, 末尾: …' + t.slice(-4) + ')';
+}
+
+document.getElementById('token-state').textContent = describeToken(localStorage.getItem(TOKEN_KEY));
+document.getElementById('gistid-state').textContent = localStorage.getItem(ID_KEY) || '(未設定)';
+
+async function runCheck(){
+  const r = document.getElementById('result');
+  r.style.display='block';
+  r.className='';
+  r.textContent='通信中...';
+  const token = localStorage.getItem(TOKEN_KEY);
+  const gistId = localStorage.getItem(ID_KEY);
+  if(!token){
+    r.textContent='❌ トークンが保存されていません(localStorageが空)';
+    r.style.background='#2a1218';
+    return;
+  }
+  try{
+    const res = await fetch('https://api.github.com/gists/'+gistId, {
+      headers:{'Authorization':'token '+token,'Accept':'application/vnd.github+json'}
+    });
+    if(!res.ok){
+      const body = await res.text();
+      r.textContent='❌ 読み取り失敗 HTTP '+res.status+' : '+body.slice(0,200);
+      r.style.background='#2a1218';
+      return;
+    }
+    const data = await res.json();
+    const patchRes = await fetch('https://api.github.com/gists/'+gistId, {
+      method:'PATCH',
+      headers:{'Authorization':'token '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+      body: JSON.stringify({description: data.description + ' [診断ツールによる疎通確認 ' + new Date().toISOString() + ']'})
+    });
+    if(!patchRes.ok){
+      const body = await patchRes.text();
+      r.textContent='❌ 書き込み失敗 HTTP '+patchRes.status+' : '+body.slice(0,200);
+      r.style.background='#2a1218';
+      return;
+    }
+    r.textContent='✅ 成功しました！トークンは有効で、書き込みもできています。';
+    r.style.background='#0f2418';
+  }catch(e){
+    r.textContent='❌ 通信エラー: '+(e&&e.message||e);
+    r.style.background='#2a1218';
+  }
+}
+</script>
+</body>
+</html>
