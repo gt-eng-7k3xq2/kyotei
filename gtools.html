@@ -515,7 +515,11 @@ let gistSyncTimer=null;
 
 function scheduleGistSync(){
   const token=localStorage.getItem(GIST_SYNC_TOKEN_KEY);
-  if(!token) return;
+  // 2026-09-11追加(原因切り分け用、CEO報告: 同期が丸一日無言で止まっていた):
+  // これまでトークン未設定時は無言でreturnしていたため、「トークンが実は保存されて
+  // いない」ケースと「同期が失敗している」ケースの区別が画面から一切できなかった。
+  // 一時的に可視化する。
+  if(!token){ showToast('⚠️ Gist同期: トークン未設定のため同期していません'); return; }
   if(gistSyncTimer) clearTimeout(gistSyncTimer);
   gistSyncTimer=setTimeout(doGistSync,GIST_SYNC_DEBOUNCE_MS);
 }
@@ -531,7 +535,7 @@ window.addEventListener('pagehide',flushGistSyncIfPending);
 
 async function doGistSync(){
   const token=localStorage.getItem(GIST_SYNC_TOKEN_KEY);
-  if(!token) return;
+  if(!token){ showToast('⚠️ Gist同期: トークン未設定のため同期していません'); return; }
   const gistId=localStorage.getItem(GIST_SYNC_ID_KEY);
   const body={
     description:'GARON kyotei_v2 予想ログ自動同期(非公開・gtools.htmlから自動更新)',
@@ -550,8 +554,15 @@ async function doGistSync(){
       localStorage.setItem(GIST_SYNC_ID_KEY,data.id);
       updateGistSyncStatusBox(data.id);
     }
+    // 2026-09-11追加(原因切り分け用): 従来は初回Gist作成時以外、成功しても画面に一切
+    // 表示が出ない仕様だったため、「無言=失敗」なのか「無言=成功」なのか区別できな
+    // かった。一時的に成功時もトーストを出す。
+    showToast('✅ Gist同期完了('+getLogs().length+'件)');
+    const s2=document.getElementById('gist-sync-status');
+    if(s2){ s2.textContent='✅ 前回の同期: 成功('+new Date().toLocaleTimeString('ja-JP')+')'; s2.style.color='var(--green)'; }
   }catch(e){
     console.warn('Gist自動同期に失敗しました(ログ自体の保存は成功しています):',e.message);
+    showToast('⚠️ Gist同期失敗: '+e.message);
     const s=document.getElementById('gist-sync-status');
     if(s){ s.textContent='⚠️ 前回の同期に失敗: '+e.message; s.style.color='var(--red)'; }
   }
