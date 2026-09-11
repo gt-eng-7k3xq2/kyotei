@@ -449,7 +449,53 @@ function switchPage(p){
 // v4 (2026-07-08〜): n=269検証で悪化のためv2の重みに巻き戻し
 const SCORE_ENGINE_VERSION=5;
 function getLogs(){try{return JSON.parse(localStorage.getItem('kyotei_v2')||'[]');}catch{return[];}}
-function saveLogs(logs){localStorage.setItem('kyotei_v2',JSON.stringify(logs));scheduleGistSync();}
+// 2026-09-11追加(CEO報告: 実践保存に使っているgtools側で容量超過が無防備だった発覚)。
+// 圧縮対象から除外するレアケース判定(逃げ固定：軸1号艇かつ逃げ率85%以上)。
+// garon_q_engine.html側のisRareCaseV2と同一ロジック(ファイルが分かれているため複製、
+// 判定条件を変える場合は両方直すこと)。
+function isRareCaseV2(l){
+  return l.shinkido==='固' || (l.shinkido==='通' && String(l.maru)==='1' && (l.nigeRate||0)>=85);
+}
+function saveLogs(logs){
+  try{
+    localStorage.setItem('kyotei_v2',JSON.stringify(logs));
+  }catch(e){
+    if(e && (e.name==='QuotaExceededError' || /quota/i.test(e.message||''))){
+      // 古いログのscores明細だけ間引いて再試行する(結果・買い目などの基本情報は保持)
+      // 14日で足りなければ7→3→1→0日と段階的に絞り込む(garon_q_engine.html側と同一方針)
+      const dates=logs.map(l=>l.date).filter(Boolean).sort();
+      const latest=dates.length?new Date(dates[dates.length-1]):new Date();
+      let saved=false;
+      for(const keepDays of [14,7,3,1,0]){
+        const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-keepDays);
+        const compacted=logs.map(l=>{
+          if(l.date && new Date(l.date)<cutoff && l.scores && !isRareCaseV2(l)){
+            const {scores, ...rest}=l;
+            return rest;
+          }
+          return l;
+        });
+        try{
+          localStorage.setItem('kyotei_v2',JSON.stringify(compacted));
+          saved=true;
+          break;
+        }catch(e2){ /* まだ超過。さらに絞る */ }
+      }
+      if(saved){
+        showToast('⚠️ 容量超過のため古いログの明細だけ間引いて保存しました(結果・逃げ固定の明細は保持)');
+      }else{
+        showToast('⚠️ 容量超過で保存できませんでした。ログを整理してから再度お試しください');
+        return false;
+      }
+    } else {
+      console.error('saveLogs error:',e);
+      showToast('⚠️ 保存に失敗しました: '+(e&&e.message||'不明なエラー'));
+      return false;
+    }
+  }
+  scheduleGistSync();
+  return true;
+}
 
 // ===== Gist自動同期(Claude Code連携、2026-08-17) =====
 // saveLogs()を経由する全ての書き込み(追加・編集・削除・配当反映)で、
@@ -723,15 +769,18 @@ function importJSONFile(evt){
     // id重複は既存優先でスキップし、新規のみ追加（URL移行後の初回インポートなら全件新規追加になる）
     const toAdd=imported.filter(l=>l&&l.id!=null&&!existingIds.has(l.id));
     const merged=[...existing,...toAdd].sort((a,b)=>(b.id||0)-(a.id||0));
-    saveLogs(merged);
-    renderLogs();
-    showToast(`${toAdd.length}件を復元しました（合計${merged.length}件）`);
+    // 2026-09-11: saveLogsが失敗した場合、既に警告トーストを出しているので
+    // ここで上書きしない(「復元しました」という虚偽の成功表示を防ぐ)
+    if(saveLogs(merged)){
+      renderLogs();
+      showToast(`${toAdd.length}件を復元しました（合計${merged.length}件）`);
+    }
     evt.target.value='';
   };
   reader.onerror=function(){showToast('ファイル読み込みエラー');evt.target.value='';};
   reader.readAsText(file);
 }
-function deleteLog(id){const logs=getLogs().filter(l=>l.id!==id);saveLogs(logs);renderLogs();showToast('削除しました');}
+function deleteLog(id){const logs=getLogs().filter(l=>l.id!==id);if(saveLogs(logs)){renderLogs();showToast('削除しました');}}
 function renderAnalysisTabs(){
   const allLogs=getLogs().filter(l=>!(l.miss||[]).includes('miseru'));
   const dates=[...new Set(allLogs.map(l=>l.date).filter(Boolean))].sort().reverse();
@@ -1263,9 +1312,10 @@ function resetPayoutByRange(){
       count++;
     }
   });
-  saveLogs(logs);
-  statusEl.style.color='var(--green)';
-  statusEl.textContent='✅ '+count+'件の配当をリセットしました。新しいブックマークで再取り込みしてください。';
+  if(saveLogs(logs)){
+    statusEl.style.color='var(--green)';
+    statusEl.textContent='✅ '+count+'件の配当をリセットしました。新しいブックマークで再取り込みしてください。';
+  }
 }
 function applyPayPaste(text){
   if(!text||text.trim().length<10)return;
@@ -1289,11 +1339,12 @@ function applyPayPaste(text){
       }
     });
     if(updated>0){
-      saveLogs(v2logs);
-      statusEl.style.color='var(--green)';
-      statusEl.textContent='✅ '+updated+'件の配当を反映しました';
-      document.getElementById('pay-paste').value='';
-      setTimeout(function(){switchPage('logs');renderLogs();},800);
+      if(saveLogs(v2logs)){
+        statusEl.style.color='var(--green)';
+        statusEl.textContent='✅ '+updated+'件の配当を反映しました';
+        document.getElementById('pay-paste').value='';
+        setTimeout(function(){switchPage('logs');renderLogs();},800);
+      }
     } else {
       statusEl.style.color='var(--gold)';
       statusEl.textContent='⚠️ 反映できるレースがありませんでした（着順入力済みのレースと照合します）';
@@ -1326,7 +1377,7 @@ function openEditModal(id){
 function saveEdit(){
   const logs=getLogs(),idx=logs.findIndex(l=>l.id===editingId);if(idx===-1)return;
   logs[idx]={...logs[idx],venue:document.getElementById('edit-venue').value,raceNum:document.getElementById('edit-race-num').value,ver:document.getElementById('edit-ver').value,date:document.getElementById('edit-date').value,memo:document.getElementById('edit-memo').value,payout:document.getElementById('edit-payout').value,result:[document.getElementById('edit-r1').value,document.getElementById('edit-r2').value,document.getElementById('edit-r3').value].filter(Boolean).join('-'),bets:[...editBets],miss:[...document.querySelectorAll('#miss-grid-edit .miss-btn.selected')].map(b=>b.dataset.val)};
-  saveLogs(logs);closeEditModal();renderLogs();showToast('更新しました ✓');
+  if(saveLogs(logs)){closeEditModal();renderLogs();showToast('更新しました ✓');}
 }
 function tapBoatEdit(n){if(editCurrent.includes(n))return;editCurrent.push(n);updateBetInputEdit();}
 function updateBetInputEdit(){
@@ -1406,12 +1457,14 @@ function applyPayFromUrl(){
       }
     });
     if(updated>0){
-      saveLogs(v2logs); // saveLogs()経由に統一(Gist自動同期のフックを通すため、2026-08-17)
-      setTimeout(function(){
-        showToast('✅ '+updated+'件の配当を反映しました');
-        switchPage('logs');
-        renderLogs();
-      },300);
+      // saveLogs()経由に統一(Gist自動同期のフックを通すため、2026-08-17)
+      if(saveLogs(v2logs)){
+        setTimeout(function(){
+          showToast('✅ '+updated+'件の配当を反映しました');
+          switchPage('logs');
+          renderLogs();
+        },300);
+      }
     } else {
       setTimeout(function(){
         showToast('⚠️ 反映できるレースがありませんでした');
