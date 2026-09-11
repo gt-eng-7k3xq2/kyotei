@@ -461,25 +461,33 @@ function saveLogs(logs){
     localStorage.setItem('kyotei_v2',JSON.stringify(logs));
   }catch(e){
     if(e && (e.name==='QuotaExceededError' || /quota/i.test(e.message||''))){
-      // 古いログのscores明細だけ間引いて再試行する(結果・買い目などの基本情報は保持)
-      // 14日で足りなければ7→3→1→0日と段階的に絞り込む(garon_q_engine.html側と同一方針)
+      // 古いログのscores明細・監査専用フィールドを段階的に間引いて再試行する
+      // (結果・買い目などの基本情報は保持)。14日で足りなければ7→3→1→0日、それでも
+      // 足りなければscores以外の監査専用フィールド(displayedPoints等)も対象に含める
+      // 2段階方式(garon_q_engine.html側のtryCompactAndSaveと同一方針、2026-09-11)。
+      const COMPACTABLE_FIELDS=['scores','displayedPoints','commentInputPoints','r07FinalPoints','r06FinalPoints','qV3OriginalPoints','escapeModelScores'];
       const dates=logs.map(l=>l.date).filter(Boolean).sort();
       const latest=dates.length?new Date(dates[dates.length-1]):new Date();
       let saved=false;
-      for(const keepDays of [14,7,3,1,0]){
-        const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-keepDays);
-        const compacted=logs.map(l=>{
-          if(l.date && new Date(l.date)<cutoff && l.scores && !isRareCaseV2(l)){
-            const {scores, ...rest}=l;
-            return rest;
-          }
-          return l;
-        });
-        try{
-          localStorage.setItem('kyotei_v2',JSON.stringify(compacted));
-          saved=true;
-          break;
-        }catch(e2){ /* まだ超過。さらに絞る */ }
+      outer:
+      for(const fieldCount of [1, COMPACTABLE_FIELDS.length]){
+        const fields=COMPACTABLE_FIELDS.slice(0,fieldCount);
+        for(const keepDays of [14,7,3,1,0]){
+          const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-keepDays);
+          const compacted=logs.map(l=>{
+            if(l.date && new Date(l.date)<cutoff && l.scores && !isRareCaseV2(l)){
+              const rest={...l};
+              for(const f of fields) delete rest[f];
+              return rest;
+            }
+            return l;
+          });
+          try{
+            localStorage.setItem('kyotei_v2',JSON.stringify(compacted));
+            saved=true;
+            break outer;
+          }catch(e2){ /* まだ超過。さらに絞る */ }
+        }
       }
       if(saved){
         showToast('⚠️ 容量超過のため古いログの明細だけ間引いて保存しました(結果・逃げ固定の明細は保持)');

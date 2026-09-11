@@ -1400,28 +1400,13 @@ function isRareCase(entry){
 function manualCompactSgLogs(){
   const logs=getLogs();
   const beforeCount=logs.filter(l=>l.scores).length;
-  const dates=logs.map(l=>l.date).filter(Boolean).sort();
-  const latest=dates.length?new Date(dates[dates.length-1]):new Date();
-  let saved=false, afterCount=beforeCount, usedDays=null;
-  for(const keepDays of [14,7,3,1,0]){
-    const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-keepDays);
-    const compacted=logs.map(entry=>{
-      if(entry.date && new Date(entry.date)<cutoff && entry.scores && !isRareCase(entry)){
-        const {scores, ...rest}=entry;
-        return rest;
-      }
-      return entry;
-    });
-    try{
-      localStorage.setItem(STORE_KEY,JSON.stringify(compacted));
-      afterCount=compacted.filter(l=>l.scores).length;
-      usedDays=keepDays;
-      saved=true;
-      break;
-    }catch(e){ /* まだ超過。さらに絞る */ }
-  }
-  if(saved){
-    showToast(`✅ 軽量化しました（明細あり: ${beforeCount}件→${afterCount}件、直近${usedDays}日分保持＋逃げ固定は無期限保持、結果は全件保持）`);
+  // 2026-09-11修正: 従来はscoresだけを間引く独自ループだったが、実データでそれだけでは
+  // 不十分なケースが確認されたため、saveLogs/saveV2Logsと同じ共通ヘルパー(tryCompactAndSave、
+  // scores以外の監査専用フィールドも含めた2段階の間引き)を再利用するよう統一した。
+  const compacted=tryCompactAndSave(STORE_KEY, logs, isRareCase);
+  if(compacted){
+    const afterCount=compacted.filter(l=>l.scores).length;
+    showToast(`✅ 軽量化しました（明細あり: ${beforeCount}件→${afterCount}件、逃げ固定は無期限保持、結果は全件保持）`);
   }else{
     showToast('⚠️ 全ログの明細を削っても保存できません。kyotei_v2(gtools側)も含めた容量整理が必要です');
   }
@@ -1431,22 +1416,34 @@ function manualCompactSgLogs(){
 // 段階的にscores明細だけ間引きながら保存を試みる共通処理(isRareCaseV2用にキー・レア判定関数を
 // 差し替え可能にした、saveLogs/saveV2Logsで共有)。レアケース(逃げ固定)は常に明細を保持する。
 // 保存できればcompacted配列を返す、全滅すればnullを返す。
+// 2026-09-11追加: 実データで確認したところ、1エントリのうちscoresが約6割を占めるものの、
+// 残り(displayedPoints/commentInputPoints/r07FinalPoints/r06FinalPoints/qV3OriginalPoints等、
+// いずれも監査・整合性確認用でbetsと重複した点数配列)だけでもR07/R06モードのエントリは
+// 800件超で数百KB〜1MB超に達し、scoresだけの間引きでは足りないケースが実機で発生した。
+// 古いエントリからこれらの監査専用フィールドも段階的に削る(結果・買い目本体・stake等の
+// 財務情報は残す)。
+const COMPACTABLE_FIELDS=['scores','displayedPoints','commentInputPoints','r07FinalPoints','r06FinalPoints','qV3OriginalPoints','escapeModelScores'];
 function tryCompactAndSave(key, entries, isRareFn){
   const dates=entries.map(x=>x.date).filter(Boolean).sort();
   const latest=dates.length?new Date(dates[dates.length-1]):new Date();
-  for(const keepDays of [14,7,3,1,0]){
-    const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-keepDays);
-    const compacted=entries.map(entry=>{
-      if(entry.date && new Date(entry.date)<cutoff && entry.scores && !isRareFn(entry)){
-        const {scores, ...rest}=entry;
-        return rest;
-      }
-      return entry;
-    });
-    try{
-      localStorage.setItem(key,JSON.stringify(compacted));
-      return compacted;
-    }catch(e){ /* まだ超過。さらに絞る */ }
+  // fieldCount: 1=scoresのみ(従来通り、最小限の間引き)、2=監査専用フィールドも含めて全部
+  for(const fieldCount of [1, COMPACTABLE_FIELDS.length]){
+    const fields=COMPACTABLE_FIELDS.slice(0,fieldCount);
+    for(const keepDays of [14,7,3,1,0]){
+      const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-keepDays);
+      const compacted=entries.map(entry=>{
+        if(entry.date && new Date(entry.date)<cutoff && entry.scores && !isRareFn(entry)){
+          const rest={...entry};
+          for(const f of fields) delete rest[f];
+          return rest;
+        }
+        return entry;
+      });
+      try{
+        localStorage.setItem(key,JSON.stringify(compacted));
+        return compacted;
+      }catch(e){ /* まだ超過。さらに絞る */ }
+    }
   }
   return null;
 }
