@@ -5147,7 +5147,10 @@ function garonSetSyncStatus(patch){
 
 async function garonDoAutoSync(){
   const token=localStorage.getItem(GARON_SYNC_TOKEN_KEY);
-  if(!token) return;
+  // 2026-09-11追加(原因切り分け用、CEO報告: 同期が丸一日無言で止まっていた):
+  // このエンジン側の同期は元々、成功時も失敗時も画面に一切表示が出ない設計だった
+  // (localStorageのgaron_sync_statusへ記録するのみ)。一時的にトーストで可視化する。
+  if(!token){ if(typeof showToast==='function') showToast('⚠️ Gist同期(エンジン): トークン未設定'); return; }
   if(garonSyncInFlight){
     // 実行中に次の保存が発生した場合は、今回の実行完了後に最新内容で必ず再同期する
     // (2026-09-08 偽時計テストで発見: 従来はここで無条件returnしていたため、実行中に
@@ -5184,10 +5187,12 @@ async function garonDoAutoSync(){
       hashHex=Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('').slice(0,16);
     }catch(e){}
     garonSetSyncStatus({ lastSuccessAt:new Date().toISOString(), lastSuccessCount:merged.length, lastSuccessHash:hashHex, lastFailureAt:null, lastFailureReason:null });
+    if(typeof showToast==='function') showToast('✅ Gist同期完了(エンジン、'+merged.length+'件)');
   }catch(e){
     let msg=String(e&&e.message||e);
     const token2=localStorage.getItem(GARON_SYNC_TOKEN_KEY);
     if(token2 && msg.indexOf(token2)>=0) msg=msg.split(token2).join('***');
+    if(typeof showToast==='function') showToast('⚠️ Gist同期失敗(エンジン): '+msg);
     const pending=JSON.parse(localStorage.getItem(GARON_SYNC_PENDING_KEY)||'{"retryCount":0}');
     pending.retryCount=(pending.retryCount||0)+1;
     pending.lastAttemptAt=new Date().toISOString();
@@ -5209,10 +5214,14 @@ function garonScheduleAutoSync(){
   const token=localStorage.getItem(GARON_SYNC_TOKEN_KEY);
   if(!token) return;
   const pending=JSON.parse(localStorage.getItem(GARON_SYNC_PENDING_KEY)||'null');
+  // 2026-09-11修正(CEO報告: 丸一日同期が無言で止まっていた真因): 5回失敗すると
+  // 「同じ日のうちは再試行しない」設計だったため、日中どこかで5回失敗した時点で
+  // その日は何回保存し直しても二度と同期が試行されず(エラー表示も一切無い)、
+  // 原因が直った後(トークン再登録等)も自動復旧しなかった。日単位ではなく
+  // 15分のクールダウンに変更し、直しても長時間ブロックされ続けないようにする。
   if(pending && pending.retryCount>=GARON_SYNC_MAX_RETRY){
-    const lastDate=(pending.lastAttemptAt||'').slice(0,10);
-    const today=new Date().toISOString().slice(0,10);
-    if(lastDate===today) return;
+    const lastAttempt=new Date(pending.lastAttemptAt||0).getTime();
+    if(Date.now()-lastAttempt < 15*60*1000) return;
   }
   if(garonSyncTimer) clearTimeout(garonSyncTimer);
   garonSyncTimer=setTimeout(garonDoAutoSync, GARON_SYNC_DEBOUNCE_MS);
