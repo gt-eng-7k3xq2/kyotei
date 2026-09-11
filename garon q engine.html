@@ -1460,6 +1460,30 @@ function tryCompactAndSave(key, entries, isRareFn){
       }catch(e){ /* まだ超過。さらに絞る */ }
     }
   }
+  // 2026-09-11追加(実機で上記2段階でも解消しないケースが確認されたため最終手段):
+  // ここまでで駄目な場合、古いエントリはフィールドを削るだけでなくエントリ自体を削除する。
+  // kyotei_v2は既にGist(GitHub)へ同期済みで長期保管の実体はそちらにあるため、STORE_KEY
+  // (Qエンジン独自の詳細ログ)側から古い実体を削っても記録が完全に失われるわけではない。
+  // 全エントリを最大限まで間引いた状態(全COMPACTABLE_FIELDS除去)を土台にした上で、
+  // さらに60→30→14→7日分だけ残す方向で段階的にエントリ自体を削る(単独では容量が
+  // 足りない場合、間引きと削除を組み合わせないと解消しないケースがあるため)。
+  // 結果入力済みの古いレースから優先的に削除、レアケースは常に保持する。
+  const fullyStripped=entries.map(entry=>{
+    if(!isRareFn(entry)){
+      const rest={...entry};
+      for(const f of COMPACTABLE_FIELDS) delete rest[f];
+      return rest;
+    }
+    return entry;
+  });
+  for(const keepDays of [60,30,14,7]){
+    const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-keepDays);
+    const pruned=fullyStripped.filter((entry,i)=>!(entries[i].date && new Date(entries[i].date)<cutoff && !isRareFn(entries[i])));
+    try{
+      localStorage.setItem(key,JSON.stringify(pruned));
+      return pruned;
+    }catch(e){ /* まだ超過。さらに絞る */ }
+  }
   return null;
 }
 
