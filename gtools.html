@@ -504,13 +504,13 @@ function saveLogs(logs){
 const GIST_SYNC_TOKEN_KEY='garon_gist_sync_token';
 const GIST_SYNC_ID_KEY='garon_gist_sync_id';
 const GIST_SYNC_FILENAME='kyotei_v2_sync.json';
-// 2026-09-11修正(CEO報告: レース当日に結果を都度保存しているのに同期が丸一日止まる):
-// 元は2500msだったが、レース観戦中は「1件保存→すぐアプリを離れる/画面ロック」という
-// 使い方が普通で、モバイルSafariはタブが非アクティブになるとsetTimeoutを遅延・停止する
-// ことがあるため、待機時間が長いほど同期が一度も走らないまま終わるリスクが高い。
-// 待ち時間を大幅短縮し、さらにページが隠れる瞬間(visibilitychange/pagehide)に保留中の
-// 同期があれば即座に実行するようにして、バックグラウンド化される前に間に合わせる。
-const GIST_SYNC_DEBOUNCE_MS=400;
+// 2026-09-11修正: 400msに短縮したところ、保存直後に出る「更新しました ✓」等のトーストと
+// 同期完了トーストがほぼ同時に表示され、同じ#toast要素を取り合って前者しか見えない(後者が
+// 一瞬で上書きされ気づけない)ケースが発生した。2200ms(showToastの表示時間)より少し長い
+// 2500msに戻し、保存トーストが消えてから同期トーストが出るよう順序を分離する。
+// バックグラウンド化対策はvisibilitychange/pagehideでの即時flushの方で担保する(そちらは
+// デバウンス時間に依存しない)。
+const GIST_SYNC_DEBOUNCE_MS=2800;
 let gistSyncTimer=null;
 
 function scheduleGistSync(){

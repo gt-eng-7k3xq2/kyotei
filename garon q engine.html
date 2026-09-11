@@ -5059,12 +5059,13 @@ const GARON_SYNC_ID_KEY='garon_gist_sync_id';
 const GARON_SYNC_PENDING_KEY='garon_sync_pending';
 const GARON_SYNC_STATUS_KEY='garon_sync_status';
 const GARON_SYNC_FILENAME='kyotei_v2_sync.json';
-// 2026-09-11修正(CEO報告): 元は2500msだったが、レース観戦中は「1件保存→すぐ画面を
-// 離れる/ロック」という使い方が普通で、モバイルSafariはタブが非アクティブになると
-// setTimeoutを遅延・停止することがあるため、待機時間が長いほど同期が一度も走らないまま
-// 終わるリスクが高い。gtools.html側と同じ理由・同じ対処(短縮+visibilitychange/pagehideで
-// 即時flush)。
-const GARON_SYNC_DEBOUNCE_MS=400;
+// 2026-09-11修正: 400msに短縮したところ、結果登録直後に出る「✅ 的中登録!」等のトーストと
+// 同期完了トーストがほぼ同時に表示され、同じ#toast要素を取り合って前者しか見えない(後者が
+// 一瞬で上書きされ気づけない)ケースが発生した。2200ms(showToastの表示時間)より少し長い
+// 2500msに戻し、結果登録トーストが消えてから同期トーストが出るよう順序を分離する。
+// バックグラウンド化対策はvisibilitychange/pagehideでの即時flushの方で担保する(そちらは
+// デバウンス時間に依存しない)。
+const GARON_SYNC_DEBOUNCE_MS=2500;
 const GARON_SYNC_MAX_RETRY=5;
 let garonSyncTimer=null;
 let garonSyncInFlight=false;
