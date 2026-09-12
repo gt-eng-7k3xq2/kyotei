@@ -92,7 +92,7 @@ GARON COMPANY構想を「5部隊が本当に案件を追跡できる組織」に
 
 **現時点でできないこと**: ①CEOが何も操作しない完全無人の夜間自動起動(2026-08-19に既存記載の通り、ヘッドレスClaude Code実行時の安全性警告が未解消のため見送り中。CEOが一言メッセージを送ることが起点として必要) ②サブエージェントによる自律的な部隊間ラリー(未検証)。**将来的な完全自動化(スケジューラ→COO起動→案件確認→テーマ選定→部隊稼働→ラリー→検証→日次報告→CEO確認)へ移行する条件**: COOプロトコルが実運用で安定/部隊間ラリーが安定/案件記録漏れがない/CEO承認ゲートが確実に機能/本番環境と研究環境の分離が維持される/ヘッドレス自動実行環境の安全性が確認される、の全てを満たしてから検討する。
 
-### GARON RESEARCH OS(2026-08-31設計、2026-09-01実装。初回有人パイロット1回実施→失敗→判定パケット方式へ再設計・2回目パイロット準備完了)
+### GARON RESEARCH OS(2026-08-31設計、2026-09-01実装。初回有人パイロット1回実施→失敗→判定パケット方式へ再設計・2回目〈2026-09-01〉/3回目〈2026-09-11〉の隔離パイロットはいずれもstatus=success・resultStatus=REJECTEDで完了、MAX_PILOT_ATTEMPTS=3の試行上限に到達)
 
 CodexをClaude以外の発想源として正式に組み込む仕組み。全体設計は[reports/garon_research_os_design_2026-08-31.md](reports/garon_research_os_design_2026-08-31.md)参照(Phase 0〜4のロードマップ、cases.md/research_log.mdを置き換えない方針等)。
 
@@ -112,7 +112,8 @@ CodexをClaude以外の発想源として正式に組み込む仕組み。全体
   3. `claude auth status`で`authMethod=claude.ai`(OAuth月額プラン、値ではなく方式のみ確認、秘密情報は表示しない)
   4. (パイロット試行のみ)環境変数`RESEARCH_OS_PILOT_RUN=1`、かつ`RESEARCH_OS_PILOT_ATTEMPT=<N>`が次に許可される試行番号と一致。失敗履歴は`logs/.research_os_pilot_used.json`に配列として保持し続け(上書き削除しない)、試行回数の絶対上限は3回(`MAX_PILOT_ATTEMPTS`)
 - **その他の安全装置(`scripts/lib/research_os_safety.js`)**: 同時起動防止ロック・5分タイムアウト(判定パケット方式のため旧30分から短縮)・タスクあたりリトライ上限3回・日次起動上限1回・**Pro週間枠温存の一時停止フラグ**(`logs/.research_os_usage_pause`)・taskId許可パターン限定・本番HTML6ファイルのSHA-256整合性チェック(変更検知で即キルスイッチ・ntfy最優先通知)・呼び出し中は本番HTMLファイルを`attrib +r`で読み取り専用化・実行前後の監査ログ(`logs/research_os_processor_audit.log`)・処理規模ログ(`logs/research_os_usage.log`)。モックモード(`RESEARCH_OS_MOCK_CLAUDE=1`)で全項目E2E検証済み。
-- **初回パイロットの実施結果(2026-09-01)**: 安全装置(認証確認・ツール制限・整合性チェック・失敗時の状態不変)は全て設計通り機能したが、**ヘッドレスClaudeが確認文+コードフェンスで応答したため決定の適用自体は失敗**(`test-pilot-20260901-01`はNEWのまま、失敗記録は`logs/.research_os_pilot_used.json`に保持)。上記の判定パケット方式・ツールなし・正規化強化はこの結果を受けた再設計であり、**2回目パイロット(`RESEARCH_OS_PILOT_ATTEMPT=2`)は準備完了・未実施**。
+- **初回パイロットの実施結果(2026-09-01)**: 安全装置(認証確認・ツール制限・整合性チェック・失敗時の状態不変)は全て設計通り機能したが、**ヘッドレスClaudeが確認文+コードフェンスで応答したため決定の適用自体は失敗**(1回目試行時点では`test-pilot-20260901-01`はNEWのまま、失敗記録は`logs/.research_os_pilot_used.json`に保持)。上記の判定パケット方式・ツールなし・正規化強化はこの結果を受けた再設計。
+- **2回目パイロット(2026-09-01T05:14、`RESEARCH_OS_PILOT_ATTEMPT=2`)・3回目パイロット(2026-09-11T15:00、`RESEARCH_OS_PILOT_ATTEMPT=3`)の実施結果**: 同一のtaskId(2回目は再設計後に`test-pilot-20260901-01`をNEWへリセットして再処理、3回目は新規タスク`test-pilot-20260901-02`)で、いずれも意図的な重複ダミー課題(GARON-20260831-002を模した課題)を使用。2回とも`status=success`・タスクは正しく`REJECTED`(重複候補としてGARON-20260831-002を正確に指摘)となり、本番HTML6ファイルのSHA-256は呼出前後で完全一致(`changedProductionFiles:[]`)。これにより認証ゲート・ツールなし単一ターン・出力正規化・Node側のみでの状態変更・整合性チェック・重複検出精度は2回の独立実行で再現確認できたが、**ACCEPTED/HOLD判定パス、試行上限到達後の実ブロック動作、リトライ上限・同時起動防止・タイムアウト・日次上限・キルスイッチ等の異常系、非ダミー(実在)提案での判定精度は一度も実クラウド呼出で検証されていない**(詳細は`reports/research_os_pilot_isolation_test_summary_2026-09-12.md`)。`.research_os_pilot_used.json`は現在3件(上限到達)で、**MAX_PILOT_ATTEMPTS(3)の枠を使い切っている**。上限を超える試行はCEO承認による引き上げが無い限り実行しない。
 - **タスクスケジューラへの登録は未実施**。
 - **正式な案件ID(GARON-YYYYMMDD-NNN)はこのタスク管理では採番しない**。ACCEPTED時にCOOが従来通りcases.mdの当日最大値を見て採番し、`--case=GARON-...`でタスクへ紐付ける。
 - **範囲外(未実装)**: `research_os/base/snapshot.json`(設計書3節)、ダッシュボードへのタスク状況表示(同11節)、タスクスケジューラ設定の修正(`GARON_CodexDailyResearch`の起動時刻00:15→06:00、Interactive→S4U。2026-09-01発見済みだがCEO判断で見送り)。
