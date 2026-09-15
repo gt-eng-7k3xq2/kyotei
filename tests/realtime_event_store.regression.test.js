@@ -357,6 +357,7 @@ console.log('=== テスト10: realtime_screening.js側の配線が既存の日�
   check('isAlreadyNotified(...)による二重送信防止チェックは変更されていない', src.includes("isAlreadyNotified(dateStr, raceKeyStr)"));
   check('永続化失敗時は通知をスキップする分岐が追加されている', src.includes('judgmentEventId === null'));
   check('notification_sentはntfy送信成功ブロックの内側でのみ記録される', /markNotified\(dateStr, raceKeyStr, 'Q'\);[\s\S]{0,300}recordNotificationSent\(judgmentEventId\)/.test(src));
+  check('2026-09-15追加: 通知タップURLにjudgmentEventIdクエリパラメータが含まれる(受入監査指摘2、raceIdだけでは表示対象を一意に固定できないため)', src.includes('judgmentEventId=${encodeURIComponent(judgmentEventId)}'));
 }
 
 console.log(`\n=== 結果: PASS=${pass} FAIL=${fail} ===`);
