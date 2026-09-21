@@ -118,6 +118,16 @@ CodexをClaude以外の発想源として正式に組み込む仕組み。全体
 - **正式な案件ID(GARON-YYYYMMDD-NNN)はこのタスク管理では採番しない**。ACCEPTED時にCOOが従来通りcases.mdの当日最大値を見て採番し、`--case=GARON-...`でタスクへ紐付ける。
 - **範囲外(未実装)**: `research_os/base/snapshot.json`(設計書3節)、ダッシュボードへのタスク状況表示(同11節)、タスクスケジューラ設定の修正(`GARON_CodexDailyResearch`の起動時刻00:15→06:00、Interactive→S4U。2026-09-01発見済みだがCEO判断で見送り)。
 
+## BOATCAST+データバンク→既存R07 接続(2026-09-21、候補実装。本番未反映)
+
+- 既決事項(CEO): 本番の予想エンジンはR07。移行するのは取得層だけ(BOATCAST+GARONデータバンク→既存R07)。Q画面・GTOOLS・RaceOps・ntfy・コメント・ログ・投稿の流れは維持。kyoteibiyoriは、BOATCAST経路が実レースで通るまで緊急用の入力としてのみ残す。R07のロジック変更や研究モデルの本番接続はCEO承認が必須。
+- 経緯: Codexが3コミット(Q画面のBOATCAST入力、抽出ブックマークレット、引継ぎ)を作成(Draft PR #3、`garon-raceops-private`)。Claudeが監査し、アダプターの欠陥(履歴の艇番結合漏れ、wakuAvgSTとkonkiAvgSTの入れ替わり、「今期」の取り方、キー名不一致)、サーバーの鮮度検査の欠落などを修正した。**修正版と詳細: `reports/boatcast_candidate_20260921/`(`BOATCAST_PR3_AUDIT_AND_FIX_REPORT_20260921.md`、`fixed/`)。**
+- 確認済みの定義(kyoteibiyoriの実値と一致): 「今期」= 期別ファイル(前の半期の集計)、nigerate6m等 = 暦の6か月・実進入コース・完走した出走数。
+- 未反映: 公開Q画面・PC RaceOps(`scripts/race_ops_server.js`)は変更していない。実BOATCASTでのブックマークレット実行は未検証。リアルタイムスクリーニング(`realtime_screening.js`)は未移行でkyoteibiyori依存のまま。
+- 反映の順序: CEO承認 → バックアップ → `fixed/scripts`を`scripts/`へ上書き → RaceOpsだけ再起動 → プリフライト/拒否の確認 → `fixed/html`をGitHub Pagesへ → 実BOATCAST1レースの全経路確認 → 通常運用(手動)。1手で戻せるよう、公開中のQ画面はrollbackとして保管。
+- 決まっていない点(CEO判断): 欠損の扱い(拒否=約16%のレースで予想不可 / 該当項目だけ0で補完して明示)、11/1の期別ファイル切替の取込手順、データバンクの日次更新(現在9/18で停止)。
+- R07の実力: 学習期間(〜2026-07-16)より後の回収率は約77%(本番判定ログ75.2%)。「115%」は使わない(`reports/databank_aggregation_20260920/DEEP_RESEARCH_REPORT_20260920.md`)。
+
 ## ファイル構成と役割
 
 - **sg_narutou.html** — 本番予想エンジン。BM抽出データを貼り付けてスコア計算・モード判定・買い目生成・X投稿文生成までを行う。Gemini API (`generativelanguage.googleapis.com`) を呼び出して展開コメントを生成する。
