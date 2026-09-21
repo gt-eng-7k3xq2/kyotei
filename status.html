@@ -77,14 +77,14 @@ function calib(cal){
 const VENUE_ORDER=['桐生','戸田','江戸川','平和島','多摩川','浜名湖','蒲郡','常滑','津','三国','びわこ','住之江','尼崎','鳴門','丸亀','児島','宮島','徳山','下関','若松','芦屋','福岡','唐津','大村'];
 const KSTYLE={
   notify:{c:'#3ee0a0',t:'通知',g:'◎'},skip_odds:{c:'#ffc857',t:'見送り(配当が薄い)',g:'△'},skip_conf:{c:'#5b7396',t:'見送り(確信度)',g:'－'},skip_other:{c:'#ffc857',t:'見送り',g:'△'},
-  no_data:{c:'#ff5d73',t:'取得できず',g:'✕'},no_feature:{c:'#ff5d73',t:'特徴不足',g:'✕'},error:{c:'#ff5d73',t:'エラー',g:'✕'},missed:{c:'#22344f',t:'評価なし',g:''},pending:{c:'#0d1726',t:'これから',g:'○'}
+  no_data:{c:'#ff5d73',t:'取得できず',g:'✕'},no_data_fixed:{c:'#8a4a5a',t:'取得できず(修正済みの不具合)',g:'✕'},no_feature:{c:'#ff5d73',t:'特徴不足',g:'✕'},error:{c:'#ff5d73',t:'エラー',g:'✕'},missed:{c:'#22344f',t:'評価なし',g:''},pending:{c:'#0d1726',t:'これから',g:'○'}
 };
 let pickedCell=null;let lastStatus=null;
 function pickCell(v,r){pickedCell=v+'|'+r;if(lastStatus)renderDisp(lastStatus);}
 function renderDisp(s){
   const el=document.getElementById('disp-card');if(!el)return;
   const d=s.dispositions||{counts:{},rows:[]};const c=d.counts||{};const n=k=>c[k]||0;const rows=d.rows;const total=rows.length;
-  const skip=n('skip_conf')+n('skip_odds')+n('skip_other'),bad=n('no_data')+n('no_feature')+n('error');
+  const skip=n('skip_conf')+n('skip_odds')+n('skip_other'),bad=n('no_data')+n('no_data_fixed')+n('no_feature')+n('error');
   const groups=[['notify','通知',n('notify')],['skip','見送り',skip],['bad','取れず',bad],['missed','評価なし',n('missed')],['pending','これから',n('pending')]];
   const gcolor={notify:'#3ee0a0',skip:'#5b7396',bad:'#ff5d73',missed:'#22344f',pending:'#1a2a44'};
   let h='<div class="ct">SORTING 今日の全レースの振り分け</div>';
@@ -108,7 +108,7 @@ function renderDisp(s){
     }
   }
   h+='</div>';
-  h+='<div class="mu" style="font-size:10px;margin:8px 0 12px">◎ 通知　△ 見送り(配当が薄い)　－ 見送り(確信度)　✕ 取得できず　空白 評価なし　○ これから　／ マスを押すと詳細</div>';
+  h+='<div class="mu" style="font-size:10px;margin:8px 0 12px">◎ 通知　△ 見送り(配当が薄い)　－ 見送り(確信度)　✕ 取得できず(暗い赤は修正済みの不具合)　空白 評価なし　○ これから　／ マスを押すと詳細</div>';
   // 詳細
   let detail='<div class="mu" style="font-size:12px;text-align:center;padding:12px 0">マスを押すと、そのレースの振り分けと理由が出ます</div>';
   if(pickedCell){const [v,rr]=pickedCell.split('|');const row=(by[v]||{})[rr];if(row){const st=KSTYLE[row.kind]||KSTYLE.missed;
