@@ -2890,7 +2890,9 @@ function openOfficialRaceList(){
   const code=OFFICIAL_VENUE_CODE[currentParsedData.venue];
   if(!code){ showToast('⚠️ 会場コードが分かりません（会場名: '+currentParsedData.venue+'）'); return; }
   const rno=(currentParsedData.raceNum||'').replace(/R$/,'');
-  const hd=currentParsedData.hiduke;
+  // 2026-09-21: BOATCAST読込では hiduke が入らないため、読み込んだ日付(raceDate)から補う
+  const rd=(garonBoatcastPrepared&&garonBoatcastPrepared.raceDate)||(garonEngineCtx&&garonEngineCtx.raceDate)||'';
+  const hd=currentParsedData.hiduke||String(rd).replace(/-/g,'');
   if(!rno || !hd){ showToast('⚠️ レース番号または日付が取得できていません'); return; }
   const url=`https://www.boatrace.jp/owpc/pc/race/racelist?rno=${rno}&jcd=${code}&hd=${hd}`;
   window.open(url, '_blank');
