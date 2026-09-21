@@ -1,7 +1,7 @@
 (async () => {
   'use strict';
 
-  const VERSION = 'garon-boatcast-bm/0.1.0';
+  const VERSION = 'garon-boatcast-bm/0.2.0';
   const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
   const clean = value => String(value ?? '').replace(/\u00a0/g, ' ').replace(/[ \t]+/g, ' ').trim();
   const lines = value => String(value ?? '').split(/\r?\n/).map(clean).filter(Boolean);
@@ -95,26 +95,23 @@
     };
   }
 
-  function parseOdds3t(text) {
-    const ls = lines(text);
-    let i = ls.findIndex(x => x === '3連単');
-    if (i < 0) return {};
-    i += 1;
+  // 実画面(2026-09-21確認): 3連単は table.odds3Tan が1着艇ごとに6個。先頭行=[1着艇番, 選手名(colspan2)]、
+  // 以降の行=[2着艇番(rowspan), 3着艇番, オッズ] または [3着艇番, オッズ]。
+  function parseOdds3tFromDom() {
     const out = {};
-    for (let first = 1; first <= 6; first++) {
-      while (i < ls.length && !new RegExp(`^${first}\\s+`).test(ls[i])) i++;
-      if (i >= ls.length) break;
-      i++;
-      for (const second of [1,2,3,4,5,6].filter(x => x !== first)) {
-        while (i < ls.length && ls[i] !== String(second)) i++;
-        if (i >= ls.length) break;
-        i++;
-        for (const third of [1,2,3,4,5,6].filter(x => x !== first && x !== second)) {
-          if (ls[i] !== String(third)) break;
-          const price = Number((ls[i + 1] || '').replace(/,/g, ''));
-          if (Number.isFinite(price)) out[`${first}-${second}-${third}`] = price;
-          i += 2;
-        }
+    for (const table of document.querySelectorAll('main table.odds3Tan')) {
+      if (table.offsetParent === null) continue;
+      const rows = [...table.querySelectorAll('tr')];
+      const first = Number(clean(rows[0]?.children[0]?.innerText));
+      if (!(first >= 1 && first <= 6)) continue;
+      let second = null;
+      for (const row of rows.slice(1)) {
+        const cells = [...row.children].map(c => clean(c.innerText));
+        let third, price;
+        if (cells.length >= 3) { second = Number(cells[0]); third = Number(cells[1]); price = cells[2]; }
+        else { third = Number(cells[0]); price = cells[1]; }
+        const odds = Number(String(price ?? '').replace(/,/g, ''));
+        if (second >= 1 && second <= 6 && third >= 1 && third <= 6 && Number.isFinite(odds) && odds > 0) out[`${first}-${second}-${third}`] = odds;
       }
     }
     return out;
@@ -131,14 +128,11 @@
     warnings: []
   };
 
+  // BOATCASTから取るのは「当日にしか分からない情報」だけ。過去成績(枠番別過去10走・得点率早見・モーター履歴・全国/当地3節・票数)は
+  // GARONデータバンク側で賄うので取らない。
   const jobs = [
     ['出走表', '選手成績', '選手成績'],
     ['出走表', '節間成績', '節間成績'],
-    ['出走表', 'モーター履歴', 'モーター履歴'],
-    ['出走表', '全国成績過去3節', '全国成績過去3節'],
-    ['出走表', '当地成績過去3節', '当地成績過去3節'],
-    [null, '枠番別過去10走', '枠番別過去10走'],
-    [null, '得点率早見', '得点率早見'],
     ['直前情報', null, '直前情報'],
     ['直前情報', 'スタート展示', 'スタート展示'],
     ['直前情報', 'オリジナル展示データ', 'オリジナル展示データ']
@@ -155,7 +149,7 @@
         loadState,
         text: clean(document.querySelector('main')?.innerText || '')
       };
-      if (!loadState.loaded) payload.warnings.push(`${sectionName}: データ待機が解消しませんでした`);
+      if (!loadState.loaded) payload.warnings.push(loadState.waiting ? `${sectionName}: まだ公開されていません（展示が終わってからもう一度実行してください）` : `${sectionName}: データ待機が解消しませんでした`);
     } catch (error) {
       payload.warnings.push(`${sectionName}: ${error.message}`);
     }
@@ -164,37 +158,24 @@
   try {
     await open('オッズ', 500);
     const three = button('3連単');
-    if (three) {
-      three.click();
-      await waitForSection(6000, false);
+    if (three) three.click();
+    let loadState = { loaded: false };
+    for (let i = 0; i < 20; i++) {
+      await wait(400);
+      payload.odds3t = parseOdds3tFromDom();
+      if (Object.keys(payload.odds3t).length === 120) { loadState = { loaded: true }; break; }
     }
-    const oddsText = document.querySelector('main')?.innerText || '';
-    payload.sections['オッズ3連単'] = { tables: visibleTables(), profiles: visibleProfiles(), text: clean(oddsText) };
-    payload.odds3t = parseOdds3t(oddsText);
-    if (Object.keys(payload.odds3t).length !== 120) {
-      payload.warnings.push(`3連単オッズは${Object.keys(payload.odds3t).length}/120通りです`);
+    // 表の中身は odds3t に全て入るので、セクションには読み込み状態だけ残す(送信サイズ削減)
+    payload.sections['オッズ3連単'] = { tables: [], profiles: [], loadState };
+    const oddsCount = Object.keys(payload.odds3t).length;
+    if (oddsCount !== 120) {
+      payload.warnings.push(`3連単オッズは${oddsCount}/120通りです`);
     } else {
       const overround = Object.values(payload.odds3t).reduce((sum, v) => sum + 1 / v, 0);
       if (!(overround > 1.15 && overround < 1.6)) payload.warnings.push(`3連単オッズの逆数合計が異常です(${overround.toFixed(3)}、通常は約1.3)`);
     }
   } catch (error) {
     payload.warnings.push(`オッズ: ${error.message}`);
-  }
-
-  try {
-    await open('票数', 500);
-    const vote3t = button('3連単');
-    if (vote3t) {
-      vote3t.click();
-      await waitForSection(6000, false);
-    }
-    payload.sections['票数3連単'] = {
-      tables: visibleTables(),
-      profiles: visibleProfiles(),
-      text: clean(document.querySelector('main')?.innerText || '')
-    };
-  } catch (error) {
-    payload.warnings.push(`票数3連単（任意）: ${error.message}`);
   }
 
   payload.meta = { ...payload.meta, ...pageMeta() };
@@ -206,40 +187,29 @@
   }
   const old = document.getElementById('garon-boatcast-export');
   if (old) old.remove();
+  const oddsCount = Object.keys(payload.odds3t).length;
+  const ok = oddsCount === 120 && !payload.warnings.length;
   const panel = document.createElement('div');
   panel.id = 'garon-boatcast-export';
-  panel.style.cssText = 'position:fixed;z-index:2147483647;top:12px;right:12px;width:min(92vw,520px);max-height:88vh;overflow:auto;background:#fff;color:#111;border:3px solid #075985;border-radius:10px;padding:12px;font:14px/1.45 sans-serif;box-shadow:0 8px 30px #0008';
+  panel.style.cssText = 'position:fixed;z-index:2147483647;top:12px;right:12px;width:min(92vw,520px);max-height:88vh;overflow:auto;background:#fff;color:#111;border:3px solid ' + (ok ? '#15803d' : '#b91c1c') + ';border-radius:10px;padding:12px;font:14px/1.45 sans-serif;box-shadow:0 8px 30px #0008';
   const title = document.createElement('b');
-  title.textContent = `GARON BOATCAST抽出完了（オッズ ${Object.keys(payload.odds3t).length}/120）`;
   const info = document.createElement('div');
-  info.textContent = payload.warnings.length ? payload.warnings.join(' / ') : '警告なし';
   info.style.cssText = 'margin:8px 0;color:#b91c1c';
+  info.textContent = payload.warnings.length ? payload.warnings.join(' / ') : '';
   const copy = document.createElement('button');
-  copy.textContent = 'JSONをコピー';
-  copy.onclick = async () => { await navigator.clipboard.writeText(json); copy.textContent = 'コピー済み'; };
-  const download = document.createElement('button');
-  download.textContent = 'JSONを保存';
-  download.style.marginLeft = '8px';
-  download.onclick = () => {
-    const blob = new Blob([json], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `garon_boatcast_${payload.meta.raceDate || 'date'}_${payload.meta.stadiumCode || 'jo'}_${payload.meta.raceNo || 'R'}.json`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  copy.style.cssText = 'font-size:18px;padding:10px 18px;margin-right:8px';
+  const doCopy = async () => {
+    try { await navigator.clipboard.writeText(json); return true; } catch { return false; }
   };
+  const showCopied = () => { title.textContent = 'コピー済み。Q画面に貼り付けてください（オッズ ' + oddsCount + '/120）'; copy.textContent = 'もう一度コピー'; };
+  title.textContent = 'GARON BOATCAST抽出完了（オッズ ' + oddsCount + '/120）';
+  copy.textContent = 'コピー';
+  copy.onclick = async () => { if (await doCopy()) showCopied(); else alert('コピーできませんでした。'); };
   const close = document.createElement('button');
   close.textContent = '閉じる';
-  close.style.marginLeft = '8px';
+  close.style.cssText = 'font-size:18px;padding:10px 18px';
   close.onclick = () => panel.remove();
-  const share = document.createElement('button');
-  share.textContent = 'iPhoneで共有';
-  share.style.marginLeft = '8px';
-  share.onclick = async () => {
-    if (!navigator.share) return alert('このブラウザは共有に対応していません。コピーまたは保存を使ってください。');
-    const file = new File([json], `garon_boatcast_${payload.meta.raceDate || 'date'}_${payload.meta.stadiumCode || 'jo'}_${payload.meta.raceNo || 'R'}.json`, { type: 'application/json' });
-    await navigator.share({ title: 'GARON BOATCAST抽出', files: [file] });
-  };
-  panel.append(title, info, copy, download, share, close);
+  panel.append(title, info, copy, close);
   document.body.appendChild(panel);
+  if (await doCopy()) showCopied();
 })().catch(error => alert('GARON BOATCAST抽出失敗: ' + error.message));
