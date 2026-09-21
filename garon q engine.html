@@ -397,7 +397,8 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--gold);bo
        選択はlocalStorage(garon_q_engine_mode)へ保存し、次回起動時に復元する。 -->
   <div class="card" id="engine-mode-card">
     <div class="card-title">🔀 エンジンモード</div>
-    <div style="display:flex;gap:8px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button id="engine-mode-gdb-btn" class="btn btn-sm" style="flex:1 1 100%;" onclick="garonSetEngineMode('GDB')">🚀 GARON-DB(独自エンジン・新)</button>
       <button id="engine-mode-r06-btn" class="btn btn-sm" style="flex:1;" onclick="garonSetEngineMode('R06')">R06ハイブリッド</button>
       <!-- 2026-09-10追加(GARON-Q-R07 逃げ順位更新版 v1、非本番ステージング専用): 既定選択は
            引き続きR06(本番承認時に別途変更、CEO指示書5番)。 -->
@@ -1904,6 +1905,7 @@ function switchTab(name){
 // 何も反映されず、直前の値・初期値の12点のまま買い目が生成されていた)。
 // ボタンのハイライト表示は一致するものがあれば更新するが、値の反映自体はボタンの有無に関係なく必ず行う。
 function autoSetBetCount(pts){
+  if(typeof CURRENT_ENGINE_MODE!=='undefined' && CURRENT_ENGINE_MODE==='GDB') return;   // GARON-DBでは点数を自動変更しない(点数ボタン・既定12点に従う)
   selectedBetCount=pts;
   garonRerenderEngineCard();
   const btns=document.querySelectorAll('.betcount-row .bc-btn'); // race-type選択(rtype-*)も.bc-btnを共有しているため、点数ボタンだけに絞る
@@ -1919,6 +1921,7 @@ function setBetCount(n,btn){
   garonRerenderEngineCard();
   document.querySelectorAll('.betcount-row .bc-btn').forEach(b=>b.classList.remove('active')); // race-type選択と混同しないよう範囲を限定(2026-07-29修正)
   btn.classList.add('active');
+  if(CURRENT_ENGINE_MODE==='GDB'){ if(garonEngine) garonApplyEngineMode(); return; }   // GARON-DBは、点数ボタンで買い目を作り直す(Q v3の再計算は使わない)
   refreshBetsForCount();
 }
 
@@ -3491,9 +3494,11 @@ async function runYosoQ(){
   // 独自エンジン(データバンク版)のカード。R07が使えない(入力不足)場合は、このカードだけを表示する
   garonRerenderEngineCard();
   const engineOnly=!garonBoatcastPrepared&&!!garonEngine;
-  document.querySelectorAll('#yoso-result > .card:not(#engine-card), #yoso-result > #bet-section').forEach(e=>e.classList.toggle('engine-only-hide',engineOnly));
+  const gdbNow=(CURRENT_ENGINE_MODE==='GDB');
+  document.querySelectorAll('#yoso-result > .card:not(#engine-card), #yoso-result > #bet-section').forEach(e=>e.classList.toggle('engine-only-hide',engineOnly && !(gdbNow && e.id==='bet-section')));
   if(engineOnly){
-    if(srcBanner){srcBanner.style.color='var(--gold)';srcBanner.textContent='入力: BOATCAST＋GARON DB（独自エンジンのみ。R07は入力不足のため出していません）';}
+    if(srcBanner){srcBanner.style.color='var(--gold)';srcBanner.textContent=gdbNow?'入力: BOATCAST＋GARON DB（GARON-DBのみ。R07は入力不足のため出していません）':'入力: BOATCAST＋GARON DB（独自エンジンのみ。R07は入力不足のため出していません）';}
+    if(gdbNow){ garonGdbPrepareEngineOnlyGlobals(); garonApplyEngineMode(); }   // 独自エンジンだけで、買い目・X投稿サマリー・コメント用データ・保存まで通す
     return;
   }
 
@@ -4145,7 +4150,7 @@ function garonFormatBetsForComment(arr){
   // 無条件でcompressBetsSGへ流れ、CEOが過去に報告したR06と同種の圧縮バグが再発する
   // (実ブラウザ試験: 徳山4Rの逃げ6点が「1-2=45/1-2-36」という実在しない組み合わせを含む
   // 表記に化けることを確認した)。
-  if(currentCalcData && (currentCalcData.mode==='r06' || currentCalcData.mode==='r07')){
+  if(currentCalcData && (currentCalcData.mode==='r06' || currentCalcData.mode==='r07' || currentCalcData.mode==='gdb')){
     const vals=(arr||[]).map(b=>typeof b==='string'?b:b.val);
     return garonNaturalGroupBets(vals).join('/');
   }
@@ -4153,6 +4158,7 @@ function garonFormatBetsForComment(arr){
 }
 
 function buildXSummary(mode,withAmount){
+  if(CURRENT_ENGINE_MODE==='GDB') return garonGdbXSummary(mode,withAmount);   // 2026-09-21: 独自エンジン
   if(!currentCalcData) return '';
   const racenum=currentCalcData.racenum||'?';
   const ranking=currentCalcData.ranking||[];
@@ -4879,6 +4885,7 @@ function buildRoleCandidates(boats, attackCands, dbg, maruBoat){
 // 直す必要がある)。出す内容も「系統別得点の内訳・買い目(本線/抑え)・場・レース番号」の
 // 3点に絞る(雄大さん指示: 他のAIに渡して展開コメントを書かせるための最小限のデータ)。
 function buildClaudeCommentData(){
+  if(CURRENT_ENGINE_MODE==='GDB') return garonGdbCommentData();   // 2026-09-21: 独自エンジン
   // 2026-09-10追記(R06本番統合、見送り時の安全策): R06選択中に見送り/未計算/失敗の場合は
   // Q v3側のデータを誤って渡さない。
   if(CURRENT_ENGINE_MODE==='R06' && (!currentR06Result || currentR06Result.route==='hold')) return '⚠️ R06は見送り判定のため、コメント用データはありません。';
@@ -5027,6 +5034,7 @@ function copyClaudeData(){
 // 生データを渡して解釈させると空虚な一般論になるため、比較・順位・実績値は
 // ここで計算済みの形でJSON化して渡し、AIには文章化だけさせる。
 function computeTenkaiFacts(){
+  if(CURRENT_ENGINE_MODE==='GDB') return null;   // 2026-09-21: 独自エンジンはQ v3の確定事実を持たない(展開コメントはClaude用データで作る)
   // 2026-09-10追記(R06本番統合、見送り時の安全策): R06選択中に見送り/未計算/失敗の場合は
   // Q v3側のデータを誤って渡さない。
   if(CURRENT_ENGINE_MODE==='R06' && (!currentR06Result || currentR06Result.route==='hold')) return null;
@@ -5474,6 +5482,15 @@ function saveResultInner(resultType){
       const auditRecordSave07=garonBuildR07AuditRecord(currentR07Result, (currentParsedData&&currentParsedData.boats)||[], (currentParsedData&&currentParsedData.oddsMap)||{}, {eventType:'gtool_save', raceKey:venue+'|'+racenumRaw, gtoolSavedPoints:gtoolPointsNow07});
       garonSaveR07AuditRecord(auditRecordSave07, (currentParsedData&&currentParsedData.boats)||[], (currentParsedData&&currentParsedData.oddsMap)||{});
     }catch(auditErr07){ console.error('R07監査ログ(GTOOL保存時)の記録に失敗', auditErr07); }
+  } else if(CURRENT_ENGINE_MODE==='GDB' && garonEngine && garonEngine.ok){
+    // 2026-09-21追加: 独自エンジン(GARON-DB)。確信度・予測確率・買い目をログへ残す(GTOOLの分析で使う)。
+    Object.assign(entry, garonGdbLogFields());
+    // 買い目の金額(3000円均等回収の配分)をログの買い目へ入れる。GTOOLの投資額・回収率の計算が、実際の配分どおりになる。
+    if(Array.isArray(entry.engineAmounts) && Array.isArray(entry.bets)){
+      entry.bets.forEach((b,i)=>{ if(!b.amount && entry.engineAmounts[i]) b.amount=entry.engineAmounts[i]; });
+      const sumAmt=entry.engineAmounts.reduce((s,v)=>s+v,0);
+      if(sumAmt>0) entry.invest=sumAmt;
+    }
   } else {
     entry.engineMode='QV3';
   }
@@ -8607,7 +8624,177 @@ function r07BuildSaveLogFields(r07Result){
 // 確実に参照できることを優先する。トップレベルのlet/constはグローバル"レキシカル環境"には
 // 入るがwindowオブジェクトのプロパティにはならない仕様のため、外部からの状態確認(監査・
 // デバッグ)がしやすいvarを使う)。
-const GARON_ENGINE_MODE_KEY='garon_q_engine_mode';
+// ============================================================
+// 2026-09-21追加: GARON-DB モード(独自予想エンジン)。R07/R06/現行Q v3と同じ「エンジンモード」として選べる(既定はGARON-DB)。
+// 選ぶと、買い目表・X投稿サマリー・展開コメント用データ・GTOOL保存が、独自エンジンの結果で動く。
+// R07が入力不足で出せないレースでも動く(独自エンジンだけの結果で、買い目〜保存まで通る)。
+var currentEngineState=null;   // 直近の独自エンジンの画面用状態(ranking/betsRaw/…)。R07/R06のcurrentR07State等と同じ形
+
+function garonGdbSurname(no){
+  const e=(garonEngine&&garonEngine.explain&&garonEngine.explain.boats)?garonEngine.explain.boats[no-1]:null;
+  return garonBoatLabel(no,(e&&e.name)||'');
+}
+
+function garonGdbHyoka(boatWin){
+  const order=boatWin.map((p,i)=>({no:i+1,p})).sort((a,b)=>b.p-a.p);
+  return order.map((r,i)=>{
+    if(i===0)return String(r.no);
+    const gap=order[i-1].p-r.p;
+    return (gap>=0.15?'>>>':gap>=0.06?'>>':'>')+r.no;
+  }).join('');
+}
+
+// 独自エンジンの結果 → 画面用の状態。買い目の点数は点数ボタン(selectedBetCount)に従う。
+function garonGdbState(){
+  if(!garonEngine||!garonEngine.ok)return null;
+  const p=garonBoatcastPrepared;
+  const ctx=p?{oddsMap:p.oddsMap,venue:p.venue,raceNum:p.raceNum,deadline:p.deadline}:(garonEngineCtx||{});
+  const K=Math.min(Math.max(selectedBetCount||12,1),garonEngine.top.length);
+  const pts=garonEngine.top.slice(0,K).map(x=>x.combo);
+  const order=garonEngine.boatWin.map((pw,i)=>({boat:i+1,p:pw})).sort((a,b)=>b.p-a.p);
+  const marks=['◎','○','▲','△','▽','×'];
+  const ranking=order.map((o,i)=>({rank:i+1,boat:o.boat,mark:marks[i],score:o.p*100}));
+  const axis=order[0].boat;
+  const betsRaw=pts.map(v=>({val:v,type:(Number(v.split('-')[0])===axis)?'GDB本線':'GDB抑え'}));
+  const probabilities={};
+  garonEngine.top.forEach(x=>{probabilities[x.combo]=x.p;});
+  const conf=garonEngineConfidence(garonEngine.top1p);
+  const gosei=(ctx.oddsMap&&typeof calcGoseiOdds==='function')?calcGoseiOdds(pts,ctx.oddsMap):null;
+  return {
+    ranking,betsRaw,betcount:betsRaw.length,mode:'gdb',dbg:{selectedPoints:pts,probabilities},axes:[{boat:axis}],
+    infoStripText:`${ctx.venue||'?'}${ctx.raceNum||'?'} ／ GARON-DB(確信度${conf.label})買い目${K}点 ／ 軸: ${axis}`,
+    goseiHtml:gosei?`<b style="color:var(--gold);">全体合成オッズ: ${gosei}倍</b>`:'',
+    ctx,conf,K
+  };
+}
+
+function garonRenderGdbPanel(state){
+  if(!state)return '<div style="font-size:12px;color:var(--red);">GARON-DBの結果がありません。BOATCASTデータを読み込み直してください。</div>';
+  return `<div class="card-title">🚀 GARON-DB エンジンで計算した買い目です</div>
+    <div style="font-size:12px;line-height:1.7;color:var(--muted);">確信度 <b style="color:${state.conf.color};">${state.conf.label}</b>／データ〜${gxEsc(garonEngine.stateDay||'')}／過去の成績だけから予測(オッズ不使用)。根拠は上の GARON ENGINE カードにあります。</div>`;
+}
+
+// R07が入力不足で出せないとき、独自エンジンだけで買い目〜保存まで通すための最小限の状態(名前・オッズ・レース情報)。
+function garonGdbPrepareEngineOnlyGlobals(){
+  const ctx=garonEngineCtx||{};
+  const names=(garonEngine.explain&&garonEngine.explain.boats)?garonEngine.explain.boats.map(b=>b.name||''):[];
+  currentParsedData={venue:ctx.venue,raceNum:ctx.raceNum,shimekiri:ctx.deadline,oddsMap:ctx.oddsMap||{},boats:[1,2,3,4,5,6].map(n=>({no:n,name:names[n-1]||''}))};
+  currentCalcData={racenum:String(ctx.raceNum||'').replace(/R$/,''),honme:'1',mode:'gdb',betcount:0,shikin:3000,ranking:[],betsRaw:[]};
+  currentAreScores=[];currentQSupport=null;currentQAttackCands=[];currentQAxes=[];currentQDbg=null;currentQGenAt=Date.now();
+}
+
+// X投稿サマリー(garon_q_engine.htmlの既存書式)。mode='x': 実際の「X用」コピーと同じ(評価順の行なし)、'note': 評価順・本線・抑えつき、'all': 両方。
+function garonGdbXSummary(mode,withAmount){
+  const st=currentEngineState||garonGdbState();
+  if(!st||!garonEngine)return '';
+  const ctx=st.ctx||{};
+  const venue=ctx.venue||((document.getElementById('inp-venue')||{}).value)||'不明';
+  const race=String(ctx.raceNum||'').replace(/R$/,'')||(currentCalcData&&currentCalcData.racenum)||'?';
+  const shimekiri=ctx.deadline?` 締切${ctx.deadline}`:'';
+  const cum=st.betsRaw.reduce((s,b)=>s+((garonEngine.top.find(x=>x.combo===b.val)||{p:0}).p),0);
+  const axis=st.axes[0].boat;
+  const tenkai=((typeof aiTenkaiLine!=='undefined'&&aiTenkaiLine)||'').trim()||'─';
+  const head=[`【${venue}${race}R】${shimekiri}`,'',`G.RATE ${Math.round(cum*100)}%`,'',`軸：${garonGdbSurname(axis)}`];
+  const xLines=[...head,'',`展開：${tenkai}`,'','最終予想・買い目はプロフィール（note）から。','','G.'];
+  if(mode==='x')return xLines.join('\n');
+  const honsen=st.betsRaw.filter(b=>Number(b.val.split('-')[0])===axis);
+  const osae=st.betsRaw.filter(b=>Number(b.val.split('-')[0])!==axis);
+  const rows=document.querySelectorAll('#bet-tbody tr');
+  const amountOf=b=>{const i=st.betsRaw.indexOf(b);const c=rows[i]&&rows[i].querySelector('.amt-cell');return parseInt(((c&&c.textContent)||'0').replace(/[¥,]/g,''),10)||0;};
+  const fmt=arr=>{
+    if(!withAmount)return garonNaturalGroupBets(arr.map(b=>b.val)).join('/');
+    const groups={};
+    arr.forEach(b=>{const a=amountOf(b);(groups[a]=groups[a]||[]).push(b.val);});
+    return Object.entries(groups).sort((a,b)=>parseInt(b[0],10)-parseInt(a[0],10)).map(([a,vals])=>garonNaturalGroupBets(vals).join('/')+`　¥${parseInt(a,10).toLocaleString()}`).join('\n　　　');
+  };
+  const betLines=[`本線：${fmt(honsen)}`];
+  if(osae.length)betLines.push('',`抑え：${fmt(osae)}`);
+  const noteLines=[...head,`評価順：${garonGdbHyoka(garonEngine.boatWin)}`,'',`展開：${tenkai}`,'',...betLines,'','G.'];
+  if(mode==='note')return noteLines.join('\n');
+  const sep='─────────';
+  return ['【X用】',...xLines,'',sep,'','【note用】',...noteLines].join('\n');
+}
+
+// 展開コメント生成用データ(Claudeに貼り付けて展開コメントを作ってもらう用)。通知の2通目(boatcast_migration/scripts/lib/engine_notify.js)と同じ構成。
+function garonGdbStatLine(stats,keys){
+  return keys.map(k=>{const s=stats.find(x=>x.k===k);return s&&s.value!=='-'?`${s.label.replace(/\(.*?\)/g,'')}${s.value}${s.rank?`(${s.rank}位)`:''}`:null;}).filter(Boolean).join('、');
+}
+function garonGdbCommentData(){
+  const st=currentEngineState||garonGdbState();
+  if(!st||!garonEngine)return '⚠️ GARON-DBの結果がありません。BOATCASTデータを読み込んでから使ってください。';
+  const ctx=st.ctx||{};
+  const venue=ctx.venue||((document.getElementById('inp-venue')||{}).value)||'';
+  const race=String(ctx.raceNum||'').replace(/R$/,'')||(currentCalcData&&currentCalcData.racenum)||'';
+  const bets=st.betsRaw.map(b=>b.val);
+  const ex=(garonEngine.explain&&!garonEngine.explain.error)?garonEngine.explain:null;
+  const boatWin=garonEngine.boatWin;
+  const axis=st.axes[0].boat;
+  const label=no=>garonGdbSurname(no);
+  const lines=[];
+  lines.push(`【${venue}${race}R】`,'');
+  lines.push('■軸',label(axis),'');
+  lines.push('■エンジンの評価(過去のデータバンクだけから予測・オッズ不使用。公開用%は含まない)');
+  boatWin.map((p,i)=>({no:i+1,p})).sort((a,b)=>b.p-a.p).forEach((r,i)=>{
+    const e=ex?ex.boats[r.no-1]:null;
+    lines.push(`${i+1}位 ${label(r.no)}: 1着${(r.p*100).toFixed(0)}%${e?`／2着${(e.p2*100).toFixed(0)}%／3着${(e.p3*100).toFixed(0)}%`:''}`);
+  });
+  lines.push('');
+  lines.push(`■最終買い目(${bets.length}点)`,garonNaturalGroupBets(bets).join('/'),'');
+  lines.push('■買い目順位(確率順、公開用%は含まない)');
+  bets.forEach((b,i)=>lines.push(`${i+1}位 ${b}`));
+  lines.push('');
+  const chain=gxChain(garonEngine.probs);
+  const betFirsts=[...new Set(bets.map(b=>Number(b.split('-')[0])))];
+  lines.push('■2着候補順位(1着時、条件付きの確率順)');
+  betFirsts.forEach(a=>{
+    const seconds=Object.keys(chain.p12).filter(k=>k.startsWith(`${a}-`)).map(k=>({b:Number(k.split('-')[1]),p:chain.p12[k]/chain.p1[a]})).sort((x,y)=>y.p-x.p).slice(0,3);
+    lines.push(`${label(a)}1着時`);
+    seconds.forEach((s,i)=>lines.push(`${i+1}位 ${label(s.b)}`));
+  });
+  lines.push('');
+  lines.push('■買い目分岐(実在する組み合わせのみ)');
+  betFirsts.forEach(a=>{
+    lines.push(`${label(a)}1着`);
+    const secs=[...new Set(bets.filter(b=>b.startsWith(`${a}-`)).map(b=>Number(b.split('-')[1])))];
+    secs.forEach(b=>lines.push(`・2着${label(b)} → 3着${bets.filter(x=>x.startsWith(`${a}-${b}-`)).map(x=>label(Number(x.split('-')[2]))).join('・')}`));
+  });
+  lines.push('');
+  if(ex){
+    lines.push('■コメント用参考事実(DBの実数値、同じレース内の順位)');
+    for(let no=1;no<=6;no++){
+      const e=ex.boats[no-1];
+      const pos=[1,2,3].map(k=>bets.filter(b=>Number(b.split('-')[k-1])===no).length?`${k}着`:null).filter(Boolean);
+      lines.push(`${label(no)}${no===axis?'(軸)':''}　買い目上の位置：${pos.length?pos.join('・'):'なし'}`);
+      lines.push(`　${garonGdbStatLine(e.stats,['lane180','venueLane','st','form','motor'])}`);
+      lines.push(`　${e.comment.replace(/^1着確率\d+%。/,'')}`);
+    }
+    lines.push('');
+    lines.push('■レース全体の見立て(DBの数字から自動生成)');
+    ex.race.forEach(t=>lines.push(`・${t}`));
+    lines.push('');
+  }
+  lines.push('→上記を踏まえて、展開コメントを作って。(買い目と食い違う内容・数字にない内容は書かない。%の数字は公開しない)');
+  return lines.join('\n');
+}
+
+// GTOOL保存(ログ)に付ける独自エンジンの情報。後から「確信度別の的中」「予測確率と実際」を分析できるようにする。
+function garonGdbLogFields(){
+  if(!garonEngine||!garonEngine.ok)return {};
+  const st=currentEngineState||garonGdbState();
+  const pts=st?st.dbg.selectedPoints:[];
+  const cum=pts.reduce((s,v)=>s+((garonEngine.top.find(x=>x.combo===v)||{p:0}).p),0);
+  const probs={};pts.forEach(v=>{probs[v]=Math.round(((garonEngine.top.find(x=>x.combo===v)||{p:0}).p)*10000)/10000;});
+  let amounts=null;const odds=(st&&st.ctx&&st.ctx.oddsMap)||null;
+  if(odds&&typeof r06AllocateEqualReturn==='function'){try{amounts=r06AllocateEqualReturn(pts,odds,3000);}catch(e){amounts=null;}}
+  return {
+    engineAmounts:amounts,
+    engineMode:'GDB',engineId:garonEngine.engine,engineStateDay:garonEngine.stateDay,engineTrainedThrough:garonEngine.trainedThrough||null,
+    engineConfidence:garonEngineConfidence(garonEngine.top1p).label,engineTop1p:garonEngine.top1p,engineBoatWin:garonEngine.boatWin,
+    enginePoints:pts,engineProbs:probs,engineCumHit:Math.round(cum*1000)/1000,engineBetCount:pts.length,savedAt:Date.now()
+  };
+}
+
+const GARON_ENGINE_MODE_KEY='garon_q_engine_mode_v2';   // 2026-09-21: 既定をGARON-DBへ変更したため、選択の保存キーを新しくした(以前の選択には引きずられない)
 var CURRENT_ENGINE_MODE=(function(){
   // 2026-09-10追記(GARON-Q-R07 本番反映、CEO指示書3番): 新規訪問者(保存値なし・不明値)の
   // 既定選択を'R06'から'R07'へ変更する。ただし既にlocalStorageへ選択が保存済みの端末では、
@@ -8617,9 +8804,10 @@ var CURRENT_ENGINE_MODE=(function(){
     if(m==='QV3') return 'QV3';
     if(m==='R06') return 'R06';
     if(m==='R07') return 'R07';
-    return 'R07'; // 保存値なし・不明値 → 新規既定
+    if(m==='GDB') return 'GDB';
+    return 'GDB'; // 保存値なし・不明値 → 新規既定(2026-09-21: 独自エンジンGARON-DB)
   }
-  catch(e){ return 'R07'; }
+  catch(e){ return 'GDB'; }
 })();
 var currentR06Result=null;   // 直近のgenerateR06HybridBets()結果(hold時もroute==='hold'として保持)
 var currentQV3State=null;    // 直近runYosoQ()のQ v3生値スナップショット
@@ -8628,7 +8816,7 @@ var currentR07Result=null;   // 2026-09-10追加: 直近のgenerateR07HybridBets
 var currentR07State=null;    // 同上、R07版(holdの場合はnull)
 
 function garonSetEngineMode(mode){
-  if(mode!=='R06' && mode!=='QV3' && mode!=='R07') return;
+  if(mode!=='R06' && mode!=='QV3' && mode!=='R07' && mode!=='GDB') return;
   CURRENT_ENGINE_MODE=mode;
   try{ localStorage.setItem(GARON_ENGINE_MODE_KEY, mode); }catch(e){}
   garonUpdateModeButtons();
@@ -8641,6 +8829,7 @@ function garonApplyButtonStyle(btn, active){
   else { btn.style.background='var(--surface2)'; btn.style.color='var(--text)'; btn.style.border='1px solid var(--border)'; btn.style.boxShadow='none'; }
 }
 function garonUpdateModeButtons(){
+  garonApplyButtonStyle(document.getElementById('engine-mode-gdb-btn'), CURRENT_ENGINE_MODE==='GDB');
   garonApplyButtonStyle(document.getElementById('engine-mode-r06-btn'), CURRENT_ENGINE_MODE==='R06');
   garonApplyButtonStyle(document.getElementById('engine-mode-r07-btn'), CURRENT_ENGINE_MODE==='R07');
   garonApplyButtonStyle(document.getElementById('engine-mode-qv3-btn'), CURRENT_ENGINE_MODE==='QV3');
@@ -8738,19 +8927,20 @@ function garonRenderR07StatusPanel(r07){
 // 差し替え、画面(bet-tbody/race-info-strip/bet-gosei-summary/コメント生成・Claude用データ抽出・
 // 保存ボタンの有効/無効)を更新する。runYosoQ()自体のQ v3計算・表示コードには一切触れない。
 function garonApplyEngineMode(){
-  if(!currentQV3State) return; // runYosoQ()がまだ一度も成功していない
+  if(!currentQV3State && !(CURRENT_ENGINE_MODE==='GDB' && garonEngine)) return; // runYosoQ()がまだ一度も成功していない(GARON-DBだけは、独自エンジンの結果があれば動く)
   // 2026-09-10追記(GARON-Q-R07、非本番ステージング専用): モードごとの状態オブジェクトを
   // 3値化する。R06選択時の式(CURRENT_ENGINE_MODE==='R06'?currentR06State:...)自体は
   // 変更していないため、R06モードの挙動はこれ以前と完全に同じ(section 18)。
-  const state=(CURRENT_ENGINE_MODE==='R06')?currentR06State:(CURRENT_ENGINE_MODE==='R07')?currentR07State:currentQV3State;
-  const holdMode=((CURRENT_ENGINE_MODE==='R06'||CURRENT_ENGINE_MODE==='R07') && !state); // 見送り、または未計算/失敗
+  if(CURRENT_ENGINE_MODE==='GDB') currentEngineState=garonGdbState();
+  const state=(CURRENT_ENGINE_MODE==='GDB')?currentEngineState:(CURRENT_ENGINE_MODE==='R06')?currentR06State:(CURRENT_ENGINE_MODE==='R07')?currentR07State:currentQV3State;
+  const holdMode=((CURRENT_ENGINE_MODE==='R06'||CURRENT_ENGINE_MODE==='R07'||CURRENT_ENGINE_MODE==='GDB') && !state); // 見送り、または未計算/失敗
 
   if(state){
     currentCalcData.ranking=state.ranking;
     currentCalcData.betsRaw=state.betsRaw;
     currentCalcData.betcount=state.betcount;
     currentCalcData.mode=state.mode;
-    currentQDbg=state.dbg;
+    currentQDbg=(CURRENT_ENGINE_MODE==='GDB')?null:state.dbg;   // GARON-DBはQ v2内部の診断用データを持たない(Q専用の関数に渡さない)
     currentQAxes=state.axes;
   }
 
@@ -8769,7 +8959,29 @@ function garonApplyEngineMode(){
     });
   }
 
-  if(CURRENT_ENGINE_MODE==='QV3'){
+  if(CURRENT_ENGINE_MODE==='GDB'){
+    // 独自エンジン(GARON-DB): R07/R06と同じ構造。買い目表・合成オッズ・投稿サマリー・保存が、独自エンジンの結果で動く。
+    if(banner){ banner.style.display='none'; banner.innerHTML=''; }
+    if(r06Panel){ r06Panel.style.display='block'; r06Panel.innerHTML=garonRenderGdbPanel(state); }
+    const gdbOdds=(state&&state.ctx&&state.ctx.oddsMap)||oddsMap;
+    const stripEl=document.getElementById('race-info-strip');
+    const goseiEl=document.getElementById('bet-gosei-summary');
+    if(holdMode){
+      garonRenderBetTable([], {});
+      if(stripEl) stripEl.textContent=`${(currentParsedData&&currentParsedData.venue)||'?'}${(currentParsedData&&currentParsedData.raceNum)||'?'} ／ GARON-DB：結果がありません(買い目なし)`;
+      if(goseiEl) goseiEl.innerHTML='';
+      setButtonsEnabled(false);
+      const previewEl=document.getElementById('x-summary-preview');
+      if(previewEl) previewEl.value='GARON-DBの結果がありません(BOATCASTデータを読み込み直してください)';
+    } else {
+      const bs=document.getElementById('bet-section'); if(bs) bs.style.display='block';
+      garonRenderBetTable(state.betsRaw, gdbOdds);
+      if(stripEl) stripEl.textContent=state.infoStripText;
+      if(goseiEl) goseiEl.innerHTML=state.goseiHtml;
+      setButtonsEnabled(true);
+      if(aiBtn){ aiBtn.disabled=true; aiBtn.style.opacity='0.4'; }   // 「展開をAIで書く」はQ v3の系統別得点が前提のためGARON-DBでは使えない(展開コメントはClaude用データで作る)
+    }
+  } else if(CURRENT_ENGINE_MODE==='QV3'){
     if(r06Panel){ r06Panel.style.display='none'; r06Panel.innerHTML=''; }
     if(banner){
       banner.style.display=currentQV3State.judgeBannerVisible?'block':'none';

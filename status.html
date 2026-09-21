@@ -6,210 +6,111 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GARON稼働状況">
-<meta name="theme-color" content="#102a1c">
+<meta name="theme-color" content="#070d18">
 <title>GARON 稼働状況</title>
 <style>
-  :root{--bg:#102a1c;--surface:#1a4228;--surface2:#225535;--border:#347a48;--gold:#c9a84c;--gold2:#f0d080;--red:#e05050;--blue:#4a9eff;--green:#4caf7d;--text:#eef5f0;--muted:#82cc96;--font:-apple-system,'Hiragino Sans',sans-serif;}
+  :root{--bg:#070d18;--panel:#0d1726;--panel2:#132238;--line:#1f3a5c;--cy:#3ee0ff;--cy2:#8ff0ff;--vi:#8b7bff;--ok:#3ee0a0;--warn:#ffc857;--err:#ff5d73;--tx:#e6f1ff;--mu:#7f9bbd;--font:-apple-system,'Hiragino Sans','Segoe UI',sans-serif;}
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-  body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;padding-bottom:40px;}
-  .header{background:linear-gradient(135deg,#1f5030,#102a1c);border-bottom:1px solid var(--gold);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
-  .header-title{font-size:15px;font-weight:700;color:var(--gold);letter-spacing:.05em;}
-  .header-sub{font-size:11px;color:var(--muted);margin-top:2px;}
-  .refresh-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:11px;padding:6px 10px;border-radius:6px;-webkit-appearance:none;}
-  .wrap{max-width:640px;margin:0 auto;padding:12px;}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;}
-  .card-title{font-size:12px;color:var(--gold);font-weight:700;margin-bottom:10px;letter-spacing:.08em;}
-  .badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:10px;border:1px solid var(--border);}
-  .badge-green{background:#1a3a1a;color:var(--green);border-color:var(--green);}
-  .badge-red{background:#3a1a1a;color:var(--red);border-color:var(--red);}
-  .badge-gold{background:#3a3212;color:var(--gold2);border-color:var(--gold);}
-  .badge-muted{background:var(--surface2);color:var(--muted);border-color:var(--border);}
-  .stale-warning{background:#3a1a1a;border:1px solid var(--red);color:var(--red);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;font-weight:700;}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;}
-  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
-  .stat-item{background:var(--surface2);border-radius:8px;padding:10px 12px;text-align:center;}
-  .stat-val{font-size:18px;font-weight:700;color:var(--gold);}
-  .stat-label{font-size:10px;color:var(--muted);margin-top:2px;}
-  .info-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border);}
-  .info-row:last-child{border-bottom:none;}
-  .info-row .k{color:var(--muted);}
-  .info-row .v{color:var(--text);font-weight:600;}
-  table{width:100%;border-collapse:collapse;}
-  th{font-size:10px;color:var(--muted);padding:5px 4px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;}
-  td{font-size:11px;padding:7px 4px;border-bottom:1px solid var(--border);vertical-align:top;}
-  tr:last-child td{border-bottom:none;}
-  .empty-note{font-size:12px;color:var(--muted);text-align:center;padding:16px 0;}
-  .footer-note{font-size:10px;color:var(--muted);text-align:center;line-height:1.6;margin-top:8px;}
-  .loading{text-align:center;padding:40px 0;color:var(--muted);font-size:13px;}
+  body{background:radial-gradient(900px 400px at 80% -10%,#13284a 0,transparent 60%),var(--bg);color:var(--tx);font-family:var(--font);min-height:100vh;padding-bottom:40px;}
+  .header{background:rgba(7,13,24,.92);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;backdrop-filter:blur(6px);}
+  .ht{font-size:15px;font-weight:800;letter-spacing:.14em;color:var(--cy);}
+  .hs{font-size:11px;color:var(--mu);margin-top:2px;}
+  .rb{background:var(--panel2);border:1px solid var(--line);color:var(--cy2);font-size:11px;padding:6px 12px;border-radius:6px;-webkit-appearance:none;}
+  .wrap{max-width:680px;margin:0 auto;padding:12px 16px;}
+  .card{background:linear-gradient(180deg,var(--panel),#0a1320);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;}
+  .ct{font-size:11px;color:var(--cy);font-weight:800;margin-bottom:10px;letter-spacing:.14em;}
+  .hero{display:flex;align-items:center;gap:12px;}
+  .dot{width:16px;height:16px;border-radius:50%;flex:none;}
+  .dot.ok{background:var(--ok);box-shadow:0 0 14px var(--ok);} .dot.warn{background:var(--warn);box-shadow:0 0 14px var(--warn);} .dot.error{background:var(--err);box-shadow:0 0 14px var(--err);}
+  .hero b{font-size:16px;} .hero small{display:block;color:var(--mu);font-size:11px;margin-top:2px;}
+  .al{border-radius:8px;padding:9px 11px;margin-top:8px;font-size:12px;line-height:1.5;border:1px solid;}
+  .al.error{background:#3a1520;border-color:var(--err);color:#ffc0c9;} .al.warn{background:#382d10;border-color:var(--warn);color:#ffe3a0;} .al.info{background:#102a3a;border-color:var(--cy);color:var(--cy2);}
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:8px;} .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .st{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 8px;text-align:center;}
+  .sv{font-size:19px;font-weight:800;color:var(--cy2);font-variant-numeric:tabular-nums;} .sl{font-size:10px;color:var(--mu);margin-top:3px;}
+  .row{display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:6px 0;border-bottom:1px solid var(--line);} .row:last-child{border-bottom:none;}
+  .row .k{color:var(--mu);} .row .v{font-weight:700;text-align:right;}
+  table{width:100%;border-collapse:collapse;} th{font-size:10px;color:var(--mu);padding:5px 4px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap;} th:first-child,td:first-child{text-align:left;}
+  td{font-size:12px;padding:7px 4px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;} tr:last-child td{border-bottom:none;}
+  .up{color:var(--ok);} .dn{color:var(--err);} .mu{color:var(--mu);}
+  .bd{display:inline-block;font-size:10px;font-weight:800;padding:2px 8px;border-radius:9px;border:1px solid var(--line);}
+  .bd.ok{color:var(--ok);border-color:var(--ok);} .bd.err{color:var(--err);border-color:var(--err);} .bd.off{color:var(--mu);} .bd.warn{color:var(--warn);border-color:var(--warn);}
+  .note{font-size:10px;color:var(--mu);line-height:1.6;margin-top:8px;}
+  .bar{height:8px;background:var(--panel2);border-radius:4px;overflow:hidden;margin-top:4px;position:relative;} .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--vi),var(--cy));}
+  .empty{color:var(--mu);font-size:12px;text-align:center;padding:14px 0;}
 </style>
 </head>
 <body>
-<div class="header">
-  <div>
-    <div class="header-title">🚤 GARON 稼働状況</div>
-    <div class="header-sub" id="lastFetched">読み込み中...</div>
-  </div>
-  <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">更新</button>
-</div>
-<div class="wrap" id="app">
-  <div class="loading">読み込み中...</div>
-</div>
-
+<div class="header"><div><div class="ht">GARON // STATUS</div><div class="hs" id="last">読み込み中...</div></div><button class="rb" onclick="load()">更新</button></div>
+<div class="wrap" id="app"><div class="empty">読み込み中...</div></div>
 <script>
-const GIST_OWNER = 'gt-eng-7k3xq2';
-const GIST_ID = 'c95fa9b66b4fb95d42d766a3e140cb0a';
-// api.github.com/gists/{id}(未認証60回/時)は、PCとiPhoneがテザリングで同一IPを共有している
-// ため実質的にすぐ枯渇することが判明(2026-08-20)。gist.githubusercontent.comのraw配信URL
-// (CDN経由の静的コンテンツ取得。api.github.comのレート制限対象外)に切り替えた。
-const REFRESH_MS = 60000; // raw配信はレート制限が実質無いため60秒間隔に戻せる(CDN側で数分キャッシュされる場合あり)
-const STALE_MINUTES = 12; // 稼働時間帯中にこれ以上更新が無ければ「止まっている疑い」表示
+const GIST_OWNER='gt-eng-7k3xq2', GIST_ID='c95fa9b66b4fb95d42d766a3e140cb0a', REFRESH_MS=60000, STALE_MIN=15;
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pct=(v,d=1)=>v==null?'—':(v*100).toFixed(d)+'%';
+const fmt=iso=>{try{return new Date(iso).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',hour12:false});}catch(e){return iso||'不明';}};
+const agoMin=iso=>iso?Math.round((Date.now()-new Date(iso).getTime())/60000):null;
+async function getFile(name){const r=await fetch(`https://gist.githubusercontent.com/${GIST_OWNER}/${GIST_ID}/raw/${name}?t=${Date.now()}`,{cache:'no-store'});if(!r.ok)throw new Error(name+': HTTP '+r.status);return r.json();}
+const stat=(v,l)=>`<div class="st"><div class="sv">${v}</div><div class="sl">${l}</div></div>`;
+const row=(k,v)=>`<div class="row"><span class="k">${k}</span><span class="v">${v}</span></div>`;
+const roiCls=v=>v==null?'mu':v>=1?'up':'dn';
 
-function fmtTime(iso) {
-  if (!iso) return '不明';
-  try {
-    return new Date(iso).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', hour12: false });
-  } catch (e) { return iso; }
+function levelTable(byLevel){
+  const names=['高','中上','中','低']; let h='<table><tr><th>確信度</th><th>件数</th><th>上位10点的中</th><th>検証時</th><th>回収(10点)</th></tr>';
+  let any=false;
+  for(const n of names){const b=byLevel&&byLevel[n]; if(!b||!b.n)continue; any=true;
+    const diff=b.baseline&&b.hit10!=null?b.hit10-b.baseline.hit10:null;
+    h+=`<tr><td>${n}</td><td>${b.n}</td><td class="${diff==null?'':diff>=-0.05?'up':'dn'}">${pct(b.hit10,0)}</td><td class="mu">${b.baseline?pct(b.baseline.hit10,0):'—'}</td><td class="${roiCls(b.roi10)}">${pct(b.roi10,0)}</td></tr>`;}
+  return any?h+'</table>':'<div class="empty">まだ結果が確定したレースがありません</div>';
+}
+function dailyTable(daily){
+  if(!daily||!daily.length)return '<div class="empty">日別の記録はまだありません</div>';
+  let h='<table><tr><th>日付</th><th>件数</th><th>的中(10点)</th><th>回収(10点)</th><th>高:件</th><th>高:的中</th></tr>';
+  for(const d of daily.slice(-10).reverse()){const a=d.all||{},b=d.high||{};h+=`<tr><td>${esc(d.date.slice(5))}</td><td>${a.n||0}</td><td>${pct(a.hit10,0)}</td><td class="${roiCls(a.roi10)}">${pct(a.roi10,0)}</td><td>${b.n||0}</td><td>${pct(b.hit10,0)}</td></tr>`;}
+  return h+'</table>';
+}
+function calib(cal){
+  if(!cal||!cal.length)return '';
+  cal=cal.filter(c=>c.n>0); if(!cal.length)return '';
+  return cal.map(c=>`<div style="margin-top:8px"><div class="row" style="border:0;padding:0"><span class="k">予測 ${esc(c.range)}(${c.n}レース)</span><span class="v">予測${pct(c.predicted,0)} ／ 実際${pct(c.actual,0)}</span></div><div class="bar"><i style="width:${Math.min(100,c.actual*100)}%"></i></div></div>`).join('');
+}
+function taskTable(tasks){
+  if(!tasks||!tasks.length)return '<div class="empty">タスク情報がありません</div>';
+  let h='<table><tr><th>タスク</th><th>状態</th><th>前回</th></tr>';
+  for(const t of tasks){const st=t.state||t.State; const bd=st==='Disabled'?'<span class="bd err">無効</span>':st==='Running'?'<span class="bd ok">実行中</span>':'<span class="bd off">待機</span>';
+    const res=t.result!=null?t.result:t.LastTaskResult; const lr=t.lastRun||t.LastRunTime; const bad=res!=null&&res!==0&&res!==267009&&res!==267011&&res!==267008;
+    h+=`<tr><td style="font-size:11px">${esc((t.name||t.Name).replace('GARON_',''))}</td><td>${bd}</td><td class="${bad?'dn':'mu'}" style="font-size:10px">${lr?esc(new Date(lr).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',hour12:false,month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})):'—'}${bad?' ✕':''}</td></tr>`;}
+  return h+'</table>';
 }
 
-function minutesAgo(iso) {
-  if (!iso) return null;
-  const diff = Date.now() - new Date(iso).getTime();
-  return Math.round(diff / 60000);
+function render(s){
+  const e=s.engine||{}, t=s.today||{}, v=s.verification||{}, live=v.live, rep=v.replay;
+  const label={ok:'正常に稼働中',warn:'注意があります',error:'対応が必要です'}[s.overall]||'—';
+  const stale=agoMin(s.updatedAt); const staleBad=stale!=null&&stale>STALE_MIN;
+  let h=`<div class="card"><div class="hero"><div class="dot ${staleBad?'error':esc(s.overall)}"></div><div><b>${staleBad?'更新が止まっています':label}</b><small>PCからの最終更新 ${esc(fmt(s.updatedAt))}(${stale}分前)</small></div></div>`;
+  if(staleBad)h+=`<div class="al error">PCからの更新が${stale}分間ありません。PCの電源・ネットワーク・タスク GARON_EngineStatus を確認してください。</div>`;
+  for(const a of s.alerts||[])h+=`<div class="al ${esc(a.level)}">${esc(a.text)}</div>`;
+  h+='</div>';
+  h+=`<div class="card"><div class="ct">TODAY 今日の動き(${esc(t.date||'')})</div><div class="g3">${stat(t.judgments||0,'予測したレース')}${stat(t.high||0,'確信度「高」')}${stat(t.notificationsSent||0,'通知送信')}</div>
+    <div class="g3" style="margin-top:8px">${stat(t.mid_high||0,'中上')}${stat(t.collected||0,'データ取得成功')}${stat(t.collectionFailed||0,'取得失敗')}</div>
+    ${t.lastEventAt?`<div class="note">最新の記録: ${esc(fmt(t.lastEventAt))}</div>`:''}</div>`;
+  h+=`<div class="card"><div class="ct">ENGINE エンジンの状態</div>${row('エンジン',esc(e.name||'—'))}${row('予測に使う統計の日付',esc(e.stateDay||'—')+(e.stateLagDays!=null?`<span class="mu">(${e.stateLagDays}日前)</span>`:''))}${row('データバンクの最新日',esc(e.dbLastRaceDate||'—'))}${row('モデルの学習データ',esc(e.modelTrainedThrough||'—')+(e.modelRaces?`<span class="mu">(${Number(e.modelRaces).toLocaleString()}レース)</span>`:''))}${row('通知の方針',esc((s.notifications||{}).policy||'—'))}${row('通知',(s.notifications||{}).paused?'<span class="bd warn">一時停止中</span>':'<span class="bd ok">送信中</span>')}</div>`;
+  h+=`<div class="card"><div class="ct">LIVE 実運用の答え合わせ</div>`;
+  if(live&&live.totalConfirmed){h+=`<div class="g3">${stat(live.totalConfirmed,'結果確定')}${stat(live.pending||0,'結果待ち')}${stat(pct(live.all.hit10,0),'上位10点的中')}</div>${levelTable(live.byLevel)}<div class="note">「検証時」は過去8万レースでの実績です。実運用の数字がこれを大きく下回り続けたら異常のサインです。件数が少ないうちは(30レース未満)ぶれが大きく、参考程度です。</div>`;}
+  else h+='<div class="empty">実運用の結果はまだ確定していません(締切後、順次反映されます)</div>';
+  h+='</div>';
+  if(live&&live.daily)h+=`<div class="card"><div class="ct">DAILY 日別(実運用)</div>${dailyTable(live.daily)}</div>`;
+  if(live&&live.calibration&&live.calibration.length)h+=`<div class="card"><div class="ct">CALIBRATION 予測確率と実際</div>${calib(live.calibration)}</div>`;
+  if(rep&&rep.totalConfirmed)h+=`<div class="card"><div class="ct">REPLAY 過去日の再現(参考)</div><div class="g3">${stat(rep.totalConfirmed,'レース')}${stat(pct(rep.all.hit10,0),'上位10点的中')}${stat(pct(rep.all.roi10,0),'回収(10点)')}</div>${levelTable(rep.byLevel)}<div class="note">過去日のデータを、その日時点の統計でエンジンに通し直した結果です(実運用ではありません)。</div></div>`;
+  h+=`<div class="card"><div class="ct">TASKS 自動処理</div>${taskTable(s.tasks)}</div>`;
+  h+='<div class="note" style="text-align:center">回収率はどの買い方でも控除率(約25%)の壁があり、平均で75〜80%が上限の目安です。<br>このページは自動更新されます(60秒ごと)</div>';
+  document.getElementById('app').innerHTML=h;
+  document.getElementById('last').textContent='表示更新 '+fmt(new Date().toISOString());
 }
-
-function isActiveHourJST() {
-  const h = new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo', hour: 'numeric', hour12: false });
-  const hour = parseInt(h, 10);
-  return hour >= 8 && hour < 22;
+async function load(){
+  try{render(await getFile('garon_status_engine.json'));}
+  catch(e){document.getElementById('app').innerHTML=`<div class="card"><div class="al error">状況データを取得できませんでした。<br>${esc(e.message)}<br>PC側の更新(GARON_EngineStatus)がまだ動いていない可能性があります。</div></div>`;}
 }
-
-async function fetchGistFile(filename) {
-  // キャッシュバスター(?t=)を付けて、CDN/ブラウザ双方の古いキャッシュをできるだけ避ける。
-  const url = `https://gist.githubusercontent.com/${GIST_OWNER}/${GIST_ID}/raw/${filename}?t=${Date.now()}`;
-  const res = await fetch(url, { cache: 'no-store' });
-  if (res.status === 403 || res.status === 429) throw new Error('GitHubの一時的なアクセス制限に達しました。しばらく待ってから更新ボタンを押してください。');
-  if (!res.ok) throw new Error(`Gist取得失敗: HTTP ${res.status}`);
-  const text = await res.text();
-  return JSON.parse(text);
-}
-
-function judgeBadge(entered) {
-  return entered
-    ? '<span class="badge badge-gold">◎参戦</span>'
-    : '<span class="badge badge-muted">見送り</span>';
-}
-
-function taskStateBadge(state) {
-  if (state === 'Ready') return '<span class="badge badge-green">Ready</span>';
-  if (state === 'Running') return '<span class="badge badge-gold">実行中</span>';
-  if (state === 'Disabled') return '<span class="badge badge-red">無効化</span>';
-  return `<span class="badge badge-muted">${state || '不明'}</span>`;
-}
-
-function taskResultBadge(code) {
-  if (code === 0) return '<span class="badge badge-green">正常</span>';
-  if (code === 267009) return '<span class="badge badge-gold">実行中</span>'; // SCHED_S_TASK_RUNNING
-  if (code === 267011) return '<span class="badge badge-muted">未実行</span>'; // 一度も実行されていない
-  return `<span class="badge badge-red">異常(${code})</span>`;
-}
-
-function renderScreening(data) {
-  const stale = isActiveHourJST() && minutesAgo(data.updatedAt) !== null && minutesAgo(data.updatedAt) > STALE_MINUTES;
-  const ds = data.dayStats || { evaluated: 0, entered: 0, failed: 0 };
-  let html = '';
-  if (stale) {
-    html += `<div class="stale-warning">⚠️ 稼働時間帯中ですが${minutesAgo(data.updatedAt)}分間更新がありません。プロセスが止まっている可能性があります。</div>`;
-  }
-  if (data.notificationsPaused) {
-    const np = data.notificationsPaused;
-    html += `<div class="stale-warning">🔕 通知は一時停止中です(停止時刻: ${fmtTime(np.pausedAt)} / 実施者: ${np.pausedBy || '不明'} / 理由: ${np.reason || '不明'})。自動再開はしません。判定・データ保存は継続中です。</div>`;
-  }
-  html += `<div class="card">
-    <div class="card-title">リアルタイムスクリーニング</div>
-    <div class="info-row"><span class="k">データ更新</span><span class="v">${fmtTime(data.updatedAt)}</span></div>
-    <div class="info-row"><span class="k">稼働時間帯</span><span class="v">${data.activeHourStart ?? '?'}時〜${(data.activeHourEnd ?? 22) - 1}時台</span></div>
-    <div class="info-row"><span class="k">kyoteibiyori.com</span><span class="v">${data.siteBlocked ? '<span class="badge badge-red">アクセス制限中</span>' : '<span class="badge badge-green">到達可能</span>'}</span></div>
-    <div class="info-row"><span class="k">判定エンジン</span><span class="v">${data.activeEngine === 'ALPHA' ? (data.engineVersion ?? 'ALPHA(情報取得失敗)') : `R07(pEscape≥${data.thresholds?.escapeThreshold != null ? Math.round(data.thresholds.escapeThreshold * 100) : '?'}%逃げ/≤${data.thresholds?.nonescapeThreshold != null ? Math.round(data.thresholds.nonescapeThreshold * 100) : '?'}%非逃げ)`}</span></div>
-    <div class="info-row"><span class="k">追跡中レース数</span><span class="v">${data.trackedRaces ?? '?'}件</span></div>
-    <div class="grid3" style="margin-top:10px;">
-      <div class="stat-item"><div class="stat-val">${ds.evaluated}</div><div class="stat-label">チェック件数</div></div>
-      <div class="stat-item"><div class="stat-val">${ds.entered}</div><div class="stat-label">参戦</div></div>
-      <div class="stat-item"><div class="stat-val">${ds.failed}</div><div class="stat-label">取得エラー</div></div>
-    </div>
-  </div>`;
-  return html;
-}
-
-function renderJudgments(data) {
-  const list = (data.judgments || []).slice().reverse(); // 新しい順
-  let html = '<div class="card"><div class="card-title">本日の判定一覧(参戦・見送り全件)</div>';
-  if (!list.length) {
-    html += '<div class="empty-note">本日はまだ判定対象のレースがありません</div>';
-  } else {
-    html += `<div style="overflow-x:auto;"><table><thead><tr>
-      <th>時刻</th><th>レース</th><th>判定</th><th>理由</th><th>的中率</th><th>ROI</th><th>gap</th>
-    </tr></thead><tbody>`;
-    for (const j of list) {
-      html += `<tr>
-        <td>${j.time || '?'}</td>
-        <td>${j.venue || ''}${j.raceNo || ''}R</td>
-        <td>${judgeBadge(j.entered)}</td>
-        <td style="color:var(--muted);">${j.judgeText || ''}</td>
-        <td>${j.estHit ?? '?'}%</td>
-        <td>${j.estRoi ?? '?'}%</td>
-        <td>${j.gap ?? '?'}</td>
-      </tr>`;
-    }
-    html += '</tbody></table></div>';
-  }
-  html += '</div>';
-  return html;
-}
-
-function renderTasks(data) {
-  const tasks = (data && data.tasks) || null;
-  let html = '<div class="card"><div class="card-title">無人運用タスクの健全性</div>';
-  if (!tasks) {
-    html += '<div class="empty-note">タスク情報を取得できていません</div>';
-  } else {
-    html += `<div style="overflow-x:auto;"><table><thead><tr>
-      <th>タスク</th><th>状態</th><th>最終実行</th><th>結果</th>
-    </tr></thead><tbody>`;
-    for (const t of tasks.slice().sort((a, b) => (a.Name || '').localeCompare(b.Name || ''))) {
-      html += `<tr>
-        <td>${(t.Name || '').replace('GARON_', '')}</td>
-        <td>${taskStateBadge(t.State)}</td>
-        <td>${t.LastRunTime ? fmtTime(t.LastRunTime) : '未実行'}</td>
-        <td>${taskResultBadge(t.LastTaskResult)}</td>
-      </tr>`;
-    }
-    html += '</tbody></table></div>';
-    html += `<div class="footer-note">最終取得: ${fmtTime(data.updatedAt)}(15分おきに更新)</div>`;
-  }
-  html += '</div>';
-  return html;
-}
-
-async function loadAll() {
-  const btn = document.getElementById('refreshBtn');
-  btn.textContent = '更新中...';
-  const app = document.getElementById('app');
-  try {
-    const [screening, tasks] = await Promise.all([
-      fetchGistFile('garon_status_screening.json'),
-      fetchGistFile('garon_status_tasks.json'),
-    ]);
-    app.innerHTML = renderScreening(screening) + renderJudgments(screening) + renderTasks(tasks);
-    document.getElementById('lastFetched').textContent = `最終取得: ${new Date().toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour12: false })}`;
-  } catch (e) {
-    app.innerHTML = `<div class="card"><div class="card-title" style="color:var(--red);">読み込みエラー</div><div style="font-size:12px;color:var(--muted);">${e.message}</div></div>`;
-  } finally {
-    btn.textContent = '更新';
-  }
-}
-
-loadAll();
-setInterval(loadAll, REFRESH_MS);
+load(); setInterval(load,REFRESH_MS);
 </script>
 </body>
 </html>
