@@ -73,6 +73,51 @@ function calib(cal){
   cal=cal.filter(c=>c.n>0); if(!cal.length)return '';
   return cal.map(c=>`<div style="margin-top:8px"><div class="row" style="border:0;padding:0"><span class="k">予測 ${esc(c.range)}(${c.n}レース)</span><span class="v">予測${pct(c.predicted,0)} ／ 実際${pct(c.actual,0)}</span></div><div class="bar"><i style="width:${Math.min(100,c.actual*100)}%"></i></div></div>`).join('');
 }
+// ---- 振り分け一覧: 今日評価した全レースが、通知になったのか、見送りなのか、その理由は何か ----
+const KINDS={
+  notify:{t:'通知',c:'ok'},skip_conf:{t:'見送り(確信度)',c:'off'},skip_odds:{t:'見送り(合成オッズ)',c:'warn'},skip_other:{t:'見送り(その他)',c:'warn'},
+  no_data:{t:'取得できず',c:'err'},no_feature:{t:'特徴不足',c:'err'},error:{t:'エラー',c:'err'},missed:{t:'評価なし',c:'off'},pending:{t:'これから',c:'off'}
+};
+let dispFilter=(function(){try{return localStorage.getItem('garon_disp_filter')||'all';}catch(e){return 'all';}})();
+let lastStatus=null;
+function setDispFilter(f){dispFilter=f;try{localStorage.setItem('garon_disp_filter',f);}catch(e){}if(lastStatus)renderDisp(lastStatus);}
+function renderDisp(s){
+  const el=document.getElementById('disp-card');if(!el)return;
+  const d=s.dispositions||{counts:{},rows:[]};const c=d.counts||{};const n=k=>c[k]||0;
+  const total=d.rows.length;
+  const evaluated=total-n('pending')-n('missed');
+  const predicted=n('notify')+n('skip_conf')+n('skip_odds')+n('skip_other');
+  const high=n('notify')+n('skip_odds')+n('skip_other');
+  const bad=n('no_data')+n('no_feature')+n('error');
+  // じょうご(絞り込みの流れ)
+  const step=(label,val,base,color,sub)=>'<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:12px"><span>'+label+(sub?'<span class="mu" style="font-size:10px"> '+sub+'</span>':'')+'</span><b style="font-size:15px;color:'+color+'">'+val+'</b></div><div class="bar" style="height:10px"><i style="width:'+(base?Math.max(val/base*100,val?3:0):0)+'%;background:'+color+'"></i></div></div>';
+  let h='<div class="ct">SORTING 今日のレースの振り分け</div>';
+  h+='<div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px 12px 10px">'
+    +step('今日の全レース',total,total,'#4a6a8f','これから '+n('pending')+'件')
+    +step('評価の記録があるレース',evaluated,total,'#7f9bbd','評価なし '+n('missed')+'件(エンジン導入前の時間帯など)')
+    +step('予測できた',predicted,total,'#8b7bff','取得できず・エラー '+bad+'件')
+    +step('確信度が「高」',high,total,'#3ee0ff','それ以外の '+(predicted-high)+'件は見送り')
+    +step('通知した',n('notify'),total,'#3ee0a0','合成オッズ不足で見送り '+n('skip_odds')+'件')
+    +'</div>';
+  const filters=[['all','すべて',total],['notify','通知した',n('notify')],['skip','見送り',n('skip_conf')+n('skip_odds')+n('skip_other')],['bad','取れず・エラー',bad],['missed','評価なし',n('missed')],['pending','これから',n('pending')]];
+  const match=r=>dispFilter==='all'||(dispFilter==='notify'&&r.kind==='notify')||(dispFilter==='skip'&&r.kind.startsWith('skip'))||(dispFilter==='bad'&&['no_data','no_feature','error'].includes(r.kind))||(dispFilter==='missed'&&r.kind==='missed')||(dispFilter==='pending'&&r.kind==='pending');
+  h+='<div style="margin:12px 0 6px;display:flex;flex-wrap:wrap;gap:6px">'+filters.map(f=>'<button class="rb" style="padding:8px 12px;font-size:12px;'+(dispFilter===f[0]?'background:var(--cy);color:#04121c;font-weight:800;':'')+'" onclick="setDispFilter(\''+f[0]+'\')">'+f[1]+' <b>'+f[2]+'</b></button>').join('')+'</div>';
+  const STYLE={notify:['#3ee0a0','通知'],skip_conf:['#7f9bbd','見送り'],skip_odds:['#ffc857','見送り'],skip_other:['#ffc857','見送り'],no_data:['#ff5d73','取れず'],no_feature:['#ff5d73','特徴不足'],error:['#ff5d73','エラー'],missed:['#4a6a8f','評価なし'],pending:['#4a6a8f','これから']};
+  const SHORT={notify:'確信度「高」で、買い目の合成オッズも十分',skip_odds:'確信度は高いが、買い目が薄い(合成オッズ2.5倍未満)'};
+  const rows=d.rows.filter(match);
+  if(!rows.length)h+='<div class="empty">該当するレースはまだありません</div>';
+  for(const r of rows){
+    const st=STYLE[r.kind]||['#7f9bbd',r.kind];
+    let why=r.kind==='skip_conf'?'確信度が「'+esc(r.level)+'」(通知は「高」だけ)':(r.kind==='skip_odds'?(r.reason.replace('確信度は高いが、','')||SHORT.skip_odds):(r.kind==='notify'&&/通知済み/.test(r.reason)?'確信度「高」で通知(いまの基準なら見送りの薄いレース)':(SHORT[r.kind]||r.reason)));
+    h+='<div style="display:flex;gap:10px;align-items:stretch;margin:6px 0;background:var(--panel2);border-radius:9px;overflow:hidden">'
+      +'<div style="width:5px;background:'+st[0]+'"></div>'
+      +'<div style="flex:1;padding:8px 4px 8px 0"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span style="font-size:14px"><b>'+esc(r.venue)+r.race+'R</b> <span class="mu" style="font-size:11px">'+(r.time?'締切 '+esc(r.time):'判定 '+esc(r.at))+'</span></span>'
+      +'<span style="font-size:12px;font-weight:800;color:'+st[0]+';padding-right:10px">'+st[1]+'</span></div>'
+      +'<div style="font-size:11px;color:var(--mu);margin-top:3px;padding-right:10px">'+why+'</div></div></div>';
+  }
+  h+='<div class="note">通知は、確信度が「高」で、買い目の合成オッズが2.5倍以上のレースだけです。</div>';
+  el.innerHTML=h;
+}
 function taskTable(tasks){
   if(!tasks||!tasks.length)return '<div class="empty">タスク情報がありません</div>';
   let h='<table><tr><th>タスク</th><th>状態</th><th>前回</th></tr>';
@@ -101,9 +146,11 @@ function render(s){
   if(live&&live.daily)h+=`<div class="card"><div class="ct">DAILY 日別(実運用)</div>${dailyTable(live.daily)}</div>`;
   if(live&&live.calibration&&live.calibration.length)h+=`<div class="card"><div class="ct">CALIBRATION 予測確率と実際</div>${calib(live.calibration)}</div>`;
   if(rep&&rep.totalConfirmed)h+=`<div class="card"><div class="ct">REPLAY 過去日の再現(参考)</div><div class="g3">${stat(rep.totalConfirmed,'レース')}${stat(pct(rep.all.hit10,0),'上位10点的中')}${stat(pct(rep.all.roi10,0),'回収(10点)')}</div>${levelTable(rep.byLevel)}<div class="note">過去日のデータを、その日時点の統計でエンジンに通し直した結果です(実運用ではありません)。</div></div>`;
+  h+='<div class="card" id="disp-card"></div>';
   h+=`<div class="card"><div class="ct">TASKS 自動処理</div>${taskTable(s.tasks)}</div>`;
   h+='<div class="note" style="text-align:center">回収率はどの買い方でも控除率(約25%)の壁があり、平均で75〜80%が上限の目安です。<br>このページは自動更新されます(60秒ごと)</div>';
   document.getElementById('app').innerHTML=h;
+  lastStatus=s;renderDisp(s);
   document.getElementById('last').textContent='表示更新 '+fmt(new Date().toISOString());
 }
 async function load(){
