@@ -379,11 +379,12 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--gold);bo
       <div>
         <label>買い目点数</label>
         <div class="betcount-row">
+          <button class="bc-btn active" onclick="setBetCount(selectedBetCount,this);garonGdbAuto=true;garonRerenderEngineCard();if(garonEngine&&CURRENT_ENGINE_MODE==='GDB')garonApplyEngineMode();" title="GARON-DB: 合成オッズで自動">自動</button>
           <button class="bc-btn" onclick="setBetCount(4,this)">4</button>
           <button class="bc-btn" onclick="setBetCount(6,this)">6</button>
           <button class="bc-btn" onclick="setBetCount(8,this)">8</button>
           <button class="bc-btn" onclick="setBetCount(10,this)">10</button>
-          <button class="bc-btn active" onclick="setBetCount(12,this)">12</button>
+          <button class="bc-btn" onclick="setBetCount(12,this)">12</button>
           <button class="bc-btn" onclick="setBetCount(14,this)">14</button>
           <button class="bc-btn" onclick="setBetCount(16,this)">16</button>
         </div>
@@ -1918,6 +1919,7 @@ function autoSetBetCount(pts){
 }
 function setBetCount(n,btn){
   selectedBetCount=n;
+  if(n==='auto'){garonGdbAuto=true;}else{garonGdbAuto=false;}
   garonRerenderEngineCard();
   document.querySelectorAll('.betcount-row .bc-btn').forEach(b=>b.classList.remove('active')); // race-type選択と混同しないよう範囲を限定(2026-07-29修正)
   btn.classList.add('active');
@@ -3320,7 +3322,7 @@ async function loadBoatcastText(text){
       const why=[result.error,...(result.details||[])].filter(Boolean).join(' / ');
       if(result.engine&&result.engine.ok){
         // R07は入力不足で出せないが、独自エンジンは出せる(履歴のない選手がいても確率を出す)
-        garonEngine=result.engine;garonEngineCtx=result.ctx||null;garonBoatcastPrepared=null;
+        garonEngine=result.engine;garonEngineCtx=result.ctx||null;garonBoatcastPrepared=null;garonGdbAuto=true;
         garonBoatcastLoadedAtMs=Date.now();
         garonBoatcastDeadlineMs=(garonEngineCtx&&garonEngineCtx.raceDate&&garonEngineCtx.deadline)?new Date(`${garonEngineCtx.raceDate}T${garonEngineCtx.deadline}:00+09:00`).getTime():0;
         const venueSel0=document.getElementById('inp-venue');if(venueSel0&&garonEngineCtx&&garonEngineCtx.venue)venueSel0.value=garonEngineCtx.venue;
@@ -3336,7 +3338,7 @@ async function loadBoatcastText(text){
     const problems=garonValidatePrepared(result);
     if(problems.length)throw new Error(problems.join(' / '));
     garonBoatcastPrepared=result;
-    garonEngine=(result.engine&&result.engine.ok)?result.engine:null;
+    garonEngine=(result.engine&&result.engine.ok)?result.engine:null;garonGdbAuto=true;
     garonBoatcastLoadedAtMs=Date.now();
     garonBoatcastDeadlineMs=(result.raceDate&&result.deadline)?new Date(`${result.raceDate}T${result.deadline}:00+09:00`).getTime():0;
     const venueSel=document.getElementById('inp-venue');
@@ -3400,7 +3402,7 @@ function renderEngineCard(engine,ctx){
   if(!el)return;
   if(!engine||!engine.ok){el.style.display='none';el.innerHTML='';return;}
   ctx=ctx||{};
-  const K=Math.min(Math.max(selectedBetCount||12,1),(engine.top||[]).length);
+  const K=(engine===garonEngine&&typeof garonGdbBetCount==='function')?garonGdbBetCount():Math.min(Math.max(selectedBetCount||12,1),(engine.top||[]).length);
   const pts=engine.top.slice(0,K);
   const cum=pts.reduce((s,x)=>s+x.p,0);
   const conf=garonEngineConfidence(engine.top1p);
@@ -8644,12 +8646,31 @@ function garonGdbHyoka(boatWin){
   }).join('');
 }
 
-// 独自エンジンの結果 → 画面用の状態。買い目の点数は点数ボタン(selectedBetCount)に従う。
+// 買い目の点数の自動決定(通知 boatcast_migration/scripts/lib/engine_notify.js の selectBets と同じ規則。tests/gdb_mode_parity.test.js で一致を検査)
+// 確率の高い順に足し、合成オッズが2.5倍を割る手前で止める。1コース1着が過半数なら最大6点、それ以外は最大12点、最低5点。オッズ無しは逃げ6/それ以外8。
+let garonGdbAuto=true;   // 点数ボタンを押すと手動に切り替わる。新しくデータを読み込むと自動に戻る
+function garonGdbAutoSelect(engine,oddsMap){
+  const nige=(engine.boatWin[0]||0)>=0.5;
+  const cap=Math.min(nige?6:12,engine.top.length);
+  const combos=engine.top.map(x=>x.combo);
+  const valid=!!oddsMap&&combos.slice(0,cap).every(c=>Number(oddsMap[c])>0);
+  let K;
+  if(!valid)K=nige?6:8;
+  else{K=5;let inv=0;for(let k=1;k<=cap;k++){inv+=1/Number(oddsMap[combos[k-1]]);const g=1/inv;if(k>=5&&g>=2.5)K=k;else if(k>=5)break;}}
+  K=Math.min(K,cap);
+  return {K,nige,cap,valid};
+}
+function garonGdbBetCount(){
+  if(!garonEngine||!garonEngine.ok)return selectedBetCount||12;
+  if(garonGdbAuto){const p=garonBoatcastPrepared;const om=p?p.oddsMap:(garonEngineCtx&&garonEngineCtx.oddsMap);return garonGdbAutoSelect(garonEngine,om).K;}
+  return Math.min(Math.max(selectedBetCount||12,1),garonEngine.top.length);
+}
+// 独自エンジンの結果 → 画面用の状態。買い目の点数は、自動(既定)または点数ボタン。
 function garonGdbState(){
   if(!garonEngine||!garonEngine.ok)return null;
   const p=garonBoatcastPrepared;
   const ctx=p?{oddsMap:p.oddsMap,venue:p.venue,raceNum:p.raceNum,deadline:p.deadline}:(garonEngineCtx||{});
-  const K=Math.min(Math.max(selectedBetCount||12,1),garonEngine.top.length);
+  const K=garonGdbBetCount();
   const pts=garonEngine.top.slice(0,K).map(x=>x.combo);
   const order=garonEngine.boatWin.map((pw,i)=>({boat:i+1,p:pw})).sort((a,b)=>b.p-a.p);
   const marks=['◎','○','▲','△','▽','×'];
@@ -8662,7 +8683,7 @@ function garonGdbState(){
   const gosei=(ctx.oddsMap&&typeof calcGoseiOdds==='function')?calcGoseiOdds(pts,ctx.oddsMap):null;
   return {
     ranking,betsRaw,betcount:betsRaw.length,mode:'gdb',dbg:{selectedPoints:pts,probabilities},axes:[{boat:axis}],
-    infoStripText:`${ctx.venue||'?'}${ctx.raceNum||'?'} ／ GARON-DB(確信度${conf.label})買い目${K}点 ／ 軸: ${axis}`,
+    infoStripText:`${ctx.venue||'?'}${ctx.raceNum||'?'} ／ GARON-DB(確信度${conf.label})買い目${K}点${garonGdbAuto?'(自動)':'(手動)'} ／ 軸: ${axis}`,
     goseiHtml:gosei?`<b style="color:var(--gold);">全体合成オッズ: ${gosei}倍</b>`:'',
     ctx,conf,K
   };
