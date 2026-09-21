@@ -18,7 +18,7 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Qエンジン</title>
+<title>GARON ENGINE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700;1,900&family=Noto+Serif+JP:wght@700;900&family=Noto+Sans+JP:wght@200;300;400;700&family=Anton&family=Tenor+Sans&family=DM+Serif+Display:ital@0;1&display=swap">
@@ -42,6 +42,7 @@
   textarea{height:130px;resize:none;font-size:12px;}
   select{height:42px;}
   .btn{width:100%;padding:13px;border-radius:10px;font-size:15px;font-weight:700;border:none;-webkit-appearance:none;margin-bottom:8px;letter-spacing:.05em;}
+  .engine-only-hide{display:none !important;}
   .btn-gold{background:linear-gradient(135deg,#c9a84c,#f0d080);color:#0a0a0f;}
   .btn-ghost{background:var(--surface2);border:1px solid var(--border);color:var(--text);}
   .btn-sm{padding:8px 14px;font-size:13px;border-radius:8px;border:none;-webkit-appearance:none;font-weight:600;margin-bottom:0;}
@@ -210,10 +211,128 @@
 .tekichu-boat-select{flex:1;padding:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px;text-align:center;-webkit-appearance:none;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Orbitron:wght@500;700&display=swap">
+<style id="gx-theme">
+/* ===== GARON ENGINE 近未来テーマ(2026-09-21)。既存の CSS 変数を上書きして全体の配色を刷新し、エンジンのカード(.gx-*)を追加 ===== */
+:root{--bg:#050914;--surface:#0b1226;--surface2:#111b38;--border:#1f3358;--gold:#38e1ff;--gold2:#9bf0ff;--red:#ff5c7a;--blue:#5aa2ff;--green:#3ef2b0;--text:#e8f1ff;--muted:#8299c4;
+  --violet:#a78bfa;--magenta:#ff4fd8;--amber:#ffc857;--num:'Rajdhani','Orbitron',ui-monospace,'SF Mono',Menlo,monospace;--font:'Noto Sans JP',-apple-system,'Hiragino Sans',sans-serif;}
+body{background:radial-gradient(900px 520px at 88% -8%,rgba(124,92,255,.20),transparent 60%),radial-gradient(760px 480px at -12% 6%,rgba(56,225,255,.15),transparent 58%),linear-gradient(180deg,#050914,#070d1d 60%,#050914);background-attachment:fixed;font-family:var(--font);}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(56,225,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(56,225,255,.045) 1px,transparent 1px);background-size:34px 34px;mask-image:radial-gradient(ellipse at 50% 0%,#000 0%,transparent 75%);-webkit-mask-image:radial-gradient(ellipse at 50% 0%,#000 0%,transparent 75%);z-index:0;}
+.header,.page,#yoso-result{position:relative;z-index:1;}
+.header{background:linear-gradient(135deg,rgba(17,27,56,.92),rgba(5,9,20,.92));border-bottom:1px solid rgba(56,225,255,.45);box-shadow:0 1px 22px rgba(56,225,255,.18);}
+.header-title{font-family:var(--num);font-size:17px;letter-spacing:.2em;background:linear-gradient(90deg,#38e1ff,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:700;}
+.header-sub{letter-spacing:.12em;color:var(--muted);}
+.card{background:linear-gradient(180deg,rgba(17,27,56,.82),rgba(9,15,33,.86));border:1px solid rgba(56,225,255,.16);border-radius:16px;box-shadow:0 8px 28px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.04);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}
+.card-title{font-family:var(--num);color:var(--gold);letter-spacing:.16em;font-size:12px;text-shadow:0 0 12px rgba(56,225,255,.45);}
+input[type=text],input[type=number],textarea,select{background:rgba(17,27,56,.85);border:1px solid rgba(56,225,255,.2);border-radius:10px;}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 2px rgba(56,225,255,.2),0 0 16px rgba(56,225,255,.2);}
+.btn{border-radius:14px;letter-spacing:.08em;}
+.btn-gold{background:linear-gradient(120deg,#22d3ee,#6d7cff 55%,#a855f7);color:#031019;box-shadow:0 0 26px rgba(56,225,255,.32),inset 0 1px 0 rgba(255,255,255,.35);font-weight:800;}
+.btn-gold:active{transform:translateY(1px);filter:brightness(1.1);}
+.btn-ghost{background:rgba(17,27,56,.7);border:1px solid rgba(56,225,255,.22);}
+.bc-btn{background:rgba(17,27,56,.8);border:1px solid rgba(56,225,255,.2);border-radius:10px;font-family:var(--num);font-size:15px;}
+.bc-btn.active{background:linear-gradient(180deg,rgba(56,225,255,.22),rgba(124,92,255,.22));border-color:var(--gold);color:#fff;box-shadow:0 0 14px rgba(56,225,255,.4);}
+
+/* ---- GARON ENGINE カード ---- */
+.gx{--c1:#38e1ff;--c2:#a78bfa;position:relative;}
+.gx-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px;}
+.gx-brand{font-family:var(--num);font-weight:700;letter-spacing:.22em;font-size:13px;color:var(--c1);text-shadow:0 0 14px rgba(56,225,255,.6);}
+.gx-brand b{color:var(--c2);}
+.gx-brand i{display:block;font-style:normal;font-size:10px;letter-spacing:.16em;color:var(--muted);margin-top:2px;}
+.gx-race{font-family:var(--num);font-size:22px;font-weight:700;letter-spacing:.06em;text-align:right;line-height:1;}
+.gx-race small{display:block;font-size:10px;letter-spacing:.14em;color:var(--muted);font-weight:500;margin-top:4px;}
+.gx-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.gx-chipx{font-family:var(--num);font-size:11px;letter-spacing:.08em;padding:3px 9px;border-radius:999px;border:1px solid rgba(56,225,255,.28);background:rgba(56,225,255,.07);color:var(--gold2);}
+.gx-hero{display:flex;gap:14px;align-items:center;padding:12px;border-radius:14px;background:linear-gradient(135deg,rgba(56,225,255,.08),rgba(124,92,255,.10));border:1px solid rgba(56,225,255,.2);margin-bottom:14px;}
+.gx-gauge{width:132px;flex:none;position:relative;}
+.gx-gauge svg{display:block;width:100%;overflow:visible;}
+.gx-arc-bg{fill:none;stroke:rgba(120,150,210,.2);stroke-width:9;stroke-linecap:round;}
+.gx-arc{fill:none;stroke:url(#gxg);stroke-width:9;stroke-linecap:round;filter:drop-shadow(0 0 6px rgba(56,225,255,.7));animation:gxarc 1.1s cubic-bezier(.2,.8,.2,1) both;}
+@keyframes gxarc{from{stroke-dashoffset:157}}
+.gx-gauge-c{position:absolute;left:0;right:0;bottom:0;text-align:center;}
+.gx-gauge-c b{display:block;font-family:var(--num);font-size:30px;line-height:1;font-weight:700;}
+.gx-gauge-c span{font-size:10px;letter-spacing:.14em;color:var(--muted);}
+.gx-hero-side{flex:1;min-width:0;}
+.gx-lv{display:inline-block;font-family:var(--num);font-weight:700;letter-spacing:.14em;padding:3px 12px;border-radius:8px;font-size:15px;margin-bottom:6px;}
+.gx-lv.hi{color:#06251b;background:linear-gradient(120deg,#3ef2b0,#38e1ff);box-shadow:0 0 16px rgba(62,242,176,.5);}
+.gx-lv.mh{color:#241a03;background:linear-gradient(120deg,#ffc857,#ffe08a);box-shadow:0 0 14px rgba(255,200,87,.4);}
+.gx-lv.md{color:#0a1a33;background:linear-gradient(120deg,#8fb4ff,#b6c8ff);}
+.gx-lv.lo{color:#2b0611;background:linear-gradient(120deg,#ff5c7a,#ff9aae);}
+.gx-hero-side p{font-size:12px;color:var(--muted);line-height:1.55;}
+.gx-hero-side p b{color:var(--text);font-family:var(--num);font-size:14px;}
+.gx-sec{font-family:var(--num);font-size:11px;letter-spacing:.2em;color:var(--c1);margin:16px 0 8px;display:flex;align-items:center;gap:8px;}
+.gx-sec::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(56,225,255,.45),transparent);}
+.gx-sec small{font-family:var(--font);letter-spacing:.04em;color:var(--muted);font-size:10px;}
+.gx-chip{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;font-family:var(--num);font-weight:700;font-size:15px;flex:none;box-shadow:0 0 0 1px rgba(255,255,255,.18),0 3px 10px rgba(0,0,0,.4);}
+.gx-chip.c1{background:#f4f6fb;color:#111;}.gx-chip.c2{background:#101317;color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.45),0 3px 10px rgba(0,0,0,.4);}
+.gx-chip.c3{background:#ea3b3b;color:#fff;}.gx-chip.c4{background:#2b7de9;color:#fff;}.gx-chip.c5{background:#f7d235;color:#1b1600;}.gx-chip.c6{background:#2fb35a;color:#fff;}
+.gx-chip.sm{width:22px;height:22px;font-size:13px;border-radius:7px;}
+.gx-boat{border-radius:12px;background:rgba(17,27,56,.6);border:1px solid rgba(56,225,255,.12);margin-bottom:7px;overflow:hidden;transition:border-color .2s,box-shadow .2s;}
+.gx-boat.top{border-color:rgba(255,200,87,.5);box-shadow:0 0 18px rgba(255,200,87,.18);}
+.gx-boat.open{border-color:rgba(56,225,255,.5);}
+.gx-row{display:flex;align-items:center;gap:9px;padding:9px 10px;cursor:pointer;-webkit-user-select:none;user-select:none;}
+.gx-name{width:78px;flex:none;font-size:12px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.gx-name small{display:block;font-size:9px;color:var(--muted);letter-spacing:.04em;}
+.gx-bar{flex:1;height:12px;border-radius:7px;background:rgba(120,150,210,.16);position:relative;overflow:hidden;}
+.gx-fill{display:block;height:100%;border-radius:7px;background:linear-gradient(90deg,#22d3ee,#7c5cff);box-shadow:0 0 12px rgba(56,225,255,.6);transform-origin:left;animation:gxgrow .9s cubic-bezier(.2,.8,.2,1) both;}
+.gx-boat.top .gx-fill{background:linear-gradient(90deg,#ffc857,#ff8a5c);box-shadow:0 0 14px rgba(255,200,87,.65);}
+@keyframes gxgrow{from{transform:scaleX(0)}}
+.gx-pct{width:54px;text-align:right;font-family:var(--num);font-weight:700;font-size:20px;line-height:1;}
+.gx-pct small{font-size:11px;font-weight:500;color:var(--muted);}
+.gx-caret{width:14px;color:var(--muted);font-size:11px;transition:transform .2s;}
+.gx-boat.open .gx-caret{transform:rotate(90deg);color:var(--c1);}
+.gx-mini{display:flex;gap:8px;padding:0 10px 8px 45px;font-size:10px;color:var(--muted);font-family:var(--num);letter-spacing:.06em;}
+.gx-mini b{color:var(--text);font-weight:600;}
+.gx-detail{display:none;padding:2px 12px 12px;border-top:1px dashed rgba(56,225,255,.2);}
+.gx-boat.open .gx-detail{display:block;}
+.gx-say{font-size:12.5px;line-height:1.65;margin:10px 0;padding:9px 11px;border-radius:10px;background:rgba(124,92,255,.10);border-left:3px solid var(--c2);}
+.gx-sub{font-family:var(--num);font-size:10px;letter-spacing:.16em;color:var(--muted);margin:10px 0 5px;}
+.gx-ctr{display:grid;grid-template-columns:112px 1fr 44px;gap:6px;align-items:center;font-size:11px;margin:3px 0;}
+.gx-ctr .lb{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.gx-ctr .tr{position:relative;height:8px;border-radius:4px;background:rgba(120,150,210,.14);}
+.gx-ctr .tr::before{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:rgba(200,220,255,.35);}
+.gx-ctr .bar{position:absolute;top:0;bottom:0;border-radius:4px;}
+.gx-ctr .bar.p{left:50%;background:linear-gradient(90deg,#38e1ff,#3ef2b0);box-shadow:0 0 8px rgba(62,242,176,.6);}
+.gx-ctr .bar.n{right:50%;background:linear-gradient(270deg,#ff5c7a,#ff9aae);box-shadow:0 0 8px rgba(255,92,122,.55);}
+.gx-ctr .vv{text-align:right;font-family:var(--num);font-weight:700;font-size:13px;}
+.gx-ctr .vv.p{color:var(--green);}.gx-ctr .vv.n{color:var(--red);}
+.gx-stats{width:100%;border-collapse:collapse;font-size:11.5px;}
+.gx-stats td{padding:4px 2px;border-bottom:1px solid rgba(56,225,255,.08);}
+.gx-stats td.v{text-align:right;font-family:var(--num);font-weight:700;font-size:14px;white-space:nowrap;}
+.gx-stats td.n{color:var(--muted);font-size:10px;text-align:right;}
+.gx-rk{display:inline-block;min-width:26px;text-align:center;font-family:var(--num);font-size:11px;font-weight:700;border-radius:6px;padding:1px 4px;}
+.gx-rk.good{color:#06251b;background:linear-gradient(120deg,#3ef2b0,#7df9d0);}.gx-rk.flat{color:#c3d3f2;background:rgba(120,150,210,.22);}.gx-rk.bad{color:#2b0611;background:linear-gradient(120deg,#ff5c7a,#ff9aae);}
+.gx-notes{margin:0;padding:0;list-style:none;}
+.gx-notes li{font-size:12.5px;line-height:1.65;padding:7px 10px 7px 26px;margin-bottom:5px;border-radius:10px;background:rgba(17,27,56,.55);border:1px solid rgba(56,225,255,.10);position:relative;}
+.gx-notes li::before{content:"▸";position:absolute;left:10px;color:var(--c1);text-shadow:0 0 8px rgba(56,225,255,.7);}
+.gx-bet{border-radius:12px;background:rgba(17,27,56,.6);border:1px solid rgba(56,225,255,.12);margin-bottom:6px;overflow:hidden;}
+.gx-bet.open{border-color:rgba(56,225,255,.5);}
+.gx-brow{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;padding:9px 10px;cursor:pointer;-webkit-user-select:none;user-select:none;}
+.gx-combo{display:flex;align-items:center;gap:3px;}
+.gx-combo em{font-style:normal;color:var(--muted);font-size:11px;}
+.gx-bp{min-width:0;}
+.gx-bp b{font-family:var(--num);font-size:17px;font-weight:700;}
+.gx-bp .m{display:block;height:4px;border-radius:2px;background:rgba(120,150,210,.16);margin-top:3px;overflow:hidden;}
+.gx-bp .m i{display:block;height:100%;background:linear-gradient(90deg,#38e1ff,#a78bfa);transform-origin:left;animation:gxgrow .9s ease both;}
+.gx-od{text-align:right;font-family:var(--num);font-size:13px;color:var(--gold2);white-space:nowrap;}
+.gx-od small{display:inline;margin-left:2px;font-size:10px;color:var(--muted);}
+.gx-am{text-align:right;font-family:var(--num);font-weight:700;font-size:15px;color:var(--amber);white-space:nowrap;min-width:52px;}
+.gx-bdetail{display:none;padding:4px 12px 11px;border-top:1px dashed rgba(56,225,255,.2);font-size:12px;line-height:1.7;}
+.gx-bet.open .gx-bdetail{display:block;}
+.gx-chain{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0 4px;}
+.gx-chain .st{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;border-radius:10px;background:rgba(56,225,255,.08);border:1px solid rgba(56,225,255,.2);}
+.gx-chain .st i{font-style:normal;font-size:10px;letter-spacing:.12em;color:var(--muted);}
+.gx-chain .st b{font-family:var(--num);font-size:16px;}
+.gx-sum{display:flex;justify-content:space-between;gap:8px;margin-top:10px;padding:11px 12px;border-radius:12px;background:linear-gradient(135deg,rgba(56,225,255,.10),rgba(124,92,255,.12));border:1px solid rgba(56,225,255,.25);}
+.gx-sum div{text-align:center;flex:1;}
+.gx-sum b{display:block;font-family:var(--num);font-size:20px;font-weight:700;}
+.gx-sum span{font-size:10px;letter-spacing:.08em;color:var(--muted);}
+.gx-foot{font-size:10.5px;color:var(--muted);line-height:1.6;margin-top:10px;}
+</style>
 </head>
 <body>
 <div class="header">
-  <div><div class="header-title">🎯 Qエンジン(開発中)</div><div class="header-sub">5系統クロス検証プロトタイプ</div></div>
+  <div><div class="header-title">GARON // ENGINE</div><div class="header-sub">DB-3STAGE PREDICTION SYSTEM</div></div>
  
 </div>
 <!-- タブなし（予想のみ） -->
@@ -278,7 +397,8 @@
        選択はlocalStorage(garon_q_engine_mode)へ保存し、次回起動時に復元する。 -->
   <div class="card" id="engine-mode-card">
     <div class="card-title">🔀 エンジンモード</div>
-    <div style="display:flex;gap:8px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button id="engine-mode-gdb-btn" class="btn btn-sm" style="flex:1 1 100%;" onclick="garonSetEngineMode('GDB')">🚀 GARON-DB(独自エンジン・新)</button>
       <button id="engine-mode-r06-btn" class="btn btn-sm" style="flex:1;" onclick="garonSetEngineMode('R06')">R06ハイブリッド</button>
       <!-- 2026-09-10追加(GARON-Q-R07 逃げ順位更新版 v1、非本番ステージング専用): 既定選択は
            引き続きR06(本番承認時に別途変更、CEO指示書5番)。 -->
@@ -289,6 +409,8 @@
   </div>
 
   <div id="yoso-result" style="display:none;">
+    <div id="input-source-banner" style="font-size:12px;font-weight:700;margin:0 0 8px;"></div>
+    <div class="card" id="engine-card" style="display:none;"></div>
     <div class="card">
       <div class="card-title">🔍 予想材料(選手情報)</div>
       <div id="boat-info-panel"></div>
@@ -1783,7 +1905,9 @@ function switchTab(name){
 // 何も反映されず、直前の値・初期値の12点のまま買い目が生成されていた)。
 // ボタンのハイライト表示は一致するものがあれば更新するが、値の反映自体はボタンの有無に関係なく必ず行う。
 function autoSetBetCount(pts){
+  if(typeof CURRENT_ENGINE_MODE!=='undefined' && CURRENT_ENGINE_MODE==='GDB') return;   // GARON-DBでは点数を自動変更しない(点数ボタン・既定12点に従う)
   selectedBetCount=pts;
+  garonRerenderEngineCard();
   const btns=document.querySelectorAll('.betcount-row .bc-btn'); // race-type選択(rtype-*)も.bc-btnを共有しているため、点数ボタンだけに絞る
   let target=null;
   btns.forEach(b=>{
@@ -1794,8 +1918,10 @@ function autoSetBetCount(pts){
 }
 function setBetCount(n,btn){
   selectedBetCount=n;
+  garonRerenderEngineCard();
   document.querySelectorAll('.betcount-row .bc-btn').forEach(b=>b.classList.remove('active')); // race-type選択と混同しないよう範囲を限定(2026-07-29修正)
   btn.classList.add('active');
+  if(CURRENT_ENGINE_MODE==='GDB'){ if(garonEngine) garonApplyEngineMode(); return; }   // GARON-DBは、点数ボタンで買い目を作り直す(Q v3の再計算は使わない)
   refreshBetsForCount();
 }
 
@@ -3082,6 +3208,8 @@ function setAllocMode(mode){
 // 旧runYoso()は未使用のまま残っているが呼び出し口を切り替えた(掃除は後日)。
 const GARON_BOATCAST_PREPARE_URL='https://yuta-1.taile1e601.ts.net/api/boatcast/prepare';
 let garonBoatcastPrepared=null;
+let garonEngine=null;      // 独自予想エンジン(データバンク版)の結果。R07が入力不足でも取得できる
+let garonEngineCtx=null;   // R07が使えないときの補助情報(会場・レース番号・オッズ)
 
 async function copyBoatcastBookmarklet(){
   try{
@@ -3121,14 +3249,14 @@ function garonValidatePrepared(result){
 function garonPastedDataChanged(){
   // 緊急用の貼り付け欄に入力したら、BOATCASTの読込状態は破棄する(古いBOATCASTデータが貼り付けを無言で上書きしないように)。
   if(!garonBoatcastPrepared)return;
-  garonBoatcastPrepared=null;
+  garonBoatcastPrepared=null;garonEngine=null;garonEngineCtx=null;
   const f=document.getElementById('boatcast-paste-area');if(f)f.value='';
   const status=document.getElementById('boatcast-load-status');
   if(status){status.style.color='var(--muted)';status.textContent='旧方式(貼り付け)に切り替えました。BOATCASTの読込は破棄しています。';}
 }
 
 function garonBoatcastFreshnessError(){
-  if(!garonBoatcastPrepared)return null;
+  if(!garonBoatcastPrepared&&!garonEngine)return null;
   const now=Date.now();
   if(garonBoatcastDeadlineMs&&now>=garonBoatcastDeadlineMs)return 'このレースは締切を過ぎています。BOATCASTを取得し直してください';
   if(garonBoatcastLoadedAtMs&&now-garonBoatcastLoadedAtMs>GARON_BOATCAST_MAX_AGE_MS)return 'BOATCASTの読込から20分以上経過しています。BMをやり直してください';
@@ -3165,11 +3293,19 @@ async function loadBoatcastJson(file){
   return loadBoatcastText(await file.text());
 }
 
+// 旧方式の欄にBOATCASTのデータ(JSON)を貼ってしまった場合の判定。旧方式の解析(parseData)にはBOATCASTのデータは読めず、
+// 選手名・オッズが空の予想になるため、こちらはBOATCAST経路へ回す。
+function garonLooksLikeBoatcastJson(text){
+  const t=String(text||'').trim();
+  return t.startsWith('{')&&t.includes('garon.boatcast.race.v1');
+}
+
 async function loadBoatcastText(text){
   const status=document.getElementById('boatcast-load-status');
   garonBoatcastPrepared=null;
   status.style.color='var(--muted)';
   status.textContent='BOATCASTデータを検査し、データバンクと照合しています…';
+  garonEngine=null;garonEngineCtx=null;
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),GARON_BOATCAST_FETCH_TIMEOUT_MS);
   try{
@@ -3180,10 +3316,27 @@ async function loadBoatcastText(text){
       method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(raw),signal:controller.signal
     });
     const result=await response.json().catch(()=>({error:`HTTP ${response.status}`}));
-    if(!response.ok)throw new Error([result.error,...(result.details||[])].filter(Boolean).join(' / '));
+    if(!response.ok){
+      const why=[result.error,...(result.details||[])].filter(Boolean).join(' / ');
+      if(result.engine&&result.engine.ok){
+        // R07は入力不足で出せないが、独自エンジンは出せる(履歴のない選手がいても確率を出す)
+        garonEngine=result.engine;garonEngineCtx=result.ctx||null;garonBoatcastPrepared=null;
+        garonBoatcastLoadedAtMs=Date.now();
+        garonBoatcastDeadlineMs=(garonEngineCtx&&garonEngineCtx.raceDate&&garonEngineCtx.deadline)?new Date(`${garonEngineCtx.raceDate}T${garonEngineCtx.deadline}:00+09:00`).getTime():0;
+        const venueSel0=document.getElementById('inp-venue');if(venueSel0&&garonEngineCtx&&garonEngineCtx.venue)venueSel0.value=garonEngineCtx.venue;
+        const raceSel0=document.getElementById('inp-racenum');if(raceSel0&&garonEngineCtx&&garonEngineCtx.raceNum)raceSel0.value=String(garonEngineCtx.raceNum).replace(/R$/,'');
+        saveVenueRace();
+        status.style.color='var(--green)';
+        status.textContent=`読込完了(独自エンジンのみ)：${garonEngineCtx?garonEngineCtx.venue+' '+garonEngineCtx.raceNum:''} ※R07は入力不足のため出せません: ${why}`;
+        showToast('独自エンジンの準備が完了しました(R07は入力不足)');
+        return;
+      }
+      throw new Error(why);
+    }
     const problems=garonValidatePrepared(result);
     if(problems.length)throw new Error(problems.join(' / '));
     garonBoatcastPrepared=result;
+    garonEngine=(result.engine&&result.engine.ok)?result.engine:null;
     garonBoatcastLoadedAtMs=Date.now();
     garonBoatcastDeadlineMs=(result.raceDate&&result.deadline)?new Date(`${result.raceDate}T${result.deadline}:00+09:00`).getTime():0;
     const venueSel=document.getElementById('inp-venue');
@@ -3202,22 +3355,152 @@ async function loadBoatcastText(text){
     }
     showToast('BOATCASTデータの準備が完了しました');
   }catch(error){
-    garonBoatcastPrepared=null;
+    garonBoatcastPrepared=null;garonEngine=null;garonEngineCtx=null;
     status.style.color='var(--red)';
     status.textContent=`読込失敗：${error.name==='AbortError'?'応答がありません(接続を確認してください)':error.message}`;
     showToast('BOATCASTデータを読み込めませんでした');
   }finally{clearTimeout(timer);}
 }
 
+// ============================================================
+// 2026-09-21: GARON ENGINE カード(近未来デザイン)。エンジン(データバンク版)の確率・根拠・買い目を1枚に表示する。
+// R07とは独立。オッズは予測に使わない(表示と配分にだけ使う)。確信度ごとの実績は、モデルが学習に使っていない未来の期間(2025-04〜2026-09、81,639レース)で集計した値。
+function garonEngineConfidence(top1p){
+  if(top1p>=0.111)return {label:'高',cls:'hi',hit10:'約66%',hit12:'約70%',color:'var(--green)'};
+  if(top1p>=0.087)return {label:'中上',cls:'mh',hit10:'約57%',hit12:'約62%',color:'var(--gold)'};
+  if(top1p>=0.065)return {label:'中',cls:'md',hit10:'約48%',hit12:'約53%',color:'var(--muted)'};
+  return {label:'低',cls:'lo',hit10:'約35%',hit12:'約40%',color:'var(--red)'};
+}
+
+const GX_COMBOS=(function(){const r=[];for(let a=1;a<=6;a++)for(let b=1;b<=6;b++){if(b===a)continue;for(let c=1;c<=6;c++){if(c===a||c===b)continue;r.push([a,b,c]);}}return r;})();
+function gxEsc(s){return String(s==null?'':s).replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));}
+function gxChip(n,sm){return `<span class="gx-chip c${n}${sm?' sm':''}">${n}</span>`;}
+function gxToggle(el){if(el&&el.parentElement)el.parentElement.classList.toggle('open');}
+
+// 三連単120通りの確率から、1着確率・(1着,2着)の確率を作る(条件付き確率の連鎖の表示に使う)
+function gxChain(probs){
+  const p={},p1={},p12={};
+  GX_COMBOS.forEach((c,i)=>{const k=c.join('-');p[k]=probs[i];p1[c[0]]=(p1[c[0]]||0)+probs[i];const k2=c[0]+'-'+c[1];p12[k2]=(p12[k2]||0)+probs[i];});
+  return {p,p1,p12};
+}
+
+function gxContribHtml(contrib,groups){
+  const rows=groups.map(g=>({label:g.label,v:contrib[g.key]||0})).filter(r=>Math.abs(r.v)>=0.3).sort((x,y)=>Math.abs(y.v)-Math.abs(x.v)).slice(0,6);
+  if(!rows.length)return '<div class="gx-foot">どの要因も大きくは動かしていません(平均的な艇)。</div>';
+  return rows.map(r=>{const w=Math.min(50,Math.abs(r.v)/30*50);const pos=r.v>=0;
+    return `<div class="gx-ctr"><span class="lb">${gxEsc(r.label)}</span><span class="tr"><span class="bar ${pos?'p':'n'}" style="width:${w}%"></span></span><span class="vv ${pos?'p':'n'}">${pos?'+':''}${r.v.toFixed(1)}</span></div>`;}).join('');
+}
+
+function gxStatsHtml(stats){
+  return `<table class="gx-stats">${stats.map(s=>`<tr><td>${gxEsc(s.label)}</td><td class="v">${gxEsc(s.value)}</td><td class="n">${gxEsc(s.note||'')}</td><td style="text-align:right;">${s.rank?`<span class="gx-rk ${s.tone}">${s.rank}位</span>`:''}</td></tr>`).join('')}</table>`;
+}
+
+function renderEngineCard(engine,ctx){
+  const el=document.getElementById('engine-card');
+  if(!el)return;
+  if(!engine||!engine.ok){el.style.display='none';el.innerHTML='';return;}
+  ctx=ctx||{};
+  const K=Math.min(Math.max(selectedBetCount||12,1),(engine.top||[]).length);
+  const pts=engine.top.slice(0,K);
+  const cum=pts.reduce((s,x)=>s+x.p,0);
+  const conf=garonEngineConfidence(engine.top1p);
+  const odds=ctx.oddsMap;
+  let amounts=null;
+  if(odds&&typeof r06AllocateEqualReturn==='function'){try{amounts=r06AllocateEqualReturn(pts.map(x=>x.combo),odds,3000);}catch(e){amounts=null;}}
+  const ex=(engine.explain&&!engine.explain.error)?engine.explain:null;
+  const chain=gxChain(engine.probs);
+  const maxBet=pts.length?pts[0].p:1;
+  // ---- ヘッダー ----
+  const race=ctx.venue?`${gxEsc(ctx.venue)} <span style="color:var(--gold);">${gxEsc(ctx.raceNum||'')}</span>`:'RACE';
+  const chips=[`DATA 〜${gxEsc(String(engine.stateDay||'').slice(5))}`,ctx.deadline?`締切 ${gxEsc(ctx.deadline)}`:'',`点数 ${K}`].filter(Boolean).map(t=>`<span class="gx-chipx">${t}</span>`).join('');
+  const dash=157.08;
+  const gauge=`<div class="gx-gauge"><svg viewBox="0 0 120 68"><defs><linearGradient id="gxg" x1="0" x2="1"><stop offset="0" stop-color="#38e1ff"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs>
+      <path class="gx-arc-bg" d="M10 62 A50 50 0 0 1 110 62"/><path class="gx-arc" d="M10 62 A50 50 0 0 1 110 62" style="stroke-dasharray:${dash};stroke-dashoffset:${(dash*(1-Math.min(cum,1))).toFixed(1)}"/></svg>
+      <div class="gx-gauge-c"><b>${(cum*100).toFixed(0)}<small style="font-size:14px;">%</small></b><span>HIT ESTIMATE</span></div></div>`;
+  const top=engine.boatWin.map((p,i)=>({no:i+1,p})).sort((a,b)=>b.p-a.p);
+  const hero=`<div class="gx-hero">${gauge}<div class="gx-hero-side"><span class="gx-lv ${conf.cls}">確信度 ${conf.label}</span>
+      <p>この${K}点で的中する確率の目安 <b>${(cum*100).toFixed(0)}%</b><br>過去の実績: この確信度のレースは上位10点で<b>${conf.hit10}</b>・上位12点で<b>${conf.hit12}</b>が的中</p></div></div>`;
+  // ---- 各艇(1着確率)と根拠 ----
+  const boatHtml=top.map((b,ix)=>{
+    const eb=ex?ex.boats[b.no-1]:null;
+    const tag=ix===0?'本命':(ix===1?'対抗':'');
+    const detail=eb?`<div class="gx-detail"><div class="gx-say">${gxEsc(eb.comment)}</div>
+        <div class="gx-sub">要因ごとの押し上げ・押し下げ(1着確率 pt)</div>${gxContribHtml(eb.contrib,ex.groups)}
+        <div class="gx-sub">DBの実数値(同じレース内の順位)</div>${gxStatsHtml(eb.stats)}</div>`:'';
+    return `<div class="gx-boat${ix===0?' top':''}"><div class="gx-row" onclick="gxToggle(this)">${gxChip(b.no)}
+        <div class="gx-name">${eb&&eb.name?gxEsc(eb.name):b.no+'号艇'}<small>${tag}</small></div>
+        <div class="gx-bar"><span class="gx-fill" style="width:${Math.max(2,b.p*100).toFixed(1)}%"></span></div>
+        <div class="gx-pct">${(b.p*100).toFixed(1)}<small>%</small></div><div class="gx-caret">▶</div></div>
+        <div class="gx-mini"><span>2着 <b>${eb?(eb.p2*100).toFixed(0):'-'}%</b></span><span>3着 <b>${eb?(eb.p3*100).toFixed(0):'-'}%</b></span><span style="margin-left:auto;color:var(--muted);">タップで根拠</span></div>${detail}</div>`;
+  }).join('');
+  const notes=ex&&ex.race&&ex.race.length?`<div class="gx-sec">ANALYSIS <small>今日のレースの見立て(DBの数字から自動生成)</small></div><ul class="gx-notes">${ex.race.map(t=>`<li>${gxEsc(t)}</li>`).join('')}</ul>`:'';
+  // ---- 買い目 ----
+  const betHtml=pts.map((x,i)=>{
+    const [a,b,c]=x.combo.split('-').map(Number);
+    const pa=chain.p1[a],pab=chain.p12[a+'-'+b];
+    const c2=pab/pa,c3=x.p/pab;
+    const ea=ex?ex.boats[a-1]:null,eb2=ex?ex.boats[b-1]:null,ec=ex?ex.boats[c-1]:null;
+    const o=odds&&odds[x.combo]?Number(odds[x.combo]):null;
+    const why=ea?`<div class="gx-say" style="margin:8px 0;">${a}号艇が最有力の1着候補(${(pa*100).toFixed(0)}%)。1着が${a}号艇のとき、2着は${b}号艇が${(c2*100).toFixed(0)}%${eb2?`(${b}号艇は2着に入る確率が全体で${(eb2.p2*100).toFixed(0)}%)`:''}、その上で3着が${c}号艇になる確率が${(c3*100).toFixed(0)}%${ec?`(${c}号艇の3着確率は全体で${(ec.p3*100).toFixed(0)}%)`:''}。<br><span style="color:var(--muted);">${a}号艇の根拠: ${gxEsc(ea.comment)}</span></div>`:'';
+    return `<div class="gx-bet"><div class="gx-brow" onclick="gxToggle(this)"><div class="gx-combo">${gxChip(a,1)}<em>›</em>${gxChip(b,1)}<em>›</em>${gxChip(c,1)}</div>
+        <div class="gx-bp"><b>${(x.p*100).toFixed(1)}%</b><span class="m"><i style="width:${(x.p/maxBet*100).toFixed(0)}%"></i></span></div>
+        <div class="gx-od">${o?o.toFixed(1)+'<small>倍</small>':'-'}</div><div class="gx-am">${amounts?amounts[i]+'円':''}</div></div>
+        <div class="gx-bdetail"><div class="gx-chain"><span class="st"><i>1着</i>${gxChip(a,1)}<b>${(pa*100).toFixed(1)}%</b></span><span class="st"><i>2着(1着が${a}号艇のとき)</i>${gxChip(b,1)}<b>${(c2*100).toFixed(1)}%</b></span><span class="st"><i>3着(上の2艇のとき)</i>${gxChip(c,1)}<b>${(c3*100).toFixed(1)}%</b></span></div><div class="gx-foot" style="margin:2px 0 6px;">3つを掛け合わせて <b style="color:var(--text);font-family:var(--num);">${(x.p*100).toFixed(2)}%</b></div>
+        ${why}${o?`<div class="gx-foot" style="margin:0;">参考: 確率×オッズ = ${(x.p*o).toFixed(2)}(1.00を超えると、確率どおりなら期待値が100円以上。過去の検証では、これだけで選んでも回収率は安定して上がりませんでした)</div>`:''}</div></div>`;
+  }).join('');
+  const total=amounts?amounts.reduce((s,v)=>s+v,0):null;
+  const sum=`<div class="gx-sum"><div><b>${K}</b><span>点数</span></div><div><b>${(cum*100).toFixed(0)}%</b><span>的中確率の目安</span></div><div><b>${total!=null?total.toLocaleString():'-'}</b><span>投資額(円)</span></div></div>`;
+  el.style.display='block';
+  el.innerHTML=`<div class="gx"><div class="gx-top"><div class="gx-brand">GARON<b>//</b>ENGINE<i>DB-3STAGE PREDICTION v1</i></div><div class="gx-race">${race}<small>${gxEsc(engine.engine||'')}</small></div></div>
+    <div class="gx-chips">${chips}</div>${hero}
+    <div class="gx-sec">WIN PROBABILITY <small>各艇の1着確率(タップで根拠)</small></div>${boatHtml}${notes}
+    <div class="gx-sec">BETS <small>確率の高い順・タップで理由</small></div>${betHtml}${sum}
+    <div class="gx-foot">過去の成績(データバンク20万レース)だけから予測し、オッズは予測に使っていません。回収率は過去の実績で約78%で、収支を保証するものではありません。点数は上の点数ボタンで変えられます。</div></div>`;
+}
+
+function garonRerenderEngineCard(){
+  if(!garonEngine)return;
+  const p=garonBoatcastPrepared;
+  renderEngineCard(garonEngine,p?{oddsMap:p.oddsMap,venue:p.venue,raceNum:p.raceNum,deadline:p.deadline}:garonEngineCtx);
+}
+
 async function runYosoQ(){
   saveVenueRace();
-  const data=document.getElementById('inp-data').value.trim();
-  if(!garonBoatcastPrepared&&!data){showToast('BOATCASTデータを読み込んでください');return;}
+  let data=document.getElementById('inp-data').value.trim();
+  if(!garonBoatcastPrepared&&garonLooksLikeBoatcastJson(data)){
+    await loadBoatcastText(data);       // 旧方式の欄にBOATCASTのデータが貼られている → BOATCAST経路で読み込む
+    if(!garonBoatcastPrepared)return;   // 読み込めなかった場合は、旧方式の解析には回さない(理由は読込状況に表示済み)
+    data='';
+  }
+  if(!garonBoatcastPrepared&&!garonEngine&&!data){showToast('BOATCASTデータを読み込んでください');return;}
   const garonStale=garonBoatcastFreshnessError();
   if(garonStale){showToast(garonStale);const st=document.getElementById('boatcast-load-status');if(st){st.style.color='var(--red)';st.textContent=garonStale;}return;}
 
   document.getElementById('yoso-result').style.display='block';
   document.getElementById('bet-tbody').innerHTML='';
+  // どの入力で計算したかを結果の先頭に明示する(旧方式に落ちていても気づけるように)
+  const srcBanner=document.getElementById('input-source-banner');
+  if(srcBanner){
+    if(garonBoatcastPrepared){
+      srcBanner.style.color='var(--green)';
+      const imputed=(garonBoatcastPrepared.imputedZero||[]).length;
+      srcBanner.textContent=`入力: BOATCAST＋GARON DB（${garonBoatcastPrepared.venue}${garonBoatcastPrepared.raceNum}）${imputed?` ※0で補完した項目 ${imputed}件`:''}`;
+    }else{
+      srcBanner.style.color='var(--red)';
+      srcBanner.textContent='入力: 旧方式（貼り付け）— BOATCAST＋GARON DBは使っていません';
+    }
+  }
+
+  // 独自エンジン(データバンク版)のカード。R07が使えない(入力不足)場合は、このカードだけを表示する
+  garonRerenderEngineCard();
+  const engineOnly=!garonBoatcastPrepared&&!!garonEngine;
+  const gdbNow=(CURRENT_ENGINE_MODE==='GDB');
+  document.querySelectorAll('#yoso-result > .card:not(#engine-card), #yoso-result > #bet-section').forEach(e=>e.classList.toggle('engine-only-hide',engineOnly && !(gdbNow && e.id==='bet-section')));
+  if(engineOnly){
+    if(srcBanner){srcBanner.style.color='var(--gold)';srcBanner.textContent=gdbNow?'入力: BOATCAST＋GARON DB（GARON-DBのみ。R07は入力不足のため出していません）':'入力: BOATCAST＋GARON DB（独自エンジンのみ。R07は入力不足のため出していません）';}
+    if(gdbNow){ garonGdbPrepareEngineOnlyGlobals(); garonApplyEngineMode(); }   // 独自エンジンだけで、買い目・X投稿サマリー・コメント用データ・保存まで通す
+    return;
+  }
 
   try{
     const d=garonBoatcastPrepared
@@ -3867,7 +4150,7 @@ function garonFormatBetsForComment(arr){
   // 無条件でcompressBetsSGへ流れ、CEOが過去に報告したR06と同種の圧縮バグが再発する
   // (実ブラウザ試験: 徳山4Rの逃げ6点が「1-2=45/1-2-36」という実在しない組み合わせを含む
   // 表記に化けることを確認した)。
-  if(currentCalcData && (currentCalcData.mode==='r06' || currentCalcData.mode==='r07')){
+  if(currentCalcData && (currentCalcData.mode==='r06' || currentCalcData.mode==='r07' || currentCalcData.mode==='gdb')){
     const vals=(arr||[]).map(b=>typeof b==='string'?b:b.val);
     return garonNaturalGroupBets(vals).join('/');
   }
@@ -3875,6 +4158,7 @@ function garonFormatBetsForComment(arr){
 }
 
 function buildXSummary(mode,withAmount){
+  if(CURRENT_ENGINE_MODE==='GDB') return garonGdbXSummary(mode,withAmount);   // 2026-09-21: 独自エンジン
   if(!currentCalcData) return '';
   const racenum=currentCalcData.racenum||'?';
   const ranking=currentCalcData.ranking||[];
@@ -4601,6 +4885,7 @@ function buildRoleCandidates(boats, attackCands, dbg, maruBoat){
 // 直す必要がある)。出す内容も「系統別得点の内訳・買い目(本線/抑え)・場・レース番号」の
 // 3点に絞る(雄大さん指示: 他のAIに渡して展開コメントを書かせるための最小限のデータ)。
 function buildClaudeCommentData(){
+  if(CURRENT_ENGINE_MODE==='GDB') return garonGdbCommentData();   // 2026-09-21: 独自エンジン
   // 2026-09-10追記(R06本番統合、見送り時の安全策): R06選択中に見送り/未計算/失敗の場合は
   // Q v3側のデータを誤って渡さない。
   if(CURRENT_ENGINE_MODE==='R06' && (!currentR06Result || currentR06Result.route==='hold')) return '⚠️ R06は見送り判定のため、コメント用データはありません。';
@@ -4749,6 +5034,7 @@ function copyClaudeData(){
 // 生データを渡して解釈させると空虚な一般論になるため、比較・順位・実績値は
 // ここで計算済みの形でJSON化して渡し、AIには文章化だけさせる。
 function computeTenkaiFacts(){
+  if(CURRENT_ENGINE_MODE==='GDB') return null;   // 2026-09-21: 独自エンジンはQ v3の確定事実を持たない(展開コメントはClaude用データで作る)
   // 2026-09-10追記(R06本番統合、見送り時の安全策): R06選択中に見送り/未計算/失敗の場合は
   // Q v3側のデータを誤って渡さない。
   if(CURRENT_ENGINE_MODE==='R06' && (!currentR06Result || currentR06Result.route==='hold')) return null;
@@ -5196,6 +5482,15 @@ function saveResultInner(resultType){
       const auditRecordSave07=garonBuildR07AuditRecord(currentR07Result, (currentParsedData&&currentParsedData.boats)||[], (currentParsedData&&currentParsedData.oddsMap)||{}, {eventType:'gtool_save', raceKey:venue+'|'+racenumRaw, gtoolSavedPoints:gtoolPointsNow07});
       garonSaveR07AuditRecord(auditRecordSave07, (currentParsedData&&currentParsedData.boats)||[], (currentParsedData&&currentParsedData.oddsMap)||{});
     }catch(auditErr07){ console.error('R07監査ログ(GTOOL保存時)の記録に失敗', auditErr07); }
+  } else if(CURRENT_ENGINE_MODE==='GDB' && garonEngine && garonEngine.ok){
+    // 2026-09-21追加: 独自エンジン(GARON-DB)。確信度・予測確率・買い目をログへ残す(GTOOLの分析で使う)。
+    Object.assign(entry, garonGdbLogFields());
+    // 買い目の金額(3000円均等回収の配分)をログの買い目へ入れる。GTOOLの投資額・回収率の計算が、実際の配分どおりになる。
+    if(Array.isArray(entry.engineAmounts) && Array.isArray(entry.bets)){
+      entry.bets.forEach((b,i)=>{ if(!b.amount && entry.engineAmounts[i]) b.amount=entry.engineAmounts[i]; });
+      const sumAmt=entry.engineAmounts.reduce((s,v)=>s+v,0);
+      if(sumAmt>0) entry.invest=sumAmt;
+    }
   } else {
     entry.engineMode='QV3';
   }
@@ -8329,7 +8624,177 @@ function r07BuildSaveLogFields(r07Result){
 // 確実に参照できることを優先する。トップレベルのlet/constはグローバル"レキシカル環境"には
 // 入るがwindowオブジェクトのプロパティにはならない仕様のため、外部からの状態確認(監査・
 // デバッグ)がしやすいvarを使う)。
-const GARON_ENGINE_MODE_KEY='garon_q_engine_mode';
+// ============================================================
+// 2026-09-21追加: GARON-DB モード(独自予想エンジン)。R07/R06/現行Q v3と同じ「エンジンモード」として選べる(既定はGARON-DB)。
+// 選ぶと、買い目表・X投稿サマリー・展開コメント用データ・GTOOL保存が、独自エンジンの結果で動く。
+// R07が入力不足で出せないレースでも動く(独自エンジンだけの結果で、買い目〜保存まで通る)。
+var currentEngineState=null;   // 直近の独自エンジンの画面用状態(ranking/betsRaw/…)。R07/R06のcurrentR07State等と同じ形
+
+function garonGdbSurname(no){
+  const e=(garonEngine&&garonEngine.explain&&garonEngine.explain.boats)?garonEngine.explain.boats[no-1]:null;
+  return garonBoatLabel(no,(e&&e.name)||'');
+}
+
+function garonGdbHyoka(boatWin){
+  const order=boatWin.map((p,i)=>({no:i+1,p})).sort((a,b)=>b.p-a.p);
+  return order.map((r,i)=>{
+    if(i===0)return String(r.no);
+    const gap=order[i-1].p-r.p;
+    return (gap>=0.15?'>>>':gap>=0.06?'>>':'>')+r.no;
+  }).join('');
+}
+
+// 独自エンジンの結果 → 画面用の状態。買い目の点数は点数ボタン(selectedBetCount)に従う。
+function garonGdbState(){
+  if(!garonEngine||!garonEngine.ok)return null;
+  const p=garonBoatcastPrepared;
+  const ctx=p?{oddsMap:p.oddsMap,venue:p.venue,raceNum:p.raceNum,deadline:p.deadline}:(garonEngineCtx||{});
+  const K=Math.min(Math.max(selectedBetCount||12,1),garonEngine.top.length);
+  const pts=garonEngine.top.slice(0,K).map(x=>x.combo);
+  const order=garonEngine.boatWin.map((pw,i)=>({boat:i+1,p:pw})).sort((a,b)=>b.p-a.p);
+  const marks=['◎','○','▲','△','▽','×'];
+  const ranking=order.map((o,i)=>({rank:i+1,boat:o.boat,mark:marks[i],score:o.p*100}));
+  const axis=order[0].boat;
+  const betsRaw=pts.map(v=>({val:v,type:(Number(v.split('-')[0])===axis)?'GDB本線':'GDB抑え'}));
+  const probabilities={};
+  garonEngine.top.forEach(x=>{probabilities[x.combo]=x.p;});
+  const conf=garonEngineConfidence(garonEngine.top1p);
+  const gosei=(ctx.oddsMap&&typeof calcGoseiOdds==='function')?calcGoseiOdds(pts,ctx.oddsMap):null;
+  return {
+    ranking,betsRaw,betcount:betsRaw.length,mode:'gdb',dbg:{selectedPoints:pts,probabilities},axes:[{boat:axis}],
+    infoStripText:`${ctx.venue||'?'}${ctx.raceNum||'?'} ／ GARON-DB(確信度${conf.label})買い目${K}点 ／ 軸: ${axis}`,
+    goseiHtml:gosei?`<b style="color:var(--gold);">全体合成オッズ: ${gosei}倍</b>`:'',
+    ctx,conf,K
+  };
+}
+
+function garonRenderGdbPanel(state){
+  if(!state)return '<div style="font-size:12px;color:var(--red);">GARON-DBの結果がありません。BOATCASTデータを読み込み直してください。</div>';
+  return `<div class="card-title">🚀 GARON-DB エンジンで計算した買い目です</div>
+    <div style="font-size:12px;line-height:1.7;color:var(--muted);">確信度 <b style="color:${state.conf.color};">${state.conf.label}</b>／データ〜${gxEsc(garonEngine.stateDay||'')}／過去の成績だけから予測(オッズ不使用)。根拠は上の GARON ENGINE カードにあります。</div>`;
+}
+
+// R07が入力不足で出せないとき、独自エンジンだけで買い目〜保存まで通すための最小限の状態(名前・オッズ・レース情報)。
+function garonGdbPrepareEngineOnlyGlobals(){
+  const ctx=garonEngineCtx||{};
+  const names=(garonEngine.explain&&garonEngine.explain.boats)?garonEngine.explain.boats.map(b=>b.name||''):[];
+  currentParsedData={venue:ctx.venue,raceNum:ctx.raceNum,shimekiri:ctx.deadline,oddsMap:ctx.oddsMap||{},boats:[1,2,3,4,5,6].map(n=>({no:n,name:names[n-1]||''}))};
+  currentCalcData={racenum:String(ctx.raceNum||'').replace(/R$/,''),honme:'1',mode:'gdb',betcount:0,shikin:3000,ranking:[],betsRaw:[]};
+  currentAreScores=[];currentQSupport=null;currentQAttackCands=[];currentQAxes=[];currentQDbg=null;currentQGenAt=Date.now();
+}
+
+// X投稿サマリー(garon_q_engine.htmlの既存書式)。mode='x': 実際の「X用」コピーと同じ(評価順の行なし)、'note': 評価順・本線・抑えつき、'all': 両方。
+function garonGdbXSummary(mode,withAmount){
+  const st=currentEngineState||garonGdbState();
+  if(!st||!garonEngine)return '';
+  const ctx=st.ctx||{};
+  const venue=ctx.venue||((document.getElementById('inp-venue')||{}).value)||'不明';
+  const race=String(ctx.raceNum||'').replace(/R$/,'')||(currentCalcData&&currentCalcData.racenum)||'?';
+  const shimekiri=ctx.deadline?` 締切${ctx.deadline}`:'';
+  const cum=st.betsRaw.reduce((s,b)=>s+((garonEngine.top.find(x=>x.combo===b.val)||{p:0}).p),0);
+  const axis=st.axes[0].boat;
+  const tenkai=((typeof aiTenkaiLine!=='undefined'&&aiTenkaiLine)||'').trim()||'─';
+  const head=[`【${venue}${race}R】${shimekiri}`,'',`G.RATE ${Math.round(cum*100)}%`,'',`軸：${garonGdbSurname(axis)}`];
+  const xLines=[...head,'',`展開：${tenkai}`,'','最終予想・買い目はプロフィール（note）から。','','G.'];
+  if(mode==='x')return xLines.join('\n');
+  const honsen=st.betsRaw.filter(b=>Number(b.val.split('-')[0])===axis);
+  const osae=st.betsRaw.filter(b=>Number(b.val.split('-')[0])!==axis);
+  const rows=document.querySelectorAll('#bet-tbody tr');
+  const amountOf=b=>{const i=st.betsRaw.indexOf(b);const c=rows[i]&&rows[i].querySelector('.amt-cell');return parseInt(((c&&c.textContent)||'0').replace(/[¥,]/g,''),10)||0;};
+  const fmt=arr=>{
+    if(!withAmount)return garonNaturalGroupBets(arr.map(b=>b.val)).join('/');
+    const groups={};
+    arr.forEach(b=>{const a=amountOf(b);(groups[a]=groups[a]||[]).push(b.val);});
+    return Object.entries(groups).sort((a,b)=>parseInt(b[0],10)-parseInt(a[0],10)).map(([a,vals])=>garonNaturalGroupBets(vals).join('/')+`　¥${parseInt(a,10).toLocaleString()}`).join('\n　　　');
+  };
+  const betLines=[`本線：${fmt(honsen)}`];
+  if(osae.length)betLines.push('',`抑え：${fmt(osae)}`);
+  const noteLines=[...head,`評価順：${garonGdbHyoka(garonEngine.boatWin)}`,'',`展開：${tenkai}`,'',...betLines,'','G.'];
+  if(mode==='note')return noteLines.join('\n');
+  const sep='─────────';
+  return ['【X用】',...xLines,'',sep,'','【note用】',...noteLines].join('\n');
+}
+
+// 展開コメント生成用データ(Claudeに貼り付けて展開コメントを作ってもらう用)。通知の2通目(boatcast_migration/scripts/lib/engine_notify.js)と同じ構成。
+function garonGdbStatLine(stats,keys){
+  return keys.map(k=>{const s=stats.find(x=>x.k===k);return s&&s.value!=='-'?`${s.label.replace(/\(.*?\)/g,'')}${s.value}${s.rank?`(${s.rank}位)`:''}`:null;}).filter(Boolean).join('、');
+}
+function garonGdbCommentData(){
+  const st=currentEngineState||garonGdbState();
+  if(!st||!garonEngine)return '⚠️ GARON-DBの結果がありません。BOATCASTデータを読み込んでから使ってください。';
+  const ctx=st.ctx||{};
+  const venue=ctx.venue||((document.getElementById('inp-venue')||{}).value)||'';
+  const race=String(ctx.raceNum||'').replace(/R$/,'')||(currentCalcData&&currentCalcData.racenum)||'';
+  const bets=st.betsRaw.map(b=>b.val);
+  const ex=(garonEngine.explain&&!garonEngine.explain.error)?garonEngine.explain:null;
+  const boatWin=garonEngine.boatWin;
+  const axis=st.axes[0].boat;
+  const label=no=>garonGdbSurname(no);
+  const lines=[];
+  lines.push(`【${venue}${race}R】`,'');
+  lines.push('■軸',label(axis),'');
+  lines.push('■エンジンの評価(過去のデータバンクだけから予測・オッズ不使用。公開用%は含まない)');
+  boatWin.map((p,i)=>({no:i+1,p})).sort((a,b)=>b.p-a.p).forEach((r,i)=>{
+    const e=ex?ex.boats[r.no-1]:null;
+    lines.push(`${i+1}位 ${label(r.no)}: 1着${(r.p*100).toFixed(0)}%${e?`／2着${(e.p2*100).toFixed(0)}%／3着${(e.p3*100).toFixed(0)}%`:''}`);
+  });
+  lines.push('');
+  lines.push(`■最終買い目(${bets.length}点)`,garonNaturalGroupBets(bets).join('/'),'');
+  lines.push('■買い目順位(確率順、公開用%は含まない)');
+  bets.forEach((b,i)=>lines.push(`${i+1}位 ${b}`));
+  lines.push('');
+  const chain=gxChain(garonEngine.probs);
+  const betFirsts=[...new Set(bets.map(b=>Number(b.split('-')[0])))];
+  lines.push('■2着候補順位(1着時、条件付きの確率順)');
+  betFirsts.forEach(a=>{
+    const seconds=Object.keys(chain.p12).filter(k=>k.startsWith(`${a}-`)).map(k=>({b:Number(k.split('-')[1]),p:chain.p12[k]/chain.p1[a]})).sort((x,y)=>y.p-x.p).slice(0,3);
+    lines.push(`${label(a)}1着時`);
+    seconds.forEach((s,i)=>lines.push(`${i+1}位 ${label(s.b)}`));
+  });
+  lines.push('');
+  lines.push('■買い目分岐(実在する組み合わせのみ)');
+  betFirsts.forEach(a=>{
+    lines.push(`${label(a)}1着`);
+    const secs=[...new Set(bets.filter(b=>b.startsWith(`${a}-`)).map(b=>Number(b.split('-')[1])))];
+    secs.forEach(b=>lines.push(`・2着${label(b)} → 3着${bets.filter(x=>x.startsWith(`${a}-${b}-`)).map(x=>label(Number(x.split('-')[2]))).join('・')}`));
+  });
+  lines.push('');
+  if(ex){
+    lines.push('■コメント用参考事実(DBの実数値、同じレース内の順位)');
+    for(let no=1;no<=6;no++){
+      const e=ex.boats[no-1];
+      const pos=[1,2,3].map(k=>bets.filter(b=>Number(b.split('-')[k-1])===no).length?`${k}着`:null).filter(Boolean);
+      lines.push(`${label(no)}${no===axis?'(軸)':''}　買い目上の位置：${pos.length?pos.join('・'):'なし'}`);
+      lines.push(`　${garonGdbStatLine(e.stats,['lane180','venueLane','st','form','motor'])}`);
+      lines.push(`　${e.comment.replace(/^1着確率\d+%。/,'')}`);
+    }
+    lines.push('');
+    lines.push('■レース全体の見立て(DBの数字から自動生成)');
+    ex.race.forEach(t=>lines.push(`・${t}`));
+    lines.push('');
+  }
+  lines.push('→上記を踏まえて、展開コメントを作って。(買い目と食い違う内容・数字にない内容は書かない。%の数字は公開しない)');
+  return lines.join('\n');
+}
+
+// GTOOL保存(ログ)に付ける独自エンジンの情報。後から「確信度別の的中」「予測確率と実際」を分析できるようにする。
+function garonGdbLogFields(){
+  if(!garonEngine||!garonEngine.ok)return {};
+  const st=currentEngineState||garonGdbState();
+  const pts=st?st.dbg.selectedPoints:[];
+  const cum=pts.reduce((s,v)=>s+((garonEngine.top.find(x=>x.combo===v)||{p:0}).p),0);
+  const probs={};pts.forEach(v=>{probs[v]=Math.round(((garonEngine.top.find(x=>x.combo===v)||{p:0}).p)*10000)/10000;});
+  let amounts=null;const odds=(st&&st.ctx&&st.ctx.oddsMap)||null;
+  if(odds&&typeof r06AllocateEqualReturn==='function'){try{amounts=r06AllocateEqualReturn(pts,odds,3000);}catch(e){amounts=null;}}
+  return {
+    engineAmounts:amounts,
+    engineMode:'GDB',engineId:garonEngine.engine,engineStateDay:garonEngine.stateDay,engineTrainedThrough:garonEngine.trainedThrough||null,
+    engineConfidence:garonEngineConfidence(garonEngine.top1p).label,engineTop1p:garonEngine.top1p,engineBoatWin:garonEngine.boatWin,
+    enginePoints:pts,engineProbs:probs,engineCumHit:Math.round(cum*1000)/1000,engineBetCount:pts.length,savedAt:Date.now()
+  };
+}
+
+const GARON_ENGINE_MODE_KEY='garon_q_engine_mode_v2';   // 2026-09-21: 既定をGARON-DBへ変更したため、選択の保存キーを新しくした(以前の選択には引きずられない)
 var CURRENT_ENGINE_MODE=(function(){
   // 2026-09-10追記(GARON-Q-R07 本番反映、CEO指示書3番): 新規訪問者(保存値なし・不明値)の
   // 既定選択を'R06'から'R07'へ変更する。ただし既にlocalStorageへ選択が保存済みの端末では、
@@ -8339,9 +8804,10 @@ var CURRENT_ENGINE_MODE=(function(){
     if(m==='QV3') return 'QV3';
     if(m==='R06') return 'R06';
     if(m==='R07') return 'R07';
-    return 'R07'; // 保存値なし・不明値 → 新規既定
+    if(m==='GDB') return 'GDB';
+    return 'GDB'; // 保存値なし・不明値 → 新規既定(2026-09-21: 独自エンジンGARON-DB)
   }
-  catch(e){ return 'R07'; }
+  catch(e){ return 'GDB'; }
 })();
 var currentR06Result=null;   // 直近のgenerateR06HybridBets()結果(hold時もroute==='hold'として保持)
 var currentQV3State=null;    // 直近runYosoQ()のQ v3生値スナップショット
@@ -8350,7 +8816,7 @@ var currentR07Result=null;   // 2026-09-10追加: 直近のgenerateR07HybridBets
 var currentR07State=null;    // 同上、R07版(holdの場合はnull)
 
 function garonSetEngineMode(mode){
-  if(mode!=='R06' && mode!=='QV3' && mode!=='R07') return;
+  if(mode!=='R06' && mode!=='QV3' && mode!=='R07' && mode!=='GDB') return;
   CURRENT_ENGINE_MODE=mode;
   try{ localStorage.setItem(GARON_ENGINE_MODE_KEY, mode); }catch(e){}
   garonUpdateModeButtons();
@@ -8359,10 +8825,11 @@ function garonSetEngineMode(mode){
 
 function garonApplyButtonStyle(btn, active){
   if(!btn) return;
-  if(active){ btn.style.background='linear-gradient(135deg,#c9a84c,#f0d080)'; btn.style.color='#0a0a0f'; btn.style.border='none'; }
-  else { btn.style.background='var(--surface2)'; btn.style.color='var(--text)'; btn.style.border='1px solid var(--border)'; }
+  if(active){ btn.style.background='linear-gradient(120deg,#22d3ee,#6d7cff 55%,#a855f7)'; btn.style.color='#031019'; btn.style.border='none'; btn.style.boxShadow='0 0 18px rgba(56,225,255,.35)'; }
+  else { btn.style.background='var(--surface2)'; btn.style.color='var(--text)'; btn.style.border='1px solid var(--border)'; btn.style.boxShadow='none'; }
 }
 function garonUpdateModeButtons(){
+  garonApplyButtonStyle(document.getElementById('engine-mode-gdb-btn'), CURRENT_ENGINE_MODE==='GDB');
   garonApplyButtonStyle(document.getElementById('engine-mode-r06-btn'), CURRENT_ENGINE_MODE==='R06');
   garonApplyButtonStyle(document.getElementById('engine-mode-r07-btn'), CURRENT_ENGINE_MODE==='R07');
   garonApplyButtonStyle(document.getElementById('engine-mode-qv3-btn'), CURRENT_ENGINE_MODE==='QV3');
@@ -8460,19 +8927,20 @@ function garonRenderR07StatusPanel(r07){
 // 差し替え、画面(bet-tbody/race-info-strip/bet-gosei-summary/コメント生成・Claude用データ抽出・
 // 保存ボタンの有効/無効)を更新する。runYosoQ()自体のQ v3計算・表示コードには一切触れない。
 function garonApplyEngineMode(){
-  if(!currentQV3State) return; // runYosoQ()がまだ一度も成功していない
+  if(!currentQV3State && !(CURRENT_ENGINE_MODE==='GDB' && garonEngine)) return; // runYosoQ()がまだ一度も成功していない(GARON-DBだけは、独自エンジンの結果があれば動く)
   // 2026-09-10追記(GARON-Q-R07、非本番ステージング専用): モードごとの状態オブジェクトを
   // 3値化する。R06選択時の式(CURRENT_ENGINE_MODE==='R06'?currentR06State:...)自体は
   // 変更していないため、R06モードの挙動はこれ以前と完全に同じ(section 18)。
-  const state=(CURRENT_ENGINE_MODE==='R06')?currentR06State:(CURRENT_ENGINE_MODE==='R07')?currentR07State:currentQV3State;
-  const holdMode=((CURRENT_ENGINE_MODE==='R06'||CURRENT_ENGINE_MODE==='R07') && !state); // 見送り、または未計算/失敗
+  if(CURRENT_ENGINE_MODE==='GDB') currentEngineState=garonGdbState();
+  const state=(CURRENT_ENGINE_MODE==='GDB')?currentEngineState:(CURRENT_ENGINE_MODE==='R06')?currentR06State:(CURRENT_ENGINE_MODE==='R07')?currentR07State:currentQV3State;
+  const holdMode=((CURRENT_ENGINE_MODE==='R06'||CURRENT_ENGINE_MODE==='R07'||CURRENT_ENGINE_MODE==='GDB') && !state); // 見送り、または未計算/失敗
 
   if(state){
     currentCalcData.ranking=state.ranking;
     currentCalcData.betsRaw=state.betsRaw;
     currentCalcData.betcount=state.betcount;
     currentCalcData.mode=state.mode;
-    currentQDbg=state.dbg;
+    currentQDbg=(CURRENT_ENGINE_MODE==='GDB')?null:state.dbg;   // GARON-DBはQ v2内部の診断用データを持たない(Q専用の関数に渡さない)
     currentQAxes=state.axes;
   }
 
@@ -8491,7 +8959,29 @@ function garonApplyEngineMode(){
     });
   }
 
-  if(CURRENT_ENGINE_MODE==='QV3'){
+  if(CURRENT_ENGINE_MODE==='GDB'){
+    // 独自エンジン(GARON-DB): R07/R06と同じ構造。買い目表・合成オッズ・投稿サマリー・保存が、独自エンジンの結果で動く。
+    if(banner){ banner.style.display='none'; banner.innerHTML=''; }
+    if(r06Panel){ r06Panel.style.display='block'; r06Panel.innerHTML=garonRenderGdbPanel(state); }
+    const gdbOdds=(state&&state.ctx&&state.ctx.oddsMap)||oddsMap;
+    const stripEl=document.getElementById('race-info-strip');
+    const goseiEl=document.getElementById('bet-gosei-summary');
+    if(holdMode){
+      garonRenderBetTable([], {});
+      if(stripEl) stripEl.textContent=`${(currentParsedData&&currentParsedData.venue)||'?'}${(currentParsedData&&currentParsedData.raceNum)||'?'} ／ GARON-DB：結果がありません(買い目なし)`;
+      if(goseiEl) goseiEl.innerHTML='';
+      setButtonsEnabled(false);
+      const previewEl=document.getElementById('x-summary-preview');
+      if(previewEl) previewEl.value='GARON-DBの結果がありません(BOATCASTデータを読み込み直してください)';
+    } else {
+      const bs=document.getElementById('bet-section'); if(bs) bs.style.display='block';
+      garonRenderBetTable(state.betsRaw, gdbOdds);
+      if(stripEl) stripEl.textContent=state.infoStripText;
+      if(goseiEl) goseiEl.innerHTML=state.goseiHtml;
+      setButtonsEnabled(true);
+      if(aiBtn){ aiBtn.disabled=true; aiBtn.style.opacity='0.4'; }   // 「展開をAIで書く」はQ v3の系統別得点が前提のためGARON-DBでは使えない(展開コメントはClaude用データで作る)
+    }
+  } else if(CURRENT_ENGINE_MODE==='QV3'){
     if(r06Panel){ r06Panel.style.display='none'; r06Panel.innerHTML=''; }
     if(banner){
       banner.style.display=currentQV3State.judgeBannerVisible?'block':'none';
