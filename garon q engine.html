@@ -246,8 +246,12 @@
   <div class="card">
     <div class="card-title">📊 BOATCAST＋GARONデータバンク</div>
     <button class="btn btn-ghost" style="width:100%;margin:0 0 10px;" onclick="copyBoatcastBookmarklet()">初回のみ：BOATCAST抽出BMをコピー</button>
-    <input id="boatcast-json-file" type="file" accept=".json,application/json" onchange="loadBoatcastJson(this.files[0])" style="width:100%;padding:12px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;">
-    <div id="boatcast-load-status" style="font-size:12px;color:var(--muted);margin-top:8px;">BOATCAST画面でGARON BMを実行し、保存されたJSONを選択してください。</div>
+    <button class="btn btn-gold" id="boatcast-paste-btn" style="font-size:16px;" onclick="loadBoatcastFromClipboard()">📋 クリップボードから読み込む</button>
+    <details id="boatcast-paste-details" style="margin-top:4px;">
+      <summary style="font-size:12px;color:var(--muted);cursor:pointer;">うまく読み込めない時：ここに貼り付け</summary>
+      <textarea id="boatcast-paste-area" placeholder="BOATCASTのBMでコピーしたデータをここに貼り付け（貼るとそのまま読み込みます）" style="margin-top:8px;" oninput="garonBoatcastPasteInput(this)"></textarea>
+    </details>
+    <div id="boatcast-load-status" style="font-size:12px;color:var(--muted);margin-top:8px;">BOATCAST画面でBMを実行（自動でコピーされます）→ このページに戻って上のボタンを押してください。</div>
     <details style="margin-top:10px;">
       <summary style="font-size:12px;color:var(--muted);cursor:pointer;">旧方式（緊急時のみ）</summary>
       <textarea id="inp-data" placeholder="旧データ貼付け（緊急時のみ）" style="margin-top:8px;" oninput="garonPastedDataChanged()"></textarea>
@@ -3118,7 +3122,7 @@ function garonPastedDataChanged(){
   // 緊急用の貼り付け欄に入力したら、BOATCASTの読込状態は破棄する(古いBOATCASTデータが貼り付けを無言で上書きしないように)。
   if(!garonBoatcastPrepared)return;
   garonBoatcastPrepared=null;
-  const f=document.getElementById('boatcast-json-file');if(f)f.value='';
+  const f=document.getElementById('boatcast-paste-area');if(f)f.value='';
   const status=document.getElementById('boatcast-load-status');
   if(status){status.style.color='var(--muted)';status.textContent='旧方式(貼り付け)に切り替えました。BOATCASTの読込は破棄しています。';}
 }
@@ -3131,8 +3135,37 @@ function garonBoatcastFreshnessError(){
   return null;
 }
 
+async function loadBoatcastFromClipboard(){
+  // iPhoneでは押した直後に「ペースト」の確認が出る。許可すれば読み込む。読めない場合は下の貼り付け欄で代用できる。
+  const status=document.getElementById('boatcast-load-status');
+  const openPasteBox=()=>{const box=document.getElementById('boatcast-paste-details');if(box)box.open=true;};
+  let text='';
+  try{text=await navigator.clipboard.readText();}
+  catch(error){
+    status.style.color='var(--red)';
+    status.textContent='クリップボードを読めませんでした。「うまく読み込めない時」の欄に貼り付けてください。';
+    openPasteBox();showToast('クリップボードを読めませんでした');return;
+  }
+  if(!String(text||'').trim()){
+    status.style.color='var(--red)';
+    status.textContent='クリップボードが空です。BOATCAST画面でBMを実行してから戻ってください。';
+    showToast('クリップボードが空です');return;
+  }
+  await loadBoatcastText(text);
+}
+
+let garonBoatcastPasteTimer=null;
+function garonBoatcastPasteInput(el){
+  clearTimeout(garonBoatcastPasteTimer);
+  garonBoatcastPasteTimer=setTimeout(()=>{if(el&&String(el.value||'').trim().length>=20)loadBoatcastText(el.value);},300);
+}
+
 async function loadBoatcastJson(file){
   if(!file)return;
+  return loadBoatcastText(await file.text());
+}
+
+async function loadBoatcastText(text){
   const status=document.getElementById('boatcast-load-status');
   garonBoatcastPrepared=null;
   status.style.color='var(--muted)';
@@ -3140,7 +3173,9 @@ async function loadBoatcastJson(file){
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),GARON_BOATCAST_FETCH_TIMEOUT_MS);
   try{
-    const raw=JSON.parse(await file.text());
+    let raw;
+    try{raw=JSON.parse(String(text||'').trim());}
+    catch(parseError){throw new Error('コピーした内容がBOATCASTのデータではありません。BOATCAST画面でBMを実行し直してください');}
     const response=await fetch(GARON_BOATCAST_PREPARE_URL,{
       method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(raw),signal:controller.signal
     });
@@ -3177,7 +3212,7 @@ async function loadBoatcastJson(file){
 async function runYosoQ(){
   saveVenueRace();
   const data=document.getElementById('inp-data').value.trim();
-  if(!garonBoatcastPrepared&&!data){showToast('BOATCASTのJSONを選択してください');return;}
+  if(!garonBoatcastPrepared&&!data){showToast('BOATCASTデータを読み込んでください');return;}
   const garonStale=garonBoatcastFreshnessError();
   if(garonStale){showToast(garonStale);const st=document.getElementById('boatcast-load-status');if(st){st.style.color='var(--red)';st.textContent=garonStale;}return;}
 
@@ -3630,8 +3665,8 @@ async function runYoso(){
 function clearYoso(){
   var inpData=document.getElementById('inp-data');if(inpData)inpData.value='';
   garonBoatcastPrepared=null;garonBoatcastLoadedAtMs=0;garonBoatcastDeadlineMs=0;
-  var boatcastFile=document.getElementById('boatcast-json-file');if(boatcastFile)boatcastFile.value='';
-  var boatcastStatus=document.getElementById('boatcast-load-status');if(boatcastStatus){boatcastStatus.style.color='var(--muted)';boatcastStatus.textContent='BOATCAST画面でGARON BMを実行し、保存されたJSONを選択してください。';}
+  var boatcastFile=document.getElementById('boatcast-paste-area');if(boatcastFile)boatcastFile.value='';
+  var boatcastStatus=document.getElementById('boatcast-load-status');if(boatcastStatus){boatcastStatus.style.color='var(--muted)';boatcastStatus.textContent='BOATCAST画面でBMを実行（自動でコピーされます）→ このページに戻って上のボタンを押してください。';}
   document.getElementById('inp-racenum').value='';
   document.getElementById('yoso-result').style.display='none';
   document.getElementById('bet-section').style.display='none';
