@@ -42,6 +42,7 @@
   textarea{height:130px;resize:none;font-size:12px;}
   select{height:42px;}
   .btn{width:100%;padding:13px;border-radius:10px;font-size:15px;font-weight:700;border:none;-webkit-appearance:none;margin-bottom:8px;letter-spacing:.05em;}
+  .engine-only-hide{display:none !important;}
   .btn-gold{background:linear-gradient(135deg,#c9a84c,#f0d080);color:#0a0a0f;}
   .btn-ghost{background:var(--surface2);border:1px solid var(--border);color:var(--text);}
   .btn-sm{padding:8px 14px;font-size:13px;border-radius:8px;border:none;-webkit-appearance:none;font-weight:600;margin-bottom:0;}
@@ -289,6 +290,8 @@
   </div>
 
   <div id="yoso-result" style="display:none;">
+    <div id="input-source-banner" style="font-size:12px;font-weight:700;margin:0 0 8px;"></div>
+    <div class="card" id="engine-card" style="display:none;"></div>
     <div class="card">
       <div class="card-title">🔍 予想材料(選手情報)</div>
       <div id="boat-info-panel"></div>
@@ -1784,6 +1787,7 @@ function switchTab(name){
 // ボタンのハイライト表示は一致するものがあれば更新するが、値の反映自体はボタンの有無に関係なく必ず行う。
 function autoSetBetCount(pts){
   selectedBetCount=pts;
+  garonRerenderEngineCard();
   const btns=document.querySelectorAll('.betcount-row .bc-btn'); // race-type選択(rtype-*)も.bc-btnを共有しているため、点数ボタンだけに絞る
   let target=null;
   btns.forEach(b=>{
@@ -1794,6 +1798,7 @@ function autoSetBetCount(pts){
 }
 function setBetCount(n,btn){
   selectedBetCount=n;
+  garonRerenderEngineCard();
   document.querySelectorAll('.betcount-row .bc-btn').forEach(b=>b.classList.remove('active')); // race-type選択と混同しないよう範囲を限定(2026-07-29修正)
   btn.classList.add('active');
   refreshBetsForCount();
@@ -3082,6 +3087,8 @@ function setAllocMode(mode){
 // 旧runYoso()は未使用のまま残っているが呼び出し口を切り替えた(掃除は後日)。
 const GARON_BOATCAST_PREPARE_URL='https://yuta-1.taile1e601.ts.net/api/boatcast/prepare';
 let garonBoatcastPrepared=null;
+let garonEngine=null;      // 独自予想エンジン(データバンク版)の結果。R07が入力不足でも取得できる
+let garonEngineCtx=null;   // R07が使えないときの補助情報(会場・レース番号・オッズ)
 
 async function copyBoatcastBookmarklet(){
   try{
@@ -3121,14 +3128,14 @@ function garonValidatePrepared(result){
 function garonPastedDataChanged(){
   // 緊急用の貼り付け欄に入力したら、BOATCASTの読込状態は破棄する(古いBOATCASTデータが貼り付けを無言で上書きしないように)。
   if(!garonBoatcastPrepared)return;
-  garonBoatcastPrepared=null;
+  garonBoatcastPrepared=null;garonEngine=null;garonEngineCtx=null;
   const f=document.getElementById('boatcast-paste-area');if(f)f.value='';
   const status=document.getElementById('boatcast-load-status');
   if(status){status.style.color='var(--muted)';status.textContent='旧方式(貼り付け)に切り替えました。BOATCASTの読込は破棄しています。';}
 }
 
 function garonBoatcastFreshnessError(){
-  if(!garonBoatcastPrepared)return null;
+  if(!garonBoatcastPrepared&&!garonEngine)return null;
   const now=Date.now();
   if(garonBoatcastDeadlineMs&&now>=garonBoatcastDeadlineMs)return 'このレースは締切を過ぎています。BOATCASTを取得し直してください';
   if(garonBoatcastLoadedAtMs&&now-garonBoatcastLoadedAtMs>GARON_BOATCAST_MAX_AGE_MS)return 'BOATCASTの読込から20分以上経過しています。BMをやり直してください';
@@ -3165,11 +3172,19 @@ async function loadBoatcastJson(file){
   return loadBoatcastText(await file.text());
 }
 
+// 旧方式の欄にBOATCASTのデータ(JSON)を貼ってしまった場合の判定。旧方式の解析(parseData)にはBOATCASTのデータは読めず、
+// 選手名・オッズが空の予想になるため、こちらはBOATCAST経路へ回す。
+function garonLooksLikeBoatcastJson(text){
+  const t=String(text||'').trim();
+  return t.startsWith('{')&&t.includes('garon.boatcast.race.v1');
+}
+
 async function loadBoatcastText(text){
   const status=document.getElementById('boatcast-load-status');
   garonBoatcastPrepared=null;
   status.style.color='var(--muted)';
   status.textContent='BOATCASTデータを検査し、データバンクと照合しています…';
+  garonEngine=null;garonEngineCtx=null;
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),GARON_BOATCAST_FETCH_TIMEOUT_MS);
   try{
@@ -3180,10 +3195,27 @@ async function loadBoatcastText(text){
       method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(raw),signal:controller.signal
     });
     const result=await response.json().catch(()=>({error:`HTTP ${response.status}`}));
-    if(!response.ok)throw new Error([result.error,...(result.details||[])].filter(Boolean).join(' / '));
+    if(!response.ok){
+      const why=[result.error,...(result.details||[])].filter(Boolean).join(' / ');
+      if(result.engine&&result.engine.ok){
+        // R07は入力不足で出せないが、独自エンジンは出せる(履歴のない選手がいても確率を出す)
+        garonEngine=result.engine;garonEngineCtx=result.ctx||null;garonBoatcastPrepared=null;
+        garonBoatcastLoadedAtMs=Date.now();
+        garonBoatcastDeadlineMs=(garonEngineCtx&&garonEngineCtx.raceDate&&garonEngineCtx.deadline)?new Date(`${garonEngineCtx.raceDate}T${garonEngineCtx.deadline}:00+09:00`).getTime():0;
+        const venueSel0=document.getElementById('inp-venue');if(venueSel0&&garonEngineCtx&&garonEngineCtx.venue)venueSel0.value=garonEngineCtx.venue;
+        const raceSel0=document.getElementById('inp-racenum');if(raceSel0&&garonEngineCtx&&garonEngineCtx.raceNum)raceSel0.value=String(garonEngineCtx.raceNum).replace(/R$/,'');
+        saveVenueRace();
+        status.style.color='var(--green)';
+        status.textContent=`読込完了(独自エンジンのみ)：${garonEngineCtx?garonEngineCtx.venue+' '+garonEngineCtx.raceNum:''} ※R07は入力不足のため出せません: ${why}`;
+        showToast('独自エンジンの準備が完了しました(R07は入力不足)');
+        return;
+      }
+      throw new Error(why);
+    }
     const problems=garonValidatePrepared(result);
     if(problems.length)throw new Error(problems.join(' / '));
     garonBoatcastPrepared=result;
+    garonEngine=(result.engine&&result.engine.ok)?result.engine:null;
     garonBoatcastLoadedAtMs=Date.now();
     garonBoatcastDeadlineMs=(result.raceDate&&result.deadline)?new Date(`${result.raceDate}T${result.deadline}:00+09:00`).getTime():0;
     const venueSel=document.getElementById('inp-venue');
@@ -3202,22 +3234,92 @@ async function loadBoatcastText(text){
     }
     showToast('BOATCASTデータの準備が完了しました');
   }catch(error){
-    garonBoatcastPrepared=null;
+    garonBoatcastPrepared=null;garonEngine=null;garonEngineCtx=null;
     status.style.color='var(--red)';
     status.textContent=`読込失敗：${error.name==='AbortError'?'応答がありません(接続を確認してください)':error.message}`;
     showToast('BOATCASTデータを読み込めませんでした');
   }finally{clearTimeout(timer);}
 }
 
+// ============================================================
+// 2026-09-21追加: GARON独自予想エンジン(データバンク版 GARON-DB-3STAGE-V1)のカード表示。
+// R07とは独立。オッズは使わず、過去の成績だけで三連単120通りの確率を出す(サーバー側 engine_db/)。
+// 確信度ごとの実績は、モデルを学習に使っていない未来の期間(2025-04〜2026-09、81,639レース)で集計した値。
+function garonEngineConfidence(top1p){
+  if(top1p>=0.111)return {label:'高',hit10:'約66%',hit12:'約70%',color:'var(--green)'};
+  if(top1p>=0.087)return {label:'中上',hit10:'約57%',hit12:'約62%',color:'var(--gold)'};
+  if(top1p>=0.065)return {label:'中',hit10:'約48%',hit12:'約53%',color:'var(--muted)'};
+  return {label:'低',hit10:'約35%',hit12:'約40%',color:'var(--red)'};
+}
+
+function renderEngineCard(engine,ctx){
+  const el=document.getElementById('engine-card');
+  if(!el)return;
+  if(!engine||!engine.ok){el.style.display='none';el.innerHTML='';return;}
+  const K=Math.min(Math.max(selectedBetCount||12,1),(engine.top||[]).length);
+  const pts=engine.top.slice(0,K);
+  const cum=pts.reduce((s,x)=>s+x.p,0);
+  const conf=garonEngineConfidence(engine.top1p);
+  const odds=ctx&&ctx.oddsMap;
+  let amounts=null;
+  if(odds&&typeof r06AllocateEqualReturn==='function'){try{amounts=r06AllocateEqualReturn(pts.map(x=>x.combo),odds,3000);}catch(e){amounts=null;}}
+  const bars=engine.boatWin.map((p,i)=>`<div style="display:flex;align-items:center;gap:6px;font-size:12px;margin:2px 0;">
+      <span style="width:44px;color:var(--muted);">${i+1}号艇</span>
+      <span style="flex:1;background:var(--surface2);border-radius:4px;height:10px;"><span style="display:block;height:10px;border-radius:4px;background:var(--gold);width:${Math.round(p*100)}%;"></span></span>
+      <span style="width:46px;text-align:right;">${(p*100).toFixed(1)}%</span></div>`).join('');
+  const rows=pts.map((x,i)=>`<tr><td><span class="bet-val">${x.combo}</span></td>
+      <td style="text-align:right;">${(x.p*100).toFixed(1)}%</td>
+      <td style="text-align:right;">${odds&&odds[x.combo]?Number(odds[x.combo]).toFixed(1)+'倍':'-'}</td>
+      <td style="text-align:right;">${amounts?amounts[i]+'円':'-'}</td></tr>`).join('');
+  el.style.display='block';
+  el.innerHTML=`<div class="card-title">🚀 GARON-DB エンジン <span style="font-size:11px;color:var(--muted);font-weight:400;">過去の成績だけで予測(オッズ不使用)／データ〜${engine.stateDay}</span></div>
+    <div style="font-size:13px;margin-bottom:8px;">確信度 <b style="color:${conf.color};">${conf.label}</b>
+      <span style="color:var(--muted);font-size:12px;">（過去の実績: この確信度のレースは、上位10点で${conf.hit10}・上位12点で${conf.hit12}が的中）</span></div>
+    ${bars}
+    <table style="width:100%;margin-top:8px;font-size:13px;"><thead><tr><th style="text-align:left;">買い目(${K}点)</th><th style="text-align:right;">確率</th><th style="text-align:right;">オッズ</th><th style="text-align:right;">配分(3000円均等回収)</th></tr></thead><tbody>${rows}</tbody></table>
+    <div style="font-size:12px;margin-top:6px;">この${K}点の的中確率の目安: <b>${(cum*100).toFixed(0)}%</b></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px;">回収率は過去の実績で約78%(的中を重視した予想で、収支を保証するものではありません)。点数は上の点数ボタンで変えられます。</div>`;
+}
+
+function garonRerenderEngineCard(){
+  if(garonEngine)renderEngineCard(garonEngine,garonBoatcastPrepared?{oddsMap:garonBoatcastPrepared.oddsMap}:garonEngineCtx);
+}
+
 async function runYosoQ(){
   saveVenueRace();
-  const data=document.getElementById('inp-data').value.trim();
-  if(!garonBoatcastPrepared&&!data){showToast('BOATCASTデータを読み込んでください');return;}
+  let data=document.getElementById('inp-data').value.trim();
+  if(!garonBoatcastPrepared&&garonLooksLikeBoatcastJson(data)){
+    await loadBoatcastText(data);       // 旧方式の欄にBOATCASTのデータが貼られている → BOATCAST経路で読み込む
+    if(!garonBoatcastPrepared)return;   // 読み込めなかった場合は、旧方式の解析には回さない(理由は読込状況に表示済み)
+    data='';
+  }
+  if(!garonBoatcastPrepared&&!garonEngine&&!data){showToast('BOATCASTデータを読み込んでください');return;}
   const garonStale=garonBoatcastFreshnessError();
   if(garonStale){showToast(garonStale);const st=document.getElementById('boatcast-load-status');if(st){st.style.color='var(--red)';st.textContent=garonStale;}return;}
 
   document.getElementById('yoso-result').style.display='block';
   document.getElementById('bet-tbody').innerHTML='';
+  // どの入力で計算したかを結果の先頭に明示する(旧方式に落ちていても気づけるように)
+  const srcBanner=document.getElementById('input-source-banner');
+  if(srcBanner){
+    if(garonBoatcastPrepared){
+      srcBanner.style.color='var(--green)';
+      const imputed=(garonBoatcastPrepared.imputedZero||[]).length;
+      srcBanner.textContent=`入力: BOATCAST＋GARON DB（${garonBoatcastPrepared.venue}${garonBoatcastPrepared.raceNum}）${imputed?` ※0で補完した項目 ${imputed}件`:''}`;
+    }else{
+      srcBanner.style.color='var(--red)';
+      srcBanner.textContent='入力: 旧方式（貼り付け）— BOATCAST＋GARON DBは使っていません';
+    }
+  }
+
+  // 独自エンジン(データバンク版)のカード。R07が使えない(入力不足)場合は、このカードだけを表示する
+  garonRerenderEngineCard();
+  const engineOnly=!garonBoatcastPrepared&&!!garonEngine;
+  document.querySelectorAll('#yoso-result > .card:not(#engine-card), #yoso-result > #bet-section').forEach(e=>e.classList.toggle('engine-only-hide',engineOnly));
+  if(engineOnly){
+    if(srcBanner){srcBanner.style.color='var(--gold)';srcBanner.textContent='入力: BOATCAST＋GARON DB（独自エンジンのみ。R07は入力不足のため出していません）';}
+    return;
+  }
 
   try{
     const d=garonBoatcastPrepared
