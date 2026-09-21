@@ -8660,7 +8660,9 @@ function garonGdbAutoSelect(engine,oddsMap){
   if(!valid)K=nige?6:8;
   else{K=5;let inv=0;for(let k=1;k<=cap;k++){inv+=1/Number(oddsMap[combos[k-1]]);const g=1/inv;if(k>=5&&g>=2.5)K=k;else if(k>=5)break;}}
   K=Math.min(K,cap);
-  return {K,nige,cap,valid};
+  let skip=false,gosei=null;
+  if(valid){let inv=0;for(let k=0;k<K;k++)inv+=1/Number(oddsMap[combos[k]]);gosei=1/inv;skip=gosei<2.5;}   // 最低5点でも合成2.5倍に届かない=見送り
+  return {K,nige,cap,valid,skip,gosei};
 }
 function garonGdbBetCount(){
   if(!garonEngine||!garonEngine.ok)return selectedBetCount||12;
@@ -8673,6 +8675,8 @@ function garonGdbState(){
   const p=garonBoatcastPrepared;
   const ctx=p?{oddsMap:p.oddsMap,venue:p.venue,raceNum:p.raceNum,deadline:p.deadline}:(garonEngineCtx||{});
   const K=garonGdbBetCount();
+  const skipInfo=garonGdbAuto?(function(){const om=(garonBoatcastPrepared?garonBoatcastPrepared.oddsMap:(garonEngineCtx&&garonEngineCtx.oddsMap));return garonGdbAutoSelect(garonEngine,om);})():null;
+  const skipRec=!!(skipInfo&&skipInfo.skip);
   const pts=garonEngine.top.slice(0,K).map(x=>x.combo);
   const order=garonEngine.boatWin.map((pw,i)=>({boat:i+1,p:pw})).sort((a,b)=>b.p-a.p);
   const marks=['◎','○','▲','△','▽','×'];
@@ -8685,8 +8689,8 @@ function garonGdbState(){
   const gosei=(ctx.oddsMap&&typeof calcGoseiOdds==='function')?calcGoseiOdds(pts,ctx.oddsMap):null;
   return {
     ranking,betsRaw,betcount:betsRaw.length,mode:'gdb',dbg:{selectedPoints:pts,probabilities},axes:[{boat:axis}],
-    infoStripText:`${ctx.venue||'?'}${ctx.raceNum||'?'} ／ GARON-DB(確信度${conf.label})買い目${K}点${garonGdbAuto?'(自動)':'(手動)'} ／ 軸: ${axis}`,
-    goseiHtml:gosei?`<b style="color:var(--gold);">全体合成オッズ: ${gosei}倍</b>`:'',
+    infoStripText:`${ctx.venue||'?'}${ctx.raceNum||'?'} ／ GARON-DB(確信度${conf.label})買い目${K}点${garonGdbAuto?'(自動)':'(手動)'}${skipRec?' ／ ⚠見送り推奨':''} ／ 軸: ${axis}`,
+    goseiHtml:skipRec?`<b style="color:var(--red);">⚠ 見送り推奨: 合成オッズ${gosei||''}倍(下限2.5倍未満)。配当が薄く、予想として出せません</b>`:(gosei?`<b style="color:var(--gold);">全体合成オッズ: ${gosei}倍</b>`:''),skipRec,
     ctx,conf,K
   };
 }
