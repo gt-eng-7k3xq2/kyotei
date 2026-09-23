@@ -15,6 +15,8 @@ for %%F in (
   tests\race_ops_result_updater.regression.test.js
   tests\race_ops_task_isolation.regression.test.js
   tests\race_ops_jst_time.regression.test.js
+  tests\race_ops_healthcheck.test.js
+  tests\race_ops_engine_gdb.test.js
 ) do (
   echo ============================================================
   echo RUNNING %%F

@@ -13,7 +13,7 @@ let pass = 0, fail = 0;
 function check(name, cond) { if (cond) { console.log(`  PASS: ${name}`); pass++; } else { console.log(`  FAIL: ${name}`); fail++; } }
 
 const ROOT = path.join(__dirname, '..');
-const RACE_OPS_TASK_NAMES = ['GARON_RaceOpsServer', 'GARON_RaceOpsResultUpdater', 'GARON_RaceOpsNightlyAnalysis'];
+const RACE_OPS_TASK_NAMES = ['GARON_RaceOpsServer', 'GARON_RaceOpsResultUpdater', 'GARON_RaceOpsNightlyAnalysis', 'GARON_RaceOpsHealthCheck'];
 // scripts/setup_scheduled_tasks.ps1 が本来管理する既存タスク名(2026-09-15時点で確認済みの一覧)。
 // RaceOps専用スクリプト側にこれらの名前が一切現れないことを確認する。
 const EXISTING_OTHER_TASK_NAMES = [
@@ -80,6 +80,7 @@ console.log('=== テスト5: run_race_ops_server.cmd / run_race_ops_analysis.cmd
     ['scripts/run_race_ops_server.cmd', 'race_ops_server.js'],
     ['scripts/run_race_ops_analysis.cmd', 'race_ops_analysis.js'],
     ['scripts/run_race_ops_result_updater.cmd', 'race_ops_result_updater.js'],
+    ['scripts/run_race_ops_healthcheck.cmd', 'race_ops_healthcheck.js'],
   ];
   for (const [cmdPath, scriptName] of pairs) {
     const full = path.join(ROOT, cmdPath);
@@ -92,6 +93,29 @@ console.log('=== テスト5: run_race_ops_server.cmd / run_race_ops_analysis.cmd
       check(`${cmdPath} は非ASCII文字を含まない(過去のタスク無音起動失敗の再発防止)`, !nonAscii);
     }
   }
+}
+
+console.log('=== テスト6(2026-09-23): GARON_RaceOpsHealthCheckだけがRunLevel Highestで、既存3タスクはLimitedのまま(予想ロジック本体のプロセスに昇格権限を渡さない) ===');
+{
+  const src = readSource('scripts/register_race_ops_tasks.ps1');
+  const blocks = {
+    GARON_RaceOpsServer: src.split('$serverPrincipal =')[1] && src.split('$serverPrincipal =')[1].split('\n')[0],
+    GARON_RaceOpsResultUpdater: src.split('$updaterPrincipal =')[1] && src.split('$updaterPrincipal =')[1].split('\n')[0],
+    GARON_RaceOpsNightlyAnalysis: src.split('$analysisPrincipal =')[1] && src.split('$analysisPrincipal =')[1].split('\n')[0],
+    GARON_RaceOpsHealthCheck: src.split('$healthPrincipal =')[1] && src.split('$healthPrincipal =')[1].split('\n')[0],
+  };
+  check('GARON_RaceOpsServerはRunLevel Limited', /RunLevel Limited/.test(blocks.GARON_RaceOpsServer || ''));
+  check('GARON_RaceOpsResultUpdaterはRunLevel Limited', /RunLevel Limited/.test(blocks.GARON_RaceOpsResultUpdater || ''));
+  check('GARON_RaceOpsNightlyAnalysisはRunLevel Limited', /RunLevel Limited/.test(blocks.GARON_RaceOpsNightlyAnalysis || ''));
+  check('GARON_RaceOpsHealthCheckはRunLevel Highest', /RunLevel Highest/.test(blocks.GARON_RaceOpsHealthCheck || ''));
+}
+
+console.log('=== テスト7(2026-09-23): race_ops_healthcheck.jsは、対象確認できたときだけプロセスを終了し、対象はrace_ops_server限定 ===');
+{
+  const src = readSource('scripts/race_ops_healthcheck.js');
+  check('確認できなければ殺さない(falseを返す分岐がある)', /return false;/.test(src));
+  check('Stop-Processの対象はrace_ops_server.jsの照合が通ったPIDのみ', src.includes('verifyLockedPidIsRaceOpsServer'));
+  check('他プロセス名(realtime_screening等)を再起動対象にしていない', !/realtime_screening|result_updater\.js.*Start-ScheduledTask|nightly_analysis.*Start-ScheduledTask/.test(src));
 }
 
 console.log(`\n=== 結果: PASS=${pass} FAIL=${fail} ===`);
