@@ -1014,9 +1014,29 @@ function generatePost(){
   ];
   var tomorrowMsg=tomorrowMsgs[Math.floor(Math.random()*tomorrowMsgs.length)];
 
+  // 2026-09-24変更(CEO指示): タイトル+結果ボックス+的中レース一覧の形式へ。各的中行は倍率のみ(低倍率でも投資に対して戻ることは回収率で示す)。
+  // 投資額・払戻額は買い目ごとの金額(bets[].amount)を使い、金額が無い過去ログは本線/抑えの単価設定で仮計算する。
+  function betUnit(b){return b.amount>0?b.amount:(b.type==='honsen'?honsenUnit:osaeeUnit);}
+  var totalInvest=allLogs.reduce(function(s,l){return s+(l.bets||[]).reduce(function(t,b){return t+betUnit(b);},0);},0);
+  var totalReturn=hits.reduce(function(s,l){
+    var m=(l.bets||[]).find(function(b){return b.val===l.result;});
+    var unit=m?betUnit(m):honsenUnit;
+    return s+Math.round(parsePayout(l.payout)*unit/100);
+  },0);
+  var roiPct=totalInvest>0?Math.round(totalReturn/totalInvest*100):null;
+  var yen=function(n){return n.toLocaleString('ja-JP')+'円';};
   var lines=[];
-  lines.push(dateStr+' お疲れ様でした🚤');
+  lines.push('【GARON 本日の結果】'+dateStr);
   lines.push('');
+  lines.push('━━━━━━━━━━');
+  lines.push('的中 '+hitCount+'/'+total+'R（'+rate+'%）');
+  if(roiPct!==null){
+    lines.push('回収率 '+roiPct+'%');
+    lines.push('投資 '+yen(totalInvest)+' → 払戻 '+yen(totalReturn));
+  }
+  lines.push('━━━━━━━━━━');
+  lines.push('');
+  lines.push('■ 的中レース');
   if(hitCount>0){
     hits.forEach(function(l){
       var p=parsePayout(l.payout);
@@ -1025,10 +1045,8 @@ function generatePost(){
       lines.push('🎯 '+l.venue+(l.raceNum||'')+(p>0?('　'+fireStr+(p/100).toFixed(1)+'倍'+fireStr):''));
     });
   } else {
-    lines.push('本日は的中なし…また明日💪');
+    lines.push('本日は的中なし…');
   }
-  lines.push('');
-  lines.push('🎯 '+total+'R中 '+hitCount+'的中（'+rate+'%）');
   lines.push('');
   lines.push(tomorrowMsg);
   lines.push('');
