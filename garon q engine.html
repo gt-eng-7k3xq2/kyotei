@@ -6434,7 +6434,20 @@ window.addEventListener('load', function(){ garonScheduleQAuditSync(); });
 
 function writeToV2(entry){
   try{
-    const betsV2=(entry.bets||[]).map(b=>({val:b.val,type:b.type==='本線'?'honsen':'osaee'}));
+    // 2026-09-24修正(CEO指示: エンジンとgtoolの記録を一致させる): ①本線/抑えはQ画面の表示と同じ基準(軸=maruが頭の買い目が本線)。
+    // 従来はb.type==='本線'で判定していたが、Qエンジンの買い目にその値は入らず全件「抑え」になっていた。
+    // ②エンジンの金額(bets[].amount、3000円均等回収配分)をgtoolの記録へ引き継ぐ(gtoolの投資額・回収率が実際の配分どおりになる)。
+    // 軸: 保存された軸(maru)がいずれかの買い目の頭に無い場合(独自エンジンのモード等)は、買い目で最も多い頭の艇を軸とする
+    const heads=(entry.bets||[]).map(b=>parseInt(String(b.val).split('-')[0],10));
+    let axis=parseInt(entry.maru,10);
+    if(!heads.includes(axis)){const cnt={};heads.forEach(h=>{cnt[h]=(cnt[h]||0)+1;});axis=parseInt(Object.keys(cnt).sort((x,y)=>cnt[y]-cnt[x])[0],10);}
+    const betsV2=(entry.bets||[]).map(b=>{
+      const head=parseInt(String(b.val).split('-')[0],10);
+      const item={val:b.val,type:head===axis?'honsen':'osaee'};
+      const amt=Number(b.amount);
+      if(Number.isFinite(amt)&&amt>0) item.amount=amt;
+      return item;
+    });
     const racenumV2=String(entry.racenum).replace(/R$/i,'')+'R';
     const v2entry={
       id:entry.id,

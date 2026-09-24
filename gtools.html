@@ -1158,11 +1158,12 @@ function generateJisekiSummary(){
       if(!log.result||!log.bets||!log.bets.length) return hMult;
       var matched=log.bets.find(function(b){return b.val===log.result;});
       if(!matched) return hMult;
+      if(matched.amount>0) return matched.amount/100;
       return matched.type==='honsen'?hMult:oMult;
     }
     function calcInvest(log){
       if(!log.bets||!log.bets.length) return 0;
-      return log.bets.reduce(function(s,b){return s+(b.type==='honsen'?honsenUnit:osaeeUnit);},0);
+      return log.bets.reduce(function(s,b){return s+(b.amount>0?b.amount:(b.type==='honsen'?honsenUnit:osaeeUnit));},0);
     }
     var totalPayout=hits.reduce(function(sum,l){return sum+Math.round(parsePayout(l.payout)*getHitMult(l));},0);
     var totalInvest=allLogs.reduce(function(sum,l){return sum+calcInvest(l);},0);
@@ -1357,8 +1358,8 @@ function generateNippo(){
   if(!logs.length){document.getElementById('nippo-result').innerHTML='<div class="empty-state"><div class="icon">📅</div>この日の記録がありません</div>';document.getElementById('nippo-card-actions').style.display='none';return;}
   const total=logs.length,hits=logs.filter(l=>(l.miss||[]).includes('hit')),hitCount=hits.length,rate=Math.round(hitCount/total*100);
   const hMult=honsenUnit/100,oMult=osaeeUnit/100;
-  function getHitMult(log){if(!log.result||!log.bets||!log.bets.length)return hMult;const matched=log.bets.find(b=>b.val===log.result);if(!matched)return hMult;return matched.type==='honsen'?hMult:oMult;}
-  function calcInvest(log){if(!log.bets||!log.bets.length)return 0;return log.bets.reduce((s,b)=>s+(b.type==='honsen'?honsenUnit:osaeeUnit),0);}
+  function getHitMult(log){if(!log.result||!log.bets||!log.bets.length)return hMult;const matched=log.bets.find(b=>b.val===log.result);if(!matched)return hMult;if(matched.amount>0)return matched.amount/100;return matched.type==='honsen'?hMult:oMult;}
+  function calcInvest(log){if(!log.bets||!log.bets.length)return 0;return log.bets.reduce((s,b)=>s+(b.amount>0?b.amount:(b.type==='honsen'?honsenUnit:osaeeUnit)),0);}
   const totalPayout=hits.reduce((sum,l)=>sum+Math.round(parsePayout(l.payout)*getHitMult(l)),0);
   const totalInvest=logs.reduce((sum,l)=>sum+calcInvest(l),0);
   const roi=totalInvest>0?Math.round(totalPayout/totalInvest*100):0;
