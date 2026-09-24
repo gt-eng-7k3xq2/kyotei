@@ -91,6 +91,8 @@ function renderDisp(s){
   // 全体バー
   h+='<div style="display:flex;height:14px;border-radius:7px;overflow:hidden;background:#0d1726;margin-bottom:10px">'+groups.map(g=>g[2]?'<div style="width:'+(g[2]/total*100)+'%;background:'+gcolor[g[0]]+'"></div>':'').join('')+'</div>';
   h+='<div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:14px">'+groups.map(g=>'<span style="font-size:12px"><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:'+gcolor[g[0]]+';margin-right:5px"></i>'+g[1]+' <b style="font-size:15px">'+g[2]+'</b></span>').join('')+'<span class="mu" style="font-size:12px">全 <b>'+total+'</b></span></div>';
+  // あなたの参入(GTOOL連携): 通知とどれだけ重なったか
+  if(d.mine&&d.mine.total){const m=d.mine;h+='<div style="font-size:12px;margin:0 0 12px;padding:8px 10px;border:1px solid #ff8ad8;border-radius:8px"><b style="color:#ff8ad8">あなたの参入 '+m.total+'件</b>(的中 '+m.hit+'・外れ '+m.miss+(m.open?'・結果待ち '+m.open:'')+')<br><span class="mu">エンジン通知と重なり '+m.overlapNotify+'件／あなたのみ '+m.mineOnly+'件／エンジンのみ '+m.engineOnly+'件</span></div>';}
   // ヒートマップ
   const by={};for(const r of rows){(by[r.venue]=by[r.venue]||{})[r.race]=r;}
   const venues=Object.keys(by).sort((a,b)=>{const i=VENUE_ORDER.indexOf(a),j=VENUE_ORDER.indexOf(b);return (i<0?99:i)-(j<0?99:j);});
@@ -104,11 +106,11 @@ function renderDisp(s){
       if(!row){h+='<div></div>';continue;}
       const st=KSTYLE[row.kind]||KSTYLE.missed;const sel=pickedCell===v+'|'+r;
       const isDark=(row.kind==='missed'||row.kind==='pending'||row.kind==='skip_conf');
-      h+='<div onclick="pickCell(\''+v+'\','+r+')" style="'+cellSt+'background:'+st.c+';'+(isDark?'color:#9fb6d6;':'')+(row.kind==='pending'?'border:1px dashed #2a4a72;':'')+(row.kind==='notify'?'box-shadow:0 0 8px '+st.c+';':'')+(sel?'outline:2px solid #fff;':'')+'">'+st.g+'</div>';
+      h+='<div onclick="pickCell(\''+v+'\','+r+')" style="'+cellSt+'background:'+st.c+';'+(isDark?'color:#9fb6d6;':'')+(row.kind==='pending'?'border:1px dashed #2a4a72;':'')+(row.kind==='notify'?'box-shadow:0 0 8px '+st.c+';':'')+(row.mine?'border:2px solid #ff8ad8;':'')+(sel?'outline:2px solid #fff;':'')+'">'+st.g+'</div>';
     }
   }
   h+='</div>';
-  h+='<div class="mu" style="font-size:10px;margin:8px 0 12px">◎ 通知　△ 見送り(配当が薄い)　－ 見送り(確信度)　✕ 取得できず(暗い赤は修正済みの不具合)　空白 評価なし　○ これから　／ マスを押すと詳細</div>';
+  h+='<div class="mu" style="font-size:10px;margin:8px 0 12px">◎ 通知　<span style="color:#ff8ad8">ピンク枠 あなたの参入</span>　△ 見送り(配当が薄い)　－ 見送り(確信度)　✕ 取得できず(暗い赤は修正済みの不具合)　空白 評価なし　○ これから　／ マスを押すと詳細</div>';
   // 詳細
   let detail='<div class="mu" style="font-size:12px;text-align:center;padding:12px 0">マスを押すと、そのレースの振り分けと理由が出ます</div>';
   if(pickedCell){const [v,rr]=pickedCell.split('|');const row=(by[v]||{})[rr];if(row){const st=KSTYLE[row.kind]||KSTYLE.missed;
