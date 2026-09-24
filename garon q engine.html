@@ -6512,9 +6512,33 @@ function isRareCaseV2(l){
   // 過去ログ(shinkido==='通'のまま逃げ固定相当だったもの)との互換のため旧条件も残す。
   return l.shinkido==='固' || (l.shinkido==='通' && String(l.maru)==='1' && (l.nigeRate||0)>=85);
 }
+// 2026-09-24新設: 実践ログ(kyotei_v2)の直近3日分をPC(RaceOps)へ同期する。Gist同期が止まっていても、参入・金額・結果がPCで分かるようにする。
+// Tailscale経由でPCに届かない場所(圏外・Tailscale切断)では黙って何もしない。記録の保存には一切影響しない。
+const GARON_OPS_SYNC_URL='https://yuta-1.taile1e601.ts.net/api/gtools/sync';
+let garonOpsSyncTimer=null;
+function garonOpsSyncSchedule(){
+  try{ if(garonOpsSyncTimer) clearTimeout(garonOpsSyncTimer); garonOpsSyncTimer=setTimeout(garonOpsSyncNow,2500); }catch(e){}
+}
+async function garonOpsSyncNow(){
+  try{
+    const logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
+    const cutoff=new Date(Date.now()+9*3600000-3*86400000).toISOString().slice(0,10);
+    const entries=logs.filter(l=>l&&l.date>=cutoff).slice(0,300).map(l=>({
+      id:l.id,date:l.date,venue:l.venue,raceNum:l.raceNum,ver:l.ver,shinkido:l.shinkido,maru:l.maru,pts:l.pts,
+      bets:(l.bets||[]).map(b=>({val:b.val,type:b.type,amount:b.amount})),
+      result:l.result,payout:l.payout,miss:l.miss,engineMode:l.engineMode,route:l.route,pEscape:l.pEscape,savedAt:l.savedAt}));
+    if(!entries.length) return;
+    const ac=new AbortController();const t=setTimeout(()=>ac.abort(),8000);
+    try{ await fetch(GARON_OPS_SYNC_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entries}),signal:ac.signal}); }
+    finally{ clearTimeout(t); }
+  }catch(e){ /* PCに届かなくても記録の保存には影響させない */ }
+}
+window.addEventListener('load',garonOpsSyncSchedule);
+
 function saveV2Logs(v2logs){
   try{
     localStorage.setItem('kyotei_v2',JSON.stringify(v2logs));
+    garonOpsSyncSchedule();
   }catch(e){
     if(e && (e.name==='QuotaExceededError' || /quota/i.test(e.message||''))){
       // 2026-09-11修正: 以前は14日カットオフを1回試すだけで諦めていたが(saveLogs側は
