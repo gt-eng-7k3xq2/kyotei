@@ -91,6 +91,7 @@ html,body{min-height:100vh;background:#04040c;}
 #tool-1 .bet-item{display:flex;align-items:center;padding:8px 10px;background:var(--surface3);border-radius:var(--r2);margin-bottom:6px;gap:10px;}
 #tool-1 .bet-item-num{font-size:10px;color:var(--text2);width:16px;flex-shrink:0;}
 #tool-1 .bet-item-val{flex:1;font-size:15px;font-weight:700;font-family:'Courier New',monospace;color:var(--text);letter-spacing:0.08em;}
+#tool-1 .bet-item-amt{font-size:13px;font-weight:700;font-family:'Courier New',monospace;color:var(--gold);white-space:nowrap;}
 #tool-1 .bet-item-type{font-size:11px;padding:6px 12px;border-radius:10px;font-weight:700;min-width:48px;text-align:center;}
 #tool-1 .bet-item-type.honsen{background:rgba(62,224,255,0.2);color:var(--gold);}
 #tool-1 .bet-item-type.osaee{background:rgba(85,136,224,0.15);color:#88aaee;}
@@ -1523,8 +1524,10 @@ function removeBetEdit(i){editBets.splice(i,1);renderEditBetsList();}
 function renderEditBetsList(){
   const el=document.getElementById('edit-bets-list'),countEl=document.getElementById('edit-bet-count');
   if(!editBets.length){el.innerHTML='';countEl.innerHTML='';return;}
-  el.innerHTML=editBets.map((b,i)=>`<div class="bet-item"><span class="bet-item-num">${i+1}</span><span class="bet-item-val">${b.val}</span><span class="bet-item-type ${b.type}" onclick="toggleBetTypeEdit(${i})" style="cursor:pointer;user-select:none;">${b.type==='honsen'?'本線':'抑え'}</span><button class="bet-item-del" onclick="removeBetEdit(${i})">×</button></div>`).join('');
-  countEl.innerHTML=`<span>${editBets.length}</span> / 15点`;
+  el.innerHTML=editBets.map((b,i)=>`<div class="bet-item"><span class="bet-item-num">${i+1}</span><span class="bet-item-val">${b.val}</span>${b.amount>0?`<span class="bet-item-amt">${Number(b.amount).toLocaleString('ja-JP')}円</span>`:''}<span class="bet-item-type ${b.type}" onclick="toggleBetTypeEdit(${i})" style="cursor:pointer;user-select:none;">${b.type==='honsen'?'本線':'抑え'}</span><button class="bet-item-del" onclick="removeBetEdit(${i})">×</button></div>`).join('');
+  // 2026-09-25: エンジンの金額(Q画面から記録した買い目ごとの金額)があれば、買い目の横と合計に表示する
+  const totalAmt=editBets.reduce((s,b)=>s+(b.amount>0?Number(b.amount):0),0);
+  countEl.innerHTML=`<span>${editBets.length}</span> / 15点`+(totalAmt>0?`　合計 <span>${totalAmt.toLocaleString('ja-JP')}</span>円`:'');
 }
 function toggleMiss(el,ctx){
   const val=el.dataset.val,gridId=ctx==='input'?'miss-grid-input':'miss-grid-edit';
