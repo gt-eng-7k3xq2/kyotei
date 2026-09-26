@@ -4135,16 +4135,43 @@ function compressBetsSG(bets){
 // 元の集合と1対1で一致する)なのは「1着-2着を固定して3着だけを集合として並べる」方式
 // (compressBetsSG内部のcompressNatural相当)のみのため、これだけを独立に再実装して使う。
 // compressBetsSG自体は変更しない(Q v3保護対象)。
+// 2026-09-26変更(CEO指示「買い目をもっとまとめて」): 頭ごとに、「2着の集まり × 3着の集まり」の四角に分け、
+// 四角の数(書き方の数)が最少になる分け方を探す(同じ艇が重なる組み合わせは存在しないので無視)。
+// 例: 5-1-2,5-1-3,5-1-4,5-4-1,5-2-1 → 5-1-234/5-24-1 、 4-1-2,4-1-5,4-5-1,4-5-2 → 4-15-125。
+// 書き方から元の買い目へ戻すと、必ず同じ集合になる(買い目そのもの・金額は変わらない、表記だけ)。
+// 旧方式(1着-2着でまとめて3着を並べるだけ)はバックアップ backups/garon_q_engine.before_compress_2026-09-26.html。
+// compressBetsSG(Q v3保護対象)は変更していない。
 function garonNaturalGroupBets(vals){
-  const g12={}, order12=[];
-  vals.forEach(v=>{
-    const p=String(v).split('-');
-    if(p.length!==3) return;
-    const key=p[0]+'-'+p[1];
-    if(!g12[key]){ g12[key]=[]; order12.push(key); }
-    if(!g12[key].includes(p[2])) g12[key].push(p[2]);
+  const byHead = {}, order = [];
+  vals.forEach(v => {
+    const p = String(v).split('-'); if (p.length !== 3) return;
+    if (!byHead[p[0]]) { byHead[p[0]] = new Set(); order.push(p[0]); }
+    byHead[p[0]].add(p[1] + p[2]);
   });
-  return order12.map(key=>key+'-'+g12[key].sort((a,b)=>parseInt(a,10)-parseInt(b,10)).join(''));
+  const subsets = (arr) => { const out = []; for (let m = 1; m < (1 << arr.length); m++) out.push(arr.filter((_, i) => m & (1 << i))); return out; };
+  const out = [];
+  order.forEach(h => {
+    const set = byHead[h], pairs = [...set].sort();
+    const seconds = [...new Set(pairs.map(x => x[0]))].sort(), thirds = [...new Set(pairs.map(x => x[1]))].sort();
+    const rects = [];
+    subsets(seconds).forEach(B => subsets(thirds).forEach(C => {
+      const cover = []; let okAll = true;
+      B.forEach(b => C.forEach(c => { if (b !== c) { if (set.has(b + c)) cover.push(b + c); else okAll = false; } }));
+      if (okAll && cover.length) rects.push({ B, C, cover, text: h + '-' + B.join('') + '-' + C.join('') });
+    }));
+    let best = null;
+    const dfs = (covered, chosen, chars) => {
+      if (best && (chosen.length > best.n || (chosen.length === best.n && chars >= best.chars))) return;
+      const next = pairs.find(x => !covered.has(x));
+      if (!next) { best = { n: chosen.length, chars, list: chosen.slice() }; return; }
+      rects.filter(r => r.cover.includes(next) && r.cover.every(x => !covered.has(x))).sort((a, b) => b.cover.length - a.cover.length).forEach(r => {
+        const cv = new Set(covered); r.cover.forEach(x => cv.add(x)); chosen.push(r); dfs(cv, chosen, chars + r.text.length); chosen.pop();
+      });
+    };
+    dfs(new Set(), [], 0);
+    (best ? best.list : []).sort((a, b) => b.cover.length - a.cover.length || (a.text < b.text ? -1 : 1)).forEach(r => out.push(r.text));
+  });
+  return out;
 }
 function garonFormatBetsForComment(arr){
   // 2026-09-10追記(GARON-Q-R07、非本番ステージング専用、実ブラウザ一気通貫試験で発見):
