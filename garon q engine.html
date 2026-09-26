@@ -4135,43 +4135,54 @@ function compressBetsSG(bets){
 // 元の集合と1対1で一致する)なのは「1着-2着を固定して3着だけを集合として並べる」方式
 // (compressBetsSG内部のcompressNatural相当)のみのため、これだけを独立に再実装して使う。
 // compressBetsSG自体は変更しない(Q v3保護対象)。
-// 2026-09-26変更(CEO指示「買い目をもっとまとめて」): 頭ごとに、「2着の集まり × 3着の集まり」の四角に分け、
-// 四角の数(書き方の数)が最少になる分け方を探す(同じ艇が重なる組み合わせは存在しないので無視)。
+// 2026-09-26変更(CEO指示「買い目をもっとまとめて」): 「頭の集まり × 2着の集まり × 3着の集まり」の四角に分け、
+// 四角の数(書き方の数)が最少になる分け方を探す(同じ艇が重なる組み合わせは存在しないので無視)。頭と2着の入れ替えは a=b、2着と3着の入れ替えは b=c と書く。
 // 例: 5-1-2,5-1-3,5-1-4,5-4-1,5-2-1 → 5-1-234/5-24-1 、 4-1-2,4-1-5,4-5-1,4-5-2 → 4-15-125。
 // 書き方から元の買い目へ戻すと、必ず同じ集合になる(買い目そのもの・金額は変わらない、表記だけ)。
 // 旧方式(1着-2着でまとめて3着を並べるだけ)はバックアップ backups/garon_q_engine.before_compress_2026-09-26.html。
 // compressBetsSG(Q v3保護対象)は変更していない。
 function garonNaturalGroupBets(vals){
-  const byHead = {}, order = [];
-  vals.forEach(v => {
-    const p = String(v).split('-'); if (p.length !== 3) return;
-    if (!byHead[p[0]]) { byHead[p[0]] = new Set(); order.push(p[0]); }
-    byHead[p[0]].add(p[1] + p[2]);
-  });
+  const seen = new Set(), list = [];
+  vals.forEach(v => { const p = String(v).split('-'); if (p.length !== 3 || new Set(p).size !== 3) return; const k = p.join('-'); if (!seen.has(k)) { seen.add(k); list.push(p); } });
+  if (!list.length) return [];
+  const uniq = (i) => [...new Set(list.map(p => p[i]))].sort();
+  const Hs = uniq(0), Bs = uniq(1), Cs = uniq(2);
   const subsets = (arr) => { const out = []; for (let m = 1; m < (1 << arr.length); m++) out.push(arr.filter((_, i) => m & (1 << i))); return out; };
-  const out = [];
-  order.forEach(h => {
-    const set = byHead[h], pairs = [...set].sort();
-    const seconds = [...new Set(pairs.map(x => x[0]))].sort(), thirds = [...new Set(pairs.map(x => x[1]))].sort();
-    const rects = [];
-    subsets(seconds).forEach(B => subsets(thirds).forEach(C => {
-      const cover = []; let okAll = true;
-      B.forEach(b => C.forEach(c => { if (b !== c) { if (set.has(b + c)) cover.push(b + c); else okAll = false; } }));
-      if (okAll && cover.length) rects.push({ B, C, cover, text: h + '-' + B.join('') + '-' + C.join('') });
-    }));
-    let best = null;
-    const dfs = (covered, chosen, chars) => {
-      if (best && (chosen.length > best.n || (chosen.length === best.n && chars >= best.chars))) return;
-      const next = pairs.find(x => !covered.has(x));
-      if (!next) { best = { n: chosen.length, chars, list: chosen.slice() }; return; }
-      rects.filter(r => r.cover.includes(next) && r.cover.every(x => !covered.has(x))).sort((a, b) => b.cover.length - a.cover.length).forEach(r => {
-        const cv = new Set(covered); r.cover.forEach(x => cv.add(x)); chosen.push(r); dfs(cv, chosen, chars + r.text.length); chosen.pop();
-      });
-    };
-    dfs(new Set(), [], 0);
-    (best ? best.list : []).sort((a, b) => b.cover.length - a.cover.length || (a.text < b.text ? -1 : 1)).forEach(r => out.push(r.text));
-  });
-  return out;
+  const same = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+  // 候補の四角(頭の集まり × 2着の集まり × 3着の集まり)。四角の中の、同じ艇が重ならない組み合わせが、すべて買い目に入っているものだけ。
+  const rects = new Map();
+  subsets(Hs).forEach(H => subsets(Bs).forEach(B => {
+    const A = Cs.filter(c => H.every(h => B.every(b => h === b || c === h || c === b || seen.has(h + '-' + b + '-' + c))));
+    subsets(A).forEach(C => {
+      const cover = []; const usedH = new Set(), usedB = new Set(), usedC = new Set();
+      H.forEach(h => B.forEach(b => C.forEach(c => { if (h !== b && b !== c && h !== c) { cover.push(h + '-' + b + '-' + c); usedH.add(h); usedB.add(b); usedC.add(c); } })));
+      if (!cover.length) return;
+      const h2 = H.filter(x => usedH.has(x)), b2 = B.filter(x => usedB.has(x)), c2 = C.filter(x => usedC.has(x));
+      let text;
+      if (h2.length === 2 && same(h2, b2)) text = h2[0] + '=' + h2[1] + '-' + c2.join('');
+      else if (b2.length === 2 && same(b2, c2)) text = h2.join('') + '-' + b2[0] + '=' + b2[1];
+      else text = h2.join('') + '-' + b2.join('') + '-' + c2.join('');
+      const key = cover.slice().sort().join(',');
+      if (!rects.has(key) || rects.get(key).text.length > text.length) rects.set(key, { cover, text });
+    });
+  }));
+  // 重ならない分け方(同じ買い目を2度書かない)のうち、書き方の数が最少のもの。同数なら文字数が少ないもの。
+  const cand = [...rects.values()].sort((a, b) => b.cover.length - a.cover.length);
+  const byTriple = new Map(); cand.forEach(r => r.cover.forEach(x => { if (!byTriple.has(x)) byTriple.set(x, []); byTriple.get(x).push(r); }));
+  const all = list.map(p => p.join('-'));
+  let best = null, budget = 300000;
+  const dfs = (covered, chosen, chars) => {
+    if (budget-- <= 0) return;
+    if (best && (chosen.length > best.n || (chosen.length === best.n && chars >= best.chars))) return;
+    const next = all.find(x => !covered.has(x));
+    if (!next) { best = { n: chosen.length, chars, list: chosen.slice() }; return; }
+    for (const r of byTriple.get(next)) {
+      if (r.cover.some(x => covered.has(x))) continue;
+      const cv = new Set(covered); r.cover.forEach(x => cv.add(x)); chosen.push(r); dfs(cv, chosen, chars + r.text.length); chosen.pop();
+    }
+  };
+  dfs(new Set(), [], 0);
+  return (best ? best.list : []).sort((a, b) => b.cover.length - a.cover.length || (a.text < b.text ? -1 : 1)).map(r => r.text);
 }
 function garonFormatBetsForComment(arr){
   // 2026-09-10追記(GARON-Q-R07、非本番ステージング専用、実ブラウザ一気通貫試験で発見):
