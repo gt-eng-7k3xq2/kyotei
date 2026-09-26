@@ -132,6 +132,26 @@ function taskTable(tasks){
   return h+'</table>';
 }
 
+
+const TIER_JP={strong:'強',a:'候補'};const STATE_JP={new:'これから',notified:'通知済み',bet:'記録済み(購入)',pass:'見送り済み',closed:'締切済み'};
+function renderWild(w){
+  if(!w)return '';
+  const ok=w.indexAgeMin!=null&&w.indexAgeMin<5;
+  const alive=!w.inHours?'(稼働時間外)':ok?'動いています':w.indexAgeMin==null?'カード未作成':`${w.indexAgeMin}分止まっています`;
+  const L=w.ledger||{},c=w.cards||{},bt=c.byTier||{};
+  let h=`<div class="card"><div class="ct">WILD 荒れ予想(対話型)</div>
+    <div class="g3">${stat((bt.strong||0)+'/'+(bt.a||0),'目安 強/候補')}${stat(c.total||0,'作ったカード')}${stat(w.notifiedCount||0,'通知した')}</div>
+    <div class="g3" style="margin-top:8px">${stat(L.todayBets||0,'購入の記録')}${stat(L.todayPasses||0,'見送り')}${stat(L.waitingResults||0,'結果待ち')}</div>
+    ${row('裏方(カード作成・結果取得)',`<span class="${w.inHours&&!ok?'dn':'up'}">${esc(alive)}</span>${w.indexAt?`<span class="mu">(最終 ${esc(fmt(w.indexAt))})</span>`:''}`)}
+    ${row('記録の改ざんチェック',L.verifyOk?`<span class="up">正常(${L.total}件)</span>`:`<span class="dn">異常 ${esc(L.verifyAt)}件目</span>`)}
+    ${row('結果の取得',`確定 ${(w.results||{}).confirmed||0}件${(w.results||{}).manual?`(うち手入力 ${w.results.manual}件)`:''}`)}`;
+  if((w.entryRaces||[]).length){
+    h+='<div style="margin-top:10px"><table><tr><th>レース</th><th>締切</th><th>目安</th><th>状態</th></tr>'+
+      w.entryRaces.map(r=>`<tr><td>${esc(r.venue)}${r.race}R</td><td>${esc(r.deadline)}</td><td>${esc(TIER_JP[r.tier]||'')}</td><td>${esc(STATE_JP[r.state]||r.state)}</td></tr>`).join('')+'</table></div>';
+  } else h+='<div class="note" style="margin-top:8px">今日は、参入の目安が出たレースはまだありません。</div>';
+  h+='</div>';
+  return h;
+}
 function render(s){
   const e=s.engine||{}, t=s.today||{}, v=s.verification||{}, live=v.live, rep=v.replay;
   const label={ok:'正常に稼働中',warn:'注意があります',error:'対応が必要です'}[s.overall]||'—';
@@ -151,6 +171,7 @@ function render(s){
   if(live&&live.daily)h+=`<div class="card"><div class="ct">DAILY 日別(実運用)</div>${dailyTable(live.daily)}</div>`;
   if(live&&live.calibration&&live.calibration.length)h+=`<div class="card"><div class="ct">CALIBRATION 予測確率と実際</div>${calib(live.calibration)}</div>`;
   if(rep&&rep.totalConfirmed)h+=`<div class="card"><div class="ct">REPLAY 過去日の再現(参考)</div><div class="g3">${stat(rep.totalConfirmed,'レース')}${stat(pct(rep.all.hit10,0),'上位10点的中')}${stat(pct(rep.all.roi10,0),'回収(10点)')}</div>${levelTable(rep.byLevel)}<div class="note">過去日のデータを、その日時点の統計でエンジンに通し直した結果です(実運用ではありません)。</div></div>`;
+  h+=renderWild(s.wild);
   h+='<div class="card" id="disp-card"></div>';
   h+=`<div class="card"><div class="ct">TASKS 自動処理</div>${taskTable(s.tasks)}</div>`;
   h+='<div class="note" style="text-align:center">回収率はどの買い方でも控除率(約25%)の壁があり、平均で75〜80%が上限の目安です。<br>このページは自動更新されます(60秒ごと)</div>';
