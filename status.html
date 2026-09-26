@@ -143,7 +143,6 @@ function renderWild(w){
     <div class="g3">${stat((bt.strong||0)+'/'+(bt.a||0),'目安 強/候補')}${stat(c.total||0,'作ったカード')}${stat(w.notifiedCount||0,'通知した')}</div>
     <div class="g3" style="margin-top:8px">${stat(L.todayBets||0,'購入の記録')}${stat(L.todayPasses||0,'見送り')}${stat(L.waitingResults||0,'結果待ち')}</div>
     ${row('裏方(カード作成・結果取得)',`<span class="${w.inHours&&!ok?'dn':'up'}">${esc(alive)}</span>${w.indexAt?`<span class="mu">(最終 ${esc(fmt(w.indexAt))})</span>`:''}`)}
-    ${row('記録の改ざんチェック',L.verifyOk?`<span class="up">正常(${L.total}件)</span>`:`<span class="dn">異常 ${esc(L.verifyAt)}件目</span>`)}
     ${row('結果の取得',`確定 ${(w.results||{}).confirmed||0}件${(w.results||{}).manual?`(うち手入力 ${w.results.manual}件)`:''}`)}`;
   if((w.entryRaces||[]).length){
     h+='<div style="margin-top:10px"><table><tr><th>レース</th><th>締切</th><th>目安</th><th>状態</th></tr>'+
