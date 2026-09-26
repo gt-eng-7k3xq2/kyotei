@@ -436,6 +436,12 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--gold);bo
     <div class="card">
       <div class="card-title">𝕏 X投稿サマリー</div>
       <textarea id="x-summary-preview" class="ai-output" style="min-height:100px;font-size:11px;width:100%;background:var(--card-bg);color:var(--text);border:1px solid #444;border-radius:8px;padding:8px;resize:vertical;box-sizing:border-box;"></textarea>
+      <div style="display:flex;gap:8px;margin-top:4px;align-items:center;">
+        <span style="font-size:11px;color:var(--muted);">展開の文体</span>
+        <button class="btn btn-ghost btn-sm" style="flex:1;" data-tenkai-style="S" onclick="setTenkaiStyle('S')">短め</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1;" data-tenkai-style="M" onclick="setTenkaiStyle('M')">標準</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1;" data-tenkai-style="L" onclick="setTenkaiStyle('L')">詳しめ</button>
+      </div>
       <div style="display:flex;gap:8px;margin-top:4px;">
         <button id="ai-tenkai-btn" class="btn btn-ghost btn-sm" style="flex:1;" onclick="generateTenkaiAI()">🤖 展開をAIで書く</button>
         <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="resetAiTenkai()">↺ ルールに戻す</button>
@@ -4482,6 +4488,7 @@ function buildXSummary(mode,withAmount){
   ].join('\n');
 }
 
+window.addEventListener('load',()=>{ try{ setTenkaiStyle(garonTenkaiStyle); }catch(e){} });
 function updateXPreview(){
   const el=document.getElementById('x-summary-preview');
   if(!el) return;
@@ -8786,29 +8793,55 @@ function garonGdbPrepareEngineOnlyGlobals(){
 }
 
 // X投稿サマリー(garon_q_engine.htmlの既存書式)。mode='x': 実際の「X用」コピーと同じ(評価順の行なし)、'note': 評価順・本線・抑えつき、'all': 両方。
-// 展開の一文を、買い目から自動で作る(2026-09-26、CEO指示。お見本の型: 本線 → 2着(筆頭・次点) → 3着まで → 壊れたら → 切り)。
+// 展開の一文を、買い目から自動で作る(2026-09-26、CEO指示。お見本20本の型)。3つの文体: S=短め / M=標準 / L=詳しめ。
 // 買い目だけから組み立てるので、買い目と食い違わない。エンジンの確率は順位づけにだけ使い、文には出さない。決まり手・スタート差は、このエンジンが持っていないので書かない。
-// bets: 買い目の配列('1-2-3'形式)、probOf(combo): その出目の確率、axis: 軸の艇、labelOf(no): '❶北村' 形式の表記
-function tenkaiFromBets(bets, probOf, axis, labelOf) {
-  const circ = ['❶', '❷', '❸', '❹', '❺', '❻'];
-  const groups = {}, order = [];
+// bets: 買い目('1-2-3'形式)、probOf(combo): その出目の確率、axis: 軸の艇、labelOf(no): '❶北村' 形式、style: 'S'|'M'|'L'、facts: {motor:{艇:順位},st:{..},form:{..}}(任意。6艇中の順位。上位2位までだけ理由に使う)
+// 展開の文体(2026-09-26、CEO指示): S=短め / M=標準 / L=詳しめ。選択はこの端末に保存する。通知は標準(M)固定。
+let garonTenkaiStyle='M';
+try{ const _s=localStorage.getItem('garon_q_tenkai_style_v1'); if(_s==='S'||_s==='M'||_s==='L') garonTenkaiStyle=_s; }catch(e){}
+function setTenkaiStyle(v){
+  if(v!=='S'&&v!=='M'&&v!=='L') return;
+  garonTenkaiStyle=v; try{ localStorage.setItem('garon_q_tenkai_style_v1',v); }catch(e){}
+  document.querySelectorAll('[data-tenkai-style]').forEach(b=>{ const on=b.getAttribute('data-tenkai-style')===v; b.style.color=on?'var(--gold)':''; b.style.borderColor=on?'var(--gold)':''; });
+  try{ updateXPreview(); }catch(e){}
+}
+function tenkaiFactsOf(explain) {
+  const out = { motor: {}, st: {}, form: {} };
+  if (!explain || !Array.isArray(explain.boats)) return out;
+  explain.boats.forEach((b, i) => { (b && b.stats || []).forEach(s => { if (out[s.k] && Number.isFinite(Number(s.rank))) out[s.k][i + 1] = Number(s.rank); }); });
+  return out;
+}
+function tenkaiFromBets(bets, probOf, axis, labelOf, style, facts) {
+  const circ = ['❶', '❷', '❸', '❹', '❺', '❻'], st = style === 'S' || style === 'L' ? style : 'M', f = facts || {};
+  const groups = {}, order = [], list = [];
   (bets || []).forEach(v => {
     const p = String(v).split('-').map(Number); if (p.length !== 3 || p.some(n => !(n >= 1 && n <= 6)) || new Set(p).size !== 3) return;
-    const pr = Number(probOf(v)) || 0;
-    if (!groups[p[0]]) { groups[p[0]] = { w: 0, sec: {}, thd: {} }; order.push(p[0]); }
-    const g = groups[p[0]]; g.w += pr; g.sec[p[1]] = (g.sec[p[1]] || 0) + pr; g.thd[p[2]] = (g.thd[p[2]] || 0) + pr;
+    list.push(p); const pr = Number(probOf(v)) || 0;
+    if (!groups[p[0]]) { groups[p[0]] = { w: 0, sec: {}, thd: {}, byS: {} }; order.push(p[0]); }
+    const g = groups[p[0]]; g.w += pr; g.sec[p[1]] = (g.sec[p[1]] || 0) + pr; g.thd[p[2]] = (g.thd[p[2]] || 0) + pr; (g.byS[p[1]] = g.byS[p[1]] || []).push([p[2], pr]);
   });
   if (!order.length) return '';
   const rank = (o) => Object.keys(o).sort((x, y) => o[y] - o[x] || Number(x) - Number(y)).map(Number);
+  const reason = (n) => (f.motor && f.motor[n] <= 2 ? '機力上位' : f.st && f.st[n] <= 2 ? 'ST上位' : f.form && f.form[n] <= 2 ? '調子上位' : '');
   const heads = order.slice().sort((a, b) => (b === axis) - (a === axis) || groups[b].w - groups[a].w || a - b);
-  const out = [], first = heads[0], g1 = groups[first], s1 = rank(g1.sec), t1 = rank(g1.thd);
-  out.push(first === 1 ? labelOf(1) + 'のイン逃げが本線。' : '頭は' + labelOf(first) + 'が本線。');
-  if (s1.length) out.push('2着は' + labelOf(s1[0]) + '筆頭' + (s1[1] ? '、' + labelOf(s1[1]) + '次点' : '') + '。');
+  const first = heads[0], g1 = groups[first], s1 = rank(g1.sec), t1 = rank(g1.thd), out = [];
+  const hr = st === 'S' ? '' : reason(first);
+  out.push(first === 1 ? (hr ? labelOf(1) + 'は' + hr + '、イン逃げが本線。' : labelOf(1) + 'のイン逃げが本線。') : (hr ? '頭は' + labelOf(first) + '(' + hr + ')が本線。' : '頭は' + labelOf(first) + 'が本線。'));
+  if (s1.length) {
+    const role = (n) => (first === 1 && st !== 'S' ? (n === 2 ? 'のマーク' : n === 3 ? 'の差し残り' : '') : '');   // お見本の言い回し(頭が1号艇のときだけ)
+    const a = labelOf(s1[0]) + (role(s1[0]) || (st !== 'S' && reason(s1[0]) ? '(' + reason(s1[0]) + ')' : ''));
+    const b = s1[1] ? labelOf(s1[1]) + (role(s1[1]) || (st === 'L' && reason(s1[1]) ? '(' + reason(s1[1]) + ')' : '') ) : '';
+    out.push('相手筆頭は' + a + (b ? '、次点' + b : '') + '。');
+  }
   if (t1.length) out.push('3着は' + t1.map(n => circ[n - 1]).join('') + 'まで。');
-  heads.slice(1).forEach(h => { const s = rank(groups[h].sec); out.push('壊れたら' + (h === 1 ? labelOf(1) + 'の逃げ' : labelOf(h) + '頭') + (s.length ? '(2着は' + labelOf(s[0]) + ')' : '') + '。'); });
-  const used = new Set(); (bets || []).forEach(v => String(v).split('-').forEach(x => used.add(Number(x))));
+  if (st === 'L') {   // 分岐: 買い目そのまま(「❷が2着なら3着は❸❺」)
+    const br = s1.slice(0, 2).map(s => { const th = (g1.byS[s] || []).slice().sort((x, y) => y[1] - x[1] || x[0] - y[0]).map(x => x[0]); return th.length ? circ[s - 1] + 'が2着なら3着は' + th.map(n => circ[n - 1]).join('') : ''; }).filter(Boolean);
+    if (br.length >= 2) out.push(br.join('、') + '。');
+  }
+  if (st !== 'S') heads.slice(1).forEach(h => { const s = rank(groups[h].sec); out.push('押さえは' + (h === 1 ? labelOf(1) + 'の逃げ' : labelOf(h) + 'の頭') + (s.length ? '(2着は' + labelOf(s[0]) + ')' : '') + '。'); });
+  const used = new Set(); list.forEach(p => p.forEach(n => used.add(n)));
   const cut = [1, 2, 3, 4, 5, 6].filter(n => !used.has(n));
-  if (cut.length) out.push(cut.map(n => circ[n - 1]).join('') + 'は切り。');
+  if (st !== 'S' && cut.length) out.push(cut.map(n => circ[n - 1]).join('') + 'は切り。');
   return out.join('');
 }
 
@@ -8822,7 +8855,7 @@ function garonGdbXSummary(mode,withAmount){
   const cum=st.betsRaw.reduce((s,b)=>s+((garonEngine.top.find(x=>x.combo===b.val)||{p:0}).p),0);
   const axis=st.axes[0].boat;
   // 2026-09-26(CEO指示): AIで書いた展開があればそれを優先。無ければ、買い目から自動で作る(通知と同じ関数・同じ文)
-  const tenkai=((typeof aiTenkaiLine!=='undefined'&&aiTenkaiLine)||'').trim()||tenkaiFromBets(st.betsRaw.map(b=>b.val),c=>(garonEngine.top.find(x=>x.combo===c)||{p:0}).p,axis,garonGdbSurname)||'─';
+  const tenkai=((typeof aiTenkaiLine!=='undefined'&&aiTenkaiLine)||'').trim()||tenkaiFromBets(st.betsRaw.map(b=>b.val),c=>(garonEngine.top.find(x=>x.combo===c)||{p:0}).p,axis,garonGdbSurname,garonTenkaiStyle,tenkaiFactsOf(garonEngine.explain&&!garonEngine.explain.error?garonEngine.explain:null))||'─';
   const head=[`【${venue}${race}R】${shimekiri}`,'',`G.RATE ${Math.round(cum*100)}%`,'',`軸：${garonGdbSurname(axis)}`];
   const xLines=[...head,'',`展開：${tenkai}`,'','最終予想・買い目はプロフィール（note）から。','','G.'];
   if(mode==='x')return xLines.join('\n');
