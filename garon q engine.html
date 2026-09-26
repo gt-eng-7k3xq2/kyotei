@@ -8823,32 +8823,44 @@ function tenkaiFromBets(bets, probOf, axis, labelOf, style, facts) {
   if (!order.length) return '';
   const rank = (o) => Object.keys(o).sort((x, y) => o[y] - o[x] || Number(x) - Number(y)).map(Number);
   const reason = (n) => (f.motor && f.motor[n] <= 2 ? '機力上位' : f.st && f.st[n] <= 2 ? 'ST上位' : f.form && f.form[n] <= 2 ? '調子上位' : '');
-  // 荒れ型(頭が1号艇以外)の言い回し。お見本(2026-09-26 追加分): 2=差し切り、3=センターの仕掛け、4=カドからのまくり、5・6=外のまくり差し。壁=3号艇、カド=4号艇。
-  const ROLE_HEAD = { 2: '差し切り', 3: 'センターからの仕掛け', 4: 'カドからのまくり', 5: '外からのまくり差し', 6: '大外のまくり差し' };
+  // 頭になったときの展開の名前(枠の初期値)と、買い目の位置での言い換え(お見本 2026-09-26): 3号艇が2着=壁、4号艇が2着=カド、頭が1号艇のとき2号艇=マーク・3号艇=差し残り。
+  const ROLE_HEAD = { 2: '差し切り', 3: 'センター攻め', 4: 'カドまくり', 5: '外からのまくり差し', 6: '大外のまくり差し' };
   const heads = order.slice().sort((a, b) => (b === axis) - (a === axis) || groups[b].w - groups[a].w || a - b);
-  const first = heads[0], g1 = groups[first], s1 = rank(g1.sec), t1 = rank(g1.thd), out = [], arai = first !== 1;
+  const first = heads[0], g1 = groups[first], s1 = rank(g1.sec), out = [], arai = first !== 1, nm = (n) => labelOf(n);
+  const thirdsOf = (s) => (g1.byS[s] || []).slice().sort((x, y) => y[1] - x[1] || x[0] - y[0]).map(x => x[0]);
   const hr = st === 'S' ? '' : reason(first);
-  if (!arai) out.push(hr ? labelOf(1) + 'は' + hr + '、イン逃げが本線。' : labelOf(1) + 'のイン逃げが本線。');
-  else { out.push('狙うは' + labelOf(first) + (hr ? '(' + hr + ')' : '') + '。'); out.push(ROLE_HEAD[first] + 'が本線。'); if (st !== 'S' && !order.includes(1)) out.push('逃げは捨てる。'); }
+  const roleSec = (n) => (st === 'S' ? '' : !arai ? (n === 2 ? 'のマーク' : n === 3 ? 'の差し残り' : '') : (n === 3 ? 'の壁' : n === 4 ? 'のカド' : ''));
+  if (st === 'S') {
+    if (!arai) { out.push(nm(1) + 'のイン逃げが本線。'); if (s1.length) out.push('相手筆頭は' + nm(s1[0]) + (s1[1] ? '、次点' + nm(s1[1]) : '') + '。'); }
+    else {
+      // 短め: 動作を並べる(お見本の型)。別の頭から差し残しで戻る形が買い目にあれば、それも軸として書く
+      const alt = heads.slice(1).find(h => (groups[h].byS[first] || []).length);
+      const ALT = { 2: '差し', 3: 'センター攻め', 4: 'カドまくり', 5: '外のまくり差し', 6: '大外のまくり差し' };
+      out.push('狙うは' + nm(first) + '。' + (alt ? ROLE_HEAD[first] + 'でも、' + nm(alt) + 'の' + ALT[alt] + 'から' + circ[first - 1] + 'の差し残しでも軸。' : ROLE_HEAD[first] + 'が本線。'));
+      const kabe = s1.slice(0, 2).find(n => n === 3); if (kabe) out.push(nm(3) + 'は壁。');
+    }
+    return out.join('');
+  }
+  if (!arai) out.push(hr ? nm(1) + 'は' + hr + '、イン逃げが本線。' : nm(1) + 'のイン逃げが本線。');
+  else { out.push('狙うは' + nm(first) + (hr ? '(' + hr + ')' : '') + '。'); out.push(ROLE_HEAD[first] + 'が本線。'); if (!order.includes(1)) out.push('逃げは捨てる。'); }
   if (s1.length) {
-    const role = (n) => (!arai ? (st !== 'S' ? (n === 2 ? 'のマーク' : n === 3 ? 'の差し残り' : '') : '') : (st !== 'S' ? (first === 2 ? (n === 3 ? 'の壁' : n === 4 ? 'のカド' : '') : first === 4 && n === 2 ? 'の差し残し' : '') : ''));
-    const a = labelOf(s1[0]) + (role(s1[0]) || (st !== 'S' && reason(s1[0]) ? '(' + reason(s1[0]) + ')' : ''));
-    const b = s1[1] ? labelOf(s1[1]) + (role(s1[1]) || (st === 'L' && reason(s1[1]) ? '(' + reason(s1[1]) + ')' : '')) : '';
+    const a = nm(s1[0]) + (roleSec(s1[0]) || (reason(s1[0]) ? '(' + reason(s1[0]) + ')' : ''));
+    const b = s1[1] ? nm(s1[1]) + (roleSec(s1[1]) || (st === 'L' && reason(s1[1]) ? '(' + reason(s1[1]) + ')' : '')) : '';
     out.push('相手筆頭は' + a + (b ? '、次点' + b : '') + '。');
+    // 3着: 相手筆頭が2着のときの3着(相手筆頭と同じ艇を、同じ文に出さない)。詳しめは、厚み(本線・次点)と、次点が2着のときの3着まで書く
+    const t = thirdsOf(s1[0]);
+    if (t.length) out.push(st === 'L' && t.length >= 2 ? '3着は' + circ[t[0] - 1] + 'を厚く、' + circ[t[1] - 1] + 'は次点' + (t.length > 2 ? '、' + t.slice(2).map(n => circ[n - 1]).join('') + 'まで' : '') + '。' : '3着は' + t.map(n => circ[n - 1]).join('') + '。');
+    if (st === 'L' && s1[1]) { const t2 = thirdsOf(s1[1]); if (t2.length) out.push(circ[s1[1] - 1] + 'が2着なら3着は' + t2.map(n => circ[n - 1]).join('') + '。'); }
   }
-  if (t1.length) out.push(st === 'L' && t1.length >= 3 ? '3着は' + circ[t1[0] - 1] + 'を厚く、' + t1.slice(1).map(n => circ[n - 1]).join('') + 'は薄く。' : '3着は' + t1.map(n => circ[n - 1]).join('') + 'まで。');
-  if (arai && st === 'L' && order.includes(1) === false) {   // 1号艇が2着・3着にだけ残る形
+  if (st === 'L' && arai && !order.includes(1)) {   // 1号艇が2着・3着にだけ残る形
     const pos = []; if (list.some(p => p[1] === 1)) pos.push('2'); if (list.some(p => p[2] === 1)) pos.push('3');
-    if (pos.length) out.push(labelOf(1) + 'は' + pos.join('・') + '着まで。');
+    if (pos.length) out.push(nm(1) + 'は逃げ切れず' + pos.join('・') + '着まで。');
   }
-  if (st === 'L') {   // 分岐: 買い目そのまま(「❷が2着なら3着は❸❺」)
-    const br = s1.slice(0, 2).map(s => { const th = (g1.byS[s] || []).slice().sort((x, y) => y[1] - x[1] || x[0] - y[0]).map(x => x[0]); return th.length ? circ[s - 1] + 'が2着なら3着は' + th.map(n => circ[n - 1]).join('') : ''; }).filter(Boolean);
-    if (br.length >= 2) out.push(br.join('、') + '。');
-  }
-  if (st !== 'S') heads.slice(1).forEach(h => { const s = rank(groups[h].sec); out.push('押さえは' + (h === 1 ? labelOf(1) + 'の逃げ' : labelOf(h) + 'の' + (ROLE_HEAD[h] || '頭')) + (s.length ? '(2着は' + labelOf(s[0]) + ')' : '') + '。'); });
+  const ALT = { 1: '逃げ', 2: '差し', 3: 'センター攻め', 4: 'カドまくり', 5: '外のまくり差し', 6: '大外のまくり差し' };
+  heads.slice(1).forEach(h => { const s = rank(groups[h].sec); out.push('押さえは' + nm(h) + 'の' + ALT[h] + '。' + (s.length ? '2着は' + nm(s[0]) + '。' : '')); });
   const used = new Set(); list.forEach(p => p.forEach(n => used.add(n)));
   const cut = [1, 2, 3, 4, 5, 6].filter(n => !used.has(n));
-  if (st !== 'S' && cut.length) out.push(cut.map(n => circ[n - 1]).join('') + 'は切り。');
+  if (cut.length) out.push(cut.map(n => circ[n - 1]).join('') + 'は切り。');
   return out.join('');
 }
 
