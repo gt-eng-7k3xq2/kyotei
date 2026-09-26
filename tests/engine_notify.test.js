@@ -1,4 +1,15 @@
 'use strict';
+function expandBetsText(text) {
+  const out = [];
+  String(text).split('/').filter(Boolean).forEach(tok => {
+    const parts = tok.split('-');
+    const add = (h, b, c) => { if (h !== b && b !== c && h !== c) out.push(h + '-' + b + '-' + c); };
+    if (parts.length === 2 && parts[0].includes('=')) { const [a, b] = parts[0].split('='); for (const c of parts[1]) { add(a, b, c); add(b, a, c); } }
+    else if (parts.length === 2 && parts[1].includes('=')) { const [b, c] = parts[1].split('='); for (const h of parts[0]) { add(h, b, c); add(h, c, b); } }
+    else { const [H, B, C] = parts; for (const h of H) for (const b of B) for (const c of C) add(h, b, c); }
+  });
+  return out.sort();
+}
 // 独自エンジンの通知(boatcast_migration/scripts/lib/engine_notify.js)のテスト。実行: node tests/engine_notify.test.js
 const assert = require('assert');
 const fs = require('fs');
@@ -46,8 +57,56 @@ t('確信度: top1p が 0.111 以上のときだけ「高」', () => {
 t('買い目のまとめ表記は可逆(展開すると元の集合と1対1で一致する)', () => {
   const bets = ['1-2-3', '1-2-4', '2-1-3', '1-3-2', '2-1-5', '1-4-2'];
   const text = N.groupBets(bets); const back = [];
-  for (const g of text.split('/')) { const [a, b, thirds] = g.split('-'); for (const c of thirds) back.push(`${a}-${b}-${c}`); }
+  back.push(...expandBetsText(text));   // 2026-09-26: 頭・2着・3着の集まりと、入れ替え(a=b)の書き方を展開する
+  assert.ok(text.split('/').length <= 3, text);
   assert.deepEqual(back.sort(), [...bets].sort());
+});
+t('展開の一文(買い目から自動): 3つの文体(短め・標準・詳しめ)。「壊れたら」は使わない。確率の数字は出さない', () => {
+  const p = { '1-2-3': 10, '1-2-4': 8, '1-3-2': 6, '2-1-3': 5, '2-1-4': 3 };
+  const lab = (n) => '<' + n + '>', bets = Object.keys(p), po = (c) => p[c];
+  assert.equal(N.tenkaiFromBets(bets, po, 1, lab, 'S'), '<1>のイン逃げが本線。相手筆頭は<2>、次点<3>。');
+  assert.equal(N.tenkaiFromBets(bets, po, 1, lab, 'M'), '<1>のイン逃げが本線。相手筆頭は<2>のマーク、次点<3>の差し残り。3着は❸❹。押さえは<2>の差し。2着は<1>。❺❻は切り。');
+  assert.equal(N.tenkaiFromBets(bets, po, 1, lab, 'L'), '<1>のイン逃げが本線。相手筆頭は<2>のマーク、次点<3>の差し残り。3着は❸を厚く、❹は次点。❸が2着なら3着は❷。押さえは<2>の差し。2着は<1>。❺❻は切り。');
+  assert.equal(N.tenkaiFromBets(bets, po, 1, lab), N.tenkaiFromBets(bets, po, 1, lab, 'M'), '省略時は標準');
+  assert.equal(N.tenkaiFromBets(bets, po, 1, lab, 'X'), N.tenkaiFromBets(bets, po, 1, lab, 'M'), '不明な文体は標準');
+  for (const st of ['S', 'M', 'L']) { const txt = N.tenkaiFromBets(bets, po, 1, lab, st); assert.ok(!txt.includes('壊れたら'), st); assert.ok(!/[0-9.%]/.test(txt.replace(/[23]着|❶|❷|❸|❹|❺|❻|<\d>/g, '')), st + ' 確率など数字を含まない'); }
+  assert.ok(N.tenkaiFromBets(bets, po, 1, lab, 'S').length < N.tenkaiFromBets(bets, po, 1, lab, 'M').length && N.tenkaiFromBets(bets, po, 1, lab, 'M').length < N.tenkaiFromBets(bets, po, 1, lab, 'L').length, '短め<標準<詳しめ');
+  // 頭が1号艇でないとき・理由(機力・ST・調子の上位2位まで)
+  const f = { motor: { 1: 1, 2: 5 }, st: { 5: 2 }, form: {} };
+  assert.equal(N.tenkaiFromBets(['5-1-2', '5-1-3', '5-4-1'], (c) => ({ '5-1-2': 4, '5-1-3': 3, '5-4-1': 2 }[c]), 5, lab, 'M', f), '狙うは<5>(ST上位)。外からのまくり差しが本線。逃げは捨てる。相手筆頭は<1>(機力上位)、次点<4>のカド。3着は❷❸。❻は切り。');
+  assert.equal(N.tenkaiFromBets(['5-1-2'], () => 1, 5, lab, 'S', f), '狙うは<5>。外からのまくり差しが本線。', '短めは理由を入れない');
+  assert.deepEqual(N.tenkaiFactsOf({ boats: [{ stats: [{ k: 'motor', rank: 1 }, { k: 'st', rank: '3' }, { k: 'x', rank: 1 }] }, { stats: [{ k: 'form', rank: 2 }] }] }), { motor: { 1: 1 }, st: { 1: 3 }, form: { 2: 2 } });
+  assert.deepEqual(N.tenkaiFactsOf(null), { motor: {}, st: {}, form: {} });
+  // 軸が先頭・空・不正な出目・買い目の中の艇だけ
+  assert.ok(N.tenkaiFromBets(['2-1-3', '4-1-3'], (c) => ({ '2-1-3': 1, '4-1-3': 9 }[c]), 2, lab).startsWith('狙うは<2>。差し切りが本線。'));
+  assert.equal(N.tenkaiFromBets([], () => 0, 1, lab), ''); assert.equal(N.tenkaiFromBets(['x', '1-1-2', '7-1-2'], () => 1, 1, lab), '');
+  const bets2 = ['3-1-2', '3-1-4', '3-2-1']; const t3 = N.tenkaiFromBets(bets2, () => 1, 3, lab, 'L'); const named = [...t3.matchAll(/<(\d)>/g)].map(m => Number(m[1]));
+  assert.ok(named.every(n => bets2.join('-').split('-').map(Number).includes(n)));
+});
+t('荒れ型の展開の一文(頭が1号艇以外。お見本の若松8R): 狙うは・差し切り・逃げは捨てる・壁・カド・1号艇は3着まで', () => {
+  const nm = { 1: '杉本', 2: '永野', 3: '浜田', 4: '倉持', 5: '西条', 6: '宮内' }, lab = (n) => N.boatLabel(n, nm[n]);
+  const bets = ['2-3-1', '2-3-4', '2-4-1', '2-4-3', '4-2-3'], p = { '2-3-1': 10, '2-3-4': 8, '2-4-1': 7, '2-4-3': 6, '4-2-3': 5 };
+  assert.equal(N.tenkaiFromBets(bets, (c) => p[c], 2, lab, 'S'), '狙うは❷永野。差し切りでも、❹倉持のカドまくりから❷の差し残しでも軸。❸浜田は壁。');
+  assert.equal(N.tenkaiFromBets(bets, (c) => p[c], 2, lab, 'M'), '狙うは❷永野。差し切りが本線。逃げは捨てる。相手筆頭は❸浜田の壁、次点❹倉持のカド。3着は❶❹。押さえは❹倉持のカドまくり。2着は❷永野。❺❻は切り。');
+  assert.equal(N.tenkaiFromBets(bets, (c) => p[c], 2, lab, 'L'), '狙うは❷永野。差し切りが本線。逃げは捨てる。相手筆頭は❸浜田の壁、次点❹倉持のカド。3着は❶を厚く、❹は次点。❹が2着なら3着は❶❸。❶杉本は逃げ切れず3着まで。押さえは❹倉持のカドまくり。2着は❷永野。❺❻は切り。');
+  for (const st of ['S', 'M', 'L']) { const txt = N.tenkaiFromBets(bets, (c) => p[c], 2, lab, st); assert.ok(!txt.includes('壊れたら'), st); }
+  assert.equal(N.tenkaiFromBets(['3-1-2', '3-4-1'], () => 1, 3, lab, 'M'), '狙うは❸浜田。センター攻めが本線。逃げは捨てる。相手筆頭は❶杉本、次点❹倉持のカド。3着は❷。❺❻は切り。');
+  assert.ok(!N.tenkaiFromBets(['2-1-3', '1-2-3'], () => 1, 2, lab, 'M').includes('逃げは捨てる'), '1号艇が頭の買い目もあるときは、逃げを捨てない');
+});
+t('展開の一文: 同じ艇を「相手筆頭」と「3着」で二重に出さない・頭が3号艇のとき壁と出ない・本線にいる艇を切りと書かない・短めに3着を書かない', () => {
+  const nm = { 1: '杉本', 2: '永野', 3: '浜田', 4: '倉持', 5: '西条', 6: '宮内' }, lab = (n) => N.boatLabel(n, nm[n]), pf = () => 1;
+  // 1) 頭が3号艇だけ: 壁と出ない(3号艇が頭のときはセンター攻め)
+  for (const st of ['S', 'M', 'L']) { const t = N.tenkaiFromBets(['3-2-1', '3-2-4', '3-4-2', '3-1-2'], pf, 3, lab, st); assert.ok(!t.includes('壁'), st + ' ' + t); assert.ok(t.startsWith('狙うは❸浜田。センター攻め'), t); }
+  // 2) 頭が1号艇と2号艇の混在: 逃げは捨てるを付けない
+  for (const st of ['S', 'M', 'L']) assert.ok(!N.tenkaiFromBets(['1-2-3', '1-3-2', '2-1-3', '2-3-1'], pf, 1, lab, st).includes('逃げは捨てる'), st);
+  // 3) 本線に5号艇がいる荒れ: 5・買い目の艇を切りに入れない
+  for (const st of ['M', 'L']) { const t = N.tenkaiFromBets(['5-2-1', '5-2-3', '5-1-2', '2-5-1'], pf, 5, lab, st), cut = (t.match(/([❶-❻]+)は切り/) || [])[1] || ''; assert.ok(!cut.includes('❺') && !cut.includes('❷') && !cut.includes('❶') && !cut.includes('❸'), st + ' ' + t); }
+  // 4) 短めは、2着と3着を並べない(相手筆頭の艇が、同じ文の3着に出ない)。標準・詳しめの3着は、相手筆頭以外
+  const bets = ['2-3-1', '2-3-4', '2-4-1', '2-4-3', '4-2-3'], p = { '2-3-1': 10, '2-3-4': 8, '2-4-1': 7, '2-4-3': 6, '4-2-3': 5 };
+  assert.ok(!N.tenkaiFromBets(bets, (c) => p[c], 2, lab, 'S').includes('3着'));
+  for (const st of ['M', 'L']) { const t = N.tenkaiFromBets(bets, (c) => p[c], 2, lab, st), m = t.match(/3着は([❶-❻]+)/); assert.ok(m && !m[1].includes('❸'), st + ' ' + t); }
+  // 括弧書きを使わない(通知・Qとも読みやすく)
+  for (const st of ['S', 'M', 'L']) assert.ok(!/[()（）]/.test(N.tenkaiFromBets(bets, (c) => p[c], 2, lab, st).replace(/(機力上位)|(ST上位)|(調子上位)/g, '')), st);
 });
 t('確信度が高くなければ通知は作らない', () => {
   assert.equal(N.buildEngineNotifications(fakeEngine([0.3, 0.2, 0.2, 0.1, 0.1, 0.1], 0.05), meta, collected), null);
@@ -58,11 +117,11 @@ t('高確信度: ちょうど2通(①Xサマリー ②展開コメント用デ�
   assert.equal(msgs.length, 2); assert.match(msgs[0].title, /^📝 noteサマリー 多摩川1R\(\d+点\)$/); assert.match(msgs[1].title, /^🧩 展開コメント用データ 多摩川1R$/);
   assert.equal(msgs[0].priority, 4); assert.equal(msgs[1].priority, 4);
 });
-t('Xサマリー: 既存の「X用」と同じ書式(G.RATE・軸・評価順・展開は空欄・note誘導・署名)。買い目は載せない', () => {
+t('Xサマリー: 既存の「X用」と同じ書式(G.RATE・軸・評価順・展開(買い目から自動)・note誘導・署名)。買い目は載せない', () => {
   const text = N.buildXSummary(high, meta, { 1: '長尾　　章平' });
   const lines = text.split('\n');
   assert.equal(lines[0], '【多摩川1R】 締切12:30'); assert.match(lines[2], /^G\.RATE \d+%$/); assert.equal(lines[4], '軸：❶長尾'); assert.ok(!/評価順/.test(text), '実際のX用コピーは評価順の行を除く');
-  assert.equal(lines[6], '展開：─'); assert.equal(lines[8], '最終予想・買い目はプロフィール（note）から。'); assert.equal(lines[lines.length - 1], 'G.');
+  assert.ok(lines[6].startsWith('展開：') && lines[6] !== '展開：─' && lines[6].includes('が本線。'), lines[6]);   // 2026-09-26: 買い目から自動で作る assert.equal(lines[8], '最終予想・買い目はプロフィール（note）から。'); assert.equal(lines[lines.length - 1], 'G.');
   assert.ok(!/\d-\d-\d/.test(text), '買い目(三連単)を含んではいけない');
 });
 t('展開コメント用データ: 必要な節がそろい、買い目と分岐が一致する', () => {

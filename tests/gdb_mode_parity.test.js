@@ -1,4 +1,15 @@
 'use strict';
+function expandBetsText(text) {
+  const out = [];
+  String(text).split('/').filter(Boolean).forEach(tok => {
+    const parts = tok.split('-');
+    const add = (h, b, c) => { if (h !== b && b !== c && h !== c) out.push(h + '-' + b + '-' + c); };
+    if (parts.length === 2 && parts[0].includes('=')) { const [a, b] = parts[0].split('='); for (const c of parts[1]) { add(a, b, c); add(b, a, c); } }
+    else if (parts.length === 2 && parts[1].includes('=')) { const [b, c] = parts[1].split('='); for (const h of parts[0]) { add(h, b, c); add(h, c, b); } }
+    else { const [H, B, C] = parts; for (const h of H) for (const b of B) for (const c of C) add(h, b, c); }
+  });
+  return out.sort();
+}
 // GARON-DBモード(garon_q_engine.html)と、通知(boatcast_migration/scripts/lib/engine_notify.js)で、
 // 「展開コメント用データ」「Xサマリー」の文面が完全に一致することを保証するテスト。書式を2か所に持つため、ずれたらここで検知する。
 // 実行: node tests/gdb_mode_parity.test.js
@@ -20,20 +31,29 @@ const code = [
   decl(/const GARON_LABEL_CIRCLED=[^\n]*\n/), decl(/const GARON_ONE_CHAR_SURNAMES=[^\n]*\n/), decl(/const GARON_THREE_CHAR_SURNAMES=[^\n]*\n/), decl(/const GARON_NAME_OVERRIDES=[^\n]*\n/),
   fn('garonSurname'), fn('garonBoatLabel'), fn('garonNaturalGroupBets'), fn('garonEngineConfidence'), fn('gxEsc'), fn('gxChain'),
   decl(/const GX_COMBOS=\(function\(\)\{[^\n]*\n/),
-  decl(/let garonGdbAuto=true;/), fn('garonGdbAutoSelect'), fn('garonGdbBetCount'), fn('garonGdbSurname'), fn('garonGdbHyoka'), fn('garonGdbState'), fn('garonGdbStatLine'), fn('garonGdbCommentData'), fn('garonGdbXSummary'),
+  decl(/let garonGdbAuto=true;/), fn('garonGdbAutoSelect'), fn('garonGdbBetCount'), fn('garonGdbSurname'), decl(/let garonTenkaiStyle='M';/), fn('tenkaiFactsOf'), fn('tenkaiFromBets'), fn('garonGdbHyoka'), fn('garonGdbState'), fn('garonGdbStatLine'), fn('garonGdbCommentData'), fn('garonGdbXSummary'),
 ].join('\n');
 
 const fx = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'engine_response_tamagawa_1r.json'), 'utf8'));
 function makeEnv(K, eng, odds) {
   const sandbox = { garonEngine: eng || fx.engine, garonBoatcastPrepared: { oddsMap: odds === undefined ? fx.oddsMap : odds, venue: fx.venue, raceNum: fx.raceNum, deadline: fx.deadline }, garonEngineCtx: null, selectedBetCount: K, currentEngineState: null,
     currentCalcData: { racenum: '1' }, aiTenkaiLine: null, calcGoseiOdds: () => null, document: { getElementById: () => null, querySelectorAll: () => [] }, console };
-  vm.createContext(sandbox); vm.runInContext(code + '\n;this.api={garonGdbCommentData,garonGdbXSummary,garonGdbState,garonGdbHyoka,garonEngineConfidence,garonGdbAutoSelect};' + (K === 'auto' ? '' : ';garonGdbAuto=false;'), sandbox);
+  vm.createContext(sandbox); vm.runInContext(code + '\n;this.api={garonGdbCommentData,garonGdbXSummary,garonGdbState,garonGdbHyoka,garonEngineConfidence,garonGdbAutoSelect,setStyle:(v)=>{garonTenkaiStyle=v;}};' + (K === 'auto' ? '' : ';garonGdbAuto=false;'), sandbox);
   return sandbox.api;
 }
 const meta = { venue: fx.venue, raceNumber: 1, deadlineTime: fx.deadline };
 const collected = { deadlineTime: fx.deadline, playerStats: { boats: fx.engine.explain.boats.map(b => ({ waku: b.lane, name: b.name })) } };
 const nameOf = {}; collected.playerStats.boats.forEach(b => { nameOf[b.waku] = b.name; });
 
+t('展開の文体(短め・標準・詳しめ): Q画面の選択が、そのまま「展開:」に反映される(通知は標準)', () => {
+  const api = makeEnv('auto'); const st = api.garonGdbState(); const axis = st.axes[0].boat;
+  const expectFor = (style) => N.tenkaiFromBets(st.betsRaw.map(b => b.val), (c) => (fx.engine.top.find(x => x.combo === c) || { p: 0 }).p, axis, (n) => N.boatLabel(n, nameOf[n]), style, N.tenkaiFactsOf(fx.engine.explain));
+  const lens = {};
+  for (const style of ['S', 'M', 'L']) { api.setStyle(style); const text = api.garonGdbXSummary('note', false); const e = expectFor(style); assert.ok(e && text.includes('展開：' + e), style + ' ' + text); assert.ok(!text.includes('壊れたら')); lens[style] = e.length; }
+  assert.ok(lens.S < lens.M && lens.M < lens.L, JSON.stringify(lens));
+  api.setStyle('M'); assert.equal(api.garonGdbXSummary('note', false), N.buildNoteSummary(fx.engine, meta, nameOf, fx.oddsMap), '標準は、通知と同じ');
+  api.aiTenkaiLine = null;
+});
 t('展開コメント用データ: 通知(Node)とQ画面(JS)が、12点のとき完全に同じ文面', () => {
   const api = makeEnv('auto');
   const nodeText = N.buildCommentData(fx.engine, meta, nameOf, { oddsMap: fx.oddsMap });
@@ -64,7 +84,7 @@ t('買い目の種別: 軸(1位の艇)から始まる買い目は「GDB本線」
 t('note用: 評価順・本線・抑え・署名がそろう。買い目は買い目表と一致', () => {
   const api = makeEnv(12); const text = api.garonGdbXSummary('note', false); const st = api.garonGdbState();
   assert.ok(/評価順：1[>\d]+/.test(text)); assert.ok(text.includes('本線：')); assert.ok(text.trim().endsWith('G.'));
-  const vals = st.betsRaw.map(b => b.val); const shown = [...text.matchAll(/(\d)-(\d)-(\d+)/g)].flatMap(m => [...m[3]].map(c => `${m[1]}-${m[2]}-${c}`));
+  const vals = st.betsRaw.map(b => b.val); const shown = expandBetsText(text.split(String.fromCharCode(10)).filter(l => /^(本線|抑え)：/.test(l)).map(l => l.replace(/^(本線|抑え)：/, '')).join('/'));   // 2026-09-26: まとめ方が集まり・入れ替えの書き方になったため、展開して比べる
   assert.deepEqual([...new Set(shown)].sort(), [...vals].sort());
 });
 t('エンジンが無いとき(未読込)は、空・警告になり、例外を出さない', () => {

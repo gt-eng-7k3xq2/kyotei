@@ -16,6 +16,7 @@ const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'peakslot-'));
 const DATE = '2026-10-05';
 const dirs = { dir: path.join(TMP, 'ledger'), rawDir: path.join(TMP, 'raw'), eventsDir: path.join(TMP, 'events'), reportDir: path.join(TMP, 'reports'), backupDir: path.join(TMP, 'backup'), resultsFile: path.join(TMP, 'results.json'), rulesFile: path.join(TMP, 'rules.json') };
 const baseRules = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scripts', 'peak_slot', 'rules_v1.json'), 'utf8'));
+baseRules.startDate = null; delete baseRules.startAt;   // 本番の開始日・開始時刻(2026-09-26)は、テストに持ち込まない
 function writeRules(over) { fs.writeFileSync(dirs.rulesFile, JSON.stringify({ ...baseRules, startDate: DATE, ...over }, null, 1)); }
 const at = (hhmm) => Date.parse(`${DATE}T${hhmm}:00+09:00`);   // テスト内の「現在時刻」
 
@@ -163,6 +164,26 @@ function hashTree(root) { const out = []; (function w(p) { if (!fs.existsSync(p)
     check('ステータスファイルが作られる', JSON.parse(fs.readFileSync(path.join(dirs.dir, 'status.json'), 'utf8')).rulesVersion === 'v1');
     const r2 = await runReconcile({ ...dirs, nowMs: at('23:05'), date: DATE, notify: false });
     check('照合を再実行しても、結果が二重に増えない', r2.today.resolved === recs.length && core.readLines(path.join(dirs.dir, `results_${DATE}.jsonl`)).length === recs.length);
+  }
+
+  console.log('=== テスト8b: 開始時刻(startAt)より前のレースは対象外 ===');
+  {
+    const t3 = { ...dirs, dir: path.join(TMP, 'ledger3'), rawDir: path.join(TMP, 'raw3'), eventsDir: path.join(TMP, 'events3') };
+    const startAt = at('12:30');
+    writeRules({ startAt: new Date(startAt).toISOString() });
+    const mk = (v, n, savedAt) => {
+      const r = makeRace(v, n, '15:00', true); const d = path.join(t3.rawDir, DATE); fs.mkdirSync(d, { recursive: true });
+      fs.writeFileSync(path.join(d, `${v}_${n}R_${savedAt}.json`), JSON.stringify(r.raw));
+      fs.mkdirSync(t3.eventsDir, { recursive: true }); fs.appendFileSync(path.join(t3.eventsDir, `boatcast_b01_events_${DATE}.jsonl`), JSON.stringify(r.judg) + '\n');
+    };
+    mk('宮島', 1, startAt - 60000);   // 開始の1分前に保存=対象外
+    mk('徳山', 2, startAt + 60000);   // 開始の1分後=対象
+    const r = runOnce({ ...t3, nowMs: startAt + 120000 });
+    const L = core.readLines(core.ledgerFile(t3.dir, DATE));
+    check('開始前に保存された生データは記録されない', r.processed === 1 && L.length === 1 && L[0].venue === '徳山');
+    const rc = await runReconcile({ ...t3, nowMs: startAt + 600000, date: DATE, notify: false });
+    check('照合でも、開始前のレースは取りこぼしに数えない', rc.today.rawRaces === 1 && rc.today.unrecorded === 0 && rc.today.late === 0);
+    writeRules({});
   }
 
   console.log('=== テスト9: 本番の生データ・イベントを書き換えていない ===');
