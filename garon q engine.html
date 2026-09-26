@@ -8786,6 +8786,32 @@ function garonGdbPrepareEngineOnlyGlobals(){
 }
 
 // X投稿サマリー(garon_q_engine.htmlの既存書式)。mode='x': 実際の「X用」コピーと同じ(評価順の行なし)、'note': 評価順・本線・抑えつき、'all': 両方。
+// 展開の一文を、買い目から自動で作る(2026-09-26、CEO指示。お見本の型: 本線 → 2着(筆頭・次点) → 3着まで → 壊れたら → 切り)。
+// 買い目だけから組み立てるので、買い目と食い違わない。エンジンの確率は順位づけにだけ使い、文には出さない。決まり手・スタート差は、このエンジンが持っていないので書かない。
+// bets: 買い目の配列('1-2-3'形式)、probOf(combo): その出目の確率、axis: 軸の艇、labelOf(no): '❶北村' 形式の表記
+function tenkaiFromBets(bets, probOf, axis, labelOf) {
+  const circ = ['❶', '❷', '❸', '❹', '❺', '❻'];
+  const groups = {}, order = [];
+  (bets || []).forEach(v => {
+    const p = String(v).split('-').map(Number); if (p.length !== 3 || p.some(n => !(n >= 1 && n <= 6)) || new Set(p).size !== 3) return;
+    const pr = Number(probOf(v)) || 0;
+    if (!groups[p[0]]) { groups[p[0]] = { w: 0, sec: {}, thd: {} }; order.push(p[0]); }
+    const g = groups[p[0]]; g.w += pr; g.sec[p[1]] = (g.sec[p[1]] || 0) + pr; g.thd[p[2]] = (g.thd[p[2]] || 0) + pr;
+  });
+  if (!order.length) return '';
+  const rank = (o) => Object.keys(o).sort((x, y) => o[y] - o[x] || Number(x) - Number(y)).map(Number);
+  const heads = order.slice().sort((a, b) => (b === axis) - (a === axis) || groups[b].w - groups[a].w || a - b);
+  const out = [], first = heads[0], g1 = groups[first], s1 = rank(g1.sec), t1 = rank(g1.thd);
+  out.push(first === 1 ? labelOf(1) + 'のイン逃げが本線。' : '頭は' + labelOf(first) + 'が本線。');
+  if (s1.length) out.push('2着は' + labelOf(s1[0]) + '筆頭' + (s1[1] ? '、' + labelOf(s1[1]) + '次点' : '') + '。');
+  if (t1.length) out.push('3着は' + t1.map(n => circ[n - 1]).join('') + 'まで。');
+  heads.slice(1).forEach(h => { const s = rank(groups[h].sec); out.push('壊れたら' + (h === 1 ? labelOf(1) + 'の逃げ' : labelOf(h) + '頭') + (s.length ? '(2着は' + labelOf(s[0]) + ')' : '') + '。'); });
+  const used = new Set(); (bets || []).forEach(v => String(v).split('-').forEach(x => used.add(Number(x))));
+  const cut = [1, 2, 3, 4, 5, 6].filter(n => !used.has(n));
+  if (cut.length) out.push(cut.map(n => circ[n - 1]).join('') + 'は切り。');
+  return out.join('');
+}
+
 function garonGdbXSummary(mode,withAmount){
   const st=currentEngineState||garonGdbState();
   if(!st||!garonEngine)return '';
@@ -8795,7 +8821,8 @@ function garonGdbXSummary(mode,withAmount){
   const shimekiri=ctx.deadline?` 締切${ctx.deadline}`:'';
   const cum=st.betsRaw.reduce((s,b)=>s+((garonEngine.top.find(x=>x.combo===b.val)||{p:0}).p),0);
   const axis=st.axes[0].boat;
-  const tenkai=((typeof aiTenkaiLine!=='undefined'&&aiTenkaiLine)||'').trim()||'─';
+  // 2026-09-26(CEO指示): AIで書いた展開があればそれを優先。無ければ、買い目から自動で作る(通知と同じ関数・同じ文)
+  const tenkai=((typeof aiTenkaiLine!=='undefined'&&aiTenkaiLine)||'').trim()||tenkaiFromBets(st.betsRaw.map(b=>b.val),c=>(garonEngine.top.find(x=>x.combo===c)||{p:0}).p,axis,garonGdbSurname)||'─';
   const head=[`【${venue}${race}R】${shimekiri}`,'',`G.RATE ${Math.round(cum*100)}%`,'',`軸：${garonGdbSurname(axis)}`];
   const xLines=[...head,'',`展開：${tenkai}`,'','最終予想・買い目はプロフィール（note）から。','','G.'];
   if(mode==='x')return xLines.join('\n');
