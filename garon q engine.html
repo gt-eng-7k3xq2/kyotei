@@ -1580,16 +1580,20 @@ const COMPACTABLE_FIELDS=['scores','displayedPoints','commentInputPoints','r07Fi
 function tryCompactAndSave(key, entries, isRareFn){
   const dates=entries.map(x=>x.date).filter(Boolean).sort();
   const latest=dates.length?new Date(dates[dates.length-1]):new Date();
+  const stripOdds=(rest)=>{ if(Array.isArray(rest.bets)) rest.bets=rest.bets.map(b=>{const {odds,...r}=b;return r;}); return rest; };
   // fieldCount: 1=scoresのみ(従来通り、最小限の間引き)、2=監査専用フィールドも含めて全部
+  // 2026-09-27修正: 従来はentry.scoresがある記録しか対象にしておらず、既に一度間引かれた記録や
+  // 元々scoresが無い記録が素通りしていた(対象からentry.scoresの有無を外す。削るフィールドが
+  // 無ければ何もしないだけで無害)。買い目のオッズも、結果確定済みの記録なら無くても成立するため削る。
   for(const fieldCount of [1, COMPACTABLE_FIELDS.length]){
     const fields=COMPACTABLE_FIELDS.slice(0,fieldCount);
     for(const keepDays of [14,7,3,1,0]){
       const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-keepDays);
       const compacted=entries.map(entry=>{
-        if(entry.date && new Date(entry.date)<cutoff && entry.scores && !isRareFn(entry)){
+        if(entry.date && new Date(entry.date)<cutoff && !isRareFn(entry)){
           const rest={...entry};
           for(const f of fields) delete rest[f];
-          return rest;
+          return stripOdds(rest);
         }
         return entry;
       });
@@ -1604,24 +1608,36 @@ function tryCompactAndSave(key, entries, isRareFn){
   // kyotei_v2は既にGist(GitHub)へ同期済みで長期保管の実体はそちらにあるため、STORE_KEY
   // (Qエンジン独自の詳細ログ)側から古い実体を削っても記録が完全に失われるわけではない。
   // 全エントリを最大限まで間引いた状態(全COMPACTABLE_FIELDS除去)を土台にした上で、
-  // さらに60→30→14→7日分だけ残す方向で段階的にエントリ自体を削る(単独では容量が
+  // さらに60→30→14→7→3→1→0日分だけ残す方向で段階的にエントリ自体を削る(単独では容量が
   // 足りない場合、間引きと削除を組み合わせないと解消しないケースがあるため)。
   // 結果入力済みの古いレースから優先的に削除、レアケースは常に保持する。
   const fullyStripped=entries.map(entry=>{
     if(!isRareFn(entry)){
       const rest={...entry};
       for(const f of COMPACTABLE_FIELDS) delete rest[f];
-      return rest;
+      return stripOdds(rest);
     }
     return entry;
   });
-  for(const keepDays of [60,30,14,7]){
+  for(const keepDays of [60,30,14,7,3,1,0]){
     const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-keepDays);
     const pruned=fullyStripped.filter((entry,i)=>!(entries[i].date && new Date(entries[i].date)<cutoff && !isRareFn(entries[i])));
     try{
       localStorage.setItem(key,JSON.stringify(pruned));
       return pruned;
     }catch(e){ /* まだ超過。さらに絞る */ }
+  }
+  // 2026-09-27追加(最後の手段): 日数で削ってもまだ入らない場合、直近の記録を優先して件数で切り詰める。
+  // レアケースは古くても対象外(常に保持)。
+  const rare=[], normalPairs=[];
+  entries.forEach((orig,i)=>{ if(isRareFn(orig)) rare.push(fullyStripped[i]); else normalPairs.push({stripped:fullyStripped[i],orig}); });
+  for(const keep of [500,300,150,80,30,0]){
+    const kept=normalPairs.length<=keep?normalPairs:[...normalPairs].sort((a,b)=>(b.orig.date||'').localeCompare(a.orig.date||'')).slice(0,keep);
+    const trimmed=[...rare,...kept.map(p=>p.stripped)];
+    try{
+      localStorage.setItem(key,JSON.stringify(trimmed));
+      return trimmed;
+    }catch(e){ /* さらに削る */ }
   }
   return null;
 }
@@ -1645,20 +1661,28 @@ function saveLogs(l){
         const v2logs=JSON.parse(localStorage.getItem('kyotei_v2')||'[]');
         const v2dates=v2logs.map(x=>x.date).filter(Boolean).sort();
         const v2latest=v2dates.length?new Date(v2dates[v2dates.length-1]):new Date();
+        const tryFitV2=(v2candidate)=>{
+          try{ localStorage.setItem('kyotei_v2',JSON.stringify(v2candidate)); }catch(ev2){ return false; }
+          try{ localStorage.setItem(STORE_KEY,JSON.stringify(l)); return true; }catch(e3){ return false; } // kyotei_v2側を空けたことでSTORE_KEYが収まったか
+        };
+        // 2026-09-27修正: entry.scoresの有無を条件から外し(対象漏れの修正)、買い目のオッズも削る
         for(const keepDays of [14,7,3,1,0]){
           const cutoff=new Date(v2latest); cutoff.setDate(cutoff.getDate()-keepDays);
           const compactedV2=v2logs.map(entry=>{
-            if(entry.date && new Date(entry.date)<cutoff && entry.scores && !isRareCaseV2(entry)){
+            if(entry.date && new Date(entry.date)<cutoff && !isRareCaseV2(entry)){
               const {scores, ...rest}=entry;
+              if(Array.isArray(rest.bets)) rest.bets=rest.bets.map(b=>{const {odds,...r}=b;return r;});
               return rest;
             }
             return entry;
           });
-          try{ localStorage.setItem('kyotei_v2',JSON.stringify(compactedV2)); }catch(ev2){ continue; }
-          try{
-            localStorage.setItem(STORE_KEY,JSON.stringify(l));
-            return true; // kyotei_v2側を空けたことでSTORE_KEYが収まった
-          }catch(e3){ /* まだ足りない。kyotei_v2をさらに絞る */ }
+          if(tryFitV2(compactedV2)) return true;
+        }
+        // 2026-09-27追加(最後の手段): 日数で削ってもkyotei_v2が空かない場合、直近優先で件数を切り詰めて再試行する
+        const rareV2=v2logs.filter(isRareCaseV2), normalV2=v2logs.filter(x=>!isRareCaseV2(x));
+        for(const keep of [500,300,150,80,30,0]){
+          const keptV2=normalV2.length<=keep?normalV2:[...normalV2].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,keep);
+          if(tryFitV2([...rareV2,...keptV2])) return true;
         }
       }catch(e4){ console.error('kyotei_v2側の緊急間引きに失敗', e4); }
       console.error('saveLogs 容量超過・全明細間引いても保存失敗');

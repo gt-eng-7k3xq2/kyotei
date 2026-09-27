@@ -506,6 +506,12 @@ async function garonWildImport(){
   if(garonWildImportRunning) return;
   garonWildImportRunning=true;
   try{
+    // 2026-09-27一度だけ: 修正前の不具合で「取込済み」の印だけ付いて実際は保存されなかった記録(鳴門11R・江戸川7R等)を、
+    // 一度だけ印をリセットして再取込できるようにする。WILDは2026-09-26開始で、gtool側で意図的に削除した記録はまだ無いはず。
+    if(!localStorage.getItem('garon_wild_seen_fixed_20260927')){
+      try{ localStorage.removeItem('garon_wild_seen'); }catch(e){}
+      try{ localStorage.setItem('garon_wild_seen_fixed_20260927','1'); }catch(e){}
+    }
     const ac=new AbortController();const t=setTimeout(()=>ac.abort(),8000);
     let j;try{ const r=await fetch(GARON_WILD_EXPORT_URL,{cache:'no-store',signal:ac.signal}); if(!r.ok) return; j=await r.json(); } finally{ clearTimeout(t); }
     if(!j||!j.ok||!Array.isArray(j.entries)) return;
