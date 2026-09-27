@@ -553,29 +553,53 @@ function saveLogs(logs){
       const COMPACTABLE_FIELDS=['scores','displayedPoints','commentInputPoints','r07FinalPoints','r06FinalPoints','qV3OriginalPoints','escapeModelScores'];
       const dates=logs.map(l=>l.date).filter(Boolean).sort();
       const latest=dates.length?new Date(dates[dates.length-1]):new Date();
-      let saved=false;
+      let saved=false,trimmedCount=0,workingLogs=logs;
+      // 段階1: 古いログの明細(scores等)を間引く。2026-09-27修正: 従来はl.scoresがある記録しか対象にしておらず、
+      // 既に一度間引かれた記録や元々scoresが無い記録が素通りしていた(対象条件からl.scoresの有無を外し、
+      // 削るフィールドが無ければ何もしない=無害なので、対象を広げても安全)。
       outer:
       for(const fieldCount of [1, COMPACTABLE_FIELDS.length]){
         const fields=COMPACTABLE_FIELDS.slice(0,fieldCount);
         for(const keepDays of [14,7,3,1,0]){
           const cutoff=new Date(latest); cutoff.setDate(cutoff.getDate()-keepDays);
           const compacted=logs.map(l=>{
-            if(l.date && new Date(l.date)<cutoff && l.scores && !isRareCaseV2(l)){
+            if(l.date && new Date(l.date)<cutoff && !isRareCaseV2(l)){
               const rest={...l};
               for(const f of fields) delete rest[f];
+              // 段階2: 買い目のオッズは、結果確定後の記録(的中/払戻の判定)には無くても成立するため、古い記録から削る
+              if(Array.isArray(rest.bets)) rest.bets=rest.bets.map(b=>{const {odds,...r}=b;return r;});
               return rest;
             }
             return l;
           });
           try{
             localStorage.setItem('kyotei_v2',JSON.stringify(compacted));
-            saved=true;
+            saved=true; workingLogs=compacted;
             break outer;
           }catch(e2){ /* まだ超過。さらに絞る */ }
         }
       }
+      // 段階3(最後の手段): それでも入らない場合だけ、最も古い記録から件数で切り詰める。
+      // 「固定」タグ・逃げ85%以上で1号艇的中の珍しいケース(isRareCaseV2)は、古くても対象から外す。
+      if(!saved){
+        const rare=logs.filter(isRareCaseV2), normal=logs.filter(l=>!isRareCaseV2(l));
+        for(const keep of [500,300,150,80,30,0]){
+          const kept=normal.length<=keep?normal:[...normal].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,keep);
+          const trimmed=[...rare,...kept];
+          try{
+            localStorage.setItem('kyotei_v2',JSON.stringify(trimmed));
+            saved=true; workingLogs=trimmed; trimmedCount=logs.length-trimmed.length;
+            break;
+          }catch(e3){ /* さらに削る */ }
+        }
+      }
       if(saved){
-        showToast('⚠️ 容量超過のため古いログの明細だけ間引いて保存しました(結果・逃げ固定の明細は保持)');
+        if(trimmedCount>0){
+          showToast('⚠️ 容量超過のため、最も古い記録'+trimmedCount+'件を削除して保存しました(直近の記録・固定/珍しいケースは保持)');
+        }else{
+          showToast('⚠️ 容量超過のため古いログの明細・オッズを間引いて保存しました(結果・買い目・逃げ固定の判定は保持)');
+        }
+        logs.length=0; logs.push(...workingLogs); // 呼び出し元の配列を、実際に保存できた内容に合わせる
       }else{
         showToast('⚠️ 容量超過で保存できませんでした。ログを整理してから再度お試しください');
         return false;
