@@ -589,7 +589,7 @@ function saveLogs(logs){
       // 「固定」タグ・逃げ85%以上で1号艇的中の珍しいケース(isRareCaseV2)は、古くても対象から外す。
       if(!saved){
         const rare=logs.filter(isRareCaseV2), normal=logs.filter(l=>!isRareCaseV2(l));
-        for(const keep of [500,300,150,80,30,0]){
+        for(const keep of [500,300,150,80,30]){
           const kept=normal.length<=keep?normal:[...normal].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,keep);
           const trimmed=[...rare,...kept];
           try{

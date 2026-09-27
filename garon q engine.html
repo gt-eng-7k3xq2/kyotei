@@ -1631,7 +1631,7 @@ function tryCompactAndSave(key, entries, isRareFn){
   // レアケースは古くても対象外(常に保持)。
   const rare=[], normalPairs=[];
   entries.forEach((orig,i)=>{ if(isRareFn(orig)) rare.push(fullyStripped[i]); else normalPairs.push({stripped:fullyStripped[i],orig}); });
-  for(const keep of [500,300,150,80,30,0]){
+  for(const keep of [500,300,150,80,30]){
     const kept=normalPairs.length<=keep?normalPairs:[...normalPairs].sort((a,b)=>(b.orig.date||'').localeCompare(a.orig.date||'')).slice(0,keep);
     const trimmed=[...rare,...kept.map(p=>p.stripped)];
     try{
@@ -1680,7 +1680,7 @@ function saveLogs(l){
         }
         // 2026-09-27追加(最後の手段): 日数で削ってもkyotei_v2が空かない場合、直近優先で件数を切り詰めて再試行する
         const rareV2=v2logs.filter(isRareCaseV2), normalV2=v2logs.filter(x=>!isRareCaseV2(x));
-        for(const keep of [500,300,150,80,30,0]){
+        for(const keep of [500,300,150,80,30]){
           const keptV2=normalV2.length<=keep?normalV2:[...normalV2].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,keep);
           if(tryFitV2([...rareV2,...keptV2])) return true;
         }
