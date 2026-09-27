@@ -501,7 +501,10 @@ window.addEventListener('load',garonOpsSyncSchedule);
 // 自動: 開いたとき・5分おき・画面に戻ったとき。Tailscaleが切れている場所では、黙って何もしない(記録には影響しない)。
 // 同じ記録は何度取り込んでも重複しない(id=wild-番号)。あとから結果が確定したら、結果・払戻・的中を更新する。gtool側で削除した記録は、二度と取り込まない。
 const GARON_WILD_EXPORT_URL='https://yuta-1.taile1e601.ts.net/api/wild/gtools-export';
+let garonWildImportRunning=false; // 2026-09-27: 開いた直後・5分ごと・タブ復帰が重なって同時に動くと、後勝ちで前の取込結果が消えるため、実行中は多重起動しない
 async function garonWildImport(){
+  if(garonWildImportRunning) return;
+  garonWildImportRunning=true;
   try{
     const ac=new AbortController();const t=setTimeout(()=>ac.abort(),8000);
     let j;try{ const r=await fetch(GARON_WILD_EXPORT_URL,{cache:'no-store',signal:ac.signal}); if(!r.ok) return; j=await r.json(); } finally{ clearTimeout(t); }
@@ -509,6 +512,7 @@ async function garonWildImport(){
     let seen=[];try{seen=JSON.parse(localStorage.getItem('garon_wild_seen')||'[]');}catch(e){}
     const seenSet=new Set(seen);
     const logs=getLogs();let changed=false;
+    const newlySeen=[]; // 2026-09-27: 保存が成功するまでは「取込済み」の印を付けない(保存失敗時に記録が二度と再取込されなくなる不具合の修正)
     j.entries.forEach(en=>{
       if(!en||typeof en.id!=='string'||!/^wild-\d+$/.test(en.id)) return;
       const cur=logs.find(l=>l&&l.id===en.id);
@@ -517,16 +521,20 @@ async function garonWildImport(){
         if(en.result&&(cur.result!==en.result||cur.payout!==en.payout)){cur.result=en.result;cur.payout=en.payout;cur.miss=en.miss;changed=true;}
         if(JSON.stringify(cur.bets)!==JSON.stringify(en.bets)){cur.bets=en.bets;changed=true;}
       } else if(!seenSet.has(en.id)){
-        logs.unshift(en);seenSet.add(en.id);changed=true;
+        logs.unshift(en);newlySeen.push(en.id);changed=true;
       }
     });
     if(changed){
-      try{localStorage.setItem('garon_wild_seen',JSON.stringify([...seenSet].slice(-500)));}catch(e){}
-      saveLogs(logs);
+      const ok=saveLogs(logs);
+      if(ok){
+        newlySeen.forEach(id=>seenSet.add(id));
+        try{localStorage.setItem('garon_wild_seen',JSON.stringify([...seenSet].slice(-500)));}catch(e){}
+      }
       try{ if(typeof renderLogs==='function') renderLogs(); }catch(e){}
     }
     const st=document.getElementById('wild-import-status'); if(st) st.textContent='WILD取込: '+new Date().toTimeString().slice(0,5)+'('+j.entries.length+'件)';
   }catch(e){ /* PCに届かなくても、gtoolの動作には影響させない */ }
+  finally{ garonWildImportRunning=false; }
 }
 window.addEventListener('load',()=>setTimeout(garonWildImport,3000));
 setInterval(garonWildImport,5*60*1000);
