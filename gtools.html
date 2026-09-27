@@ -750,6 +750,35 @@ function betsToggleLabel(log,open){
   const bets=(log&&log.bets)||[],total=bets.reduce((s,b)=>s+(b.amount>0?Number(b.amount):0),0);
   return '▶ 買い目 '+bets.length+'点'+(total>0?'　投資 '+total.toLocaleString('ja-JP')+'円':'');
 }
+// 2026-09-27: WILDの買い目が的中した時、エンジンQの的中報告(buildTekichuXPost)と同じ体裁でX投稿文を作る。
+// WILDの記録はgtool側で手動保存する流れが無い(WILD側の結果確定で自動的に反映される)ため、Qのような
+// 「結果保存→モーダル自動オープン」ではなく、的中したログの一覧にボタンを出す方式にする。
+function buildWildTekichuXPost(log){
+  const venue=log.venue||'',raceNum=log.raceNum||'',chakuju=log.result||'';
+  const payoutVal=parseInt(String(log.payout||'').replace(/[^\d]/g,''))||0;
+  const odds=payoutVal?(payoutVal/100).toFixed(1):'';
+  const hitBet=(log.bets||[]).find(b=>b.val===chakuju);
+  const betTypeLabel=hitBet?(hitBet.type==='honsen'?'本線':'抑え'):'';
+  const hitLine=betTypeLabel?`${betTypeLabel}にて的中🎯`:'的中🎯';
+  return `${venue}${raceNum}\n\n${chakuju}${odds?' / '+odds+'倍':''}\n\n${hitLine}`;
+}
+function toggleWildXPost(id){
+  const el=document.getElementById('wildpost-'+id);if(!el)return;
+  const opening=!el.classList.contains('open');
+  if(opening){
+    const log=getLogs().find(l=>l&&l.id===id);
+    const ta=el.querySelector('textarea');
+    if(ta&&log) ta.value=buildWildTekichuXPost(log);
+  }
+  el.classList.toggle('open');
+}
+function copyWildXPost(id){
+  const ta=document.getElementById('wildpost-'+id+'-text');
+  if(!ta||!ta.value){showToast('先に投稿文を開いてください');return;}
+  ta.select();
+  if(navigator.clipboard){navigator.clipboard.writeText(ta.value).then(()=>showToast('📋 コピーしました'));}
+  else{document.execCommand('copy');showToast('📋 コピーしました');}
+}
 function renderLogs(){
   const logs=getLogs(),dates=getUniqueDates();
   const tabsEl=document.getElementById('date-tabs');
@@ -765,7 +794,9 @@ function renderLogs(){
       :log.shinkido
       ?`<span style="background:var(--surface2);color:var(--gold);font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">${log.shinkido}</span>`
       :'';
-    return `<div class="log-item"><div class="log-header"><div><span class="log-venue">${log.venue} ${log.raceNum}</span>${shinkidoBadge}${log.ver?`<span class="ver-badge">${log.ver}</span>`:''}${engineBadge(log)}</div><div class="log-date-small">${log.date||''}</div></div><div class="log-result-row"><span>結果</span><span class="log-result-val">${log.result||'未入力'}</span>${log.payout?`<span class="log-payout">${log.payout}</span>`:''}</div><div class="miss-tags">${tags}</div>${log.bets&&log.bets.length?`<div class="log-bets-toggle" onclick="toggleBetsDetail(${logIdArg(log.id)})">${betsToggleLabel(log,false)}</div><div class="log-bets-detail" id="bets-${log.id}"><div class="log-bets-preview">${betsHtml}</div></div>`:''}<div class="log-actions"><div class="btn-del" onclick="deleteLog(${logIdArg(log.id)})">削除</div><button class="btn-secondary" style="flex:1;font-size:12px;padding:8px;" onclick="openEditModal(${logIdArg(log.id)})">✏️ 編集</button></div></div>`;
+    const isWildHit=log.engineMode==='WILD'&&(log.miss||[]).includes('hit');
+    const wildXPostHtml=isWildHit?`<div class="log-bets-toggle" onclick="toggleWildXPost(${logIdArg(log.id)})">🎯 的中投稿文</div><div class="log-bets-detail" id="wildpost-${log.id}"><textarea id="wildpost-${log.id}-text" readonly style="width:100%;min-height:70px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:12px;padding:8px;box-sizing:border-box;"></textarea><button class="btn-secondary" style="width:100%;margin-top:6px;font-size:12px;padding:7px;" onclick="copyWildXPost(${logIdArg(log.id)})">📋 コピー</button></div>`:'';
+    return `<div class="log-item"><div class="log-header"><div><span class="log-venue">${log.venue} ${log.raceNum}</span>${shinkidoBadge}${log.ver?`<span class="ver-badge">${log.ver}</span>`:''}${engineBadge(log)}</div><div class="log-date-small">${log.date||''}</div></div><div class="log-result-row"><span>結果</span><span class="log-result-val">${log.result||'未入力'}</span>${log.payout?`<span class="log-payout">${log.payout}</span>`:''}</div><div class="miss-tags">${tags}</div>${log.bets&&log.bets.length?`<div class="log-bets-toggle" onclick="toggleBetsDetail(${logIdArg(log.id)})">${betsToggleLabel(log,false)}</div><div class="log-bets-detail" id="bets-${log.id}"><div class="log-bets-preview">${betsHtml}</div></div>`:''}${wildXPostHtml}<div class="log-actions"><div class="btn-del" onclick="deleteLog(${logIdArg(log.id)})">削除</div><button class="btn-secondary" style="flex:1;font-size:12px;padding:8px;" onclick="openEditModal(${logIdArg(log.id)})">✏️ 編集</button></div></div>`;
   }).join('');
 }
 function toggleBetsDetail(id){const el=document.getElementById('bets-'+id);if(!el)return;el.classList.toggle('open');const t=el.previousElementSibling;t.textContent=betsToggleLabel(getLogs().find(l=>l.id===id),el.classList.contains('open'));}
