@@ -160,6 +160,26 @@ t('締切の計算(JST固定)・生データの一覧は、会場×レースご�
 t('本番の台帳・logs/wild には書き込んでいない', async () => {
   assert.ok(W.WILD_DIR.startsWith(tmp));
 });
+t('見送り→購入への訂正はできるが、購入済み・見送り済みへの重複記録は引き続き拒否する', async () => {
+  const sm4 = samples[3];
+  W.writeJsonAtomic(W.cardFile(date, sm4.venue, sm4.race), { ok: true, rawTs: 1, venue: sm4.venue, race: sm4.race, deadline: '13:00', card: sm4.card });
+  const before = W.readLedger().length;
+  const pass1 = await call('POST', '/api/wild/entry', { action: 'pass', venue: sm4.venue, race: sm4.race, step: 'overview', elapsedSec: 3 });
+  assert.equal(pass1.status, 200);
+  const passAgain = await call('POST', '/api/wild/entry', { action: 'pass', venue: sm4.venue, race: sm4.race, step: 'overview', elapsedSec: 3 });
+  assert.equal(passAgain.status, 409, '見送り済みへの見送りの重複記録は拒否');
+  const bet1 = await call('POST', '/api/wild/entry', Object.assign(goodBody(), { venue: sm4.venue, race: sm4.race }));
+  assert.equal(bet1.status, 200, JSON.stringify(bet1.j));
+  const betAgain = await call('POST', '/api/wild/entry', Object.assign(goodBody(), { venue: sm4.venue, race: sm4.race }));
+  assert.equal(betAgain.status, 409, '購入済みへの2回目の購入は拒否');
+  const passAfterBet = await call('POST', '/api/wild/entry', { action: 'pass', venue: sm4.venue, race: sm4.race, step: 'overview', elapsedSec: 3 });
+  assert.equal(passAfterBet.status, 409, '購入済みを見送りに戻すことは拒否');
+  assert.equal(W.readLedger().length, before + 2, '見送り1件+購入1件だけ追記されている');
+  // 集計は、見送りではなく最新の購入だけを数える(二重集計しない)
+  const s = await call('GET', '/api/wild/summary');
+  const rowsForRace = s.j.rows.filter(x => x.race === sm4.venue + sm4.race + 'R');
+  assert.equal(rowsForRace.length, 1); assert.equal(rowsForRace[0].action, 'bet');
+});
 
 (async () => {
   srv = await server.startServer(0); base = 'http://127.0.0.1:' + srv.address().port;

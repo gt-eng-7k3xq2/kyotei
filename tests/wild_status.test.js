@@ -43,9 +43,13 @@ t('裏方が止まる(稼働時間帯に索引が5分以上更新されない)�
   const w = computeWildStatus(NOW); assert.ok(w.indexAgeMin >= 8); assert.equal(w.alerts.length, 1); assert.equal(w.alerts[0].level, 'error'); assert.ok(w.alerts[0].text.startsWith('WILD'));
   const m = mergeWild({ alerts: [{ level: 'warn', text: '別の警告' }], overall: 'warn' }, w); assert.equal(m.overall, 'error'); assert.equal(m.alerts.length, 2);
 });
-t('稼働時間外(22時以降)は、止まっていても警告しない', () => {
+t('稼働時間外(23:30以降)は、止まっていても警告しない(2026-09-28、ミッドナイト競走対応で7:00〜23:30に拡張)', () => {
   writeIndex(new Date(at('21:50')).toISOString());
-  const w = computeWildStatus(at('23:00')); assert.equal(w.inHours, false); assert.deepEqual(w.alerts, []);
+  const w = computeWildStatus(at('23:45')); assert.equal(w.inHours, false); assert.deepEqual(w.alerts, []);
+});
+t('ミッドナイト競走の締切23時頃は、稼働時間帯として扱う(2026-09-28拡張)', () => {
+  writeIndex(new Date(at('21:50')).toISOString());
+  const w = computeWildStatus(at('23:00')); assert.equal(w.inHours, true);
 });
 t('mergeWild: 古いWILDの警告は入れ替え、ほかの警告は残す。overallを再計算', () => {
   const old = { alerts: [{ level: 'error', text: 'WILDの裏方の更新が9分間ありません' }, { level: 'warn', text: 'データバンクが遅れています' }], overall: 'error' };
