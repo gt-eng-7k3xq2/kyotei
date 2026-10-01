@@ -214,14 +214,16 @@ class TestCard(unittest.TestCase):
 
     def test_ai_pick_rule(self):
         card = R.build_card(self.c, self.t, sample_req())
-        ai = card['aiPick']; self.assertLessEqual(len(ai['lines']), 4)
-        self.assertTrue(all(l['odds'] >= 15.0 for l in ai['lines']))
-        js = [l['jointPct'] for l in ai['lines']]; self.assertEqual(js, sorted(js, reverse=True))     # 確率の高い順(確率×オッズでは選ばない)
-        self.assertEqual(len(ai['scenarios']), 2); self.assertIn('参考', ai['note'])
+        ai = card['aiPick']; self.assertLessEqual(len(ai['lines']), 13)   # おまかせ案(画面側autoPlan)と同じ: 最大13点
+        self.assertTrue(all(l['odds'] >= 10.0 for l in ai['lines']))
+        self.assertTrue(all(not l['combo'].startswith('1-') for l in ai['lines']))   # 1号艇が頭の出目は入れない
+        heads = [l['combo'][0] for l in ai['lines']]; self.assertTrue(all(heads.count(h) <= 8 for h in set(heads)))   # 1つの頭は最大8点
+        ps = [l['enginePct'] for l in ai['lines']]; self.assertEqual(ps, sorted(ps, reverse=True))     # エンジン確率の高い順(確率×オッズでは選ばない)
+        self.assertIn('参考', ai['note'])
         if ai['lines']: self.assertAlmostEqual(ai['goseiOdds'], round(1.0 / sum(1.0 / l['odds'] for l in ai['lines']), 2), places=2)
 
     def test_odds_floor(self):
-        req = sample_req(); req['odds'] = {c: 10.0 for c in R.COMBOS}   # 全てオッズ10倍(15倍未満)
+        req = sample_req(); req['odds'] = {c: 9.0 for c in R.COMBOS}   # 全てオッズ9倍(10倍未満)
         self.assertEqual(R.build_card(self.c, self.t, req)['aiPick']['lines'], [])
 
     def test_read_only_db(self):
