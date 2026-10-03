@@ -43,8 +43,8 @@ let n = 0; const ok = (c, m) => { assert(c, m); n++; };
   for (const bw of [[0.5, 0.2, 0.1, 0.1, 0.05, 0.05], [0.3, 0.29, 0.2, 0.1, 0.06, 0.05], [0.7333, 0.0597, 0.0284, 0.0634, 0.1111, 0.0041]]) ok(L.hyokaOrder(bw) === Q.garonGdbHyoka(bw), '評価順');
   // サマリーの書式(Q本体 garonGdbXSummary と同じ並び)
   const inp = { venue: '常滑', race: 4, deadline: '12:02', cumPct: 0.4537, axis: 5, axisLabel: '❺佐藤', hyoka: '1>5>4>2>3>6', tenkai: '❺佐藤のまくり差しが本線。', combos: ['5-1-2', '5-1-3', '5-2-1', '1-5-2'] };
-  assert.strictEqual(L.qSummary('x', inp), ['【常滑4R】 締切12:02', '', 'G.RATE 45%', '', '軸：❺佐藤', '', '展開：❺佐藤のまくり差しが本線。', '', '最終予想・買い目はプロフィール（note）から。', '', 'G.'].join(NL)); n++;
-  assert.strictEqual(L.qSummary('note', inp), ['【常滑4R】 締切12:02', '', 'G.RATE 45%', '', '軸：❺佐藤', '評価順：1>5>4>2>3>6', '', '展開：❺佐藤のまくり差しが本線。', '', '本線：5-1=2/5-1-3', '', '抑え：1-5-2', '', 'G.'].join(NL)); n++;
+  assert.strictEqual(L.qSummary('x', inp), ['【常滑4R】 締切12:02', '', '軸：❺佐藤', '', '展開：❺佐藤のまくり差しが本線。', '', '最終予想・買い目はプロフィール（note）から。', '', 'G.'].join(NL)); n++;
+  assert.strictEqual(L.qSummary('note', inp), ['【常滑4R】 締切12:02', '', '軸：❺佐藤', '評価順：1>5>4>2>3>6', '', '展開：❺佐藤のまくり差しが本線。', '', '本線：5-1=2/5-1-3', '', '抑え：1-5-2', '', 'G.'].join(NL)); n++;
   ok(L.qSummary('x', Object.assign({}, inp, { tenkai: '' })).includes('展開：─'), '展開が空なら ─');
   // 展開ブロック
   const info = { '1-2-3': { enginePct: 5 }, '1-3-2': { enginePct: 9 }, '4-1-2': { enginePct: 1 } };
