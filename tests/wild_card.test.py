@@ -249,14 +249,24 @@ class EntryInfo(unittest.TestCase):
         self.assertFalse(R.entry_info(None, {'ln_w720_lane1': 0.3}, self.req(5.0, [5.76, 4, 4, 4, 4]))['condA'])   # 他の最高勝率が基準ちょうど(超えていない)
 
     def test_strong_needs_st_gap(self):
+        # 2026-10-05: 目安=荒れスコア>=0.7。強=目安 かつ 旧条件A かつ 攻め艇のSTが0.04秒以上速い
+        base = {'ln_w720_lane1': 0.3}; rq = self.req(5.0, [6.5, 4, 4, 4, 4]); U = 0.75
+        self.assertEqual(R.entry_info({1: 0.20, 2: 0.16, 3: 0.19, 4: 0.19}, base, rq, U)['tier'], 'strong')    # 攻め艇が0.04秒速い
+        self.assertEqual(R.entry_info({1: 0.20, 2: 0.17, 3: 0.19, 4: 0.19}, base, rq, U)['tier'], 'a')         # 0.03秒差は強めに届かない
+        self.assertEqual(R.entry_info(None, base, rq, U)['tier'], 'a')                                        # STが取れないときは候補まで
+        # 旧条件Aを満たさなくても、荒れスコアが高ければ候補(新基準)
+        self.assertEqual(R.entry_info({1: 0.2, 2: 0.16, 3: 0.19, 4: 0.19}, {'ln_w720_lane1': 0.5}, rq, U)['tier'], 'a')
+
+    def test_new_tier_is_upset_threshold(self):
         base = {'ln_w720_lane1': 0.3}; rq = self.req(5.0, [6.5, 4, 4, 4, 4])
-        self.assertEqual(R.entry_info({1: 0.20, 2: 0.16, 3: 0.19, 4: 0.19}, base, rq)['tier'], 'strong')    # 攻め艇が0.04秒速い
-        self.assertEqual(R.entry_info({1: 0.20, 2: 0.17, 3: 0.19, 4: 0.19}, base, rq)['tier'], 'a')         # 0.03秒差は強めに届かない
-        self.assertEqual(R.entry_info(None, base, rq)['tier'], 'a')                                        # STが取れないときは候補まで
-        self.assertEqual(R.entry_info({1: 0.2, 2: 0.16, 3: 0.19, 4: 0.19}, {'ln_w720_lane1': 0.5}, rq)['tier'], 'none')
+        self.assertEqual(R.entry_info(None, base, rq, 0.7)['tier'], 'a')            # ちょうど0.7は含む
+        self.assertEqual(R.entry_info(None, base, rq, 0.6999)['tier'], 'none')      # 0.7に届かない
+        self.assertEqual(R.entry_info({1: 0.20, 2: 0.16, 3: 0.19, 4: 0.19}, base, rq, 0.69)['tier'], 'none')  # 旧条件の強でも、荒れスコアが低ければ対象外
+        self.assertEqual(R.entry_info(None, base, rq, None)['tier'], 'none')        # 荒れスコアが無ければ判定しない
+        self.assertEqual(R.entry_info(None, {}, rq, 0.9)['tier'], 'a')              # 逃げ率が取れなくても、荒れスコアだけで判定できる
 
     def test_missing_data_is_none(self):
-        self.assertEqual(R.entry_info(None, {}, self.req(5.0, [6, 4, 4, 4, 4]))['tier'], 'none')             # 逃げ率が無ければ判定しない
+        self.assertEqual(R.entry_info(None, {}, self.req(5.0, [6, 4, 4, 4, 4]))['tier'], 'none')             # 荒れスコアが渡されなければ判定しない
 
 
 if __name__ == '__main__':
