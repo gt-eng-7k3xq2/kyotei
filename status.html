@@ -137,15 +137,13 @@ const TIER_JP={strong:'強',a:'候補'};const STATE_JP={new:'これから',notif
 function wildTierPerf(t){
   if(!t||!t.all||!t.all.n)return '';
   const P=x=>x==null?'—':Math.round(x*100)+'%';
-  const row2=(label,cls,x)=>x.n?`<tr><td><b class="${cls}">${label}</b></td><td>${x.n}件</td><td>${x.hit}件(${P(x.hitRate)})</td><td><b class="${x.roi!=null&&x.roi>=1?'up':'dn'}">${P(x.roi)}</b></td></tr>`:`<tr><td><b class="${cls}">${label}</b></td><td>0件</td><td>—</td><td>—</td></tr>`;
-  const tbl=(x)=>`<table><tr><th>目安</th><th>レース数</th><th>的中</th><th>回収率</th></tr>${row2('強','up',x.strong)}${row2('候補','',x.a)}${row2('合計','',x.all)}</table>`;
-  const cell=x=>x.n?`${x.hit}/${x.n} <b class="${x.roi!=null&&x.roi>=1?'up':'dn'}">${P(x.roi)}</b>`:'—';
-  const dayTbl=(t)=>`<table><tr><th>日付</th><th>強</th><th>候補</th><th>合計</th></tr>${(t.daily||[]).map(d=>`<tr><td>${esc(d.date.slice(5).replace('-','/'))}</td><td>${cell(d.strong)}</td><td>${cell(d.a)}</td><td>${cell(d.all)}</td></tr>`).join('')}<tr><td><b>全日</b></td><td><b>${cell(t.strong)}</b></td><td><b>${cell(t.a)}</b></td><td><b>${cell(t.all)}</b></td></tr></table>`;
-  const td=t.today;
+  const cell=x=>x.n?`<b class="${x.roi!=null&&x.roi>=1?'up':'dn'}" style="font-size:16px">${P(x.roi)}</b><div class="mu" style="font-size:11px">${x.hit}/${x.n}</div>`:'<span class="mu">—</span>';
+  const tr=(label,d,bold)=>`<tr><td style="${bold?'font-weight:700':''}">${label}</td><td style="text-align:center">${cell(d.strong)}</td><td style="text-align:center">${cell(d.a)}</td><td style="text-align:center">${cell(d.all)}</td></tr>`;
+  const days=(t.daily||[]).map((d,i)=>tr(esc(d.date.slice(5).replace('-','/'))+(i===0&&t.today&&d.date===t.today.date?'<div class="mu" style="font-size:11px">今日</div>':''),d,false)).join('');
   return `<div style="margin-top:12px"><div class="ct" style="margin-bottom:4px">もし「目安」を全件買っていたら</div>
-    <div class="mu" style="font-size:12px;margin:6px 0 2px"><b>今日</b>(${esc(td?td.date:'')}、結果が出たレースだけ${td&&td.pending?`・結果待ち ${td.pending}件`:''})</div>${td?tbl(td):''}
-    <div class="mu" style="font-size:12px;margin:10px 0 2px"><b>日別</b>(新しい日が上。各欄は「的中数/件数 回収率」)</div>${dayTbl(t)}
-    <div class="note">AIおすすめの13点を3000円で買った<b>仮想</b>の成績で、あなたの実際の購入とは別です。回収率は100%に届いていません。${t.strong.n<30?'強は件数が少なく(30件未満)、まだ傾向とは言えません。':''}日別と全日は、買い目が13点になった10/1以降です。</div></div>`;
+    <div class="mu" style="font-size:12px;margin-bottom:6px">大きい数字=回収率、小さい数字=的中数/件数</div>
+    <table><tr><th></th><th style="text-align:center">強</th><th style="text-align:center">候補</th><th style="text-align:center">合計</th></tr>${tr('全日',t,true)}${days}</table>
+    <div class="note">AIおすすめの13点を3000円で買った<b>仮想</b>の成績で、あなたの実際の購入とは別です。結果が出たレースだけ数えています${t.today&&t.today.pending?`(今日は結果待ち ${t.today.pending}件)`:''}。10/1以降(買い目が13点になってから)の${t.days}日分です。${t.strong.n<30?'強は件数が少なく(30件未満)、まだ傾向とは言えません。':''}</div></div>`;
 }
 function renderWild(w){
   if(!w)return '';
