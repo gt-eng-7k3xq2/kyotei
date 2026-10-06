@@ -134,6 +134,14 @@ function taskTable(tasks){
 
 
 const TIER_JP={strong:'強',a:'候補'};const STATE_JP={new:'これから',notified:'通知済み',bet:'記録済み(購入)',pass:'見送り済み',closed:'締切済み'};
+function wildTierPerf(t){
+  if(!t||!t.all||!t.all.n)return '';
+  const P=x=>x==null?'—':Math.round(x*100)+'%';
+  const row2=(label,cls,x)=>`<tr><td><b class="${cls}">${label}</b></td><td>${x.n}件</td><td>${x.hit}件(${P(x.hitRate)})</td><td><b class="${x.roi!=null&&x.roi>=1?'up':'dn'}">${P(x.roi)}</b></td></tr>`;
+  return `<div style="margin-top:12px"><div class="ct" style="margin-bottom:4px">もし「目安」を全件買っていたら</div>
+    <table><tr><th>目安</th><th>レース数</th><th>的中</th><th>回収率</th></tr>${row2('強','up',t.strong)}${row2('候補','',t.a)}${row2('強+候補 合計','',t.all)}</table>
+    <div class="note">${esc(t.from||'')}〜${esc(t.to||'')}(${t.days}日分、結果確定のレースだけ)。AIおすすめの13点を3000円で買った<b>仮想</b>の成績で、あなたの実際の購入とは別です。回収率は100%に届いていません。${t.strong.n<30?'強は件数が少なく(30件未満)、まだ傾向とは言えません。':''}${t.pending?`結果待ち ${t.pending}件は含めていません。`:''}</div></div>`;
+}
 function renderWild(w){
   if(!w)return '';
   const ok=w.indexAgeMin!=null&&w.indexAgeMin<5;
@@ -144,6 +152,7 @@ function renderWild(w){
     <div class="g3" style="margin-top:8px">${stat(L.todayBets||0,'購入の記録')}${stat(L.todayPasses||0,'見送り')}${stat(L.waitingResults||0,'結果待ち')}</div>
     ${row('裏方(カード作成・結果取得)',`<span class="${w.inHours&&!ok?'dn':'up'}">${esc(alive)}</span>${w.indexAt?`<span class="mu">(最終 ${esc(fmt(w.indexAt))})</span>`:''}`)}
     ${row('結果の取得',`確定 ${(w.results||{}).confirmed||0}件${(w.results||{}).manual?`(うち手入力 ${w.results.manual}件)`:''}`)}`;
+  h+=wildTierPerf(w.tierPerf);
   if((w.entryRaces||[]).length){
     h+='<div style="margin-top:10px"><table><tr><th>レース</th><th>締切</th><th>目安</th><th>状態</th></tr>'+
       w.entryRaces.map(r=>`<tr><td>${esc(r.venue)}${r.race}R</td><td>${esc(r.deadline)}</td><td>${esc(TIER_JP[r.tier]||'')}</td><td>${esc(STATE_JP[r.state]||r.state)}</td></tr>`).join('')+'</table></div>';
