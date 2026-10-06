@@ -137,10 +137,13 @@ const TIER_JP={strong:'強',a:'候補'};const STATE_JP={new:'これから',notif
 function wildTierPerf(t){
   if(!t||!t.all||!t.all.n)return '';
   const P=x=>x==null?'—':Math.round(x*100)+'%';
-  const row2=(label,cls,x)=>`<tr><td><b class="${cls}">${label}</b></td><td>${x.n}件</td><td>${x.hit}件(${P(x.hitRate)})</td><td><b class="${x.roi!=null&&x.roi>=1?'up':'dn'}">${P(x.roi)}</b></td></tr>`;
+  const row2=(label,cls,x)=>x.n?`<tr><td><b class="${cls}">${label}</b></td><td>${x.n}件</td><td>${x.hit}件(${P(x.hitRate)})</td><td><b class="${x.roi!=null&&x.roi>=1?'up':'dn'}">${P(x.roi)}</b></td></tr>`:`<tr><td><b class="${cls}">${label}</b></td><td>0件</td><td>—</td><td>—</td></tr>`;
+  const tbl=(x)=>`<table><tr><th>目安</th><th>レース数</th><th>的中</th><th>回収率</th></tr>${row2('強','up',x.strong)}${row2('候補','',x.a)}${row2('合計','',x.all)}</table>`;
+  const td=t.today;
   return `<div style="margin-top:12px"><div class="ct" style="margin-bottom:4px">もし「目安」を全件買っていたら</div>
-    <table><tr><th>目安</th><th>レース数</th><th>的中</th><th>回収率</th></tr>${row2('強','up',t.strong)}${row2('候補','',t.a)}${row2('強+候補 合計','',t.all)}</table>
-    <div class="note">${esc(t.from||'')}〜${esc(t.to||'')}(${t.days}日分、結果確定のレースだけ)。AIおすすめの13点を3000円で買った<b>仮想</b>の成績で、あなたの実際の購入とは別です。回収率は100%に届いていません。${t.strong.n<30?'強は件数が少なく(30件未満)、まだ傾向とは言えません。':''}${t.pending?`結果待ち ${t.pending}件は含めていません。`:''}</div></div>`;
+    <div class="mu" style="font-size:12px;margin:6px 0 2px"><b>今日</b>(${esc(td?td.date:'')}、結果が出たレースだけ${td&&td.pending?`・結果待ち ${td.pending}件`:''})</div>${td?tbl(td):''}
+    <div class="mu" style="font-size:12px;margin:10px 0 2px"><b>全日分</b>(${esc(t.from||'')}〜${esc(t.to||'')}、${t.days}日)</div>${tbl(t)}
+    <div class="note">AIおすすめの13点を3000円で買った<b>仮想</b>の成績で、あなたの実際の購入とは別です。回収率は100%に届いていません。${t.strong.n<30?'強は件数が少なく(30件未満)、まだ傾向とは言えません。':''}全日分は、買い目が13点になった10/1以降です。</div></div>`;
 }
 function renderWild(w){
   if(!w)return '';
