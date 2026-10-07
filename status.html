@@ -94,7 +94,7 @@ function renderDisp(s){
   h+='<div style="display:flex;height:14px;border-radius:7px;overflow:hidden;background:#0d1726;margin-bottom:10px">'+groups.map(g=>g[2]?'<div style="width:'+(g[2]/total*100)+'%;background:'+gcolor[g[0]]+'"></div>':'').join('')+'</div>';
   h+='<div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:14px">'+groups.map(g=>'<span style="font-size:12px"><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:'+gcolor[g[0]]+';margin-right:5px"></i>'+g[1]+' <b style="font-size:15px">'+g[2]+'</b></span>').join('')+'<span class="mu" style="font-size:12px">全 <b>'+total+'</b></span></div>';
   // あなたの参入(GTOOL連携): 通知とどれだけ重なったか
-  if(d.mine&&d.mine.total){const m=d.mine;h+='<div style="font-size:12px;margin:0 0 12px;padding:8px 10px;border:1px solid #ff8ad8;border-radius:8px"><b style="color:#ff8ad8">あなたの参入 '+m.total+'件</b>(的中 '+m.hit+'・外れ '+m.miss+(m.open?'・結果待ち '+m.open:'')+')<br><span class="mu">エンジン通知と重なり '+m.overlapNotify+'件／あなたのみ '+m.mineOnly+'件／エンジンのみ '+m.engineOnly+'件'+(d.wild&&d.wild.bets?'<br>うち WILD の購入 '+d.wild.bets+'件(紫の内枠)':'')+'</span></div>';}
+  if(d.mine&&d.mine.total){const m=d.mine;h+='<div style="font-size:12px;margin:0 0 12px;padding:8px 10px;border:1px solid #ff8ad8;border-radius:8px"><b style="color:#ff8ad8">あなたの参入 '+m.total+'件</b>(的中 '+m.hit+'・外れ '+m.miss+(m.open?'・結果待ち '+m.open:'')+')<br><span class="mu">エンジン通知と重なり '+m.overlapNotify+'件／あなたのみ '+m.mineOnly+'件／エンジンのみ '+m.engineOnly+'件'+(d.wild&&d.wild.bets?'<br>うち WILD の予想 '+d.wild.bets+'件(紫の内枠)':'')+'</span></div>';}
   // ヒートマップ
   const by={};for(const r of rows){(by[r.venue]=by[r.venue]||{})[r.race]=r;}
   const venues=Object.keys(by).sort((a,b)=>{const i=VENUE_ORDER.indexOf(a),j=VENUE_ORDER.indexOf(b);return (i<0?99:i)-(j<0?99:j);});
@@ -116,7 +116,7 @@ function renderDisp(s){
   // 詳細
   let detail='<div class="mu" style="font-size:12px;text-align:center;padding:12px 0">マスを押すと、そのレースの振り分けと理由が出ます</div>';
   if(pickedCell){const [v,rr]=pickedCell.split('|');const row=(by[v]||{})[rr];if(row){const st=KSTYLE[row.kind]||KSTYLE.missed;
-    detail='<div style="border-left:4px solid '+st.c+';background:var(--panel2);border-radius:8px;padding:10px 12px"><div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:16px">'+esc(v)+rr+'R</b><span class="mu" style="font-size:11px">'+(row.time?'締切 '+esc(row.time):'')+'</span></div><div style="font-size:14px;font-weight:800;color:'+st.c+';margin:4px 0">'+st.t+(row.level?'　<span class="mu" style="font-size:11px;font-weight:400">確信度 '+esc(row.level)+'</span>':'')+'</div><div style="font-size:12px;color:var(--tx);line-height:1.6">'+esc(row.reason)+'</div>'+(row.wild?'<div style="margin-top:8px;font-size:12px;color:#a58bff">WILD 参入の目安: '+(row.wild.tier==='strong'?'強':'候補')+'(状態: '+({new:'これから',notified:'通知済み',bet:'購入済み',pass:'見送り済み',closed:'締切済み'}[row.wild.state]||esc(row.wild.state))+')'+(row.wildBet?'　WILDで購入('+({hit:'的中',miss:'外れ',open:'結果待ち'}[row.wildBet]||'')+')':'')+'</div>':(row.wildBet?'<div style="margin-top:8px;font-size:12px;color:#a58bff">WILDで購入('+({hit:'的中',miss:'外れ',open:'結果待ち'}[row.wildBet]||'')+')</div>':''))+'</div>';}}
+    detail='<div style="border-left:4px solid '+st.c+';background:var(--panel2);border-radius:8px;padding:10px 12px"><div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:16px">'+esc(v)+rr+'R</b><span class="mu" style="font-size:11px">'+(row.time?'締切 '+esc(row.time):'')+'</span></div><div style="font-size:14px;font-weight:800;color:'+st.c+';margin:4px 0">'+st.t+(row.level?'　<span class="mu" style="font-size:11px;font-weight:400">確信度 '+esc(row.level)+'</span>':'')+'</div><div style="font-size:12px;color:var(--tx);line-height:1.6">'+esc(row.reason)+'</div>'+(row.wild?'<div style="margin-top:8px;font-size:12px;color:#a58bff">WILD 参入の目安: '+(row.wild.tier==='strong'?'強':'候補')+'(状態: '+({new:'これから',notified:'通知済み',bet:'予想を記録',pass:'見送り済み',closed:'締切済み'}[row.wild.state]||esc(row.wild.state))+')'+(row.wildBet?'　WILDの予想('+({hit:'的中',miss:'外れ',open:'結果待ち'}[row.wildBet]||'')+')':'')+'</div>':(row.wildBet?'<div style="margin-top:8px;font-size:12px;color:#a58bff">WILDの予想('+({hit:'的中',miss:'外れ',open:'結果待ち'}[row.wildBet]||'')+')</div>':''))+'</div>';}}
   h+=detail;
   // 通知したレース(いつでも見えるように)
   const nl=rows.filter(r=>r.kind==='notify');
@@ -133,17 +133,25 @@ function taskTable(tasks){
 }
 
 
-const TIER_JP={strong:'強',a:'候補'};const STATE_JP={new:'これから',notified:'通知済み',bet:'記録済み(購入)',pass:'見送り済み',closed:'締切済み'};
+const TIER_JP={strong:'強',a:'候補'};const STATE_JP={new:'これから',notified:'通知済み',bet:'予想を記録',pass:'見送り済み',closed:'締切済み'};
 function wildTierPerf(t){
   if(!t||!t.all||!t.all.n)return '';
   const P=x=>x==null?'—':Math.round(x*100)+'%';
   const cell=x=>x.n?`<b class="${x.roi!=null&&x.roi>=1?'up':'dn'}" style="font-size:16px">${P(x.roi)}</b><div class="mu" style="font-size:11px">${x.hit}/${x.n}</div>`:'<span class="mu">—</span>';
   const tr=(label,d,bold)=>`<tr><td style="${bold?'font-weight:700':''}">${label}</td><td style="text-align:center">${cell(d.strong)}</td><td style="text-align:center">${cell(d.a)}</td><td style="text-align:center">${cell(d.all)}</td></tr>`;
   const days=(t.daily||[]).map((d,i)=>tr(esc(d.date.slice(5).replace('-','/'))+(i===0&&t.today&&d.date===t.today.date?'<div class="mu" style="font-size:11px">今日</div>':''),d,false)).join('');
-  return `<div style="margin-top:12px"><div class="ct" style="margin-bottom:4px">もし「目安」を全件買っていたら</div>
+  const rc=t.recorded;let rec='';
+  if(rc&&rc.all&&rc.all.n){const s2=rc.sameRaces||{};
+    rec=`<div class="mu" style="font-size:12px;margin:14px 0 4px"><b>予想の記録(台帳・補助)</b>(10/1以降、結果が出たもの)</div>
+    <table><tr><th></th><th style="text-align:center">件数</th><th style="text-align:center">的中</th><th style="text-align:center">回収率</th></tr>
+    <tr><td>記録した予想の全件</td><td style="text-align:center">${rc.all.n}</td><td style="text-align:center">${rc.all.hit}</td><td style="text-align:center"><b>${P(rc.all.roi)}</b></td></tr>
+    <tr><td>うち締切前に保存</td><td style="text-align:center">${rc.beforeDeadline.n}</td><td style="text-align:center">${rc.beforeDeadline.hit||0}</td><td style="text-align:center"><b>${P(rc.beforeDeadline.roi)}</b></td></tr>
+    ${s2.n?`<tr><td>同じレースのAI推奨(仮想)</td><td style="text-align:center">${s2.ai.n}</td><td style="text-align:center">${s2.ai.hit}</td><td style="text-align:center"><b>${P(s2.ai.roi)}</b></td></tr>`:''}</table>
+    <div class="note">台帳は、締切後に保存した予想(${rc.afterDeadlineN}件)や、保存していない予想があるため、出した予想の全体ではありません。補助の記録として見てください。</div>`;}
+  return `<div style="margin-top:12px"><div class="ct" style="margin-bottom:4px">もし「目安」を全件買っていたら(仮想・基準の成績)</div>
     <div class="mu" style="font-size:12px;margin-bottom:6px">大きい数字=回収率、小さい数字=的中数/件数</div>
     <table><tr><th></th><th style="text-align:center">強</th><th style="text-align:center">候補</th><th style="text-align:center">合計</th></tr>${tr('全日',t,true)}${days}</table>
-    <div class="note">AIおすすめの13点を3000円で買った<b>仮想</b>の成績で、あなたの実際の購入とは別です。結果が出たレースだけ数えています${t.today&&t.today.pending?`(今日は結果待ち ${t.today.pending}件)`:''}。10/1以降(買い目が13点になってから)の${t.days}日分です。${t.strong.n<30?'強は件数が少なく(30件未満)、まだ傾向とは言えません。':''}</div></div>`;
+    <div class="note">基準: 目安が出たレース<b>全件</b>を、AIおすすめの13点・合計3,000円(WILD画面と同じ均等回収配分)で買ったと<b>仮定</b>した成績です。実際に買ったものではなく、選び方に左右されません。結果が出たレースだけ数えています${t.today&&t.today.pending?`(今日は結果待ち ${t.today.pending}件)`:''}。10/1以降(買い目が13点になってから)の${t.days}日分です。${t.strong.n<30?'強は件数が少なく(30件未満)、まだ傾向とは言えません。':''}</div>${rec}</div>`;
 }
 function renderWild(w){
   if(!w)return '';
@@ -152,7 +160,7 @@ function renderWild(w){
   const L=w.ledger||{},c=w.cards||{},bt=c.byTier||{};
   let h=`<div class="card"><div class="ct">WILD 荒れ予想(対話型)</div>
     <div class="g3">${stat((bt.strong||0)+'/'+(bt.a||0),'目安 強/候補')}${stat(c.total||0,'作ったカード')}${stat(w.notifiedCount||0,'通知した')}</div>
-    <div class="g3" style="margin-top:8px">${stat(L.todayBets||0,'購入の記録')}${stat(L.todayPasses||0,'見送り')}${stat(L.waitingResults||0,'結果待ち')}</div>
+    <div class="g3" style="margin-top:8px">${stat(L.todayBets||0,'予想の記録')}${stat(L.todayPasses||0,'見送り')}${stat(L.waitingResults||0,'結果待ち')}</div>
     ${row('裏方(カード作成・結果取得)',`<span class="${w.inHours&&!ok?'dn':'up'}">${esc(alive)}</span>${w.indexAt?`<span class="mu">(最終 ${esc(fmt(w.indexAt))})</span>`:''}`)}
     ${row('結果の取得',`確定 ${(w.results||{}).confirmed||0}件${(w.results||{}).manual?`(うち手入力 ${w.results.manual}件)`:''}`)}`;
   h+=wildTierPerf(w.tierPerf);
@@ -175,7 +183,7 @@ function render(s){
     <div class="g3" style="margin-top:8px">${stat(t.mid_high||0,'中上')}${stat(t.collected||0,'データ取得成功')}${stat(t.collectionFailed||0,'取得失敗')}</div>
     ${t.lastEventAt?`<div class="note">最新の記録: ${esc(fmt(t.lastEventAt))}</div>`:''}</div>`;
   h+=`<div class="card"><div class="ct">ENGINE エンジンの状態</div>${row('エンジン',esc(e.name||'—'))}${row('予測に使う統計の日付',esc(e.stateDay||'—')+(e.stateLagDays!=null?`<span class="mu">(${e.stateLagDays}日前)</span>`:''))}${row('データバンクの最新日',esc(e.dbLastRaceDate||'—'))}${row('モデルの学習データ',esc(e.modelTrainedThrough||'—')+(e.modelRaces?`<span class="mu">(${Number(e.modelRaces).toLocaleString()}レース)</span>`:''))}${row('通知の方針',esc((s.notifications||{}).policy||'—'))}${row('通知',(s.notifications||{}).paused?'<span class="bd warn">一時停止中</span>':'<span class="bd ok">送信中</span>')}</div>`;
-  h+=`<div class="card"><div class="ct">LIVE 実運用の答え合わせ</div>`;
+  h+=`<div class="card"><div class="ct">LIVE エンジンQ通知の答え合わせ(WILDとは別の基準)</div><div class="mu" style="font-size:11px;margin-bottom:6px">この欄はエンジンQの通知(◎)を、上位10点・各100円で買ったと仮定した成績です。WILDの成績(3,000円・均等回収配分)とは基準が違うため、数字を比べないでください。</div>`;
   if(live&&live.totalConfirmed){h+=`<div class="g3">${stat(live.totalConfirmed,'結果確定')}${stat(live.pending||0,'結果待ち')}${stat(pct(live.all.hit10,0),'上位10点的中')}</div>${levelTable(live.byLevel)}<div class="note">「検証時」は過去8万レースでの実績です。実運用の数字がこれを大きく下回り続けたら異常のサインです。件数が少ないうちは(30レース未満)ぶれが大きく、参考程度です。</div>`;}
   else h+='<div class="empty">実運用の結果はまだ確定していません(締切後、順次反映されます)</div>';
   h+='</div>';
