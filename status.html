@@ -151,7 +151,7 @@ function wildTierPerf(t){
   return `<div style="margin-top:12px"><div class="ct" style="margin-bottom:4px">もし「目安」を全件買っていたら(仮想・基準の成績)</div>
     <div class="mu" style="font-size:12px;margin-bottom:6px">大きい数字=回収率、小さい数字=的中数/件数</div>
     <table><tr><th></th><th style="text-align:center">強</th><th style="text-align:center">候補</th><th style="text-align:center">合計</th></tr>${tr('全日',t,true)}${days}</table>
-    <div class="note">基準: 目安が出たレース<b>全件</b>を、AIおすすめの13点・合計3,000円(WILD画面と同じ均等回収配分)で買ったと<b>仮定</b>した成績です。実際に買ったものではなく、選び方に左右されません。結果が出たレースだけ数えています${t.today&&t.today.pending?`(今日は結果待ち ${t.today.pending}件)`:''}。10/1以降(買い目が13点になってから)の${t.days}日分です。${t.strong.n<30?'強は件数が少なく(30件未満)、まだ傾向とは言えません。':''}</div>${rec}</div>`;
+    <div class="note">基準: 目安が出たレース<b>全件</b>を、AIおすすめの13点・合計3,000円の平買い(全点均等。WILD画面と同じ)で買ったと<b>仮定</b>した成績です。実際に買ったものではなく、選び方に左右されません。結果が出たレースだけ数えています${t.today&&t.today.pending?`(今日は結果待ち ${t.today.pending}件)`:''}。10/1以降(買い目が13点になってから)の${t.days}日分です。${t.strong.n<30?'強は件数が少なく(30件未満)、まだ傾向とは言えません。':''}</div>${rec}</div>`;
 }
 function renderWild(w){
   if(!w)return '';
