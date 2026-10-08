@@ -4,6 +4,7 @@ const fs = require('fs'), os = require('os'), path = require('path'), assert = r
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'wildnotify-'));
 const WILD = path.join(tmp, 'wild'), RAW = path.join(tmp, 'raw'); fs.mkdirSync(RAW, { recursive: true });
 process.env.GARON_WILD_DIR = WILD; process.env.GARON_WILD_RAW_ROOT = RAW;
+process.env.GARON_WILD_ENTRY_ALERT = '0';   // 2026-10-08: 展示の進入の通知(公式サイトへ取りに行く)は、この試験では切る。別の試験(wild_entry_alert.test.js)で確かめる
 const W = require('../scripts/lib/wild_live');
 const { todayDateStrJST } = require('../scripts/lib/jst_time');
 const samples = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scripts', 'wild', 'samples', 'sample_cards.json'), 'utf8'));
