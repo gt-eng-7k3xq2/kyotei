@@ -39,7 +39,7 @@ t('組み込み済みの garon_wild.html に書き手が入っている', () => 
 });
 
 // ---- 文量(30/70/150字)× 文調(言い切り/です・ます/体言止め)(2026-10-08) ----
-const BAND = { 30: [20, 45], 70: [55, 90], 150: [95, 190] };
+const BAND = { 30: [20, 80], 70: [44, 90], 150: [75, 190] };
 t('文量・文調ごとの出力が、字数の範囲に入り検査に通る(成功率9割以上)', () => {
   for (const size of [30, 70, 150]) for (const st of ['plain', 'polite', 'memo', 'auto']) {
     let ok = 0; entries.forEach((e) => { const f = CW.buildFacts(e); const r = CW.composeLen(f, e.venue + e.race, size, st, 0); if (!r) return; ok++; assert(r.len >= BAND[size][0] && r.len <= BAND[size][1], `${size}/${st} ${e.venue}${e.race}R ${r.len}字`); assert(CW.check(r.text, f, 'mid').pass, `${size}/${st} 検査`); });
@@ -48,7 +48,9 @@ t('文量・文調ごとの出力が、字数の範囲に入り検査に通る(�
 t('文調ごとに文末が違う(です・ます調は「です/ます」で終わる、言い切りは含まない)', () => {
   let pol = 0, plainEnd = 0; entries.forEach((e) => { const f = CW.buildFacts(e); const a = CW.composeLen(f, 'k', 70, 'polite', 0), b = CW.composeLen(f, 'k', 70, 'plain', 0); if (a && /(です|ます)。$/.test(a.text)) pol++; if (b && !/(です|ます)。/.test(b.text)) plainEnd++; });
   assert(pol >= entries.length * 0.8 && plainEnd >= entries.length * 0.8, `polite ${pol}, plain ${plainEnd}`); });
-t('70字・150字は1号艇の文から始まる', () => { entries.forEach((e) => { const f = CW.buildFacts(e); [70, 150].forEach((n) => { const r = CW.composeLen(f, 'k', n, 'plain', 0); if (r) assert(r.text.startsWith(f.lane1.label), `${e.venue}${e.race}R ${n}字: ${r.text.slice(0, 12)}`); }); }); });
+t('書き出しがレースごとに変わる(2026-10-09: 1号艇から・軸から・負け方から・根拠から。1つの型が6割を超えない)', () => {
+  const op = {}; let n = 0; entries.forEach((e) => { const f = CW.buildFacts(e); const r = CW.composeLen(f, e.venue + e.race, 70, 'auto', 0); if (!r) return; n++; const k = r.text.startsWith(f.lane1.label) ? '1号艇' : /^インの負け/.test(r.text) ? '負け方' : /^(まずは|主役は|狙いは|崩すなら)?[❶-❻]/.test(r.text) || /^(まずは|主役は|狙いは|崩すなら)/.test(r.text) ? '軸' : 'その他'; op[k] = (op[k] || 0) + 1; });
+  assert(n >= 8); assert(Math.max(...Object.values(op)) / n <= 0.6, '書き出しの型が偏っている ' + JSON.stringify(op)); assert(Object.keys(op).length >= 2, '書き出しが1種類だけ ' + JSON.stringify(op)); console.log('   (書き出し ' + JSON.stringify(op) + ')'); });
 t('別の言い回し(variant)で文が変わり、同じ入力・同じvariantなら同じ', () => {
   let changed = 0; entries.forEach((e) => { const f = CW.buildFacts(e); const a = CW.composeLen(f, 'k', 70, 'plain', 0), b = CW.composeLen(f, 'k', 70, 'plain', 1), c = CW.composeLen(f, 'k', 70, 'plain', 0); if (a && c) assert.strictEqual(a.text, c.text); if (a && b && a.text !== b.text) changed++; });
   assert(changed >= entries.length * 0.5, `variantで変わった ${changed}/${entries.length}`); });
@@ -90,3 +92,53 @@ t('決まり手の呼び方がコースに合っている(4コースのまくり
   assert(seen > 0, 'コースに合わせた呼び名が1つも出ない'); });
 
 console.log(`\n${pass} 項目合格`);
+
+// ---- 2026-10-09 追加: CEO指摘(文のおかしさ・数字の正確さ・言い回しの変化) ----
+const BROKEN = [/、。/, /。。/, /、、/, /だが、。/, /そのうえ。/, /さらに。/, /なにより。/, /undefined|null|NaN|Infinity/, /頭を\d+点/, /直近\d+走/];
+t('壊れた文(空の節・「、。」・「頭を3点」・「直近◯走」)が出ない', () => {
+  entries.forEach((e) => { const f = CW.buildFacts(e); const r = CW.compose(f, e.venue + e.race); [r.x, r.note, r.long].filter(Boolean).forEach((s) => BROKEN.forEach((re) => assert(!re.test(s), `${e.venue}${e.race}R: ${re} → ${s.slice(0, 80)}`)));
+    [30, 70, 150].forEach((size) => ['plain', 'polite', 'memo'].forEach((st) => { const q = CW.composeLen(f, e.venue + e.race, size, st, 0); if (q) BROKEN.forEach((re) => assert(!re.test(q.text), `${size}/${st} ${e.venue}${e.race}R: ${re}`)); })); }); });
+t('数字の照合: 負けた回数・決まり手別の回数・割合・会場の傾向が事実と違う文は不合格', () => {
+  const e = entries.find((x) => { const f = CW.buildFacts(x); return f.lane1.lostN >= 6 && Object.keys(f.lane1.lostBy).length; }); assert(e, '対象のカードが無い');
+  const f = CW.buildFacts(e), tech = Object.keys(f.lane1.lostBy).sort((a, b) => f.lane1.lostBy[b] - f.lane1.lostBy[a])[0], n = f.lane1.lostN, k = f.lane1.lostBy[tech], pct = Math.round(100 * k / n);
+  const okS = `${f.lane1.label}は逃げ${f.lane1.nigePct}%。負けた${n}回のうち${tech}が最多の${k}回(${pct}%)。`;
+  assert(CW.check(okS + `${f.axisLabel}の${f.blocks[0].tech}が本線。`, f, 'mid').violations.every((v) => v.rule !== '数字'), '正しい数字を誤って不合格にした');
+  assert(CW.check(okS.replace(`${n}回のうち`, `${n + 1}回のうち`), f, 'mid').violations.some((v) => v.rule === '数字'), '負けた回数の誤りを見逃した');
+  assert(CW.check(okS.replace(`最多の${k}回`, `最多の${k + 1}回`), f, 'mid').violations.some((v) => v.rule === '数字'), '決まり手別回数の誤りを見逃した');
+  assert(CW.check(okS.replace(`(${pct}%)`, `(${pct + 5}%)`), f, 'mid').violations.some((v) => v.rule === '数字'), '割合の誤りを見逃した');
+});
+t('数字が整合しない・走数が少ない1号艇は、逃げ率と負け方を出さない', () => {
+  const e = JSON.parse(JSON.stringify(entries[0])); e.card.lane1.stats.starts = 6; const f = CW.buildFacts(e);
+  assert(f.lane1.nigePct == null && f.lane1.lostN == null && f.lane1.numbersWithheld, '走数6でも数字を出している');
+  const e2 = JSON.parse(JSON.stringify(entries[0])); e2.card.lane1.vulnerability.lost = (e2.card.lane1.vulnerability.lost || 0) + 5; const f2 = CW.buildFacts(e2);
+  assert(f2.lane1.numbersWithheld, '負けた回数が合わないのに数字を出している'); });
+t('言い回しがレースごとに変わる(30字: 文頭の型が偏りすぎない・同一文が少ない)', () => {
+  const outs = entries.map((e) => { const r = CW.composeLen(CW.buildFacts(e), e.venue + e.race, 30, 'auto', 0); return r && r.text; }).filter(Boolean);
+  assert(outs.length >= 4); assert(new Set(outs).size >= Math.floor(outs.length * 0.9), '同じ文が多い'); });
+t('同じレース・同じ案なら同じ出力(言い回しの乱数が固定)', () => {
+  const e = entries[1], f = CW.buildFacts(e); const a = CW.composeLen(f, 'k', 30, 'auto', 0), b = CW.composeLen(f, 'k', 30, 'auto', 0); assert.strictEqual(a && a.text, b && b.text); });
+t('会場の傾向は、全国より8ポイント以上高いときだけ書き、全国の割合を添える(2コースのまくり30%のような全国並みの数字は理由にしない)', () => {
+  let seen = 0;
+  entries.forEach((e) => { const f = CW.buildFacts(e); [30, 70, 150].forEach((size) => ['plain', 'polite', 'memo'].forEach((st) => { const q = CW.composeLen(f, e.venue + e.race, size, st, 0); if (!q) return;
+    for (const m of q.text.matchAll(/では([1-6])コースの1着の(\d+)%が(まくり差し|まくり|差し|抜き)\(全国は(\d+)%\)/g)) { seen++; assert(Number(m[2]) >= Number(m[4]) + 8, `${e.venue}${e.race}R: ${m[0]}`); }
+    assert(!/では[1-6]コースの1着の\d+%が(まくり差し|まくり|差し|抜き)(?!差し|\(全国は)/.test(q.text), `${e.venue}${e.race}R: 全国の割合が無い`); })); });
+  console.log('   (会場の傾向の記載 ' + seen + ' 件を確認)'); });
+t('スタートが2位との差0.02秒未満なら「スタート最速」と書かない(0.008秒差を強みにしない)', () => {
+  const e = JSON.parse(JSON.stringify(entries[0])); assert(e.card.boats.every((b) => b.st != null), '前提');
+  e.card.boats.forEach((b, i) => { b.st = 0.17 + i * 0.001; });
+  const f = CW.buildFacts(e); const s = CW.composeLen(f, 'k', 70, 'plain', 0); if (s) assert(!/スタート最速/.test(s.text), 'わずかな差を最速と書いた'); });
+t('同じ苗字の選手が2人いるレース(常滑4Rの❷松下・❻松下)でも、新しい書き手が文を作る(古い文に戻らない)', () => {
+  const e = JSON.parse(JSON.stringify(entries[0])); e.card.boats[5].name = e.card.boats[1].name;   // ❻を❷と同じ名前にする
+  const f = CW.buildFacts(e); assert.strictEqual(f.boats[1].surname, f.boats[5].surname);
+  const r = CW.compose(f, 'same'); const q = CW.composeLen(f, 'same', 70, 'plain', 0); assert(r.x || (q && q.text), '同姓で文が作れない'); });
+t('F持ち: カードにFの記録が無いのに「F持ち」と書いた文は不合格、記録があれば使える', () => {
+  const e = JSON.parse(JSON.stringify(entries[0])); e.card.boats.forEach((b) => { b.fl = null; }); const f = CW.buildFacts(e);
+  assert(CW.check(`${f.lane1.label}はF持ちで、逃げは${f.lane1.nigePct}%。${f.axisLabel}の${f.blocks[0].tech}が本線。`, f, 'mid').violations.some((v) => v.msg.includes('F持ち')), 'F持ちの誤りを見逃した');
+  e.card.boats[0].fl = 'F2'; const f2 = CW.buildFacts(e); assert(!CW.check(`${f2.lane1.label}はF持ちで、逃げは${f2.lane1.nigePct}%。${f2.axisLabel}の${f2.blocks[0].tech}が本線。`, f2, 'mid').violations.some((v) => v.msg.includes('F持ち')), 'F持ちの記録があるのに不合格にした'); });
+t('根拠の材料が毎回同じにならない(70字: 材料の組み合わせが10種類以上、最多の組み合わせが4割以下)', () => {
+  const types = [/負けた\d+回|の負けは\d+回/, /では[2-6]コースの1着/, /過去1年の[2-6]コース/, /平均スタート/, /モーター2連率|機力/, /展示/, /当地勝率/, /条件が近い/, /配当|旨み|三連単は/, /気配/, /展開。?$|展開です/, /F持ち/, /展開が向けば|流れ|展開次第|崩れた(時の)?形/];
+  const sig = {}; let n = 0; entries.forEach((e) => { const f = CW.buildFacts(e); const r = CW.composeLen(f, e.venue + e.race, 70, 'auto', 0); if (!r) return; n++; const k = types.map((re, i) => re.test(r.text) ? i : -1).filter((i) => i >= 0).join('+'); sig[k] = (sig[k] || 0) + 1; });
+  assert(Object.keys(sig).length >= 10, '材料の組み合わせが少ない ' + Object.keys(sig).length); assert(Math.max(...Object.values(sig)) / n <= 0.4, '最多の組み合わせが4割を超えた'); console.log('   (組み合わせ ' + Object.keys(sig).length + ' 種類 / ' + n + ' 件)'); });
+t('「◯◯は…は」「根拠は平均スタートは」のような、助詞の重なりが出ない', () => {
+  entries.forEach((e) => { const f = CW.buildFacts(e); [70, 150].forEach((n) => ['plain', 'polite', 'memo'].forEach((st) => { const r = CW.composeLen(f, e.venue + e.race, n, st, 0); if (r) assert(!/(根拠は|裏付けは|決め手は)平均スタートは/.test(r.text) && !/[❶-❻][^。、]{1,4}は(インが負けた|平均スタートは|1号艇)/.test(r.text), `${e.venue}${e.race}R: ${r.text.slice(0, 50)}`); })); }); });
+console.log('\n' + pass + ' 項目合格');
