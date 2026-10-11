@@ -41,7 +41,7 @@
 </style>
 </head>
 <body>
-<div class="header"><div><div class="ht">GARON // STATUS</div><div class="hs" id="last">読み込み中...</div></div><button class="rb" onclick="load()">更新</button></div>
+<div class="header"><div><div class="ht">GARON // STATUS</div><div class="hs" id="last">読み込み中...</div></div><button class="rb" type="button" id="rbtn" onclick="manualLoad()">更新</button></div>
 <div class="wrap" id="app"><div class="empty">読み込み中...</div></div>
 <script>
 const GIST_OWNER='gt-eng-7k3xq2', GIST_ID='c95fa9b66b4fb95d42d766a3e140cb0a', REFRESH_MS=60000, STALE_MIN=15;
@@ -201,6 +201,8 @@ async function load(){
   try{render(await getFile('garon_status_engine.json'));}
   catch(e){document.getElementById('app').innerHTML=`<div class="card"><div class="al error">状況データを取得できませんでした。<br>${esc(e.message)}<br>PC側の更新(GARON_EngineStatus)がまだ動いていない可能性があります。</div></div>`;}
 }
+// 2026-10-11: 「更新」を押しても何も変わって見えない(元のデータは5分おきにしか新しくならない)ため、押した手応えを出す
+async function manualLoad(){const b=document.getElementById('rbtn');if(!b||b.disabled)return;b.disabled=true;b.textContent='更新中…';try{await load();b.textContent='更新しました';}finally{setTimeout(()=>{b.textContent='更新';b.disabled=false;},1500);}}
 load(); setInterval(load,REFRESH_MS);
 </script>
 </body>
