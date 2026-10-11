@@ -141,4 +141,11 @@ t('根拠の材料が毎回同じにならない(70字: 材料の組み合わせ
   assert(Object.keys(sig).length >= 10, '材料の組み合わせが少ない ' + Object.keys(sig).length); assert(Math.max(...Object.values(sig)) / n <= 0.4, '最多の組み合わせが4割を超えた'); console.log('   (組み合わせ ' + Object.keys(sig).length + ' 種類 / ' + n + ' 件)'); });
 t('「◯◯は…は」「根拠は平均スタートは」のような、助詞の重なりが出ない', () => {
   entries.forEach((e) => { const f = CW.buildFacts(e); [70, 150].forEach((n) => ['plain', 'polite', 'memo'].forEach((st) => { const r = CW.composeLen(f, e.venue + e.race, n, st, 0); if (r) assert(!/(根拠は|裏付けは|決め手は)平均スタートは/.test(r.text) && !/[❶-❻][^。、]{1,4}は(インが負けた|平均スタートは|1号艇)/.test(r.text), `${e.venue}${e.race}R: ${r.text.slice(0, 50)}`); })); }); });
+// ---- 5人の予想家(2026-10-11) ----
+t('5人の予想家: 全員が検査に通り、です・ます調を使わず、文量ごとに作れる(成功率7割以上。買う理由が無い人は作らない)、同じ入力は同じ出力', () => {
+  let ok = 0, tot = 0;
+  entries.forEach((e) => { const f = CW.buildFacts(e); for (const size of [30, 70, 150]) { const a = CW.composePersonas(f, 'k', size, 0), b = CW.composePersonas(f, 'k', size, 0); assert.strictEqual(a.length, 6); assert.deepStrictEqual(a, b);
+    a.forEach((p) => { tot++; if (!p.text) return; ok++; assert(CW.check(p.text, f, 'mid').pass, p.name + ': ' + p.text); assert(!/(です|ます)(。|$)/.test(p.text), 'です・ます調が混ざっている: ' + p.text); assert(!/[()（）「」]/.test(p.text), 'かっこ書きが入っている: ' + p.text); }); } });
+  assert(ok / tot >= 0.7, '成功率 ' + ok + '/' + tot); });
+t('5人の予想家: 画面に欄があり、書き手が組み込まれている', () => { const live = path.join(ROOT, 'garon_wild.html'); if (!fs.existsSync(live)) return; const h = fs.readFileSync(live, 'utf8'); assert(h.includes('personaBox') && h.includes('composePersonas')); });
 console.log('\n' + pass + ' 項目合格');

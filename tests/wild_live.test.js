@@ -42,7 +42,7 @@ t('記録: オッズはサーバーのカードの値を使い、合計もサー
   const r = await call('POST', '/api/wild/entry', goodBody()); assert.equal(r.status, 200, JSON.stringify(r.j));
   const e = r.j.entry; assert.equal(e.seq, 1); assert.ok(!('hash' in e) && !('prevHash' in e), 'ハッシュ連鎖は使わない'); assert.equal(e.total, 3000); assert.equal(e.pointCount, 3); assert.equal(e.mode, 'live');
   assert.equal(e.lines[0].odds, info['5-1-4'].odds); assert.notEqual(e.lines[0].odds, 9999);
-  assert.deepEqual(e.aiCombos, ['5-1-4', '5-1-2', '5-1-3']); assert.deepEqual(e.excluded, [1]); assert.equal(typeof e.afterDeadline, 'boolean'); assert.ok(e.receivedAt);
+  assert.deepEqual(e.aiCombos, ['5-1-4', '5-1-2', '5-1-3']); assert.deepEqual(e.excluded, [1]); assert.equal(e.afterDeadline, undefined); assert.ok(e.receivedAt);   // 2026-10-11: 「締切後」の概念を廃止(記録しない)
 });
 t('同じレースの2回目は409(二重記録を防ぐ)', async () => { const r = await call('POST', '/api/wild/entry', goodBody()); assert.equal(r.status, 409); assert.equal(W.readLedger().length, 1); });
 t('不正な内容は400で、台帳に何も足さない(金額・重複・形式・上限・点数)', async () => {
