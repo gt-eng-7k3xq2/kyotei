@@ -1,0 +1,22 @@
+'use strict';
+const fs = require('fs'), path = require('path'), assert = require('assert');
+const L = require('../scripts/lib/odds_snapshot_lib');
+const fx = (n) => fs.readFileSync(path.join(__dirname, 'fixtures', n), 'utf8');
+let pass = 0; const t = (n, f) => { try { f(); pass++; console.log('PASS', n); } catch (e) { console.log('FAIL', n, '-', e.message); process.exitCode = 1; } };
+const odds = L.parseOdds3t(fx('official_odds3t_suminoe8_2026-10-12.html'));
+t('オッズ表から120通りが取れる', () => assert.strictEqual(Object.keys(odds).length, 120));
+t('住之江8Rの確定払戻(4-6-1=10,360円)と一致=出目の対応が正しい', () => assert.strictEqual(odds['4-6-1'], 103.6));
+t('1着の艇が違えば別の出目(1-2-3=50.2、2-1-3=138.0)', () => { assert.strictEqual(odds['1-2-3'], 50.2); assert.strictEqual(odds['2-1-3'], 138); });
+t('出目は1〜6の異なる3艇だけ', () => Object.keys(odds).forEach(c => { assert(L.COMBOS.includes(c), c); }));
+t('締切の一覧(住之江8R=18:25)', () => { const d = L.parseDeadlines(fx('official_raceindex_suminoe_2026-10-12.html')); assert.strictEqual(Object.keys(d).length, 12); assert.strictEqual(d[8], '18:25'); assert.strictEqual(d[1], '15:16'); });
+t('開催場コード(14場)', () => assert.strictEqual(L.parseVenueCodes(fx('official_index_2026-10-12.html')).length, 14));
+t('発売前・空のページでは何も取らない(推測しない)', () => assert.strictEqual(Object.keys(L.parseOdds3t('<html><body><table><tbody><tr><td>x</td></tr></tbody></table></body></html>')).length, 0));
+const dl = Date.UTC(2026, 9, 12, 9, 25);   // 18:25 JST
+const race = { key: '住之江_8', deadlineMs: dl };
+const at = (min) => dl + min * 60000;
+t('時点に達する前は取らない', () => assert.strictEqual(L.dueSnapshots({ nowMs: at(-16), races: [race], done: new Set() }).length, 0));
+t('締切15分前に達したらm15を取る', () => assert.deepStrictEqual(L.dueSnapshots({ nowMs: at(-14.5), races: [race], done: new Set() }).map(x => x.slot), ['m15']));
+t('取得済みは取らない', () => assert.strictEqual(L.dueSnapshots({ nowMs: at(-14.5), races: [race], done: new Set(['住之江_8|m15']) }).length, 0));
+t('取り損ねは追いかけない(予定から6分超)', () => assert.strictEqual(L.dueSnapshots({ nowMs: at(-15 + 7), races: [race], done: new Set() }).filter(x => x.slot === 'm15').length, 0));
+t('確定オッズは締切の12分後', () => assert.deepStrictEqual(L.dueSnapshots({ nowMs: at(12.2), races: [race], done: new Set() }).map(x => x.slot), ['final']));
+console.log('\n' + pass + ' 項目合格');

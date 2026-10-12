@@ -148,4 +148,15 @@ t('5人の予想家: 全員が検査に通り、です・ます調を使わず�
     a.forEach((p) => { tot++; if (!p.text) return; ok++; assert(CW.check(p.text, f, 'mid').pass, p.name + ': ' + p.text); assert(!/(です|ます)(。|$)/.test(p.text), 'です・ます調が混ざっている: ' + p.text); assert(!/[()（）「」]/.test(p.text), 'かっこ書きが入っている: ' + p.text); }); } });
   assert(ok / tot >= 0.7, '成功率 ' + ok + '/' + tot); });
 t('5人の予想家: 画面に欄があり、書き手が組み込まれている', () => { const live = path.join(ROOT, 'garon_wild.html'); if (!fs.existsSync(live)) return; const h = fs.readFileSync(live, 'utf8'); assert(h.includes('personaBox') && h.includes('composePersonas')); });
+t('機力は%ではなく「○号機」で書く(号機があるとき。2026-10-12 CEO指示)', () => {
+  let seen = 0;
+  entries.forEach((e) => {
+    const c = JSON.parse(JSON.stringify(e.card)); const ax = CW.buildFacts(e).axis; c.boats.forEach((b) => { b.motNo = 10 + b.lane; if (b.lane === ax) b.motT2 = 60; });
+    const f = CW.buildFacts(Object.assign({}, e, { card: c }));
+    CW.composePersonas(f, 'k', 70, 0).forEach((p) => { if (!p.text) return; assert(!/モーター2連率/.test(p.text), 'モーター2連率が残っている: ' + p.text); assert(CW.check(p.text, f, 'mid').pass, '検査: ' + p.text); if (/号機/.test(p.text)) seen++; });
+    const r = CW.compose(f, e.venue + e.race); [r.x, r.note].forEach((x) => { if (x) assert(!/モーター2連率/.test(x), x); });
+  });
+  assert(seen >= 1, '号機を使った文が1件も出ない');
+  console.log('   (号機を使った文 ' + seen + ' 件)');
+});
 console.log('\n' + pass + ' 項目合格');

@@ -3,7 +3,7 @@
 const fs = require('fs'), path = require('path'), assert = require('assert');
 const html = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'wild', 'wild_template.html'), 'utf8');
 const src = html.split('/*LOGIC_START*/')[1].split('/*LOGIC_END*/')[0];
-const L = new Function(src + '; return {allocateEqualReturn,syntheticOdds,payoutPosition,nagashiCombos,gapWords,vsMeWords,buildPool,pointStats,upsetWords,garonSurname,boatLabel,naturalGroupBets,hyokaOrder,qSummary,orderBlock,mergeBlocks,swapHeads,autoTenkai,autoPlan,hasExcluded,dropExcluded,compressBets,hyokaFromBets,boatsText,skillNotes,officialRaceListUrl,boatsRows,BOATS_IMG_HEAD,tierWords,entryChecks,sortByTier,planReasons,marginals,killCandidates,calLookup,TOP3_CAL,WIN_CAL};')();
+const L = new Function(src + '; return {allocateFlat,syntheticOdds,payoutPosition,nagashiCombos,gapWords,vsMeWords,buildPool,pointStats,upsetWords,garonSurname,boatLabel,naturalGroupBets,hyokaOrder,qSummary,orderBlock,mergeBlocks,swapHeads,autoPlan,hasExcluded,dropExcluded,compressBets,hyokaFromBets,boatsText,skillNotes,officialRaceListUrl,boatsRows,BOATS_IMG_HEAD,tierWords,entryChecks,sortByTier,planReasons,marginals,killCandidates,calLookup,TOP3_CAL,WIN_CAL};')();
 const en = require('../boatcast_migration/scripts/lib/engine_notify');
 function expandBets(text) {
   const out = [];
@@ -18,9 +18,11 @@ function expandBets(text) {
 }
 let n = 0; const ok = (c, m) => { assert(c, m); n++; };
 (async () => {
-  // 配分: 本体と同じ結果になる
+  // 配分(平買い)
   const cases = [[['1-2-3','1-3-2','1-4-2'], {'1-2-3':20,'1-3-2':35.5,'1-4-2':80}, 3000], [['2-1-3','2-3-1'], {'2-1-3':12.3,'2-3-1':50}, 1500], [['1-2-3','1-3-2'], {'1-2-3':20}, 1000], [['3-1-2','3-2-1','3-4-1','3-4-2','3-1-4','3-2-4'], {'3-1-2':15,'3-2-1':22,'3-4-1':44,'3-4-2':60,'3-1-4':90,'3-2-4':120}, 3000]];
-  for (const [p, o, t] of cases) { const a = L.allocateEqualReturn(p, o, t); assert.deepStrictEqual(a, en.allocateEqualReturn(p, o, t)); ok(a.reduce((x, y) => x + y, 0) === t, '合計'); ok(a.every(v => v >= 100 && v % 100 === 0), '100円単位'); }
+  // 2026-09-30にWILDの配分は「平買い(全点均等・100円単位)」へ変更済み(allocateEqualReturnは廃止)。平買いの性質を検証する
+  for (const [p, o, t] of cases) { const a = L.allocateFlat(p, t); ok(a.length === p.length, '点数'); ok(a.reduce((x, y) => x + y, 0) === t, '合計'); ok(a.every(v => v >= 100 && v % 100 === 0), '100円単位'); ok(Math.max(...a) - Math.min(...a) <= 100, '均等(差は100円以内)'); }
+  ok(JSON.stringify(L.allocateFlat(new Array(13).fill(0), 3000)) === JSON.stringify([300,300,300,300,200,200,200,200,200,200,200,200,200]), '13点・3,000円は、先頭4点300円・残り9点200円(CEOの住之江8R代行登録と同じ)');
   ok(Math.abs(L.syntheticOdds([10, 10]) - 5) < 1e-9, '合成');
   ok(L.syntheticOdds([]) === null, '合成空');
   const sim = { p25: 20, median: 40, p75: 90, p90: 200 };
@@ -52,7 +54,6 @@ let n = 0; const ok = (c, m) => { assert(c, m); n++; };
   ok(L.mergeBlocks([{ combos: ['1-3-2', '1-2-3'], n: 2 }, { combos: ['1-2-3', '4-1-2'], n: 2 }]).join() === '1-3-2,1-2-3,4-1-2', '塊の合流(重複は1回)');
   ok(L.mergeBlocks([{ combos: ['1-3-2', '1-2-3'], n: 1 }]).join() === '1-3-2', '点数で削る');
   ok(L.swapHeads(['1-4-2', '2-1-3']).join() === '4-1-2,1-2-3', '頭の入れ替え');
-  ok(L.autoTenkai([{ winner: 5, tech: 'まくり差し' }, { winner: 2, tech: '差し' }], (no) => '<' + no + '>') === '<5>のまくり差しが本線。押さえは<2>の差し。', '展開の一言');
   // おまかせ案(確率順13点・1つの頭は最大8点・1号艇は頭にしない・オッズ10倍以上): 4件の見本すべてで規則どおりになる
   const samples = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scripts', 'wild', 'samples', 'sample_cards.json'), 'utf8'));
   for (const sm of samples) {
@@ -80,7 +81,6 @@ let n = 0; const ok = (c, m) => { assert(c, m); n++; };
   const bl = [{ winner: 5, tech: 'x', combos: ['5-1-2', '5-2-3', '5-3-4'], n: 3 }, { winner: 2, tech: 'y', combos: ['2-1-3'], n: 1 }];
   ok(L.dropExcluded(bl, [1]).length === 1 && L.dropExcluded(bl, [1])[0].combos.join() === '5-2-3,5-3-4' && L.dropExcluded(bl, [1])[0].n === 2, '消し艇を塊から外す');
   ok(L.dropExcluded(bl, [5]).length === 1 && L.dropExcluded(bl, [5])[0].winner === 2, '頭が消しなら塊ごと消える');
-  ok(L.autoTenkai([{ winner: 5, tech: 'a' }], (no) => '<' + no + '>', [2, 3]) === '<5>のaが本線。<2>・<3>は消し。', '展開の一言に消し艇');
   // 買い目のまとめ方(できるだけ少ない書き方、頭・2着・3着の集まり。a=b は入れ替え)。元の買い目へ戻すと、必ず同じ集合になる
   const expand = (strs) => expandBets(strs.join('/'));
   const eq = (v, arr) => { assert.deepStrictEqual(L.compressBets(v), arr); n++; };
@@ -148,18 +148,6 @@ let n = 0; const ok = (c, m) => { assert(c, m); n++; };
   ok(by[5].kind === 'weak' && by[5].inBets === false, '5コースは苦手・買い目に入っていない');
   ok(!by[2] && !by[3], '平均並み(2コース)と、走数10未満(3コース)は出さない');
   ok(L.skillNotes({}, [], null).length === 0 && L.skillNotes({ skill: card0.skill }, [], null).length === 0, 'データが無ければ何も出さない');
-  // 展開の一文(CEOのお見本の型): 本線 → 2着(筆頭・次点) → 3着まで → 押さえは → 切り。買い目と食い違わない
-  const ctx = { info: { '5-1-2': { enginePct: 4 }, '5-1-3': { enginePct: 3 }, '5-4-1': { enginePct: 2 }, '2-1-5': { enginePct: 5 }, '2-4-1': { enginePct: 1 } }, card: null };
-  const tb = [{ winner: 5, tech: 'まくり差し', combos: ['5-1-2', '5-1-3', '5-4-1'], n: 3 }, { winner: 2, tech: '差し', combos: ['2-1-5', '2-4-1'], n: 2 }];
-  ok(L.autoTenkai(tb, (no) => '<' + no + '>', [], ctx) === '狙うは<5>。まくり差しが本線。逃げは捨てる。相手筆頭は<1>、次点<4>のカド。3着は❷❸。押さえは<2>の差し。2着は<1>。❻は切り。', '展開の一文 ' + L.autoTenkai(tb, (no) => '<' + no + '>', [], ctx));
-  const tb2 = [{ winner: 6, tech: 'まくり', combos: ['6-1-2'], n: 1 }];
-  const cardG = { attackers: [{ lane: 6, start: { gap: -0.052 } }] };
-  ok(L.autoTenkai(tb2, (no) => '<' + no + '>', [], { info: { '6-1-2': { enginePct: 3 } }, card: cardG }).includes('スタートは内より0.05秒速い。'), '数字は1つ(内より速いスタート)');
-  const cardS = { skill: { 6: { n: 25, w: 0.12, t2: 0.20 } }, laneAvg: { w: [0.547, 0.140, 0.124, 0.101, 0.057, 0.030], t2: [0.722, 0.387, 0.338, 0.266, 0.176, 0.110] } };
-  ok(L.autoTenkai(tb2, (no) => '<' + no + '>', [], { info: { '6-1-2': { enginePct: 3 } }, card: cardS }).includes('6コース巧者(1着率12.0%)。'), 'スタートが無ければコース巧者を1つ');
-  ok((L.autoTenkai(tb2, (no) => '<' + no + '>', [], { info: { '6-1-2': { enginePct: 3 } }, card: cardG }).match(/\d+\.\d+/g) || []).length === 1, '数字は1つだけ');
-  // 買い目と食い違わない: 一文に出る艇(丸数字)は、買い目に入っている艇だけ(切りの艇を除く)
-  for (const sm of samples) { const p = L.autoPlan(sm.card), txt = L.autoTenkai(p.blocks, (no) => '{' + no + '}', [], { info: sm.card.combos, card: sm.card }), used = new Set(L.mergeBlocks(p.blocks).join('-').split('-').map(Number));
-    const named = [...txt.matchAll(/\{(\d)\}/g)].map(m => Number(m[1])); ok(named.every(n => used.has(n)), sm.venue + ' 一文に出る艇は買い目の中'); ok(txt.startsWith('狙うは{' + p.blocks[0].winner + '}。'), sm.venue + ' 先頭は本線の頭'); }
+  // (旧: autoTenkai=展開の一文の自動生成。2026-10-08以降は展開コメントの書き手(comment_writer.js、tests/wild_comment_writer.test.js)に置き換わり、関数ごと廃止されたため、この節のテストは外した)
   console.log(`PASS ${n}項目`);
 })().catch(e => { console.error('FAIL', e.message); process.exit(1); });
