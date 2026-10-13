@@ -55,7 +55,7 @@ t('別の言い回し(variant)で文が変わり、同じ入力・同じvariant�
   let changed = 0; entries.forEach((e) => { const f = CW.buildFacts(e); const a = CW.composeLen(f, 'k', 70, 'plain', 0), b = CW.composeLen(f, 'k', 70, 'plain', 1), c = CW.composeLen(f, 'k', 70, 'plain', 0); if (a && c) assert.strictEqual(a.text, c.text); if (a && b && a.text !== b.text) changed++; });
   assert(changed >= entries.length * 0.5, `variantで変わった ${changed}/${entries.length}`); });
 t('おまかせは、レースごとに文調がばらける', () => { const sts = new Set(entries.map((e) => { const r = CW.composeLen(CW.buildFacts(e), e.venue + e.race, 70, 'auto', 0); return r && r.style; })); assert(sts.size >= 3, [...sts].join(',')); });
-t('画面に文量・文調の操作が入っている', () => { const live = path.join(ROOT, 'garon_wild.html'); if (!fs.existsSync(live)) return; const h = fs.readFileSync(live, 'utf8'); assert(h.includes('data-cwlen') && h.includes('CW.composeLen('), '文量・文調の操作が画面に無い'); });
+t('画面に長さ(4段階)と候補の操作が入っている', () => { const live = path.join(ROOT, 'garon_wild.html'); if (!fs.existsSync(live)) return; const h = fs.readFileSync(live, 'utf8'); assert(h.includes('data-csz') && h.includes('CSEGS') && h.includes('data-cuse') && h.includes('data-cadd'), '長さ・候補の操作が画面に無い'); });
 
 
 // ---- 2026-10-08 CEOの指摘(画面のスクリーンショット)への対策 ----
@@ -80,7 +80,7 @@ t('負け方の数字は、買い目にある決まり手(軸または対抗)に
     [70, 150].forEach((n) => ['plain', 'polite', 'memo'].forEach((st) => { const r = CW.composeLen(f, 'k', n, st, 0); if (!r) return; const re = /(?:負けた|インの負けは)(\d+)回のうち(まくり差し|まくり|差し|抜き|逃げ)/g; let m; while ((m = re.exec(r.text))) { seen++; assert(techs.has(m[2]), `${e.venue}${e.race}R 関係の無い負け方「${m[2]}」: ${r.text}`); } })); });
   assert(seen > 0, '負け方の文が1つも出ない'); });
 t('展示の見立て(extra)を渡すと文末に足される(検査の対象外)', () => { const e = entries[0]; const f = CW.buildFacts(e); const ex = '展示では' + f.axisLabel + 'の周り足が良い。'; const a = CW.composeLen(f, 'k', 70, 'plain', 0), b = CW.composeLen(f, 'k', 70, 'plain', 0, ex); assert(a && b && b.text === a.text + ex); const n0 = CW.compose(f, 'k'), n1 = CW.compose(f, 'k', ex); assert(n1.note.includes(ex) && !n0.note.includes(ex)); });
-t('画面に展示の見立てのボタンが入っている', () => { const live = path.join(ROOT, 'garon_wild.html'); if (!fs.existsSync(live)) return; const h = fs.readFileSync(live, 'utf8'); assert(h.includes('data-cs=') && h.includes('cwExtra'), '見立てのボタンが画面に無い'); });
+t('画面に展示の見立てのボタンが入っている', () => { const live = path.join(ROOT, 'garon_wild.html'); if (!fs.existsSync(live)) return; const h = fs.readFileSync(live, 'utf8'); assert(h.includes('data-cs=') && h.includes('展示では'), '見立てのボタンが画面に無い'); });
 
 
 t('決まり手の呼び方がコースに合っている(4コースのまくり=カドまくり、3=センターまくり、5=外まくり、6=大外まくり、5・6のまくり差し=外の/大外の)', () => {
@@ -120,8 +120,8 @@ t('同じレース・同じ案なら同じ出力(言い回しの乱数が固定)
 t('会場の傾向は、全国より8ポイント以上高いときだけ書き、全国の割合を添える(2コースのまくり30%のような全国並みの数字は理由にしない)', () => {
   let seen = 0;
   entries.forEach((e) => { const f = CW.buildFacts(e); [30, 70, 150].forEach((size) => ['plain', 'polite', 'memo'].forEach((st) => { const q = CW.composeLen(f, e.venue + e.race, size, st, 0); if (!q) return;
-    for (const m of q.text.matchAll(/では([1-6])コースの1着の(\d+)%が(まくり差し|まくり|差し|抜き)\(全国は(\d+)%\)/g)) { seen++; assert(Number(m[2]) >= Number(m[4]) + 8, `${e.venue}${e.race}R: ${m[0]}`); }
-    assert(!/では[1-6]コースの1着の\d+%が(まくり差し|まくり|差し|抜き)(?!差し|\(全国は)/.test(q.text), `${e.venue}${e.race}R: 全国の割合が無い`); })); });
+    for (const m of q.text.matchAll(/では([1-6])コースの1着の(\d+)%が(まくり差し|まくり|差し|抜き)で、全国は(\d+)%/g)) { seen++; assert(Number(m[2]) >= Number(m[4]) + 8, `${e.venue}${e.race}R: ${m[0]}`); }
+    assert(!/では[1-6]コースの1着の\d+%が(まくり差し|まくり|差し|抜き)(?!差し|で、全国は)/.test(q.text), `${e.venue}${e.race}R: 全国の割合が無い`); })); });
   console.log('   (会場の傾向の記載 ' + seen + ' 件を確認)'); });
 t('スタートが2位との差0.02秒未満なら「スタート最速」と書かない(0.008秒差を強みにしない)', () => {
   const e = JSON.parse(JSON.stringify(entries[0])); assert(e.card.boats.every((b) => b.st != null), '前提');
@@ -147,7 +147,13 @@ t('5人の予想家: 全員が検査に通り、です・ます調を使わず�
   entries.forEach((e) => { const f = CW.buildFacts(e); for (const size of [30, 70, 150]) { const a = CW.composePersonas(f, 'k', size, 0), b = CW.composePersonas(f, 'k', size, 0); assert.strictEqual(a.length, 6); assert.deepStrictEqual(a, b);
     a.forEach((p) => { tot++; if (!p.text) return; ok++; assert(CW.check(p.text, f, 'mid').pass, p.name + ': ' + p.text); assert(!/(です|ます)(。|$)/.test(p.text), 'です・ます調が混ざっている: ' + p.text); assert(!/[()（）「」]/.test(p.text), 'かっこ書きが入っている: ' + p.text); }); } });
   assert(ok / tot >= 0.7, '成功率 ' + ok + '/' + tot); });
-t('5人の予想家: 画面に欄があり、書き手が組み込まれている', () => { const live = path.join(ROOT, 'garon_wild.html'); if (!fs.existsSync(live)) return; const h = fs.readFileSync(live, 'utf8'); assert(h.includes('personaBox') && h.includes('composePersonas')); });
+t('コメント選択: 画面に欄があり、書き手が組み込まれている', () => { const live = path.join(ROOT, 'garon_wild.html'); if (!fs.existsSync(live)) return; const h = fs.readFileSync(live, 'utf8'); assert(h.includes('cmtCands') && h.includes('composePersonas') && h.includes('もっと長い'), '新しいコメント選択(候補・長さ4段階)が組み込まれていない'); assert(!h.includes('personaBox'), '旧「5人の予想家」欄が残っている'); });
+t('予想家ごとに複数案(2026-10-13): 展開屋は文の並べ方が違う案を3種類以上作れる。サマリーの末尾に「G.」署名が無い', () => {
+  entries.forEach((e) => { const f = CW.buildFacts(e); const set = new Set(); for (let v = 0; v < 5; v++) { const r = CW.composePersonas(f, 'k', 70, v).find((p) => p.name === '展開屋'); if (r && r.text) set.add(r.text); } assert(set.size >= 3, e.venue + e.race + 'R 展開屋の案が' + set.size + '種類'); });
+  const Q = new Function(src + '; return {qSummary};')(); const inp = { venue: '常滑', race: 4, deadline: '12:02', axis: 5, axisLabel: '❺佐藤', hyoka: '1>5>4>2>3>6', tenkai: 'テスト', combos: ['5-1-2', '1-5-2'] };
+  ['x', 'note', 'short'].forEach((m) => assert(!/G\./.test(Q.qSummary(m, inp)), m + 'に「G.」が残っている')); });
+t('仕上げ(2026-10-13): 括弧書き・「本線」・「最多」を出さない。全国比で特徴と言えない負け方は書かない', () => {
+  let n = 0; entries.forEach((e) => { const f = CW.buildFacts(e), r = CW.compose(f, e.venue + e.race); [r.x, r.note, r.long].filter(Boolean).forEach((t) => { n++; assert(!/[()（）]/.test(t), '括弧: ' + t); assert(!/本線/.test(t), '本線: ' + t); assert(!/で最多/.test(t), '最多: ' + t); const ss = t.split(/(?<=。)/).filter((x) => x.length >= 8); assert.strictEqual(new Set(ss).size, ss.length, '同じ文の重複: ' + t); }); for (const size of [30, 70, 150]) CW.composePersonas(f, 'k', size, 0).forEach((p) => { if (p.text) { n++; assert(!/[()（）]/.test(p.text) && !/本線/.test(p.text), p.name + ': ' + p.text); } }); }); assert(n > 20); });
 t('機力は%ではなく「○号機」で書く(号機があるとき。2026-10-12 CEO指示)', () => {
   let seen = 0;
   entries.forEach((e) => {
