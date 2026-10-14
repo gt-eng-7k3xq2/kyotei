@@ -112,7 +112,7 @@ function renderDisp(s){
     }
   }
   h+='</div>';
-  h+='<div class="mu" style="font-size:10px;margin:8px 0 12px">◎ 通知　<span style="color:#ff8ad8">ピンク枠 あなたの参入</span>　<span style="color:#a58bff">W/W強 WILDの参入の目安</span>　△ 見送り(配当が薄い)　－ 見送り(確信度)　✕ 取得できず(暗い赤は修正済みの不具合)　空白 評価なし　○ これから　／ マスを押すと詳細</div>';
+  h+='<div class="mu" style="font-size:10px;margin:8px 0 12px">◎ 通知　<span style="color:#ff8ad8">ピンク枠 あなたの参入</span>　<span style="color:#a58bff">W WILDの参入ランク(S/A/B)</span>　△ 見送り(配当が薄い)　－ 見送り(確信度)　✕ 取得できず(暗い赤は修正済みの不具合)　空白 評価なし　○ これから　／ マスを押すと詳細</div>';
   // 詳細
   let detail='<div class="mu" style="font-size:12px;text-align:center;padding:12px 0">マスを押すと、そのレースの振り分けと理由が出ます</div>';
   if(pickedCell){const [v,rr]=pickedCell.split('|');const row=(by[v]||{})[rr];if(row){const st=KSTYLE[row.kind]||KSTYLE.missed;
@@ -133,12 +133,12 @@ function taskTable(tasks){
 }
 
 
-const TIER_JP={strong:'強',a:'候補'};const STATE_JP={new:'これから',notified:'通知済み',bet:'予想を記録',pass:'見送り済み',closed:'締切済み'};
+const TIER_JP={S:'ランクS',A:'ランクA',B:'ランクB'};const STATE_JP={new:'これから',notified:'通知済み',bet:'予想を記録',pass:'見送り済み',closed:'締切済み'};
 function wildTierPerf(t){
   if(!t||!t.all||!t.all.n)return '';
   const P=x=>x==null?'—':Math.round(x*100)+'%';
   const cell=x=>x.n?`<b class="${x.roi!=null&&x.roi>=1?'up':'dn'}" style="font-size:16px">${P(x.roi)}</b><div class="mu" style="font-size:11px">${x.hit}/${x.n}</div>`:'<span class="mu">—</span>';
-  const tr=(label,d,bold)=>`<tr><td style="${bold?'font-weight:700':''}">${label}</td><td style="text-align:center">${cell(d.strong)}</td><td style="text-align:center">${cell(d.a)}</td><td style="text-align:center">${cell(d.all)}</td></tr>`;
+  const tr=(label,d,bold)=>`<tr><td style="${bold?'font-weight:700':''}">${label}</td><td style="text-align:center">${cell(d.S)}</td><td style="text-align:center">${cell(d.A)}</td><td style="text-align:center">${cell(d.B)}</td><td style="text-align:center">${cell(d.all)}</td></tr>`;
   const days=(t.daily||[]).map((d,i)=>tr(esc(d.date.slice(5).replace('-','/'))+(i===0&&t.today&&d.date===t.today.date?'<div class="mu" style="font-size:11px">今日</div>':''),d,false)).join('');
   const rc=t.recorded;let rec='';
   if(rc&&rc.all&&rc.all.n){const s2=rc.sameRaces||{};
@@ -147,10 +147,10 @@ function wildTierPerf(t){
     <tr><td>記録した予想の全件</td><td style="text-align:center">${rc.all.n}</td><td style="text-align:center">${rc.all.hit}</td><td style="text-align:center"><b>${P(rc.all.roi)}</b></td></tr>
     ${s2.n?`<tr><td>同じレースのAI推奨(仮想)</td><td style="text-align:center">${s2.ai.n}</td><td style="text-align:center">${s2.ai.hit}</td><td style="text-align:center"><b>${P(s2.ai.roi)}</b></td></tr>`:''}</table>
     <div class="note">台帳は、保存していない予想があるため、出した予想の全体ではありません。補助の記録として見てください。</div>`;}
-  return `<div style="margin-top:12px"><div class="ct" style="margin-bottom:4px">もし「目安」を全件買っていたら(仮想・基準の成績)</div>
+  return `<div style="margin-top:12px"><div class="ct" style="margin-bottom:4px">もし「ランクS・A・B」を全件買っていたら(仮想・基準の成績)</div>
     <div class="mu" style="font-size:12px;margin-bottom:6px">大きい数字=回収率、小さい数字=的中数/件数</div>
-    <table><tr><th></th><th style="text-align:center">強</th><th style="text-align:center">候補</th><th style="text-align:center">合計</th></tr>${tr('全日',t,true)}${days}</table>
-    <div class="note">基準: 目安が出たレース<b>全件</b>を、AIおすすめの13点・合計3,000円の平買い(全点均等。WILD画面と同じ)で買ったと<b>仮定</b>した成績です。実際に買ったものではなく、選び方に左右されません。結果が出たレースだけ数えています${t.today&&t.today.pending?`(今日は結果待ち ${t.today.pending}件)`:''}。10/1以降(買い目が13点になってから)の${t.days}日分です。${t.strong.n<30?'強は件数が少なく(30件未満)、まだ傾向とは言えません。':''}</div>${rec}</div>`;
+    <table><tr><th></th><th style="text-align:center">S</th><th style="text-align:center">A</th><th style="text-align:center">B</th><th style="text-align:center">合計</th></tr>${tr('全日',t,true)}${days}</table>
+    <div class="note">基準: ランクS・A・Bが付いたレース<b>全件</b>を、AIおすすめの13点・合計3,000円の平買い(全点均等。WILD画面と同じ)で買ったと<b>仮定</b>した成績です。実際に買ったものではなく、選び方に左右されません。結果が出たレースだけ数えています${t.today&&t.today.pending?`(今日は結果待ち ${t.today.pending}件)`:''}。10/1以降(買い目が13点になってから)の${t.days}日分です。${t.strong.n<30?'強は件数が少なく(30件未満)、まだ傾向とは言えません。':''}</div>${rec}</div>`;
 }
 function renderWild(w){
   if(!w)return '';
@@ -158,7 +158,7 @@ function renderWild(w){
   const alive=!w.inHours?'(稼働時間外)':ok?'動いています':w.indexAgeMin==null?'カード未作成':`${w.indexAgeMin}分止まっています`;
   const L=w.ledger||{},c=w.cards||{},bt=c.byTier||{};
   let h=`<div class="card"><div class="ct">WILD 荒れ予想(対話型)</div>
-    <div class="g3">${stat((bt.strong||0)+'/'+(bt.a||0),'目安 強/候補')}${stat(c.total||0,'作ったカード')}${stat(w.notifiedCount||0,'通知した')}</div>
+    <div class="g3">${stat((bt.S||0)+'/'+(bt.A||0)+'/'+(bt.B||0),'ランク S/A/B')}${stat(c.total||0,'作ったカード')}${stat(w.notifiedCount||0,'通知した')}</div>
     <div class="g3" style="margin-top:8px">${stat(L.todayBets||0,'予想の記録')}${stat(L.todayPasses||0,'見送り')}${stat(L.waitingResults||0,'結果待ち')}</div>
     ${row('裏方(カード作成・結果取得)',`<span class="${w.inHours&&!ok?'dn':'up'}">${esc(alive)}</span>${w.indexAt?`<span class="mu">(最終 ${esc(fmt(w.indexAt))})</span>`:''}`)}
     ${row('結果の取得',`確定 ${(w.results||{}).confirmed||0}件${(w.results||{}).manual?`(うち手入力 ${w.results.manual}件)`:''}`)}`;
