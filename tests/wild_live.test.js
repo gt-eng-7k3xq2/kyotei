@@ -120,15 +120,15 @@ t('gtool連携: 購入記録をgtoolのログ形式で返す(本線/抑え・結
   assert.equal((await call('POST', '/api/wild/gtools-export', {}, { Origin: ORIGIN })).status, 404);   // 読み取り専用(POSTは無い)
   fs.rmSync(W.resultsFile(date), { force: true });
 });
-t('ntfy通知の判定: 強・候補だけ、締切3分前までなら送る。対象外・締切間際・締切後は送らない', async () => {
+t('ntfy通知の判定: ランクS・A・Bだけ、締切3分前までなら送る。対象外・締切間際・締切後は送らない', async () => {
   const dl = W.deadlineMs('2026-09-26', '12:30');
-  const row = (o) => Object.assign({ date: '2026-09-26', venue: '丸亀', race: 3, deadline: '12:30', upset: 0.744, tier: 'strong', top: { winner: 4, tech: 'まくり', scenarioPct: 21.3 } }, o);
+  const row = (o) => Object.assign({ date: '2026-09-26', venue: '丸亀', race: 3, deadline: '12:30', upset: 0.744, tier: 'strong', rank: 'S', top: { winner: 4, tech: 'まくり', scenarioPct: 21.3 } }, o);
   const n = W.wildNotificationFor(row(), dl - 9 * 60000);
   assert.ok(n); assert.equal(n.key, '丸亀_3'); assert.equal(n.priority, 4);
-  assert.ok(n.title.includes('WILD 強') && n.title.includes('丸亀3R') && n.title.includes('12:30')); assert.ok(n.body.includes('74%') && n.body.includes('4号艇 まくり') && n.body.includes('約9分'));
-  assert.equal(W.wildNotificationFor(row({ tier: 'a' }), dl - 9 * 60000).priority, 3);
-  assert.ok(W.wildNotificationFor(row({ tier: 'a' }), dl - 9 * 60000).title.includes('候補'));
-  assert.equal(W.wildNotificationFor(row({ tier: 'none' }), dl - 9 * 60000), null);
+  assert.ok(n.title.includes('WILD ランクS') && n.title.includes('丸亀3R') && n.title.includes('12:30')); assert.ok(n.body.includes('74%') && n.body.includes('4号艇 まくり') && n.body.includes('約9分'));
+  assert.equal(W.wildNotificationFor(row({ tier: 'a', rank: 'A' }), dl - 9 * 60000).priority, 3);
+  assert.ok(W.wildNotificationFor(row({ tier: 'a', rank: 'A' }), dl - 9 * 60000).title.includes('ランクA'));
+  assert.equal(W.wildNotificationFor(row({ tier: 'none', rank: null }), dl - 9 * 60000), null);
   assert.equal(W.wildNotificationFor(row(), dl - 179 * 1000), null);     // 3分を切った
   assert.ok(W.wildNotificationFor(row(), dl - 181 * 1000));               // ちょうど3分超
   assert.equal(W.wildNotificationFor(row(), dl + 1000), null);            // 締切後

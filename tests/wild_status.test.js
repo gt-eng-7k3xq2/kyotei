@@ -10,7 +10,7 @@ const { toPublicStatus } = require('../scripts/lib/engine_status');
 let pass = 0, fail = 0; const t = (n, f) => { try { f(); pass++; console.log('PASS  ' + n); } catch (e) { fail++; console.log('FAIL  ' + n + ': ' + e.message.split('\n')[0]); } };
 const date = '2026-09-26';
 const at = (hhmm) => W.deadlineMs(date, hhmm);   // 指定した JST 時刻(ミリ秒)
-const card = (venue, race, deadline, tier, ok = true) => W.writeJsonAtomic(W.cardFile(date, venue, race), ok ? { ok: true, venue, race, deadline, card: { overview: { upset: 0.7 }, scenarios: [{ winner: 2, tech: '差し', scenarioPct: 15 }], entry: { tier } } } : { ok: false, error: 'x' });
+const card = (venue, race, deadline, tier, ok = true) => W.writeJsonAtomic(W.cardFile(date, venue, race), ok ? { ok: true, venue, race, deadline, card: { overview: { upset: 0.7 }, scenarios: [{ winner: 2, tech: '差し', scenarioPct: 15 }], entry: { tier, rank: tier === 'strong' ? 'S' : tier === 'a' ? 'A' : null } } } : { ok: false, error: 'x' });
 card('丸亀', 3, '13:00', 'strong'); card('多摩川', 3, '13:10', 'a'); card('津', 6, '13:20', 'none'); card('尼崎', 2, '12:00', 'a');
 const rowsOf = () => ['丸亀', '多摩川', '津', '尼崎'].map(v => { const c = W.readJson(W.cardFile(date, v, { 丸亀: 3, 多摩川: 3, 津: 6, 尼崎: 2 }[v]), null); return W.indexRow({ venue: c.venue, race: c.race, deadline: c.deadline, card: c.card, capturedAt: 'x' }); });
 const writeIndex = (iso) => W.writeJsonAtomic(W.indexFile(date), { date, generatedAt: iso, races: rowsOf() });
@@ -21,7 +21,7 @@ t('正常: 裏方が動いていて、カード・目安・状態が出る', () 
   W.writeJsonAtomic(W.notifiedFile(date), { '丸亀_3': { at: 'x' } });
   const w = computeWildStatus(NOW);
   assert.equal(w.inHours, true); assert.ok(w.indexAgeMin <= 1);
-  assert.deepEqual(w.cards.byTier, { strong: 1, a: 2, none: 1 }); assert.equal(w.cards.total, 4); assert.equal(w.cards.failed, 0);
+  assert.deepEqual(w.cards.byTier, { S: 1, A: 2, B: 0, none: 1 }); assert.equal(w.cards.total, 4); assert.equal(w.cards.failed, 0);
   const st = Object.fromEntries(w.entryRaces.map(r => [r.venue + r.race, r.state]));
   assert.equal(st['丸亀3'], 'notified'); assert.equal(st['多摩川3'], 'new'); assert.equal(st['尼崎2'], 'closed');   // 尼崎は12:00締切→締切済み
   assert.equal(w.notifiedCount, 1); assert.deepEqual(w.alerts, []);

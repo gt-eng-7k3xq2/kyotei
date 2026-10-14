@@ -131,6 +131,8 @@ CodexをClaude以外の発想源として正式に組み込む仕組み。全体
 ## 回収率の基準(2026-10-07、CEO承認)
 
 CEOは実際には舟券を買っていない。回収率は、予想屋としてのシステム上の仮想の数字であり、SNSで金額・回収率はまだ公開していない(内部確認用。将来は公開もあり得る)。
+- **【2026-10-14夜、CEO指示「やっぱ元通りに直す。買い目13点に」】点数の可変(8〜12点)と6号艇2/3着除外は止め、AIおすすめは従来の13点に戻した(スイッチ: race_card.py の PLAN_VARIABLE / wild_template.html の PLAN_VARIABLE を true にすれば再び有効)。理由: 過去データで回収率が変わらなかった。ランクS/A/Bの表示・通知・成績集計は残している。以下の可変点数の記述は、スイッチを入れたときの規則。**
+- **【2026-10-14、CEO指示】AIおすすめの点数は8〜12点の可変(確率順の先頭から、合成オッズ3.5倍以上になる最小の点数、8点未満にしない、届かなければ12点。あわせて6号艇が2着・3着に入る出目を外す〔頭の6号艇は残す〕)。10/15以降のカードから。10/1〜10/14は13点。以下の「13点」は10/14までの基準で、以降は可変点数(合計3,000円の平買いは同じ)。13点の並びは各カードの `aiPick.lines13` に残してあり、前向き検証スクリプトはそれを使う。実装: `scripts/wild/race_card.py` の `variable_k` と `wild_template.html` の `variableK`(同じ値にすること、`tests/wild_variable_points.test.js`で一致確認)。**
 - **公式基準(エンジンWILD)**: 目安(強・候補)が出たレースを**全件**、AIおすすめの13点・合計3,000円の**平買い**(全点均等・100円単位。WILD画面と同じ`allocateFlat`。2026-09-30、CEO判断でWILDだけ均等回収配分から変更)で買ったと仮定した成績。選び方・後出し・保存漏れに左右されない。実装: `scripts/lib/wild_tier_perf.js`。買い目が13点になった10/1以降のみ(4点期間とは比べない)。
 - **補助の記録**: WILD台帳・gtoolsは「公開した予想の記録」。保存していないものがあるため、出した予想の全体ではない。公式の成績には使わない。表示は「予想の記録」(「購入」「実際に買った」とは書かない)。
 - **WILD画面の正は`garon_wild.html`(2026-10-07以降は`scripts/wild/wild_template.html`と一致させてある)。** 以前はファイルへ直接修正が重ねられ、ひな型が古いまま残っていたため、ひな型から再生成すると機能が消える事故が起きた(2026-10-07)。修正はひな型へ入れて`node scripts/wild/build_wild_html.js`で再生成すること。
@@ -184,6 +186,8 @@ CEOは実際には舟券を買っていない。回収率は、予想屋とし�
 - **回帰テスト**: `node tests/score_engine.regression.test.js` — sg_narutou.htmlから`calcAreScore`/`calcAreIndex`/`judgeMode`/`buildBetsProbabilistic`等を直接抜き出して実行し、実際のレースデータ(三国9R・平和島12R、`tests/fixtures/`)に対する出力を`tests/golden/`のゴールデン値と比較する。ロジックを意図的に変更した後は`--update-golden`でゴールデン値を更新すること。`parseData()`はテスト対象外(理由はテストファイル冒頭のコメント参照)。
 
 ## データ収集(scripts/)
+
+**配当抽出のブックマークレット(CEOが手動で使う、2026-10-14記録)**: [PAYOUT_EXTRACT_BM.txt](PAYOUT_EXTRACT_BM.txt)(元の1行。読みやすく復号した版は[scripts/bm/payout_extract_bm.decoded.js](scripts/bm/payout_extract_bm.decoded.js))。公式サイト(boatrace.jp)の**払戻金一覧ページ**(`/owpc/pc/race/pay?hd=YYYYMMDD`)でCEOが実行すると、ページ内の表から全場・全Rの3連単の組番と払戻を読み取り、`[{v:会場,r:'7R',c:'1-2-3',p:'¥1,680',d:'2026-10-14'}]`のJSONをクリップボードへコピーする(外部通信なし、DOMを読むだけ)。コピーしたJSONを**gtools.htmlの配当貼り付け欄(`#pay-paste`)**へ貼ると、ログの配当が反映される。自動化(夜間バックフィル `backfill_official_results.js`・払戻金一覧の自動取得 `fetch_daily_payouts.js`)とは別系統で、**CEOの手動の補助手段**。配当・払戻の話が出たら、まずこのBMとgtoolsの貼り付け欄の流れを前提に考える(CEOに何度も説明させない)。
 
 `scripts/collect_playwright.js` — kyoteibiyori.comのBMデータを半自動収集するPlaywrightスクリプト。元は`garon_multiwin_full_auto.txt`というブックマークレット(iPhone Safari用)で、そのDOM操作ロジックを移植したもの。完全無人のスケジュール実行ではなく、ターミナルからコマンドを1つ叩いて実行する運用。
 

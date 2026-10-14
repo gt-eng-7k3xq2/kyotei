@@ -16,7 +16,7 @@ fs.writeFileSync(stub, `const n=require(${JSON.stringify(path.join(__dirname, '.
 n.sendNtfyNotification=async(topic,o)=>{ if(fs.existsSync(${JSON.stringify(failFlag)})) throw new Error('offline'); fs.appendFileSync(${JSON.stringify(sentLog)},JSON.stringify({topic:!!topic,title:o.title,body:o.body,priority:o.priority,click:o.click||null})+'\\n'); return true; };`);
 function jstHHMM(offsetMin) { const d = new Date(Date.now() + 9 * 3600e3 + offsetMin * 60e3); return String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0'); }
 function putCard(sm, tier, deadline) {
-  const card = JSON.parse(JSON.stringify(sm.card)); card.entry = Object.assign({}, card.entry, { tier });
+  const card = JSON.parse(JSON.stringify(sm.card)); card.entry = Object.assign({}, card.entry, { tier, rank: tier === 'strong' ? 'S' : tier === 'a' ? 'A' : null });
   W.writeJsonAtomic(W.cardFile(date, sm.venue, sm.race), { ok: true, rawTs: 9e15, venue: sm.venue, race: sm.race, deadline, card });
 }
 function scan() { return spawnSync(process.execPath, ['--require', stub, path.join(__dirname, '..', 'scripts', 'wild_scan.js')], { env: process.env, encoding: 'utf8' }); }
@@ -29,10 +29,10 @@ putCard(b, 'a', jstHHMM(12));          // 12分後、候補 → 送る
 putCard(c, 'none', jstHHMM(9));        // 対象外 → 送らない
 putCard(d, 'strong', jstHHMM(2));      // 2分後(3分を切っている) → 送らない
 
-t('強・候補だけ通知する(対象外・締切3分前を切ったものは送らない)', () => {
+t('ランクS・A・Bだけ通知する(対象外・締切3分前を切ったものは送らない)', () => {
   const r = scan(); assert.equal(r.status, 0, r.stderr);
   const s = sent(); assert.equal(s.length, 2, JSON.stringify(s.map(x => x.title)));
-  const strong = s.find(x => x.title.includes('WILD 強')), cand = s.find(x => x.title.includes('WILD 候補'));
+  const strong = s.find(x => x.title.includes('WILD ランクS')), cand = s.find(x => x.title.includes('WILD ランクA'));
   assert.ok(strong && strong.title.includes(a.venue + a.race + 'R') && strong.priority === 4);
   assert.ok(cand && cand.title.includes(b.venue + b.race + 'R') && cand.priority === 3);
   assert.ok(s.every(x => x.topic === true));

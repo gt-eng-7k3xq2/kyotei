@@ -47,7 +47,7 @@ fs.writeFileSync(stub, [
   `const cf = require(${q(path.join(__dirname, '..', 'scripts', 'lib', 'config.js'))}); const o = cf.loadConfig; cf.loadConfig = () => Object.assign({}, o(), { NTFY_TOPIC: 'test-topic', RACE_OPS_PUBLIC_BASE_URL: '' });`,
 ].join(String.fromCharCode(10)));
 function jstHHMM(m) { const d = new Date(Date.now() + 9 * 3600e3 + m * 60e3); return String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0'); }
-function putCard(sm, tier, dl) { const card = JSON.parse(JSON.stringify(sm.card)); card.entry = Object.assign({}, card.entry, { tier }); W.writeJsonAtomic(W.cardFile(date, sm.venue, sm.race), { ok: true, rawTs: 9e15, venue: sm.venue, race: sm.race, deadline: dl, card }); }
+function putCard(sm, tier, dl) { const card = JSON.parse(JSON.stringify(sm.card)); card.entry = Object.assign({}, card.entry, { tier, rank: tier === 'strong' ? 'S' : tier === 'a' ? 'A' : null }); W.writeJsonAtomic(W.cardFile(date, sm.venue, sm.race), { ok: true, rawTs: 9e15, venue: sm.venue, race: sm.race, deadline: dl, card }); }
 const scan = (extraEnv) => spawnSync(process.execPath, ['--require', stub, path.join(__dirname, '..', 'scripts', 'wild_scan.js')], { env: Object.assign({}, process.env, extraEnv || {}), encoding: 'utf8' });
 const lines = (f) => (fs.existsSync(f) ? fs.readFileSync(f, 'utf8').split(String.fromCharCode(10)).filter(Boolean).map((x) => JSON.parse(x)) : []);
 const sents = () => lines(sentLog), callLog = () => lines(calls);
