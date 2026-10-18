@@ -196,6 +196,19 @@ function hashTree(root) { const out = []; (function w(p) { if (!fs.existsSync(p)
     check('記録係は、既存の生データを書き換えない', h1 === sha(fs.readFileSync(raw1)));
   }
 
+  // 2026-10-18追加: 規則を v1→v2 に切り替えても、1期目の鎖が「壊れている」と誤判定されないこと。未知の先頭や、書き換えは、従来どおり拒否すること。
+  {
+    const core2 = require('../scripts/lib/peak_slot_core.js'); const dir = path.join(TMP, 'chain_v1_to_v2'); fs.mkdirSync(dir, { recursive: true });
+    const r1 = core2.loadRules(path.join(__dirname, '..', 'scripts', 'peak_slot', 'rules_v1.json')), r2 = core2.loadRules(path.join(__dirname, '..', 'scripts', 'peak_slot', 'rules_v2.json'));
+    core2.appendEntry(dir, '2026-09-26', { raceId: 'X|桐生|1', rulesHash: r1.rulesHash }, r1.rulesHash);
+    core2.appendEntry(dir, '2026-10-18', { raceId: 'X|桐生|2', rulesHash: r2.rulesHash }, r2.rulesHash);
+    check('規則v1→v2に切り替えても、鎖の検証が通る(現在の規則はv2で呼ぶ)', core2.verifyChain(dir, r2.rulesHash).ok === true && core2.verifyChain(dir, r2.rulesHash).count === 2);
+    const f = path.join(dir, 'ledger_2026-09-26.jsonl'); const orig = fs.readFileSync(f, 'utf8'); fs.writeFileSync(f, orig.replace('桐生', '住之江'));
+    check('書き換えは、規則を切り替えた後も、検出される', core2.verifyChain(dir, r2.rulesHash).ok === false); fs.writeFileSync(f, orig);
+    const bad = JSON.parse(orig.trim()); bad.prevHash = 'GENESIS:' + 'f'.repeat(64); fs.writeFileSync(f, JSON.stringify(bad) + '\n');
+    check('未知の規則の印から始まる鎖は、拒否される', core2.verifyChain(dir, r2.rulesHash).ok === false); fs.writeFileSync(f, orig);
+  }
+
   fs.rmSync(TMP, { recursive: true, force: true });
   console.log(`\n=== 結果: PASS=${pass} FAIL=${fail} ===`);
   process.exit(fail ? 1 : 0);
