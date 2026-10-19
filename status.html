@@ -155,12 +155,12 @@ function wildTierPerf(t){
 function renderPeakX(p,w){
   w=w||{};const xp=w.xPerf||{},xa=xp.all||{},xt=xp.today||{};
   const pct1=v=>v==null?'—':(v*100).toFixed(1)+'%';
-  let h=`<div class="card"><div class="ct">通知X(WILDエンジン・100倍以上の12点)</div>
+  let h=`<div class="card"><div class="ct">通知X(WILDエンジン・80倍以上の12点)</div>
     <div class="g3">${stat((w.xNotified||0)+'本','今日の通知(目安約3本・上限6)')}${stat(w.xCardsToday==null?'—':w.xCardsToday,'今日の該当レース')}${stat(xt.n!=null?(xt.hit||0)+'/'+xt.n:'—','今日の的中(結果確定分)')}</div>
     <div class="g3" style="margin-top:8px">${stat(xa.n||0,'該当(結果確定の累計)')}${stat(xa.n?pct1(xa.hitRate):'—','的中率')}${stat(xa.avgHitMult!=null?Math.round(xa.avgHitMult)+'倍':'—','平均的中配当')}</div>
     ${row('仮想の回収率(確定分)',xa.n?`${pct1(xa.roi)}<span class="mu">(n=${xa.n}${xa.n<30?'、少ないので参考外':''})</span>`:'—')}
     ${row('100倍以上の的中',xa.n?(xa.big100||0)+'本':'—')}
-    <div class="note" style="margin-top:8px">基準: オッズ100倍以上の出目を、エンジンの確率順に12点。12点の確率の合計が約15%以上のレースだけ通知します(ntfyの【X】)。過去の確定オッズでは、1日約3本・的中率約6%・平均的中配当約158倍・回収率約80%でした(件数が少ない間は、この表の数字は偶然で大きく動きます)。</div>`;
+    <div class="note" style="margin-top:8px">基準: オッズ80倍以上の出目を、エンジンの確率順に12点。12点の確率の合計が約17.5%以上のレースだけ通知します(ntfyの【X】)。過去の確定オッズでは、1日約3本・的中率約7.6%・平均的中配当約127倍・回収率約81%でした(件数が少ない間は、この表の数字は偶然で大きく動きます)。</div>`;
   if(p){
     const alive=p.state==='ok'||p.state==='locked'?(p.hbAgeMin!=null&&p.hbAgeMin>=15?`<span class="dn">${p.hbAgeMin}分止まっています</span>`:'<span class="up">動いています</span>'):esc(p.state||'未開始');
     const m=p.mansyu||{};
