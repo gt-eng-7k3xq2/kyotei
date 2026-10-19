@@ -152,18 +152,25 @@ function wildTierPerf(t){
     <table><tr><th></th><th style="text-align:center">S</th><th style="text-align:center">A</th><th style="text-align:center">B</th><th style="text-align:center">合計</th></tr>${tr('全日',t,true)}${days}</table>
     <div class="note">基準: ランクS・A・Bが付いたレース<b>全件</b>を、AIおすすめの13点・合計3,000円の平買い(全点均等。WILD画面と同じ)で買ったと<b>仮定</b>した成績です。実際に買ったものではなく、選び方に左右されません。結果が出たレースだけ数えています${t.today&&t.today.pending?`(今日は結果待ち ${t.today.pending}件)`:''}。10/1以降(買い目が13点になってから)の${t.days}日分です。${(t.S&&t.S.n<30)?'ランクSは件数が少なく(30件未満)、まだ傾向とは言えません。':''}</div>${rec}</div>`;
 }
-function renderPeakX(p){
-  if(!p)return '';
-  const nx=p.notifyX||{},m=p.mansyu||{},tm=p.todayMansyu||{};
-  const alive=p.state==='ok'||p.state==='locked'?(p.hbAgeMin!=null&&p.hbAgeMin>=15?`<span class="dn">${p.hbAgeMin}分止まっています</span>`:'<span class="up">動いています</span>'):esc(p.state||'未開始');
-  let h=`<div class="card"><div class="ct">通知X ピーク枠(テスト運用+影の運用)</div>
-    <div class="g3">${stat((nx.today||0)+'本','今日の通知(目安約3本・上限'+(nx.cap||5)+')')}${stat(p.todayAdopted==null?'—':p.todayAdopted,'今日の影の記録(採用)')}${stat(p.todayRecorded==null?'—':p.todayRecorded,'今日の評価レース')}</div>
-    <div class="g3" style="margin-top:8px">${stat(p.adopted==null?'—':p.adopted,'影の記録 累計(採用)')}${stat(m.races?m.hits+'/'+m.races:'—','万舟級5点の的中')}${stat(m.races?(m.m100||0)+'本':'—','100倍以上の的中')}</div>
-    ${row('記録係',alive+(p.hbAgeMin!=null?`<span class="mu">(最終 ${p.hbAgeMin}分前)</span>`:''))}
-    ${row('2期目',p.dayIndex!=null?`${p.dayIndex}日目/${p.durationDays}日(集計は11/1)`:'—')}
-    ${row('今日の的中',tm.races!=null?`${tm.hits||0}/${tm.races}件(30倍以上 ${tm.m30||0}・100倍以上 ${tm.m100||0})`:'—')}
-    <div class="note" style="margin-top:8px">通知は、採用のうち基準(スコア ${nx.min||0.0838})以上だけをntfyの【X】で送ります。影の運用は全件を記録(規則は変えていません)。的中率は約6〜9%で、件数が少ない参考値です。回収率は載せません。</div></div>`;
-  return h;
+function renderPeakX(p,w){
+  w=w||{};const xp=w.xPerf||{},xa=xp.all||{},xt=xp.today||{};
+  const pct1=v=>v==null?'—':(v*100).toFixed(1)+'%';
+  let h=`<div class="card"><div class="ct">通知X(WILDエンジン・100倍以上の12点)</div>
+    <div class="g3">${stat((w.xNotified||0)+'本','今日の通知(目安約3本・上限6)')}${stat(w.xCardsToday==null?'—':w.xCardsToday,'今日の該当レース')}${stat(xt.n!=null?(xt.hit||0)+'/'+xt.n:'—','今日の的中(結果確定分)')}</div>
+    <div class="g3" style="margin-top:8px">${stat(xa.n||0,'該当(結果確定の累計)')}${stat(xa.n?pct1(xa.hitRate):'—','的中率')}${stat(xa.avgHitMult!=null?Math.round(xa.avgHitMult)+'倍':'—','平均的中配当')}</div>
+    ${row('仮想の回収率(確定分)',xa.n?`${pct1(xa.roi)}<span class="mu">(n=${xa.n}${xa.n<30?'、少ないので参考外':''})</span>`:'—')}
+    ${row('100倍以上の的中',xa.n?(xa.big100||0)+'本':'—')}
+    <div class="note" style="margin-top:8px">基準: オッズ100倍以上の出目を、エンジンの確率順に12点。12点の確率の合計が約15%以上のレースだけ通知します(ntfyの【X】)。過去の確定オッズでは、1日約3本・的中率約6%・平均的中配当約158倍・回収率約80%でした(件数が少ない間は、この表の数字は偶然で大きく動きます)。</div>`;
+  if(p){
+    const alive=p.state==='ok'||p.state==='locked'?(p.hbAgeMin!=null&&p.hbAgeMin>=15?`<span class="dn">${p.hbAgeMin}分止まっています</span>`:'<span class="up">動いています</span>'):esc(p.state||'未開始');
+    const m=p.mansyu||{};
+    h+=`<div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px"><div class="mu" style="font-size:11px;margin-bottom:4px">影の運用(ピーク枠・5点、通知はしない・記録のみ)</div>
+      ${row('記録係',alive+(p.hbAgeMin!=null?`<span class="mu">(最終 ${p.hbAgeMin}分前)</span>`:''))}
+      ${row('2期目',p.dayIndex!=null?`${p.dayIndex}日目/${p.durationDays}日(集計は11/1)`:'—')}
+      ${row('今日の記録',p.todayAdopted!=null?`採用 ${p.todayAdopted}件/評価 ${p.todayRecorded}件`:'—')}
+      ${row('累計',m.races?`採用 ${m.races}件・万舟級の的中 ${m.hits}・100倍以上 ${m.m100||0}本`:'—')}</div>`;
+  }
+  return h+'</div>';
 }
 function renderWild(w){
   if(!w)return '';
@@ -203,7 +210,7 @@ function render(s){
   if(live&&live.calibration&&live.calibration.length)h+=`<div class="card"><div class="ct">CALIBRATION 予測確率と実際</div>${calib(live.calibration)}</div>`;
   if(rep&&rep.totalConfirmed)h+=`<div class="card"><div class="ct">REPLAY 過去日の再現(参考)</div><div class="g3">${stat(rep.totalConfirmed,'レース')}${stat(pct(rep.all.hit10,0),'上位10点的中')}${stat(pct(rep.all.roi10,0),'回収(10点)')}</div>${levelTable(rep.byLevel)}<div class="note">過去日のデータを、その日時点の統計でエンジンに通し直した結果です(実運用ではありません)。</div></div>`;
   h+=renderWild(s.wild);
-  h+=renderPeakX(s.peakSlot);
+  h+=renderPeakX(s.peakSlot,s.wild);
   h+='<div class="card" id="disp-card"></div>';
   h+=`<div class="card"><div class="ct">TASKS 自動処理</div>${taskTable(s.tasks)}</div>`;
   h+='<div class="note" style="text-align:center">回収率はどの買い方でも控除率(約25%)の壁があり、平均で75〜80%が上限の目安です。<br>このページは自動更新されます(60秒ごと)</div>';
