@@ -16,12 +16,12 @@ ok(variableK(cases[2]) === 12, '合成が届かなければ12点(上限12点)');
 ok(variableK(cases[5]) === 6, '候補が6点しか無ければ6点');
 const code = [grab(/const PLAN_POINTS[^\n]*\n/), src, grab(/function hasExcluded[^\n]*\n/), grab(/function autoPlan[\s\S]*?return \{ attacker, blocks \};\s*\}/), grab(/function syntheticOdds[^\n]*\n/), grab(/function mergeBlocks[\s\S]*?return out;\s*\}/), grab(/const SAMPLES = [^\n]*\n/)].join('\n');
 const F = new Function(code + ';return {autoPlan,mergeBlocks,syntheticOdds,SAMPLES};')();
-// 2026-10-14夜: CEO指示で13点に戻した(PLAN_VARIABLE=false)。おまかせ案は13点・6号艇の2/3着も除外しない。可変の規則(variableK)は残してあり、スイッチを true にすれば8〜12点に戻せる。
+// 2026-10-14夜: CEO指示で13点に戻した(PLAN_VARIABLE=false)。おまかせ案は12点(2026-10-18、13点から変更)・6号艇の2/3着も除外しない。可変の規則(variableK)は残してあり、スイッチを true にすれば8〜12点に戻せる。
 ok(/const PLAN_VARIABLE = false;/.test(html), '画面: 点数の可変は止めてある(13点)');
 ok(/PLAN_VARIABLE = False/.test(fs.readFileSync(path.join(__dirname, '..', 'scripts', 'wild', 'race_card.py'), 'utf8')), 'サーバー: 点数の可変は止めてある(13点)');
 F.SAMPLES.forEach(s => {
   const cs = F.mergeBlocks(F.autoPlan(s.card, null, []).blocks);
-  ok(cs.length === 13, `${s.venue}${s.race}R: ${cs.length}点(13点)`);
+  ok(cs.length === 12, `${s.venue}${s.race}R: ${cs.length}点(12点)`);
 });
 // 安定枠(2026-10-14): 三連単8点(確率順、1号艇頭も含む)。画面の関数で、実カード(サンプル)から8点・合成オッズ・p8が作れること
 const codeS = [grab(/const STABLE_BANDS[^\n]*\n/), grab(/function syntheticOdds[^\n]*\n/), grab(/function stablePlan[\s\S]*?\r?\n\}\r?\n/), grab(/const SAMPLES = [^\n]*\n/)].join('\n');
