@@ -18,19 +18,20 @@ const NOW = at('12:30');
 
 t('正常: 裏方が動いていて、カード・目安・状態が出る', () => {
   writeIndex(new Date(NOW - 30000).toISOString());
-  W.writeJsonAtomic(W.notifiedFile(date), { '丸亀_3': { at: 'x' } });
+  W.writeJsonAtomic(W.notifiedFile(date), { '丸亀_3': { at: 'x' }, '尼崎_2': { at: 'x' } });   // 2026-10-21(CEO指示): 通知が来たものだけ一覧に出す
   const w = computeWildStatus(NOW);
   assert.equal(w.inHours, true); assert.ok(w.indexAgeMin <= 1);
   assert.deepEqual(w.cards.byTier, { S: 1, A: 2, B: 0, none: 1 }); assert.equal(w.cards.total, 4); assert.equal(w.cards.failed, 0);
   const st = Object.fromEntries(w.entryRaces.map(r => [r.venue + r.race, r.state]));
-  assert.equal(st['丸亀3'], 'notified'); assert.equal(st['多摩川3'], 'new'); assert.equal(st['尼崎2'], 'closed');   // 尼崎は12:00締切→締切済み
-  assert.equal(w.notifiedCount, 1); assert.deepEqual(w.alerts, []);
+  assert.equal(st['丸亀3'], 'notified'); assert.ok(!('多摩川3' in st), '通知が来ていない目安は一覧に出さない'); assert.equal(st['尼崎2'], 'closed');   // 尼崎は12:00締切→締切済み
+  assert.equal(w.notifiedCount, 2); assert.deepEqual(w.alerts, []);
   assert.ok(!('津3' in st) && !('津6' in st), '対象外は一覧に出さない');
 });
 t('記録・見送り・結果待ちの件数と、レースごとの状態(購入/見送り)', () => {
   const base = { mode: 'live', raceDate: date, deadline: '13:00', entryTier: 'strong', receivedAt: new Date(NOW).toISOString() };
   W.appendLedger(Object.assign({}, base, { action: 'bet', venue: '丸亀', raceNo: 3, race: '丸亀3R', lines: [{ combo: '2-1-3', amount: 3000, odds: 30 }], total: 3000, pointCount: 1 }));
   W.appendLedger(Object.assign({}, base, { action: 'pass', venue: '多摩川', raceNo: 3, race: '多摩川3R' }));
+  W.writeJsonAtomic(W.notifiedFile(date), Object.assign(W.readJson(W.notifiedFile(date), {}), { '多摩川_3': { at: 'x' } }));
   const w = computeWildStatus(NOW);
   assert.equal(w.ledger.todayBets, 1); assert.equal(w.ledger.todayPasses, 1); assert.equal(w.ledger.waitingResults, 1);
   const st = Object.fromEntries(w.entryRaces.map(r => [r.venue + r.race, r.state])); assert.equal(st['丸亀3'], 'bet'); assert.equal(st['多摩川3'], 'pass');

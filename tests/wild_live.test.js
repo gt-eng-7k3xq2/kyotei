@@ -125,9 +125,9 @@ t('ntfy通知の判定: ランクS・A・Bだけ、締切3分前までなら送�
   const row = (o) => Object.assign({ date: '2026-09-26', venue: '丸亀', race: 3, deadline: '12:30', upset: 0.744, tier: 'strong', rank: 'S', top: { winner: 4, tech: 'まくり', scenarioPct: 21.3 } }, o);
   const n = W.wildNotificationFor(row(), dl - 9 * 60000);
   assert.ok(n); assert.equal(n.key, '丸亀_3'); assert.equal(n.priority, 4);
-  assert.ok(n.title.includes('WILD ランクS') && n.title.includes('丸亀3R') && n.title.includes('12:30')); assert.ok(n.body.includes('74%') && n.body.includes('4号艇 まくり') && n.body.includes('約9分'));
+  assert.ok(n.title.includes('WILD S') && n.title.includes('丸亀3R') && n.title.includes('12:30')); assert.ok(n.body.includes('74%') && n.body.includes('4号艇 まくり') && n.body.includes('約9分'));
   assert.equal(W.wildNotificationFor(row({ tier: 'a', rank: 'A' }), dl - 9 * 60000).priority, 3);
-  assert.ok(W.wildNotificationFor(row({ tier: 'a', rank: 'A' }), dl - 9 * 60000).title.includes('ランクA'));
+  assert.ok(W.wildNotificationFor(row({ tier: 'a', rank: 'A' }), dl - 9 * 60000).title.includes('WILD A'));
   assert.equal(W.wildNotificationFor(row({ tier: 'none', rank: null }), dl - 9 * 60000), null);
   assert.equal(W.wildNotificationFor(row(), dl - 179 * 1000), null);     // 3分を切った
   assert.ok(W.wildNotificationFor(row(), dl - 181 * 1000));               // ちょうど3分超

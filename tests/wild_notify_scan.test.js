@@ -32,7 +32,7 @@ putCard(d, 'strong', jstHHMM(2));      // 2分後(3分を切っている) → �
 t('ランクS・A・Bだけ通知する(対象外・締切3分前を切ったものは送らない)', () => {
   const r = scan(); assert.equal(r.status, 0, r.stderr);
   const s = sent(); assert.equal(s.length, 2, JSON.stringify(s.map(x => x.title)));
-  const strong = s.find(x => x.title.includes('WILD ランクS')), cand = s.find(x => x.title.includes('WILD ランクA'));
+  const strong = s.find(x => x.title.includes('WILD S')), cand = s.find(x => x.title.includes('WILD A'));
   assert.ok(strong && strong.title.includes(a.venue + a.race + 'R') && strong.priority === 4);
   assert.ok(cand && cand.title.includes(b.venue + b.race + 'R') && cand.priority === 3);
   assert.ok(s.every(x => x.topic === true));
@@ -55,27 +55,27 @@ t('環境変数で通知を止められる(GARON_WILD_NOTIFY=0)', () => {
   const r = spawnSync(process.execPath, ['--require', stub, path.join(__dirname, '..', 'scripts', 'wild_scan.js')], { env: Object.assign({}, process.env, { GARON_WILD_NOTIFY: '0' }), encoding: 'utf8' });
   assert.equal(r.status, 0); assert.equal(sent().length, 3);
 });
-// ---- 通知X(2026-10-19): ランクとは別に、card.entry.x が立ったレースを【X】で通知する(12点、1日の上限あり、締切3分前を切ったら送らない) ----
+// ---- 通知X(2026-10-19): ランクとは別に、card.entry.x が立ったレースを【WILD X】で通知する(12点、1日の上限あり、締切3分前を切ったら送らない) ----
 function putCardX(sm, deadline, on) {
   const card = JSON.parse(JSON.stringify(sm.card)); card.entry = Object.assign({}, card.entry, { tier: 'none', rank: null, x: on, xP12: 0.16 });
   card.aiPick = Object.assign({}, card.aiPick, { xLines: Array.from({ length: 12 }, (_, i) => ({ combo: '2-3-' + (4 + (i % 3)), odds: 101 + i, enginePct: 1.3 })) });
   W.writeJsonAtomic(W.cardFile(date, sm.venue, sm.race), { ok: true, rawTs: 9e15, venue: sm.venue, race: sm.race, deadline, card });
 }
-t('通知X: 基準以上(x)のレースを【X】で1回だけ通知する(12点の買い目つき・音あり)', () => {
+t('通知X: 基準以上(x)のレースを【WILD X】で1回だけ通知する(ランクS・A・Bと同じ文言)', () => {
   const before = sent().length; putCardX(samples[3], jstHHMM(9), true);
   const r = scan(); assert.equal(r.status, 0, r.stderr);
-  const xs = sent().filter(x => x.title.includes('【X】')); assert.equal(xs.length, 1, JSON.stringify(sent().map(x => x.title)));
+  const xs = sent().filter(x => x.title.includes('【WILD X】')); assert.equal(xs.length, 1, JSON.stringify(sent().map(x => x.title)));
   assert.ok(xs[0].title.includes(samples[3].venue + samples[3].race + 'R') && xs[0].priority === 3);
   assert.equal(sent().length, before + 1);
-  scan(); assert.equal(sent().filter(x => x.title.includes('【X】')).length, 1, '2回目は再送しない');
+  scan(); assert.equal(sent().filter(x => x.title.includes('【WILD X】')).length, 1, '2回目は再送しない');
   assert.ok(W.readJson(W.notifiedFile(date), {})['X_' + samples[3].venue + '_' + samples[3].race], '通知済みの記録(X_キー)');
 });
-t('通知X: xが立っていない・締切3分前を切った・上限に達した場合は送らない', () => {
-  const n0 = sent().filter(x => x.title.includes('【X】')).length;
-  putCardX(samples[2], jstHHMM(9), false); scan(); assert.equal(sent().filter(x => x.title.includes('【X】')).length, n0, 'xなしは送らない');
-  putCardX(samples[2], jstHHMM(2), true); scan(); assert.equal(sent().filter(x => x.title.includes('【X】')).length, n0, '締切3分前を切ったら送らない');
-  const nf = W.readJson(W.notifiedFile(date), {}); for (let i = 0; i < W.X_DAILY_CAP; i++) nf['X_dummy_' + i] = { at: 'x' }; W.writeJsonAtomic(W.notifiedFile(date), nf);
-  putCardX(samples[2], jstHHMM(9), true); scan(); assert.equal(sent().filter(x => x.title.includes('【X】')).length, n0, '上限(' + W.X_DAILY_CAP + '本)に達したら送らない');
+t('通知X: xが立っていない・締切3分前を切った場合は送らない(1日の上限は無し)', () => {
+  const n0 = sent().filter(x => x.title.includes('【WILD X】')).length;
+  putCardX(samples[2], jstHHMM(9), false); scan(); assert.equal(sent().filter(x => x.title.includes('【WILD X】')).length, n0, 'xなしは送らない');
+  putCardX(samples[2], jstHHMM(2), true); scan(); assert.equal(sent().filter(x => x.title.includes('【WILD X】')).length, n0, '締切3分前を切ったら送らない');
+  const nf = W.readJson(W.notifiedFile(date), {}); for (let i = 0; i < 12; i++) nf['X_dummy_' + i] = { at: 'x' }; W.writeJsonAtomic(W.notifiedFile(date), nf);
+  putCardX(samples[2], jstHHMM(9), true); scan(); assert.equal(sent().filter(x => x.title.includes('【WILD X】')).length, n0 + 1, '1日の上限は無い: 通知済みが12本あっても、条件に当てはまれば送る');
 });
 t('本番の logs/wild には書き込んでいない', () => { assert.ok(W.WILD_DIR.startsWith(tmp)); });
 
