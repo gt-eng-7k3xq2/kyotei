@@ -133,7 +133,7 @@ function taskTable(tasks){
 }
 
 
-const TIER_JP={S:'ランクS',A:'ランクA',B:'ランクB',M:'M 中配当',X:'X 大型'};const STATE_JP={new:'これから',notified:'通知済み',bet:'予想を記録',pass:'見送り済み',closed:'締切済み'};
+const TIER_JP={S:'ランクS',A:'ランクA',B:'ランクB',M:'M 中配当',X:'通知X'};const STATE_JP={new:'これから',notified:'通知済み',bet:'予想を記録',pass:'見送り済み',closed:'締切済み'};
 function wildTierPerf(t,xp,mp){
   if(!t||!t.all||!t.all.n)return '';
   xp=xp||{};mp=mp||{};const xd={},md={};(xp.daily||[]).forEach(d=>{xd[d.date]=d});(mp.daily||[]).forEach(d=>{md[d.date]=d});
@@ -150,7 +150,7 @@ function wildTierPerf(t,xp,mp){
     ${s2.n?`<tr><td>同じレースのAI推奨(仮想)</td><td style="text-align:center">${s2.ai.n}</td><td style="text-align:center">${s2.ai.hit}</td><td style="text-align:center"><b>${P(s2.ai.roi)}</b></td></tr>`:''}</table>
     <div class="note">台帳は、保存していない予想があるため、出した予想の全体ではありません。補助の記録として見てください。</div>`;}
   return `<div style="margin-top:12px"><div class="ct" style="margin-bottom:4px">S・A・B・M・X を全件買っていたら(仮想・基準の成績)</div>
-    <div class="mu" style="font-size:12px;margin-bottom:6px">大きい数字=回収率、小さい数字=的中数/件数。計=S・A・Bの合計。M(10/21〜)・Xは12点・各点100円</div>
+    <div class="mu" style="font-size:12px;margin-bottom:6px">大きい数字=回収率、小さい数字=的中数/件数。計=S・A・Bの合計。M・通知Xは、通知が来たレースだけ(12点・各点100円)</div>
     <table><tr><th></th><th style="text-align:center">S</th><th style="text-align:center">A</th><th style="text-align:center">B</th><th style="text-align:center;border-left:1px solid var(--line)">計</th><th style="text-align:center;border-left:1px solid var(--line)">X</th><th style="text-align:center">M</th></tr>${tr('全日',t,true,xp.all,mp.all)}${days}</table>
     <div class="note">基準: ランクS・A・Bが付いたレース<b>全件</b>を、AIおすすめで買ったと<b>仮定</b>した成績です(10/20まではAIおすすめの12〜13点・合計約3,000円の平買い、<b>10/21以降は全点100円</b>〔12点=1,200円〕。回収率は払戻合計÷投資合計なので、混ざっても計算できます)。実際に買ったものではなく、選び方に左右されません。結果が出たレースだけ数えています${t.today&&t.today.pending?`(今日は結果待ち ${t.today.pending}件)`:''}。10/1以降(買い目が13点になってから)の${t.days}日分です。${(t.S&&t.S.n<30)?'ランクSは件数が少なく(30件未満)、まだ傾向とは言えません。':''}</div>${rec}</div>`;
 }
@@ -158,17 +158,19 @@ function wildTierPerf(t,xp,mp){
 function renderWildSummary(w){
   if(!w)return '';
   const pct=v=>v==null?'—':Math.round(v*100)+'%';
+  // 今日の的中/結果は、通知が来たレース(下の『目安が出たレース』表と同じ)だけで数える
+  const er=w.entryRaces||[],td=(cat)=>{let h=0,n=0;er.forEach(r=>{if(cat(r.tier)&&r.result&&(r.result.state==='hit'||r.result.state==='miss')){n++;if(r.result.state==='hit')h++}});return {hit:h,n}};
   const rows=[
-    ['S・A・B',w.notifiedCount||0,'約13',(w.tierPerf||{}).today&&(w.tierPerf.today.all||{}),(w.tierPerf||{}).all],
-    ['M 中配当',w.mNotified||0,'約14',(w.mPerf||{}).today,(w.mPerf||{}).all],
-    ['X 大型',w.xNotified||0,'約3',(w.xPerf||{}).today,(w.xPerf||{}).all],
+    ['S・A・B',w.notifiedCount||0,'約13',td(t=>t==='S'||t==='A'||t==='B'),(w.tierPerf||{}).all],
+    ['M 中配当',w.mNotified||0,'約14',td(t=>t==='M'),(w.mPerf||{}).all],
+    ['通知X',w.xNotified||0,'約3',td(t=>t==='X'),(w.xPerf||{}).all],
   ];
   const tot=rows.reduce((a,r)=>a+r[1],0);
   const tr=r=>{const t=r[3]||{},a=r[4]||{};return `<tr><td><b>${r[0]}</b></td><td style="text-align:center"><b>${r[1]}</b>本</td><td style="text-align:center" class="mu">${r[2]}</td><td style="text-align:center">${t.n!=null?(t.hit||0)+'/'+t.n:'—'}</td><td style="text-align:center">${a.n?(a.n<30?`<span class="mu">${pct(a.roi)}</span>`:pct(a.roi))+`<div class="mu" style="font-size:11px">n=${a.n}${a.n<30?'(参考外)':''}</div>`:'—'}</td></tr>`;};
   return `<div class="card"><div class="ct">今日の通知(WILD)</div>
     <table><tr><th></th><th style="text-align:center">今日</th><th style="text-align:center">1日の目安</th><th style="text-align:center">的中/結果</th><th style="text-align:center">累計回収</th></tr>${rows.map(tr).join('')}
     <tr><td><b>合計</b></td><td style="text-align:center"><b>${tot}</b>本</td><td style="text-align:center" class="mu">約30</td><td></td><td></td></tr></table>
-    <div class="note">的中/結果=今日、結果が出たレースのうち的中した数。累計回収=仮想(全件を12点で買ったと仮定。S・A・Bは10/1〜、M・Xは開始日以降)。件数が少ない間は、偶然で大きく動きます。</div></div>`;
+    <div class="note">的中/結果=今日、通知が来たレースのうち、結果が出たものの的中数。累計回収=仮想(12点・各点100円〔S・A・Bの10/20までは約3,000円〕で買ったと仮定。S・A・Bは10/1以降の該当全件、M・通知Xは通知が来たものだけ)。件数が少ない間は、偶然で大きく動きます。</div></div>`;
 }
 function renderM(w){
   w=w||{};const mp=w.mPerf||{},ma=mp.all||{},mt=mp.today||{};
