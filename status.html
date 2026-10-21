@@ -133,7 +133,7 @@ function taskTable(tasks){
 }
 
 
-const TIER_JP={S:'ランクS',A:'ランクA',B:'ランクB',M:'M 中配当'};const STATE_JP={new:'これから',notified:'通知済み',bet:'予想を記録',pass:'見送り済み',closed:'締切済み'};
+const TIER_JP={S:'ランクS',A:'ランクA',B:'ランクB',M:'M 中配当',X:'X 大型'};const STATE_JP={new:'これから',notified:'通知済み',bet:'予想を記録',pass:'見送り済み',closed:'締切済み'};
 function wildTierPerf(t,xp,mp){
   if(!t||!t.all||!t.all.n)return '';
   xp=xp||{};mp=mp||{};const xd={},md={};(xp.daily||[]).forEach(d=>{xd[d.date]=d});(mp.daily||[]).forEach(d=>{md[d.date]=d});
