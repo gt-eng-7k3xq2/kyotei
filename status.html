@@ -160,8 +160,8 @@ function renderWildSummary(w){
   const pct=v=>v==null?'—':Math.round(v*100)+'%';
   const rows=[
     ['S・A・B',w.notifiedCount||0,'約13',(w.tierPerf||{}).today&&(w.tierPerf.today.all||{}),(w.tierPerf||{}).all],
-    ['M 中配当',w.mNotified||0,'約14(上限'+(w.mCap||15)+')',(w.mPerf||{}).today,(w.mPerf||{}).all],
-    ['X 大型',w.xNotified||0,'約3(上限6)',(w.xPerf||{}).today,(w.xPerf||{}).all],
+    ['M 中配当',w.mNotified||0,'約14',(w.mPerf||{}).today,(w.mPerf||{}).all],
+    ['X 大型',w.xNotified||0,'約3',(w.xPerf||{}).today,(w.xPerf||{}).all],
   ];
   const tot=rows.reduce((a,r)=>a+r[1],0);
   const tr=r=>{const t=r[3]||{},a=r[4]||{};return `<tr><td><b>${r[0]}</b></td><td style="text-align:center"><b>${r[1]}</b>本</td><td style="text-align:center" class="mu">${r[2]}</td><td style="text-align:center">${t.n!=null?(t.hit||0)+'/'+t.n:'—'}</td><td style="text-align:center">${a.n?(a.n<30?`<span class="mu">${pct(a.roi)}</span>`:pct(a.roi))+`<div class="mu" style="font-size:11px">n=${a.n}${a.n<30?'(参考外)':''}</div>`:'—'}</td></tr>`;};
@@ -174,7 +174,7 @@ function renderM(w){
   w=w||{};const mp=w.mPerf||{},ma=mp.all||{},mt=mp.today||{};
   const pct1=v=>v==null?'—':(v*100).toFixed(1)+'%';
   return `<div class="card"><div class="ct">目安M(WILDエンジン・荒れ想定の中配当狙い)</div>
-    <div class="g3">${stat((w.mNotified||0)+'本','今日の通知(上限'+(w.mCap||15)+')')}${stat(w.mCardsToday==null?'—':w.mCardsToday,'今日の該当レース')}${stat(mt.n!=null?(mt.hit||0)+'/'+mt.n:'—','今日の的中(結果確定分)')}</div>
+    <div class="g3">${stat((w.mNotified||0)+'本','今日の通知(目安約14本)')}${stat(w.mCardsToday==null?'—':w.mCardsToday,'今日の該当レース')}${stat(mt.n!=null?(mt.hit||0)+'/'+mt.n:'—','今日の的中(結果確定分)')}</div>
     <div class="g3" style="margin-top:8px">${stat(ma.n||0,'該当(結果確定の累計)')}${stat(ma.n?pct1(ma.hitRate):'—','的中率')}${stat(ma.avgHitMult!=null?Math.round(ma.avgHitMult)+'倍':'—','平均的中配当')}</div>
     ${row('仮想の回収率(確定分)',ma.n?`${pct1(ma.roi)}<span class="mu">(n=${ma.n}${ma.n<30?'、少ないので参考外':''})</span>`:'—')}
     <div class="note" style="margin-top:8px">条件: 荒れ40%超・12点の合成3.5〜6倍・12点の確率合計15%以上(S・A・Bとは別枠、ntfyの【M】)。12点・各点100円で買ったと<b>仮定</b>した、${esc(mp.from||'2026-10-21')}以降の${mp.days||0}日分の成績です。目安は、的中約2割・当たれば約40倍台・回収約8割(参考値、100%には届いていません)。件数が少ない間は、偶然で大きく動きます。</div></div>`;
@@ -183,7 +183,7 @@ function renderPeakX(p,w){
   w=w||{};const xp=w.xPerf||{},xa=xp.all||{},xt=xp.today||{};
   const pct1=v=>v==null?'—':(v*100).toFixed(1)+'%';
   let h=`<div class="card"><div class="ct">通知X(WILDエンジン・80倍以上の12点)</div>
-    <div class="g3">${stat((w.xNotified||0)+'本','今日の通知(目安約3本・上限6)')}${stat(w.xCardsToday==null?'—':w.xCardsToday,'今日の該当レース')}${stat(xt.n!=null?(xt.hit||0)+'/'+xt.n:'—','今日の的中(結果確定分)')}</div>
+    <div class="g3">${stat((w.xNotified||0)+'本','今日の通知(目安約3本)')}${stat(w.xCardsToday==null?'—':w.xCardsToday,'今日の該当レース')}${stat(xt.n!=null?(xt.hit||0)+'/'+xt.n:'—','今日の的中(結果確定分)')}</div>
     <div class="g3" style="margin-top:8px">${stat(xa.n||0,'該当(結果確定の累計)')}${stat(xa.n?pct1(xa.hitRate):'—','的中率')}${stat(xa.avgHitMult!=null?Math.round(xa.avgHitMult)+'倍':'—','平均的中配当')}</div>
     ${row('仮想の回収率(確定分)',xa.n?`${pct1(xa.roi)}<span class="mu">(n=${xa.n}${xa.n<30?'、少ないので参考外':''})</span>`:'—')}
     ${row('100倍以上の的中',xa.n?(xa.big100||0)+'本':'—')}
