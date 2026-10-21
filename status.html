@@ -211,8 +211,8 @@ function renderWild(w){
     ${row('結果の取得',`確定 ${(w.results||{}).confirmed||0}件${(w.results||{}).manual?`(うち手入力 ${w.results.manual}件)`:''}`)}`;
   h+=wildTierPerf(w.tierPerf,w.xPerf,w.mPerf);
   if((w.entryRaces||[]).length){
-    h+='<div style="margin-top:10px"><table><tr><th>レース</th><th>締切</th><th>目安</th><th>状態</th></tr>'+
-      w.entryRaces.map(r=>`<tr><td>${esc(r.venue)}${r.race}R</td><td>${esc(r.deadline)}</td><td>${esc(TIER_JP[r.tier]||'')}</td><td>${esc(STATE_JP[r.state]||r.state)}</td></tr>`).join('')+'</table></div>';
+    h+='<div style="margin-top:10px"><table><tr><th>レース</th><th style="text-align:right">結果</th><th>目安</th><th>状態</th></tr>'+
+      w.entryRaces.map(r=>{const o=r.result;const res=o&&o.state==='hit'?`<b class="up">${o.mult}倍</b>`:o&&o.state==='miss'?'<b class="dn">✖</b>':`<span class="mu" title="締切 ${esc(r.deadline)}">—</span>`;return `<tr><td>${esc(r.venue)}${r.race}R</td><td style="text-align:right">${res}</td><td>${esc(TIER_JP[r.tier]||'')}</td><td>${esc(STATE_JP[r.state]||r.state)}</td></tr>`}).join('')+'</table><div class="note">結果=AIおすすめの買い目で的中なら的中配当(倍)、不的中なら✖、結果待ちは—(基準の仮想)。</div></div>';
   } else h+='<div class="note" style="margin-top:8px">今日は、参入の目安が出たレースはまだありません。</div>';
   h+='</div>';
   return h;
