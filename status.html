@@ -150,7 +150,16 @@ function wildTierPerf(t){
   return `<div style="margin-top:12px"><div class="ct" style="margin-bottom:4px">もし「ランクS・A・B」を全件買っていたら(仮想・基準の成績)</div>
     <div class="mu" style="font-size:12px;margin-bottom:6px">大きい数字=回収率、小さい数字=的中数/件数</div>
     <table><tr><th></th><th style="text-align:center">S</th><th style="text-align:center">A</th><th style="text-align:center">B</th><th style="text-align:center">合計</th></tr>${tr('全日',t,true)}${days}</table>
-    <div class="note">基準: ランクS・A・Bが付いたレース<b>全件</b>を、AIおすすめの13点・合計3,000円の平買い(全点均等。WILD画面と同じ)で買ったと<b>仮定</b>した成績です。実際に買ったものではなく、選び方に左右されません。結果が出たレースだけ数えています${t.today&&t.today.pending?`(今日は結果待ち ${t.today.pending}件)`:''}。10/1以降(買い目が13点になってから)の${t.days}日分です。${(t.S&&t.S.n<30)?'ランクSは件数が少なく(30件未満)、まだ傾向とは言えません。':''}</div>${rec}</div>`;
+    <div class="note">基準: ランクS・A・Bが付いたレース<b>全件</b>を、AIおすすめで買ったと<b>仮定</b>した成績です(10/20まではAIおすすめの12〜13点・合計約3,000円の平買い、<b>10/21以降は全点100円</b>〔12点=1,200円〕。回収率は払戻合計÷投資合計なので、混ざっても計算できます)。実際に買ったものではなく、選び方に左右されません。結果が出たレースだけ数えています${t.today&&t.today.pending?`(今日は結果待ち ${t.today.pending}件)`:''}。10/1以降(買い目が13点になってから)の${t.days}日分です。${(t.S&&t.S.n<30)?'ランクSは件数が少なく(30件未満)、まだ傾向とは言えません。':''}</div>${rec}</div>`;
+}
+function renderM(w){
+  w=w||{};const mp=w.mPerf||{},ma=mp.all||{},mt=mp.today||{};
+  const pct1=v=>v==null?'—':(v*100).toFixed(1)+'%';
+  return `<div class="card"><div class="ct">目安M(WILDエンジン・荒れ想定の中配当狙い)</div>
+    <div class="g3">${stat((w.mNotified||0)+'本','今日の通知(上限'+(w.mCap||15)+')')}${stat(w.mCardsToday==null?'—':w.mCardsToday,'今日の該当レース')}${stat(mt.n!=null?(mt.hit||0)+'/'+mt.n:'—','今日の的中(結果確定分)')}</div>
+    <div class="g3" style="margin-top:8px">${stat(ma.n||0,'該当(結果確定の累計)')}${stat(ma.n?pct1(ma.hitRate):'—','的中率')}${stat(ma.avgHitMult!=null?Math.round(ma.avgHitMult)+'倍':'—','平均的中配当')}</div>
+    ${row('仮想の回収率(確定分)',ma.n?`${pct1(ma.roi)}<span class="mu">(n=${ma.n}${ma.n<30?'、少ないので参考外':''})</span>`:'—')}
+    <div class="note" style="margin-top:8px">基準: 荒れやすさ40%超・AIおすすめ12点の合成オッズ3.5倍以上6倍未満・12点の確率合計15%以上のレース(ランクS・A・Bとは別枠、ntfyの【M】)を、12点・各点100円で買ったと<b>仮定</b>した成績です。${esc(mp.from||'2026-10-21')}以降の${mp.days||0}日分(前向き)。過去の検証(確定オッズ・17.8万レース)では、合成4〜6倍で1日約13本・的中約16%・平均約56倍・回収約77%。通知の時点(約10分前)のカードでは、的中約2割・約40倍台・回収約8割が目安でした(標本が小さい参考値で、100%には届いていません)。件数が少ない間は、この表の数字は偶然で大きく動きます。</div></div>`;
 }
 function renderPeakX(p,w){
   w=w||{};const xp=w.xPerf||{},xa=xp.all||{},xt=xp.today||{};
@@ -211,6 +220,7 @@ function render(s){
   if(rep&&rep.totalConfirmed)h+=`<div class="card"><div class="ct">REPLAY 過去日の再現(参考)</div><div class="g3">${stat(rep.totalConfirmed,'レース')}${stat(pct(rep.all.hit10,0),'上位10点的中')}${stat(pct(rep.all.roi10,0),'回収(10点)')}</div>${levelTable(rep.byLevel)}<div class="note">過去日のデータを、その日時点の統計でエンジンに通し直した結果です(実運用ではありません)。</div></div>`;
   h+=renderWild(s.wild);
   h+=renderPeakX(s.peakSlot,s.wild);
+  h+=renderM(s.wild);
   h+='<div class="card" id="disp-card"></div>';
   h+=`<div class="card"><div class="ct">TASKS 自動処理</div>${taskTable(s.tasks)}</div>`;
   h+='<div class="note" style="text-align:center">回収率はどの買い方でも控除率(約25%)の壁があり、平均で75〜80%が上限の目安です。<br>このページは自動更新されます(60秒ごと)</div>';
