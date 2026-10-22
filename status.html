@@ -33,6 +33,9 @@
   table{width:100%;border-collapse:collapse;} th{font-size:10px;color:var(--mu);padding:5px 4px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap;} th:first-child,td:first-child{text-align:left;}
   td{font-size:12px;padding:7px 4px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;} tr:last-child td{border-bottom:none;}
   .up{color:var(--ok);} .dn{color:var(--err);} .mu{color:var(--mu);}
+  .tg{display:inline-block;min-width:26px;text-align:center;font-weight:800;font-size:13px;border-radius:6px;padding:2px 6px;border:1px solid var(--line)}
+  .tg-S{color:#4ade80;border-color:#4ade80}.tg-A{color:#38bdf8;border-color:#38bdf8}.tg-B{color:#fbbf24;border-color:#fbbf24}.tg-M{color:#a5b4fc;border-color:#a5b4fc}.tg-X{color:#f472b6;border-color:#f472b6}
+  table.ent td{padding:6px 4px;vertical-align:middle}table.ent th{padding:4px}
   .bd{display:inline-block;font-size:10px;font-weight:800;padding:2px 8px;border-radius:9px;border:1px solid var(--line);}
   .bd.ok{color:var(--ok);border-color:var(--ok);} .bd.err{color:var(--err);border-color:var(--err);} .bd.off{color:var(--mu);} .bd.warn{color:var(--warn);border-color:var(--warn);}
   .note{font-size:10px;color:var(--mu);line-height:1.6;margin-top:8px;}
@@ -216,8 +219,9 @@ function renderWild(w){
     ${row('結果の取得',`確定 ${(w.results||{}).confirmed||0}件${(w.results||{}).manual?`(うち手入力 ${w.results.manual}件)`:''}`)}`;
   h+=wildTierPerf(w.tierPerf,w.xPerf,w.mPerf);
   if((w.entryRaces||[]).length){
-    h+='<div style="margin-top:10px"><table><tr><th>レース</th><th style="text-align:right">結果</th><th>目安</th><th>状態</th></tr>'+
-      w.entryRaces.map(r=>{const o=r.result;const res=o&&o.state==='hit'?`<b class="up">${o.mult}倍</b>`:o&&o.state==='miss'?'<b class="dn">✖</b>':`<span class="mu" title="締切 ${esc(r.deadline)}">—</span>`;return `<tr><td>${esc(r.venue)}${r.race}R</td><td style="text-align:right">${res}</td><td>${esc(TIER_JP[r.tier]||'')}</td><td>${esc(STATE_JP[r.state]||r.state)}</td></tr>`}).join('')+'</table><div class="note">結果=AIおすすめの買い目で的中なら的中配当(倍)、不的中なら✖、結果待ちは—(基準の仮想)。</div></div>';
+    // 2026-10-22(CEO指示「稼働状況は常に見やすく」「総じて合成次第で参入している」): 列=目安(色つき)・レース・合成・結果・状態。合成が大きいレースほど参入の判断材料になる。
+    h+='<div style="margin-top:10px"><table class="ent"><tr><th>目安</th><th>レース</th><th style="text-align:right">合成</th><th style="text-align:right">結果</th><th style="text-align:right">状態</th></tr>'+
+      w.entryRaces.map(r=>{const o=r.result;const res=o&&o.state==='hit'?`<b class="up">${o.mult}倍</b>`:o&&o.state==='miss'?'<b class="dn">✖</b>':`<span class="mu" title="締切 ${esc(r.deadline)}">—</span>`;const g=r.gosei!=null?`<b>${Number(r.gosei).toFixed(1)}</b><span class="mu" style="font-size:11px">倍</span>`:'<span class="mu">—</span>';const st=STATE_JP[r.state]||r.state;return `<tr><td><span class="tg tg-${esc(r.tier)}">${esc(r.tier)}</span></td><td>${esc(r.venue)}${r.race}R<div class="mu" style="font-size:11px">${esc(r.deadline)}</div></td><td style="text-align:right">${g}</td><td style="text-align:right;font-size:15px">${res}</td><td style="text-align:right" class="mu">${esc(st)}</td></tr>`}).join('')+'</table><div class="note">合成=12点を全部買ったときの合成オッズ(通知の時点)。結果=AIおすすめの買い目で的中なら的中配当(倍)、不的中なら✖、結果待ちは—(基準の仮想)。</div></div>';
   } else h+='<div class="note" style="margin-top:8px">今日は、参入の目安が出たレースはまだありません。</div>';
   h+='</div>';
   return h;
