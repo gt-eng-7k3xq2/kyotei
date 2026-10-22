@@ -16,8 +16,8 @@ t('ランクS/A/Bのレースは対象外(重複通知を防ぐ)', () => assert.
 t('12点に満たないカードは対象外', () => { const c = mk(0.5, 54, 1.5); c.aiPick.lines.length = 11; assert.strictEqual(W.mInfo(c), null); });
 t('通知の文言はランクS/A/Bと同じ形(タイトル【WILD ○】、本文=荒れやすさ・一番ありそうな展開・あと約N分)', () => {
   const dl = W.deadlineMs('2026-10-21', '15:00'), base = { venue: '津', race: 5, date: '2026-10-21', deadline: '15:00', upset: 0.5, top: { winner: 3, tech: 'まくり差し', scenarioPct: 21.2 } };
-  const b = W.wildNotificationFor(Object.assign({ rank: 'B' }, base), dl - 600000);
-  const x = W.wildXNotificationFor(Object.assign({ x: true, xLines: W.mInfo(mk(0.5, 54, 1.5)).lines }, base), dl - 600000);
+  const b = W.wildNotificationFor(Object.assign({ rank: 'B', aiGosei: 2.2 }, base), dl - 600000);
+  const x = W.wildXNotificationFor(Object.assign({ x: true, xGoseiV: 8.8, xLines: W.mInfo(mk(0.5, 54, 1.5)).lines }, base), dl - 600000);
   const m = W.wildMNotificationFor(Object.assign({ m: true, mLines: W.mInfo(mk(0.5, 54, 1.5)).lines, mGosei: 4.5 }, base), dl - 600000);
   const shape = (n) => n.body.replace(/\d+/g, '#');
   assert.strictEqual(shape(x), shape(b)); assert.strictEqual(shape(m), shape(b));
@@ -25,7 +25,7 @@ t('通知の文言はランクS/A/Bと同じ形(タイトル【WILD ○】、本
 });
 t('通知: 締切3分前を切ると送らない(1日の上限は無し)', () => {
   const row = { m: true, mLines: W.mInfo(mk(0.5, 54, 1.5)).lines, venue: '津', race: 5, date: '2026-10-21', deadline: '15:00', upset: 0.5, mGosei: 4.5, top: { winner: 3, tech: 'まくり差し', scenarioPct: 21.2 } };
-  const n = W.wildMNotificationFor(row, W.deadlineMs('2026-10-21', '15:00') - 600000); assert.ok(n && n.key === 'M_津_5' && n.title.startsWith('【WILD M】津5R') && n.priority === 3 && n.body.startsWith('荒れやすさ 50%。一番ありそうな展開:') && n.body.includes('タップでGARON-WILDを開きます。'));
+  const n = W.wildMNotificationFor(row, W.deadlineMs('2026-10-21', '15:00') - 600000); assert.ok(n && n.key === 'M_津_5' && n.title.startsWith('【WILD M】津5R') && n.priority === 3 && n.body.startsWith('荒れやすさ 50%。合成4.5倍。一番ありそうな展開:') && n.body.includes('タップでGARON-WILDを開きます。'));
   assert.strictEqual(W.wildMNotificationFor(row, W.deadlineMs('2026-10-21', '15:00') - 120000), null); assert.strictEqual(W.M_DAILY_CAP, undefined); assert.strictEqual(W.X_DAILY_CAP, undefined);
 });
 t('画面(wild_template.html の mOfCard)と同じ判定(実カード全件で一致)', () => {
