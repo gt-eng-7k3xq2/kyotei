@@ -36,6 +36,8 @@
   .tg{display:inline-block;min-width:26px;text-align:center;font-weight:800;font-size:13px;border-radius:6px;padding:2px 6px;border:1px solid var(--line)}
   .tg-S{color:#4ade80;border-color:#4ade80}.tg-A{color:#38bdf8;border-color:#38bdf8}.tg-B{color:#fbbf24;border-color:#fbbf24}.tg-M{color:#a5b4fc;border-color:#a5b4fc}.tg-X{color:#f472b6;border-color:#f472b6}
   table.ent td{padding:6px 4px;vertical-align:middle}table.ent th{padding:4px}
+  .bts{display:flex;flex-wrap:wrap;gap:5px}.bt{display:inline-flex;flex-direction:column;align-items:center;min-width:52px;padding:3px 6px;border:1px solid var(--line);border-radius:6px;font-weight:700;font-size:14px;line-height:1.15}.bt small{font-weight:400;font-size:10px;color:var(--mu)}.bt.bw{border-color:var(--ok);color:var(--ok);background:rgba(74,222,128,.12)}
+  tr.entr:active{background:rgba(255,255,255,.05)}
   .bd{display:inline-block;font-size:10px;font-weight:800;padding:2px 8px;border-radius:9px;border:1px solid var(--line);}
   .bd.ok{color:var(--ok);border-color:var(--ok);} .bd.err{color:var(--err);border-color:var(--err);} .bd.off{color:var(--mu);} .bd.warn{color:var(--warn);border-color:var(--warn);}
   .note{font-size:10px;color:var(--mu);line-height:1.6;margin-top:8px;}
@@ -207,6 +209,7 @@ function renderPeakX(p,w){
   }
   return h+'</div>';
 }
+function toggleEnt(i){const e=document.getElementById('entd'+i);if(e)e.style.display=e.style.display==='none'?'table-row':'none';}
 function renderWild(w){
   if(!w)return '';
   const ok=w.indexAgeMin!=null&&w.indexAgeMin<5;
@@ -221,7 +224,12 @@ function renderWild(w){
   if((w.entryRaces||[]).length){
     // 2026-10-22(CEO指示「稼働状況は常に見やすく」「総じて合成次第で参入している」): 列=目安(色つき)・レース・合成・結果・状態。合成が大きいレースほど参入の判断材料になる。
     h+='<div style="margin-top:10px"><table class="ent"><tr><th>目安</th><th>レース</th><th style="text-align:right">合成</th><th style="text-align:right">結果</th><th style="text-align:right">状態</th></tr>'+
-      w.entryRaces.map(r=>{const o=r.result;const res=o&&o.state==='hit'?`<b class="up">${o.mult}倍</b>`:o&&o.state==='miss'?'<b class="dn">✖</b>':`<span class="mu" title="締切 ${esc(r.deadline)}">—</span>`;const g=r.gosei!=null?`<b>${Number(r.gosei).toFixed(1)}</b><span class="mu" style="font-size:11px">倍</span>`:'<span class="mu">—</span>';const st=STATE_JP[r.state]||r.state;return `<tr><td><span class="tg tg-${esc(r.tier)}">${esc(r.tier)}</span></td><td>${esc(r.venue)}${r.race}R<div class="mu" style="font-size:11px">${esc(r.deadline)}</div></td><td style="text-align:right">${g}</td><td style="text-align:right;font-size:15px">${res}</td><td style="text-align:right" class="mu">${esc(st)}</td></tr>`}).join('')+'</table><div class="note">合成=12点を全部買ったときの合成オッズ(通知の時点)。結果=AIおすすめの買い目で的中なら的中配当(倍)、不的中なら✖、結果待ちは—(基準の仮想)。</div></div>';
+      w.entryRaces.map((r,i)=>{const o=r.result;const res=o&&o.state==='hit'?`<b class="up">${o.mult}倍</b>`:o&&o.state==='miss'?'<b class="dn">✖</b>':`<span class="mu" title="締切 ${esc(r.deadline)}">—</span>`;const g=r.gosei!=null?`<b>${Number(r.gosei).toFixed(1)}</b><span class="mu" style="font-size:11px">倍</span>`:'<span class="mu">—</span>';const st=STATE_JP[r.state]||r.state;
+        // 2026-10-22(CEO指示): レース名をタップすると、買い目(12点・オッズつき)と結果(勝ち目・払戻)が開く
+        const chips=(r.lines||[]).map(l=>`<span class="bt${o&&o.win===l.c?' bw':''}">${esc(l.c)}${l.o!=null?`<small>${l.o}倍</small>`:''}</span>`).join('');
+        const resTxt=o&&o.win?`結果 <b>${esc(o.win)}</b>${o.yen?`(${Number(o.yen).toLocaleString()}円${o.state==='hit'?'・<b class="up">的中 '+o.mult+'倍</b>':'・<b class="dn">不的中</b>'})`:''}`:'結果待ち';
+        const det=`<tr class="entd" id="entd${i}" style="display:none"><td colspan="5" style="padding:4px 4px 10px"><div class="mu" style="font-size:12px;margin-bottom:6px">${esc(r.tier)}の買い目 ${(r.lines||[]).length}点(通知の時点のオッズ・各点100円${r.gosei!=null?'・合成'+Number(r.gosei).toFixed(1)+'倍':''})</div><div class="bts">${chips||'<span class="mu">買い目を取得できませんでした</span>'}</div><div style="font-size:13px;margin-top:8px">${resTxt}</div></td></tr>`;
+        return `<tr class="entr" onclick="toggleEnt(${i})" style="cursor:pointer"><td><span class="tg tg-${esc(r.tier)}">${esc(r.tier)}</span></td><td>${esc(r.venue)}${r.race}R<span class="mu" style="font-size:11px"> ▾</span><div class="mu" style="font-size:11px">${esc(r.deadline)}</div></td><td style="text-align:right">${g}</td><td style="text-align:right;font-size:15px">${res}</td><td style="text-align:right;white-space:nowrap;font-size:12px" class="mu">${esc(st)}</td></tr>`+det}).join('')+'</table><div class="note">合成=12点を全部買ったときの合成オッズ(通知の時点)。結果=AIおすすめの買い目で的中なら的中配当(倍)、不的中なら✖、結果待ちは—(基準の仮想)。</div></div>';
   } else h+='<div class="note" style="margin-top:8px">今日は、参入の目安が出たレースはまだありません。</div>';
   h+='</div>';
   return h;
