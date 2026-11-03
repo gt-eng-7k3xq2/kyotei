@@ -164,6 +164,14 @@ CEOの言葉(原文): 通知S,A,B→的中率35%～45%、的中配当35倍～150
 - COOの注記: 回収率=的中率×平均配当(倍)÷点数。理想の3つの数字は、そのままでは同時に成り立たない部分がある(整合案は`ideal_form`の記録を参照、CEO未確認)。
 - **【2026-10-21、CEO承認「進めて」】アストラの報告(reports/codex_ideal_form_2026-10-20.md)を受け、目指す数字を現実に合わせて改訂した**: 本線(S/A/B)=12点・的中約40%・平均配当約24倍・約14本/日・回収約80%を土台、通知X=12点・的中7〜8%・平均約127倍・約3本/日。90〜110%は通常の期待値に置かない。市場に勝つ余地の探索は別枠で継続。着手順=①成功の定義と公開運用②参入条件③買い目構成④エンジン⑤事業評価(エンジン・買い目は、この順序が済むまで変えない)。詳細は[reports/ideal_form_2026-10-17.md](reports/ideal_form_2026-10-17.md)末尾。
 
+## M2並行比較(シャドー、2026-11-03実装。ユーザー向けの買い目・ランク・通知には未接続)
+
+- 目的: 現行エンジンと『現行×通知時点の市場オッズ(M2)』を、同じレース・同じ判断時刻(カード作成時)で並行して記録し、前向きに比較する。M2の重み(a=0.5712, b=0.5569)と採用条件は凍結(scripts/m2_params_v1.json、reports/market_redesign_study_2026-11-03.md 第7節)。評価開始日は2026-11-04。変更が必要な場合はM2-v2として別ファイル・別の評価開始日にする。M2の確率はユーザー表示に使わない(displayAllowed=false。前向き標本で実際が予測の約1.2倍、現行エンジンも同程度で、原因は未確定)。
+- 構成: scripts/m2_shadow_run.js(記録役。logs/wild/cards を読み取り専用で見て、判断台帳 logs/decision_ledger/日付.jsonl へ追記)/ scripts/m2_shadow_reconcile.js(確定結果と通知後オッズの追記、2日以上前の日の封印)/ scripts/m2_shadow_report.js(集計。reports/m2_shadow_report_日付.md)/ scripts/lib/m2_shadow.js・decision_ledger.js(部品)。通知処理(wild_scan.js・race_card.py・画面)は一切変更していない。依存の向きは一方向で、並行比較が失敗・停止しても通知には影響しない(tests/m2_shadow.test.jsで静的に確認)。
+- 現行方式へ戻す条件(いずれか1つで、その判断のM2の列は現行と同じにして記録): params_unavailable / odds_missing(120通りがそろわない・null・NaN・0以下) / odds_sum_out_of_range(Σ(1/オッズ)が1.30〜1.40の外。実測1.334〜1.348) / engine_missing / engine_sum_out_of_range(99〜101の外) / timestamp_missing / odds_stale_or_early(締切までが2〜15分の外。評価は約6〜10分前) / non_finite。
+- 稼働: タスク GARON_M2Shadow(毎日07:55)・GARON_M2ShadowReconcile(毎日23:45)は scripts/register_m2_shadow_tasks.ps1 を管理者PowerShellで実行して登録(2026-11-03時点で未登録)。停止: logs.m2_shadow_disable を作る / scripts/unregister_m2_shadow_tasks.ps1。台帳とログは削除しない。
+- 試験: node tests/m2_shadow.test.js(23項目。JS版とPython版の一致、戻す条件、台帳の改ざん検出、実行体の統合、分離の静的確認)。
+
 ## ファイル構成と役割
 
 - **sg_narutou.html** — 本番予想エンジン。BM抽出データを貼り付けてスコア計算・モード判定・買い目生成・X投稿文生成までを行う。Gemini API (`generativelanguage.googleapis.com`) を呼び出して展開コメントを生成する。
