@@ -3,7 +3,7 @@
 const fs = require('fs'), path = require('path'), assert = require('assert');
 const html = fs.readFileSync(path.join(__dirname, '..', 'garon_wild.html'), 'utf8');
 const g = re => { const m = html.match(re); if (!m) throw new Error('抽出失敗 ' + re); return m[0]; };
-const code = [g(/const PLAN_POINTS[^\n]*\n/), g(/const X_ODDS_MIN[^\n]*\n/), g(/const PLAN_MIN_POINTS[\s\S]*?function variableK[\s\S]*?return n;\s*\}/), g(/function hasExcluded[^\n]*\n/), g(/function autoPlan[\s\S]*?\n\}\r?\n/), g(/function mergeBlocks[\s\S]*?return out;\s*\}/), g(/const SAMPLES = [^\n]*\n/)].join('\n');
+const code = [g(/const PLAN_POINTS[^\n]*\n/), g(/const X_ODDS_MIN[^\n]*\n/), g(/const PLAN_MIN_POINTS[\s\S]*?function variableK[\s\S]*?return n;\s*\}/), g(/function planKey[^\n]*\n/), g(/function hasExcluded[^\n]*\n/), g(/function autoPlan[\s\S]*?\n\}\r?\n/), g(/function mergeBlocks[\s\S]*?return out;\s*\}/), g(/const SAMPLES = [^\n]*\n/)].join('\n');
 const F = new Function(code + ';let S=null;return {autoPlan,mergeBlocks,SAMPLES,setS:v=>{S=v;}};')();
 let pass = 0, fail = 0; const t = (n, f) => { try { f(); pass++; console.log('PASS  ' + n); } catch (e) { fail++; console.log('FAIL  ' + n + ': ' + e.message.split('\n')[0]); } };
 F.SAMPLES.forEach(s => {
