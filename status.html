@@ -42,11 +42,16 @@
   .bd.ok{color:var(--ok);border-color:var(--ok);} .bd.err{color:var(--err);border-color:var(--err);} .bd.off{color:var(--mu);} .bd.warn{color:var(--warn);border-color:var(--warn);}
   .note{font-size:10px;color:var(--mu);line-height:1.6;margin-top:8px;}
   .bar{height:8px;background:var(--panel2);border-radius:4px;overflow:hidden;margin-top:4px;position:relative;} .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--vi),var(--cy));}
+  .tabs{display:flex;gap:6px;max-width:680px;margin:0 auto;padding:10px 16px 0;position:sticky;top:55px;z-index:9;background:linear-gradient(180deg,rgba(7,13,24,.97) 70%,transparent);}
+  .tabs button{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--mu);font-size:14px;font-weight:800;padding:10px 4px;border-radius:10px;-webkit-appearance:none;}
+  .tabs button.on{color:#06101c;background:var(--cy);border-color:var(--cy);}
+  .spark{width:100%;height:64px;display:block;}
   .empty{color:var(--mu);font-size:12px;text-align:center;padding:14px 0;}
 </style>
 </head>
 <body>
 <div class="header"><div><div class="ht">GARON // STATUS</div><div class="hs" id="last">読み込み中...</div></div><button class="rb" type="button" id="rbtn" onclick="manualLoad()">更新</button></div>
+<div class="tabs" id="tabs"></div>
 <div class="wrap" id="app"><div class="empty">読み込み中...</div></div>
 <script>
 const GIST_OWNER='gt-eng-7k3xq2', GIST_ID='c95fa9b66b4fb95d42d766a3e140cb0a', REFRESH_MS=60000, STALE_MIN=15;
@@ -163,6 +168,27 @@ function wildTierPerf(t,xp,mp){
     <div class="note">基準: S・A・Bが付いたレース<b>全件</b>を、AIおすすめで買ったと<b>仮定</b>した成績です(10/20まではAIおすすめの12〜13点・合計約3,000円の平買い、<b>10/21以降は全点100円</b>〔12点=1,200円〕。回収率は払戻合計÷投資合計なので、混ざっても計算できます)。実際に買ったものではなく、選び方に左右されません。結果が出たレースだけ数えています${t.today&&t.today.pending?`(今日は結果待ち ${t.today.pending}件)`:''}。10/1以降(買い目が13点になってから)の${t.days}日分です。${(t.S&&t.S.n<30)?'Sは件数が少なく(30件未満)、まだ傾向とは言えません。':''}</div>${rec}</div>`;
 }
 // 通知のまとめ(2026-10-21、CEO指示: S・A・B・M・Xの通知の数を1か所で見たい)
+// 2026-11-06(CEO指示「実際に俺が参入したレースの回収率がわかるように」): 台帳に記録した予想(実際の金額)の成績
+function renderMine(w,mode){
+  const m=w&&w.myPerf; if(!m||!m.all)return '';
+  const P=x=>x==null?'—':Math.round(x*100)+'%', Y=v=>(v<0?'-':'+')+Math.abs(Math.round(v)).toLocaleString()+'円';
+  const cls=x=>x==null?'':(x>=1?'up':'dn');
+  const box=(t,x)=>x&&x.n?`<div class="st"><div class="sv ${cls(x.roi)}">${P(x.roi)}</div><div class="sl">${t}<br>${x.hit}/${x.n}的中・${Y(x.net)}</div></div>`:`<div class="st"><div class="sv mu">—</div><div class="sl">${t}<br>参入なし</div></div>`;
+  const a=m.all, small=a.n<30?'<span class="mu">(少ないので参考外)</span>':'';
+  const tiers=['S','A','B','目安外'].filter(k=>m.byTier&&m.byTier[k]&&m.byTier[k].n).map(k=>{const x=m.byTier[k];return `<tr><td><b>${k}</b></td><td style="text-align:center">${x.n}</td><td style="text-align:center">${x.hit} (${P(x.hitRate)})</td><td style="text-align:center"><b class="${cls(x.roi)}">${P(x.roi)}</b>${x.n<30?'<span class="mu" style="font-size:11px"> 参考外</span>':''}</td><td style="text-align:right">${Y(x.net)}</td></tr>`}).join('');
+  const brk=(t,list,order)=>{ if(!list||!list.length)return ''; if(order)list=order.map(k=>list.find(x=>x.k===k)).filter(Boolean); return `<div class="mu" style="font-size:12px;margin:10px 0 4px">${t}</div><table><tr><th></th><th style="text-align:center">参入</th><th style="text-align:center">的中率</th><th style="text-align:center">回収率</th><th style="text-align:right">損益</th></tr>${list.map(x=>`<tr><td>${esc(x.k)}</td><td style="text-align:center">${x.n}</td><td style="text-align:center">${P(x.hitRate)}</td><td style="text-align:center"><b class="${cls(x.roi)}">${P(x.roi)}</b>${x.n<30?'<span class="mu" style="font-size:11px"> 参考外</span>':''}</td><td style="text-align:right">${Y(x.net)}</td></tr>`).join('')}</table>`; };
+  const spark=cum=>{ if(!cum||cum.length<2)return ''; const v=cum.map(c=>c.cum), mn=Math.min(0,...v), mx=Math.max(0,...v), W=300, H=60, X=i=>i*(W/(v.length-1)), Yp=y=>H-(y-mn)/((mx-mn)||1)*H; const pts=v.map((y,i)=>X(i).toFixed(1)+','+Yp(y).toFixed(1)).join(' '); return `<div class="mu" style="font-size:12px;margin:10px 0 2px">累計損益の推移(${esc(cum[0].date.slice(5))}〜、いま ${Y(v[v.length-1])})</div><svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><line x1="0" x2="${W}" y1="${Yp(0).toFixed(1)}" y2="${Yp(0).toFixed(1)}" stroke="#1f3a5c" stroke-dasharray="3"/><polyline fill="none" stroke="#3ee0ff" stroke-width="1.6" points="${pts}"/></svg>`; };
+  const days=(m.daily||[]).slice(0,10).map(d=>`<tr><td>${esc(d.date.slice(5).replace('-','/'))}</td><td style="text-align:center">${d.n}</td><td style="text-align:center">${d.hit}</td><td style="text-align:center"><b class="${cls(d.roi)}">${P(d.roi)}</b></td><td style="text-align:right">${Y(d.net)}</td></tr>`).join('');
+  if(mode==='today')return `<div class="card"><div class="ct">MY ENTRY 俺が参入したレースの成績</div><div class="g3">${box('今日',m.today)}${box('直近7日',m.last7)}${box('全期間',a)}</div>${m.today&&m.today.open?`<div class="note">今日は結果待ち ${m.today.open}件</div>`:''}<div class="note">目安別・場別・日別などの内訳は「成績」タブにあります。</div></div>`;
+  return `<div class="card"><div class="ct">MY ENTRY 俺が参入したレースの成績(${esc((m.from||'').slice(5).replace('-','/'))}〜)</div>
+    <div class="g3">${box('今日',m.today)}${box('直近7日',m.last7)}${box('全期間',a)}</div>
+    <div class="note" style="margin-top:8px">全期間 ${a.n}レース・投資 ${Number(a.stake).toLocaleString()}円・払戻 ${Number(a.ret).toLocaleString()}円 ${small}${m.today&&m.today.open?`<br>結果待ち ${m.today.open}件(今日)`:''}${a.noPay?`<br>払戻が不明で除いた的中 ${a.noPay}件`:''}</div>
+    ${tiers?`<div class="mu" style="font-size:12px;margin:10px 0 4px">目安別(記録した時点のランク)</div><table><tr><th></th><th style="text-align:center">参入</th><th style="text-align:center">的中</th><th style="text-align:center">回収率</th><th style="text-align:right">損益</th></tr>${tiers}</table>`:''}
+    ${days?`<div class="mu" style="font-size:12px;margin:10px 0 4px">日別(直近10日)</div><table><tr><th></th><th style="text-align:center">参入</th><th style="text-align:center">的中</th><th style="text-align:center">回収率</th><th style="text-align:right">損益</th></tr>${days}</table>`:''}
+    ${brk('レース番号別',m.byRace,['1〜4R','5〜8R','9〜12R'])}${brk('12点の合成オッズ別(記録時)',m.byGosei)}${brk('買い目の点数別',m.byPts)}${brk('場別(参入の多い順)',(m.byVenue||[]).slice(0,10))}
+    ${spark(m.cum)}
+    <div class="note">基準: WILD画面で記録した予想(実際の買い目・金額)を、結果が確定したレースだけ数えた成績です。同じレースを複数回記録したときは最後の1件。見送り ${m.passes||0}件は含みません。目安外=M・X・旧基準の時期の記録を含みます。</div></div>`;
+}
 function renderWildSummary(w){
   if(!w)return '';
   const pct=v=>v==null?'—':Math.round(v*100)+'%';
@@ -211,7 +237,7 @@ function renderPeakX(p,w){
 }
 function toggleEnt(i){const e=document.getElementById('entd'+i);if(e)e.style.display=e.style.display==='none'?'table-row':'none';}
 function renderWild(w){
-  if(!w)return '';
+  if(!w)return {head:'',perf:'',table:''};
   const ok=w.indexAgeMin!=null&&w.indexAgeMin<5;
   const alive=!w.inHours?'(稼働時間外)':ok?'動いています':w.indexAgeMin==null?'カード未作成':`${w.indexAgeMin}分止まっています`;
   const L=w.ledger||{},c=w.cards||{},bt=c.byTier||{};
@@ -220,7 +246,8 @@ function renderWild(w){
     <div class="g3" style="margin-top:8px">${stat(L.todayBets||0,'予想の記録')}${stat(L.todayPasses||0,'見送り')}${stat(L.waitingResults||0,'結果待ち')}</div>
     ${row('裏方(カード作成・結果取得)',`<span class="${w.inHours&&!ok?'dn':'up'}">${esc(alive)}</span>${w.indexAt?`<span class="mu">(最終 ${esc(fmt(w.indexAt))})</span>`:''}`)}
     ${row('結果の取得',`確定 ${(w.results||{}).confirmed||0}件${(w.results||{}).manual?`(うち手入力 ${w.results.manual}件)`:''}`)}`;
-  h+=wildTierPerf(w.tierPerf,w.xPerf,w.mPerf);
+  const headH=h+'</div>'; h='<div class="card"><div class="ct">TODAY 目安が出たレース</div>';
+  const perfH=wildTierPerf(w.tierPerf,w.xPerf,w.mPerf);
   if((w.entryRaces||[]).length){
     // 2026-10-22(CEO指示「稼働状況は常に見やすく」「総じて合成次第で参入している」): 列=目安(色つき)・レース・合成・結果・状態。合成が大きいレースほど参入の判断材料になる。
     h+='<div style="margin-top:10px"><table class="ent"><tr><th>目安</th><th>レース</th><th style="text-align:right">合成</th><th style="text-align:right">結果</th><th style="text-align:right">状態</th></tr>'+
@@ -232,7 +259,7 @@ function renderWild(w){
         return `<tr class="entr" onclick="toggleEnt(${i})" style="cursor:pointer"><td><span class="tg tg-${esc(r.tier)}">${esc(r.tier)}</span></td><td>${esc(r.venue)}${r.race}R<span class="mu" style="font-size:11px"> ▾</span><div class="mu" style="font-size:11px">${esc(r.deadline)}</div></td><td style="text-align:right">${g}</td><td style="text-align:right;font-size:15px">${res}</td><td style="text-align:right;white-space:nowrap;font-size:13px${r.state==='bet'?';font-weight:800;color:#ff8ad8':''}" class="${r.state==='bet'?'':'mu'}">${esc(st)}</td></tr>`+det}).join('')+'</table><div class="note">合成=12点を全部買ったときの合成オッズ(通知の時点)。結果=AIおすすめの買い目で的中なら的中配当(倍)、不的中なら✖、結果待ちは—(基準の仮想)。</div></div>';
   } else h+='<div class="note" style="margin-top:8px">今日は、参入の目安が出たレースはまだありません。</div>';
   h+='</div>';
-  return h;
+  return {head:headH,perf:perfH?'<div class="card"><div class="ct">仮想の成績 全件を買っていたら</div>'+perfH+'</div>':'',table:h};
 }
 function render(s){
   const e=s.engine||{}, t=s.today||{}, v=s.verification||{}, live=v.live, rep=v.replay;
@@ -242,28 +269,30 @@ function render(s){
   if(staleBad)h+=`<div class="al error">PCからの更新が${stale}分間ありません。PCの電源・ネットワーク・タスク GARON_EngineStatus を確認してください。</div>`;
   for(const a of s.alerts||[])h+=`<div class="al ${esc(a.level)}">${esc(a.text)}</div>`;
   h+='</div>';
-  h+=`<div class="card"><div class="ct">TODAY 今日の動き(${esc(t.date||'')})</div><div class="g3">${stat(t.judgments||0,'予測したレース')}${stat(t.high||0,'確信度「高」')}${stat(t.notificationsSent||0,'通知送信')}</div>
+  const hero=h;
+  const W=renderWild(s.wild);
+  // --- 稼働タブ用(エンジン・自動処理)
+  const opsH=`<div class="card"><div class="ct">TODAY エンジンの今日の動き(${esc(t.date||'')})</div><div class="g3">${stat(t.judgments||0,'予測したレース')}${stat(t.high||0,'確信度「高」')}${stat(t.notificationsSent||0,'通知送信')}</div>
     <div class="g3" style="margin-top:8px">${stat(t.mid_high||0,'中上')}${stat(t.collected||0,'データ取得成功')}${stat(t.collectionFailed||0,'取得失敗')}</div>
-    ${t.lastEventAt?`<div class="note">最新の記録: ${esc(fmt(t.lastEventAt))}</div>`:''}</div>`;
-  h+=`<div class="card"><div class="ct">ENGINE エンジンの状態</div>${row('エンジン',esc(e.name||'—'))}${row('予測に使う統計の日付',esc(e.stateDay||'—')+(e.stateLagDays!=null?`<span class="mu">(${e.stateLagDays}日前)</span>`:''))}${row('データバンクの最新日',esc(e.dbLastRaceDate||'—'))}${row('モデルの学習データ',esc(e.modelTrainedThrough||'—')+(e.modelRaces?`<span class="mu">(${Number(e.modelRaces).toLocaleString()}レース)</span>`:''))}${row('通知の方針',esc((s.notifications||{}).policy||'—'))}${row('通知',(s.notifications||{}).paused?'<span class="bd warn">一時停止中</span>':'<span class="bd ok">送信中</span>')}</div>`;
-  h+=`<div class="card"><div class="ct">LIVE エンジンQ通知の答え合わせ(WILDとは別の基準)</div><div class="mu" style="font-size:11px;margin-bottom:6px">この欄はエンジンQの通知(◎)を、上位10点・各100円で買ったと仮定した成績です。WILDの成績(3,000円・均等回収配分)とは基準が違うため、数字を比べないでください。</div>`;
-  if(live&&live.totalConfirmed){h+=`<div class="g3">${stat(live.totalConfirmed,'結果確定')}${stat(live.pending||0,'結果待ち')}${stat(pct(live.all.hit10,0),'上位10点的中')}</div>${levelTable(live.byLevel)}<div class="note">「検証時」は過去8万レースでの実績です。実運用の数字がこれを大きく下回り続けたら異常のサインです。件数が少ないうちは(30レース未満)ぶれが大きく、参考程度です。</div>`;}
-  else h+='<div class="empty">実運用の結果はまだ確定していません(締切後、順次反映されます)</div>';
-  h+='</div>';
-  if(live&&live.daily)h+=`<div class="card"><div class="ct">DAILY 日別(実運用)</div>${dailyTable(live.daily)}</div>`;
-  if(live&&live.calibration&&live.calibration.length)h+=`<div class="card"><div class="ct">CALIBRATION 予測確率と実際</div>${calib(live.calibration)}</div>`;
-  if(rep&&rep.totalConfirmed)h+=`<div class="card"><div class="ct">REPLAY 過去日の再現(参考)</div><div class="g3">${stat(rep.totalConfirmed,'レース')}${stat(pct(rep.all.hit10,0),'上位10点的中')}${stat(pct(rep.all.roi10,0),'回収(10点)')}</div>${levelTable(rep.byLevel)}<div class="note">過去日のデータを、その日時点の統計でエンジンに通し直した結果です(実運用ではありません)。</div></div>`;
-  h+=renderWildSummary(s.wild);
-  h+=renderWild(s.wild);
-  h+=renderPeakX(s.peakSlot,s.wild);
-  h+=renderM(s.wild);
-  h+='<div class="card" id="disp-card"></div>';
-  h+=`<div class="card"><div class="ct">TASKS 自動処理</div>${taskTable(s.tasks)}</div>`;
+    ${t.lastEventAt?`<div class="note">最新の記録: ${esc(fmt(t.lastEventAt))}</div>`:''}</div>`+
+    `<div class="card"><div class="ct">ENGINE エンジンの状態</div>${row('エンジン',esc(e.name||'—'))}${row('予測に使う統計の日付',esc(e.stateDay||'—')+(e.stateLagDays!=null?`<span class="mu">(${e.stateLagDays}日前)</span>`:''))}${row('データバンクの最新日',esc(e.dbLastRaceDate||'—'))}${row('モデルの学習データ',esc(e.modelTrainedThrough||'—')+(e.modelRaces?`<span class="mu">(${Number(e.modelRaces).toLocaleString()}レース)</span>`:''))}${row('通知の方針',esc((s.notifications||{}).policy||'—'))}${row('通知',(s.notifications||{}).paused?'<span class="bd warn">一時停止中</span>':'<span class="bd ok">送信中</span>')}</div>`+
+    `<div class="card"><div class="ct">TASKS 自動処理</div>${taskTable(s.tasks)}</div>`;
+  const tabsHtml={
+    today: hero+renderMine(s.wild,'today')+renderWildSummary(s.wild)+W.table+'<div class="card" id="disp-card"></div>',
+    perf: renderMine(s.wild,'full')+W.perf+renderPeakX(s.peakSlot,s.wild)+renderM(s.wild),
+    ops: hero+W.head+opsH
+  };
+  window.__tabsHtml=tabsHtml;
+  h=tabsHtml[curTab]||tabsHtml.today;
   h+='<div class="note" style="text-align:center">回収率はどの買い方でも控除率(約25%)の壁があり、平均で75〜80%が上限の目安です。<br>このページは自動更新されます(60秒ごと)</div>';
+  drawTabs();
   document.getElementById('app').innerHTML=h;
   lastStatus=s;renderDisp(s);
   document.getElementById('last').textContent='表示更新 '+fmt(new Date().toISOString());
 }
+let curTab='today';try{curTab=localStorage.getItem('garon_status_tab')||'today'}catch(e){}
+function drawTabs(){const T=[['today','今日'],['perf','成績'],['ops','稼働']];document.getElementById('tabs').innerHTML=T.map(([k,l])=>`<button class="${k===curTab?'on':''}" onclick="setTab('${k}')">${l}</button>`).join('');}
+function setTab(k){curTab=k;try{localStorage.setItem('garon_status_tab',k)}catch(e){}if(lastStatus)render(lastStatus);window.scrollTo(0,0);}
 async function load(){
   try{render(await getFile('garon_status_engine.json'));}
   catch(e){document.getElementById('app').innerHTML=`<div class="card"><div class="al error">状況データを取得できませんでした。<br>${esc(e.message)}<br>PC側の更新(GARON_EngineStatus)がまだ動いていない可能性があります。</div></div>`;}
