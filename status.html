@@ -19,6 +19,7 @@
   .wrap{max-width:680px;margin:0 auto;padding:12px 16px;}
   .card{background:linear-gradient(180deg,var(--panel),#0a1320);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;}
   .ct{font-size:13px;color:var(--cy);font-weight:800;margin-bottom:10px;letter-spacing:.14em;}
+  .card:has(>.hero){padding:10px 14px;margin-bottom:10px;}
   .hero{display:flex;align-items:center;gap:12px;}
   .dot{width:16px;height:16px;border-radius:50%;flex:none;}
   .dot.ok{background:var(--ok);box-shadow:0 0 14px var(--ok);} .dot.warn{background:var(--warn);box-shadow:0 0 14px var(--warn);} .dot.error{background:var(--err);box-shadow:0 0 14px var(--err);}
@@ -50,6 +51,19 @@
   .tabs button{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--mu);font-size:14px;font-weight:800;padding:10px 4px;border-radius:10px;-webkit-appearance:none;}
   .tabs button.on{color:#06101c;background:var(--cy);border-color:var(--cy);}
   .spark{width:100%;height:64px;display:block;}
+  .rc{display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;padding:13px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;background:var(--panel2);cursor:pointer;}
+  .rc.mine{border-color:#ff8ad8;background:rgba(255,138,216,.09);}
+  .rc .tg.big{font-size:20px;min-width:44px;padding:8px 0;border-radius:10px;border-width:2px;}
+  .rn{font-size:17px;font-weight:800;} .rm{font-size:12px;color:var(--mu);margin-top:3px;}
+  .pill{display:inline-block;margin-left:8px;font-size:11px;font-weight:800;color:#ff8ad8;border:1px solid #ff8ad8;border-radius:9px;padding:1px 7px;vertical-align:2px;}
+  .rr{font-size:22px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums;} .rr small{font-size:12px;margin-left:1px;} .rr.wt{color:var(--warn);font-size:18px;} .rr.ms{color:var(--mu);font-size:16px;}
+  .rs{font-size:11px;color:var(--mu);text-align:right;margin-top:2px;}
+  .rd{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;margin:-4px 0 10px;}
+  .sec{font-size:13px;font-weight:800;color:var(--cy);margin:14px 2px 8px;letter-spacing:.06em;}
+  .h2n{font-size:44px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;line-height:1.1;margin:4px 0;} .h2n.dn{color:var(--err);} .h2n.up{color:var(--ok);}
+  .h2s{font-size:14px;color:var(--mu);text-align:center;margin-bottom:12px;} .h2s b{color:var(--tx);}
+  .h2row{display:grid;grid-template-columns:1fr 1fr;gap:8px;} .h2b{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center;}
+  .h2bl{font-size:12px;color:var(--mu);} .h2bv{font-size:22px;font-weight:800;margin:2px 0;} .h2bs{font-size:13px;font-weight:700;}
   .empty{color:var(--mu);font-size:12px;text-align:center;padding:14px 0;}
 </style>
 </head>
@@ -177,14 +191,16 @@ function wildTierPerf(t,xp,mp){
 function renderMine(w,mode){
   const m=w&&w.myPerf; if(!m||!m.all)return '';
   const P=x=>x==null?'—':Math.round(x*100)+'%', Y=v=>(v<0?'-':'+')+Math.abs(Math.round(v)).toLocaleString()+'円';
-  const cls=x=>x==null?'':(x>=1?'up':'dn');
+  const cls=x=>x==null?'':(x>=1?'up':'');   // 回収率は100%以上だけ色を付ける(赤一色にしない)
   const box=(t,x)=>x&&x.n?`<div class="st"><div class="sl" style="margin:0 0 2px;font-weight:700">${t}</div><div class="sv ${cls(x.roi)}">${P(x.roi)}</div><div class="sl">${x.hit}/${x.n} 的中</div><div class="sl ${x.net>=0?'up':'dn'}" style="font-weight:700">${Y(x.net)}</div></div>`:`<div class="st"><div class="sl" style="margin:0 0 2px;font-weight:700">${t}</div><div class="sv mu">—</div><div class="sl">参入なし</div></div>`;
   const a=m.all, small=a.n<30?'<span class="mu">(少ないので参考外)</span>':'';
   const tiers=['S','A','B','目安外'].filter(k=>m.byTier&&m.byTier[k]&&m.byTier[k].n).map(k=>{const x=m.byTier[k];return `<tr><td><b>${k}</b></td><td style="text-align:center">${x.n}</td><td style="text-align:center">${x.hit} (${P(x.hitRate)})</td><td style="text-align:center"><b class="${cls(x.roi)}">${P(x.roi)}</b>${x.n<30?'<span class="mu" style="font-size:11px"> 参考外</span>':''}</td><td style="text-align:right">${Y(x.net)}</td></tr>`}).join('');
   const brk=(t,list,order)=>{ if(!list||!list.length)return ''; if(order)list=order.map(k=>list.find(x=>x.k===k)).filter(Boolean); return `<details class="bk"><summary>${t}</summary><table><tr><th></th><th style="text-align:center">参入</th><th style="text-align:center">的中率</th><th style="text-align:center">回収率</th><th style="text-align:right">損益</th></tr>${list.map(x=>`<tr><td>${esc(x.k)}</td><td style="text-align:center">${x.n}</td><td style="text-align:center">${P(x.hitRate)}</td><td style="text-align:center"><b class="${cls(x.roi)}">${P(x.roi)}</b>${x.n<30?'<span class="mu" style="font-size:11px"> 参考外</span>':''}</td><td style="text-align:right">${Y(x.net)}</td></tr>`).join('')}</table></details>`; };
   const spark=cum=>{ if(!cum||cum.length<2)return ''; const v=cum.map(c=>c.cum), mn=Math.min(0,...v), mx=Math.max(0,...v), W=300, H=60, X=i=>i*(W/(v.length-1)), Yp=y=>H-(y-mn)/((mx-mn)||1)*H; const pts=v.map((y,i)=>X(i).toFixed(1)+','+Yp(y).toFixed(1)).join(' '); return `<div class="mu" style="font-size:12px;margin:10px 0 2px">累計損益の推移(${esc(cum[0].date.slice(5))}〜、いま ${Y(v[v.length-1])})</div><svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><line x1="0" x2="${W}" y1="${Yp(0).toFixed(1)}" y2="${Yp(0).toFixed(1)}" stroke="#1f3a5c" stroke-dasharray="3"/><polyline fill="none" stroke="#3ee0ff" stroke-width="1.6" points="${pts}"/></svg>`; };
   const days=(m.daily||[]).slice(0,10).map(d=>`<tr><td>${esc(d.date.slice(5).replace('-','/'))}</td><td style="text-align:center">${d.n}</td><td style="text-align:center">${d.hit}</td><td style="text-align:center"><b class="${cls(d.roi)}">${P(d.roi)}</b></td><td style="text-align:right">${Y(d.net)}</td></tr>`).join('');
-  if(mode==='today')return `<div class="card"><div class="ct">MY ENTRY 俺が参入したレースの成績</div><div class="g3">${box('今日',m.today)}${box('直近7日',m.last7)}${box('全期間',a)}</div>${m.today&&m.today.open?`<details class="nd"><summary>見方・注意</summary><div class="note">今日は結果待ち ${m.today.open}件</div></details>`:''}<details class="nd"><summary>見方・注意</summary><div class="note">目安別・場別・日別などの内訳は「成績」タブにあります。</div></details></div>`;
+  if(mode==='today'){const t=m.today||{}, n=t.net||0, big=t.n?`<div class="h2n ${n>=0?'up':'dn'}">${Y(n)}</div><div class="h2s">回収率 <b>${P(t.roi)}</b> ・ 参入 <b>${t.n}</b>R ・ 的中 <b>${t.hit}</b>${t.open?` ・ 結果待ち ${t.open}`:''}</div>`:`<div class="h2n mu">—</div><div class="h2s">今日はまだ参入していません${t.open?`(結果待ち ${t.open}件)`:''}</div>`;
+    const sm=(l,x)=>x&&x.n?`<div class="h2b"><div class="h2bl">${l}</div><div class="h2bv">${P(x.roi)}</div><div class="h2bs ${x.net>=0?'up':'dn'}">${Y(x.net)}</div></div>`:'';
+    return `<div class="card"><div class="ct">今日の俺の成績</div>${big}<div class="h2row">${sm('直近7日',m.last7)}${sm('全期間',a)}</div></div>`;}
   return `<div class="card"><div class="ct">MY ENTRY 俺が参入したレースの成績(${esc((m.from||'').slice(5).replace('-','/'))}〜)</div>
     <div class="g3">${box('今日',m.today)}${box('直近7日',m.last7)}${box('全期間',a)}</div>
     <details class="nd"><summary>見方・注意</summary><div class="note">全期間 ${a.n}レース・投資 ${Number(a.stake).toLocaleString()}円・払戻 ${Number(a.ret).toLocaleString()}円 ${small}${m.today&&m.today.open?`<br>結果待ち ${m.today.open}件(今日)`:''}${a.noPay?`<br>払戻が不明で除いた的中 ${a.noPay}件`:''}</div></details>
@@ -240,7 +256,29 @@ function renderPeakX(p,w){
   }
   return h+'</div>';
 }
-function toggleEnt(i){const e=document.getElementById('entd'+i);if(e)e.style.display=e.style.display==='none'?'table-row':'none';}
+// 2026-11-06(CEO「もっと見やすく」): 目安が出たレースを、1レース=1枚のカードにする。上に「これから・結果待ち」、下に「終わったレース」
+function renderRaceCards(w){
+  const er=w.entryRaces||[]; if(!er.length)return '<div class="note" style="margin-top:8px">今日は、参入の目安が出たレースはまだありません。</div>';
+  const nB=er.filter(r=>r.state==='bet').length,nH=er.filter(r=>r.result&&r.result.state==='hit').length;
+  let h=`<div class="chips"><button class="${entFilter==='all'?'on':''}" onclick="setEnt('all')">全て ${er.length}</button><button class="${entFilter==='bet'?'on':''}" onclick="setEnt('bet')">参入 ${nB}</button><button class="${entFilter==='hit'?'on':''}" onclick="setEnt('hit')">的中 ${nH}</button></div>`;
+  const card=(r,i)=>{
+    const o=r.result, pend=!o||o.state==='pending', hit=o&&o.state==='hit', mine=r.state==='bet';
+    const right=hit?`<div class="rr up">${o.mult}<small>倍</small></div><div class="rs up">的中</div>`:pend?`<div class="rr wt">待ち</div><div class="rs">結果待ち</div>`:`<div class="rr ms">ハズレ</div><div class="rs">${esc(o.win||'')}</div>`;
+    const chips=(r.lines||[]).map(l=>`<span class="bt${o&&o.win===l.c?' bw':''}">${esc(l.c)}${l.o!=null?`<small>${l.o}倍</small>`:''}</span>`).join('');
+    const resTxt=o&&o.win?`結果 <b>${esc(o.win)}</b>${o.yen?`(${Number(o.yen).toLocaleString()}円${hit?'・<b class="up">的中 '+o.mult+'倍</b>':''})`:''}`:'結果待ち';
+    const g=r.gosei!=null?Number(r.gosei).toFixed(1)+'倍':'—';
+    return `<div class="rc${mine?' mine':''}" onclick="toggleEnt(${i})"><span class="tg tg-${esc(r.tier)} big">${esc(r.tier)}</span><div><div class="rn">${esc(r.venue)} ${r.race}R${mine?'<span class="pill">参入</span>':''}</div><div class="rm">${esc(r.deadline)}締切 ・ 合成 ${g}</div></div><div>${right}</div></div><div class="rd" id="entd${i}" style="display:none"><div class="mu" style="font-size:12px;margin-bottom:6px">${esc(r.tier)}の買い目 ${(r.lines||[]).length}点(通知の時点のオッズ・各点100円)</div><div class="bts">${chips||'<span class="mu">買い目を取得できませんでした</span>'}</div><div style="font-size:14px;margin-top:8px">${resTxt}</div></div>`;
+  };
+  const keep=(r)=>entFilter==='bet'?r.state==='bet':entFilter==='hit'?(r.result&&r.result.state==='hit'):true;
+  const isPend=r=>!r.result||r.result.state==='pending';
+  const idx=er.map((r,i)=>[r,i]).filter(([r])=>keep(r));
+  const open=idx.filter(([r])=>isPend(r)), done=idx.filter(([r])=>!isPend(r));
+  if(open.length)h+=`<div class="sec">結果待ち ${open.length}</div>`+open.map(([r,i])=>card(r,i)).join('');
+  if(done.length)h+=`<div class="sec">終わったレース ${done.length}</div>`+done.map(([r,i])=>card(r,i)).join('');
+  if(!idx.length)h+='<div class="empty">該当するレースはありません</div>';
+  return h;
+}
+function toggleEnt(i){const e=document.getElementById('entd'+i);if(e)e.style.display=e.style.display==='none'?(e.className==='rd'?'block':'table-row'):'none';}
 function renderWild(w){
   if(!w)return {head:'',perf:'',table:''};
   const ok=w.indexAgeMin!=null&&w.indexAgeMin<5;
@@ -253,18 +291,7 @@ function renderWild(w){
     ${row('結果の取得',`確定 ${(w.results||{}).confirmed||0}件${(w.results||{}).manual?`(うち手入力 ${w.results.manual}件)`:''}`)}`;
   const headH=h+'</div>'; h='<div class="card"><div class="ct">TODAY 目安が出たレース</div>';
   const perfH=wildTierPerf(w.tierPerf,w.xPerf,w.mPerf);
-  if((w.entryRaces||[]).length){
-    // 2026-10-22(CEO指示「稼働状況は常に見やすく」「総じて合成次第で参入している」): 列=目安(色つき)・レース・合成・結果・状態。合成が大きいレースほど参入の判断材料になる。
-    const nB=w.entryRaces.filter(r=>r.state==='bet').length,nH=w.entryRaces.filter(r=>r.result&&r.result.state==='hit').length;
-    h+=`<div class="chips"><button class="${entFilter==='all'?'on':''}" onclick="setEnt('all')">全て ${w.entryRaces.length}</button><button class="${entFilter==='bet'?'on':''}" onclick="setEnt('bet')">参入 ${nB}</button><button class="${entFilter==='hit'?'on':''}" onclick="setEnt('hit')">的中 ${nH}</button></div>`;
-    h+='<div style="margin-top:10px"><table class="ent"><tr><th>目安</th><th>レース</th><th style="text-align:right">合成</th><th style="text-align:right">結果</th><th style="text-align:right">状態</th></tr>'+
-      w.entryRaces.map((r,i)=>{if(entFilter==='bet'&&r.state!=='bet')return '';if(entFilter==='hit'&&!(r.result&&r.result.state==='hit'))return '';const o=r.result;const res=o&&o.state==='hit'?`<b class="up">${o.mult}倍</b>`:o&&o.state==='miss'?'<b class="dn">✖</b>':`<span class="mu" title="締切 ${esc(r.deadline)}">—</span>`;const g=r.gosei!=null?`<b>${Number(r.gosei).toFixed(1)}</b><span class="mu" style="font-size:11px">倍</span>`:'<span class="mu">—</span>';const st=STATE_JP[r.state]||r.state;
-        // 2026-10-22(CEO指示): レース名をタップすると、買い目(12点・オッズつき)と結果(勝ち目・払戻)が開く
-        const chips=(r.lines||[]).map(l=>`<span class="bt${o&&o.win===l.c?' bw':''}">${esc(l.c)}${l.o!=null?`<small>${l.o}倍</small>`:''}</span>`).join('');
-        const resTxt=o&&o.win?`結果 <b>${esc(o.win)}</b>${o.yen?`(${Number(o.yen).toLocaleString()}円${o.state==='hit'?'・<b class="up">的中 '+o.mult+'倍</b>':'・<b class="dn">不的中</b>'})`:''}`:'結果待ち';
-        const det=`<tr class="entd" id="entd${i}" style="display:none"><td colspan="5" style="padding:4px 4px 10px"><div class="mu" style="font-size:12px;margin-bottom:6px">${esc(r.tier)}の買い目 ${(r.lines||[]).length}点(通知の時点のオッズ・各点100円${r.gosei!=null?'・合成'+Number(r.gosei).toFixed(1)+'倍':''})</div><div class="bts">${chips||'<span class="mu">買い目を取得できませんでした</span>'}</div><div style="font-size:13px;margin-top:8px">${resTxt}</div></td></tr>`;
-        return `<tr class="entr${r.state==='bet'?' mine':''}" onclick="toggleEnt(${i})" style="cursor:pointer"><td><span class="tg tg-${esc(r.tier)}">${esc(r.tier)}</span></td><td>${esc(r.venue)}${r.race}R<span class="mu" style="font-size:11px"> ▾</span><div class="mu" style="font-size:11px">${esc(r.deadline)}</div></td><td style="text-align:right">${g}</td><td style="text-align:right;font-size:15px">${res}</td><td style="text-align:right;white-space:nowrap;font-size:13px${r.state==='bet'?';font-weight:800;color:#ff8ad8':''}" class="${r.state==='bet'?'':'mu'}">${esc(st)}</td></tr>`+det}).join('')+'</table><div class="note">合成=12点を全部買ったときの合成オッズ(通知の時点)。結果=AIおすすめの買い目で的中なら的中配当(倍)、不的中なら✖、結果待ちは—(基準の仮想)。</div></div>';
-  } else h+='<div class="note" style="margin-top:8px">今日は、参入の目安が出たレースはまだありません。</div>';
+  h+=renderRaceCards(w);
   h+='</div>';
   return {head:headH,perf:perfH?'<div class="card"><div class="ct">仮想の成績 全件を買っていたら</div>'+perfH+'</div>':'',table:h};
 }
