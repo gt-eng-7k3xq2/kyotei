@@ -18,20 +18,20 @@
   .rb{background:var(--panel2);border:1px solid var(--line);color:var(--cy2);font-size:11px;padding:6px 12px;border-radius:6px;-webkit-appearance:none;}
   .wrap{max-width:680px;margin:0 auto;padding:12px 16px;}
   .card{background:linear-gradient(180deg,var(--panel),#0a1320);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;}
-  .ct{font-size:11px;color:var(--cy);font-weight:800;margin-bottom:10px;letter-spacing:.14em;}
+  .ct{font-size:13px;color:var(--cy);font-weight:800;margin-bottom:10px;letter-spacing:.14em;}
   .hero{display:flex;align-items:center;gap:12px;}
   .dot{width:16px;height:16px;border-radius:50%;flex:none;}
   .dot.ok{background:var(--ok);box-shadow:0 0 14px var(--ok);} .dot.warn{background:var(--warn);box-shadow:0 0 14px var(--warn);} .dot.error{background:var(--err);box-shadow:0 0 14px var(--err);}
-  .hero b{font-size:16px;} .hero small{display:block;color:var(--mu);font-size:11px;margin-top:2px;}
+  .hero b{font-size:15px;} .hero small{display:block;color:var(--mu);font-size:11px;margin-top:2px;}
   .al{border-radius:8px;padding:9px 11px;margin-top:8px;font-size:12px;line-height:1.5;border:1px solid;}
   .al.error{background:#3a1520;border-color:var(--err);color:#ffc0c9;} .al.warn{background:#382d10;border-color:var(--warn);color:#ffe3a0;} .al.info{background:#102a3a;border-color:var(--cy);color:var(--cy2);}
   .g2{display:grid;grid-template-columns:1fr 1fr;gap:8px;} .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
   .st{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 8px;text-align:center;}
-  .sv{font-size:19px;font-weight:800;color:var(--cy2);font-variant-numeric:tabular-nums;} .sl{font-size:10px;color:var(--mu);margin-top:3px;}
-  .row{display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:6px 0;border-bottom:1px solid var(--line);} .row:last-child{border-bottom:none;}
+  .sv{font-size:26px;font-weight:800;color:var(--cy2);font-variant-numeric:tabular-nums;} .sl{font-size:12px;color:var(--mu);margin-top:4px;line-height:1.5;}
+  .row{display:flex;justify-content:space-between;gap:8px;font-size:14px;padding:9px 0;border-bottom:1px solid var(--line);} .row:last-child{border-bottom:none;}
   .row .k{color:var(--mu);} .row .v{font-weight:700;text-align:right;}
-  table{width:100%;border-collapse:collapse;} th{font-size:10px;color:var(--mu);padding:5px 4px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap;} th:first-child,td:first-child{text-align:left;}
-  td{font-size:12px;padding:7px 4px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;} tr:last-child td{border-bottom:none;}
+  table{width:100%;border-collapse:collapse;} th{font-size:12px;color:var(--mu);padding:6px 4px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap;} th:first-child,td:first-child{text-align:left;}
+  td{font-size:14px;padding:9px 4px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;} tr:last-child td{border-bottom:none;}
   .up{color:var(--ok);} .dn{color:var(--err);} .mu{color:var(--mu);}
   .tg{display:inline-block;min-width:26px;text-align:center;font-weight:800;font-size:13px;border-radius:6px;padding:2px 6px;border:1px solid var(--line)}
   .tg-S{color:#4ade80;border-color:#4ade80}.tg-A{color:#38bdf8;border-color:#38bdf8}.tg-B{color:#fbbf24;border-color:#fbbf24}.tg-M{color:#a5b4fc;border-color:#a5b4fc}.tg-X{color:#f472b6;border-color:#f472b6}
@@ -40,7 +40,11 @@
   tr.entr:active{background:rgba(255,255,255,.05)}
   .bd{display:inline-block;font-size:10px;font-weight:800;padding:2px 8px;border-radius:9px;border:1px solid var(--line);}
   .bd.ok{color:var(--ok);border-color:var(--ok);} .bd.err{color:var(--err);border-color:var(--err);} .bd.off{color:var(--mu);} .bd.warn{color:var(--warn);border-color:var(--warn);}
-  .note{font-size:10px;color:var(--mu);line-height:1.6;margin-top:8px;}
+  .note{font-size:12px;color:var(--mu);line-height:1.7;margin-top:8px;}
+  details.nd{margin-top:10px;} details.nd>summary{font-size:12px;color:var(--cy);cursor:pointer;list-style:none;padding:4px 0;} details.nd>summary::before{content:'ⓘ ';}
+  details.bk{margin-top:10px;border-top:1px solid var(--line);} details.bk>summary{font-size:14px;font-weight:700;padding:11px 2px;cursor:pointer;} details.bk>summary::after{content:' ▾';color:var(--mu);}
+  .chips{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;} .chips button{background:var(--panel2);border:1px solid var(--line);color:var(--mu);font-size:13px;font-weight:700;padding:7px 12px;border-radius:16px;-webkit-appearance:none;} .chips button.on{color:#06101c;background:var(--cy2);border-color:var(--cy2);}
+  tr.mine td{background:rgba(255,138,216,.10);} tr.mine td:first-child{box-shadow:inset 3px 0 0 #ff8ad8;}
   .bar{height:8px;background:var(--panel2);border-radius:4px;overflow:hidden;margin-top:4px;position:relative;} .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--vi),var(--cy));}
   .tabs{display:flex;gap:6px;max-width:680px;margin:0 auto;padding:10px 16px 0;position:sticky;top:55px;z-index:9;background:linear-gradient(180deg,rgba(7,13,24,.97) 70%,transparent);}
   .tabs button{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--mu);font-size:14px;font-weight:800;padding:10px 4px;border-radius:10px;-webkit-appearance:none;}
@@ -91,6 +95,7 @@ const KSTYLE={
   notify:{c:'#3ee0a0',t:'通知',g:'◎'},skip_odds:{c:'#ffc857',t:'見送り(配当が薄い)',g:'△'},skip_conf:{c:'#5b7396',t:'見送り(確信度)',g:'－'},skip_other:{c:'#ffc857',t:'見送り',g:'△'},
   no_data:{c:'#ff5d73',t:'取得できず',g:'✕'},no_data_fixed:{c:'#8a4a5a',t:'取得できず(修正済みの不具合)',g:'✕'},no_feature:{c:'#ff5d73',t:'特徴不足',g:'✕'},error:{c:'#ff5d73',t:'エラー',g:'✕'},missed:{c:'#22344f',t:'評価なし',g:''},pending:{c:'#0d1726',t:'これから',g:'○'}
 };
+let entFilter='all';function setEnt(k){entFilter=k;if(lastStatus)render(lastStatus);}
 let pickedCell=null;let lastStatus=null;
 function pickCell(v,r){pickedCell=v+'|'+r;if(lastStatus)renderDisp(lastStatus);}
 function renderDisp(s){
@@ -173,21 +178,21 @@ function renderMine(w,mode){
   const m=w&&w.myPerf; if(!m||!m.all)return '';
   const P=x=>x==null?'—':Math.round(x*100)+'%', Y=v=>(v<0?'-':'+')+Math.abs(Math.round(v)).toLocaleString()+'円';
   const cls=x=>x==null?'':(x>=1?'up':'dn');
-  const box=(t,x)=>x&&x.n?`<div class="st"><div class="sv ${cls(x.roi)}">${P(x.roi)}</div><div class="sl">${t}<br>${x.hit}/${x.n}的中・${Y(x.net)}</div></div>`:`<div class="st"><div class="sv mu">—</div><div class="sl">${t}<br>参入なし</div></div>`;
+  const box=(t,x)=>x&&x.n?`<div class="st"><div class="sl" style="margin:0 0 2px;font-weight:700">${t}</div><div class="sv ${cls(x.roi)}">${P(x.roi)}</div><div class="sl">${x.hit}/${x.n} 的中</div><div class="sl ${x.net>=0?'up':'dn'}" style="font-weight:700">${Y(x.net)}</div></div>`:`<div class="st"><div class="sl" style="margin:0 0 2px;font-weight:700">${t}</div><div class="sv mu">—</div><div class="sl">参入なし</div></div>`;
   const a=m.all, small=a.n<30?'<span class="mu">(少ないので参考外)</span>':'';
   const tiers=['S','A','B','目安外'].filter(k=>m.byTier&&m.byTier[k]&&m.byTier[k].n).map(k=>{const x=m.byTier[k];return `<tr><td><b>${k}</b></td><td style="text-align:center">${x.n}</td><td style="text-align:center">${x.hit} (${P(x.hitRate)})</td><td style="text-align:center"><b class="${cls(x.roi)}">${P(x.roi)}</b>${x.n<30?'<span class="mu" style="font-size:11px"> 参考外</span>':''}</td><td style="text-align:right">${Y(x.net)}</td></tr>`}).join('');
-  const brk=(t,list,order)=>{ if(!list||!list.length)return ''; if(order)list=order.map(k=>list.find(x=>x.k===k)).filter(Boolean); return `<div class="mu" style="font-size:12px;margin:10px 0 4px">${t}</div><table><tr><th></th><th style="text-align:center">参入</th><th style="text-align:center">的中率</th><th style="text-align:center">回収率</th><th style="text-align:right">損益</th></tr>${list.map(x=>`<tr><td>${esc(x.k)}</td><td style="text-align:center">${x.n}</td><td style="text-align:center">${P(x.hitRate)}</td><td style="text-align:center"><b class="${cls(x.roi)}">${P(x.roi)}</b>${x.n<30?'<span class="mu" style="font-size:11px"> 参考外</span>':''}</td><td style="text-align:right">${Y(x.net)}</td></tr>`).join('')}</table>`; };
+  const brk=(t,list,order)=>{ if(!list||!list.length)return ''; if(order)list=order.map(k=>list.find(x=>x.k===k)).filter(Boolean); return `<details class="bk"><summary>${t}</summary><table><tr><th></th><th style="text-align:center">参入</th><th style="text-align:center">的中率</th><th style="text-align:center">回収率</th><th style="text-align:right">損益</th></tr>${list.map(x=>`<tr><td>${esc(x.k)}</td><td style="text-align:center">${x.n}</td><td style="text-align:center">${P(x.hitRate)}</td><td style="text-align:center"><b class="${cls(x.roi)}">${P(x.roi)}</b>${x.n<30?'<span class="mu" style="font-size:11px"> 参考外</span>':''}</td><td style="text-align:right">${Y(x.net)}</td></tr>`).join('')}</table></details>`; };
   const spark=cum=>{ if(!cum||cum.length<2)return ''; const v=cum.map(c=>c.cum), mn=Math.min(0,...v), mx=Math.max(0,...v), W=300, H=60, X=i=>i*(W/(v.length-1)), Yp=y=>H-(y-mn)/((mx-mn)||1)*H; const pts=v.map((y,i)=>X(i).toFixed(1)+','+Yp(y).toFixed(1)).join(' '); return `<div class="mu" style="font-size:12px;margin:10px 0 2px">累計損益の推移(${esc(cum[0].date.slice(5))}〜、いま ${Y(v[v.length-1])})</div><svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><line x1="0" x2="${W}" y1="${Yp(0).toFixed(1)}" y2="${Yp(0).toFixed(1)}" stroke="#1f3a5c" stroke-dasharray="3"/><polyline fill="none" stroke="#3ee0ff" stroke-width="1.6" points="${pts}"/></svg>`; };
   const days=(m.daily||[]).slice(0,10).map(d=>`<tr><td>${esc(d.date.slice(5).replace('-','/'))}</td><td style="text-align:center">${d.n}</td><td style="text-align:center">${d.hit}</td><td style="text-align:center"><b class="${cls(d.roi)}">${P(d.roi)}</b></td><td style="text-align:right">${Y(d.net)}</td></tr>`).join('');
-  if(mode==='today')return `<div class="card"><div class="ct">MY ENTRY 俺が参入したレースの成績</div><div class="g3">${box('今日',m.today)}${box('直近7日',m.last7)}${box('全期間',a)}</div>${m.today&&m.today.open?`<div class="note">今日は結果待ち ${m.today.open}件</div>`:''}<div class="note">目安別・場別・日別などの内訳は「成績」タブにあります。</div></div>`;
+  if(mode==='today')return `<div class="card"><div class="ct">MY ENTRY 俺が参入したレースの成績</div><div class="g3">${box('今日',m.today)}${box('直近7日',m.last7)}${box('全期間',a)}</div>${m.today&&m.today.open?`<details class="nd"><summary>見方・注意</summary><div class="note">今日は結果待ち ${m.today.open}件</div></details>`:''}<details class="nd"><summary>見方・注意</summary><div class="note">目安別・場別・日別などの内訳は「成績」タブにあります。</div></details></div>`;
   return `<div class="card"><div class="ct">MY ENTRY 俺が参入したレースの成績(${esc((m.from||'').slice(5).replace('-','/'))}〜)</div>
     <div class="g3">${box('今日',m.today)}${box('直近7日',m.last7)}${box('全期間',a)}</div>
-    <div class="note" style="margin-top:8px">全期間 ${a.n}レース・投資 ${Number(a.stake).toLocaleString()}円・払戻 ${Number(a.ret).toLocaleString()}円 ${small}${m.today&&m.today.open?`<br>結果待ち ${m.today.open}件(今日)`:''}${a.noPay?`<br>払戻が不明で除いた的中 ${a.noPay}件`:''}</div>
+    <details class="nd"><summary>見方・注意</summary><div class="note">全期間 ${a.n}レース・投資 ${Number(a.stake).toLocaleString()}円・払戻 ${Number(a.ret).toLocaleString()}円 ${small}${m.today&&m.today.open?`<br>結果待ち ${m.today.open}件(今日)`:''}${a.noPay?`<br>払戻が不明で除いた的中 ${a.noPay}件`:''}</div></details>
     ${tiers?`<div class="mu" style="font-size:12px;margin:10px 0 4px">目安別(記録した時点のランク)</div><table><tr><th></th><th style="text-align:center">参入</th><th style="text-align:center">的中</th><th style="text-align:center">回収率</th><th style="text-align:right">損益</th></tr>${tiers}</table>`:''}
     ${days?`<div class="mu" style="font-size:12px;margin:10px 0 4px">日別(直近10日)</div><table><tr><th></th><th style="text-align:center">参入</th><th style="text-align:center">的中</th><th style="text-align:center">回収率</th><th style="text-align:right">損益</th></tr>${days}</table>`:''}
     ${brk('レース番号別',m.byRace,['1〜4R','5〜8R','9〜12R'])}${brk('12点の合成オッズ別(記録時)',m.byGosei)}${brk('買い目の点数別',m.byPts)}${brk('場別(参入の多い順)',(m.byVenue||[]).slice(0,10))}
     ${spark(m.cum)}
-    <div class="note">基準: WILD画面で記録した予想(実際の買い目・金額)を、結果が確定したレースだけ数えた成績です。同じレースを複数回記録したときは最後の1件。見送り ${m.passes||0}件は含みません。目安外=M・X・旧基準の時期の記録を含みます。</div></div>`;
+    <details class="nd"><summary>見方・注意</summary><div class="note">基準: WILD画面で記録した予想(実際の買い目・金額)を、結果が確定したレースだけ数えた成績です。同じレースを複数回記録したときは最後の1件。見送り ${m.passes||0}件は含みません。目安外=M・X・旧基準の時期の記録を含みます。</div></details></div>`;
 }
 function renderWildSummary(w){
   if(!w)return '';
@@ -204,7 +209,7 @@ function renderWildSummary(w){
   return `<div class="card"><div class="ct">今日の通知(WILD)</div>
     <table><tr><th></th><th style="text-align:center">今日</th><th style="text-align:center">1日の目安</th><th style="text-align:center">的中/結果</th><th style="text-align:center">累計回収</th></tr>${rows.map(tr).join('')}
     <tr><td><b>合計</b></td><td style="text-align:center"><b>${tot}</b>本</td><td style="text-align:center" class="mu">約30</td><td></td><td></td></tr></table>
-    <div class="note">的中/結果=今日、通知が来たレースのうち、結果が出たものの的中数。累計回収=仮想(12点・各点100円〔S・A・Bの10/20までは約3,000円〕で買ったと仮定。S・A・Bは10/1以降の該当全件、M・Xは通知が来たものだけ)。件数が少ない間は、偶然で大きく動きます。</div></div>`;
+    <details class="nd"><summary>見方・注意</summary><div class="note">的中/結果=今日、通知が来たレースのうち、結果が出たものの的中数。累計回収=仮想(12点・各点100円〔S・A・Bの10/20までは約3,000円〕で買ったと仮定。S・A・Bは10/1以降の該当全件、M・Xは通知が来たものだけ)。件数が少ない間は、偶然で大きく動きます。</div></details></div>`;
 }
 function renderM(w){
   w=w||{};const mp=w.mPerf||{},ma=mp.all||{},mt=mp.today||{};
@@ -213,7 +218,7 @@ function renderM(w){
     <div class="g3">${stat((w.mNotified||0)+'本','今日の通知(目安約14本)')}${stat(w.mCardsToday==null?'—':w.mCardsToday,'今日の該当レース')}${stat(mt.n!=null?(mt.hit||0)+'/'+mt.n:'—','今日の的中(結果確定分)')}</div>
     <div class="g3" style="margin-top:8px">${stat(ma.n||0,'該当(結果確定の累計)')}${stat(ma.n?pct1(ma.hitRate):'—','的中率')}${stat(ma.avgHitMult!=null?Math.round(ma.avgHitMult)+'倍':'—','平均的中配当')}</div>
     ${row('仮想の回収率(確定分)',ma.n?`${pct1(ma.roi)}<span class="mu">(n=${ma.n}${ma.n<30?'、少ないので参考外':''})</span>`:'—')}
-    <div class="note" style="margin-top:8px">条件: 荒れ40%超・12点の合成3.5〜6倍・12点の確率合計15%以上(S・A・Bとは別枠、ntfyの【M】)。12点・各点100円で買ったと<b>仮定</b>した、${esc(mp.from||'2026-10-21')}以降の${mp.days||0}日分の成績です。目安は、的中約2割・当たれば約40倍台・回収約8割(参考値、100%には届いていません)。件数が少ない間は、偶然で大きく動きます。</div></div>`;
+    <details class="nd"><summary>見方・注意</summary><div class="note">条件: 荒れ40%超・12点の合成3.5〜6倍・12点の確率合計15%以上(S・A・Bとは別枠、ntfyの【M】)。12点・各点100円で買ったと<b>仮定</b>した、${esc(mp.from||'2026-10-21')}以降の${mp.days||0}日分の成績です。目安は、的中約2割・当たれば約40倍台・回収約8割(参考値、100%には届いていません)。件数が少ない間は、偶然で大きく動きます。</div></details></div>`;
 }
 function renderPeakX(p,w){
   w=w||{};const xp=w.xPerf||{},xa=xp.all||{},xt=xp.today||{};
@@ -250,13 +255,15 @@ function renderWild(w){
   const perfH=wildTierPerf(w.tierPerf,w.xPerf,w.mPerf);
   if((w.entryRaces||[]).length){
     // 2026-10-22(CEO指示「稼働状況は常に見やすく」「総じて合成次第で参入している」): 列=目安(色つき)・レース・合成・結果・状態。合成が大きいレースほど参入の判断材料になる。
+    const nB=w.entryRaces.filter(r=>r.state==='bet').length,nH=w.entryRaces.filter(r=>r.result&&r.result.state==='hit').length;
+    h+=`<div class="chips"><button class="${entFilter==='all'?'on':''}" onclick="setEnt('all')">全て ${w.entryRaces.length}</button><button class="${entFilter==='bet'?'on':''}" onclick="setEnt('bet')">参入 ${nB}</button><button class="${entFilter==='hit'?'on':''}" onclick="setEnt('hit')">的中 ${nH}</button></div>`;
     h+='<div style="margin-top:10px"><table class="ent"><tr><th>目安</th><th>レース</th><th style="text-align:right">合成</th><th style="text-align:right">結果</th><th style="text-align:right">状態</th></tr>'+
-      w.entryRaces.map((r,i)=>{const o=r.result;const res=o&&o.state==='hit'?`<b class="up">${o.mult}倍</b>`:o&&o.state==='miss'?'<b class="dn">✖</b>':`<span class="mu" title="締切 ${esc(r.deadline)}">—</span>`;const g=r.gosei!=null?`<b>${Number(r.gosei).toFixed(1)}</b><span class="mu" style="font-size:11px">倍</span>`:'<span class="mu">—</span>';const st=STATE_JP[r.state]||r.state;
+      w.entryRaces.map((r,i)=>{if(entFilter==='bet'&&r.state!=='bet')return '';if(entFilter==='hit'&&!(r.result&&r.result.state==='hit'))return '';const o=r.result;const res=o&&o.state==='hit'?`<b class="up">${o.mult}倍</b>`:o&&o.state==='miss'?'<b class="dn">✖</b>':`<span class="mu" title="締切 ${esc(r.deadline)}">—</span>`;const g=r.gosei!=null?`<b>${Number(r.gosei).toFixed(1)}</b><span class="mu" style="font-size:11px">倍</span>`:'<span class="mu">—</span>';const st=STATE_JP[r.state]||r.state;
         // 2026-10-22(CEO指示): レース名をタップすると、買い目(12点・オッズつき)と結果(勝ち目・払戻)が開く
         const chips=(r.lines||[]).map(l=>`<span class="bt${o&&o.win===l.c?' bw':''}">${esc(l.c)}${l.o!=null?`<small>${l.o}倍</small>`:''}</span>`).join('');
         const resTxt=o&&o.win?`結果 <b>${esc(o.win)}</b>${o.yen?`(${Number(o.yen).toLocaleString()}円${o.state==='hit'?'・<b class="up">的中 '+o.mult+'倍</b>':'・<b class="dn">不的中</b>'})`:''}`:'結果待ち';
         const det=`<tr class="entd" id="entd${i}" style="display:none"><td colspan="5" style="padding:4px 4px 10px"><div class="mu" style="font-size:12px;margin-bottom:6px">${esc(r.tier)}の買い目 ${(r.lines||[]).length}点(通知の時点のオッズ・各点100円${r.gosei!=null?'・合成'+Number(r.gosei).toFixed(1)+'倍':''})</div><div class="bts">${chips||'<span class="mu">買い目を取得できませんでした</span>'}</div><div style="font-size:13px;margin-top:8px">${resTxt}</div></td></tr>`;
-        return `<tr class="entr" onclick="toggleEnt(${i})" style="cursor:pointer"><td><span class="tg tg-${esc(r.tier)}">${esc(r.tier)}</span></td><td>${esc(r.venue)}${r.race}R<span class="mu" style="font-size:11px"> ▾</span><div class="mu" style="font-size:11px">${esc(r.deadline)}</div></td><td style="text-align:right">${g}</td><td style="text-align:right;font-size:15px">${res}</td><td style="text-align:right;white-space:nowrap;font-size:13px${r.state==='bet'?';font-weight:800;color:#ff8ad8':''}" class="${r.state==='bet'?'':'mu'}">${esc(st)}</td></tr>`+det}).join('')+'</table><div class="note">合成=12点を全部買ったときの合成オッズ(通知の時点)。結果=AIおすすめの買い目で的中なら的中配当(倍)、不的中なら✖、結果待ちは—(基準の仮想)。</div></div>';
+        return `<tr class="entr${r.state==='bet'?' mine':''}" onclick="toggleEnt(${i})" style="cursor:pointer"><td><span class="tg tg-${esc(r.tier)}">${esc(r.tier)}</span></td><td>${esc(r.venue)}${r.race}R<span class="mu" style="font-size:11px"> ▾</span><div class="mu" style="font-size:11px">${esc(r.deadline)}</div></td><td style="text-align:right">${g}</td><td style="text-align:right;font-size:15px">${res}</td><td style="text-align:right;white-space:nowrap;font-size:13px${r.state==='bet'?';font-weight:800;color:#ff8ad8':''}" class="${r.state==='bet'?'':'mu'}">${esc(st)}</td></tr>`+det}).join('')+'</table><div class="note">合成=12点を全部買ったときの合成オッズ(通知の時点)。結果=AIおすすめの買い目で的中なら的中配当(倍)、不的中なら✖、結果待ちは—(基準の仮想)。</div></div>';
   } else h+='<div class="note" style="margin-top:8px">今日は、参入の目安が出たレースはまだありません。</div>';
   h+='</div>';
   return {head:headH,perf:perfH?'<div class="card"><div class="ct">仮想の成績 全件を買っていたら</div>'+perfH+'</div>':'',table:h};
