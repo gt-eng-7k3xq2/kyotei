@@ -14,7 +14,7 @@ cases.forEach((o, i) => ok(variableK(o) === py[i], `画面とサーバーが一�
 ok(variableK(cases[1]) === 8, '合成が高ければ8点で止まる(下限8点)');
 ok(variableK(cases[2]) === 12, '合成が届かなければ12点(上限12点)');
 ok(variableK(cases[5]) === 6, '候補が6点しか無ければ6点');
-const code = [grab(/const PLAN_POINTS[^\n]*\n/), src, grab(/function hasExcluded[^\n]*\n/), grab(/function autoPlan[\s\S]*?return \{ attacker, blocks \};\s*\}/), grab(/function syntheticOdds[^\n]*\n/), grab(/function mergeBlocks[\s\S]*?return out;\s*\}/), grab(/const SAMPLES = [^\n]*\n/)].join('\n');
+const code = [grab(/const PLAN_POINTS[^\n]*\n/), src, grab(/function planKey[^\n]*\n/), grab(/function hasExcluded[^\n]*\n/), grab(/function autoPlan[\s\S]*?return \{ attacker, blocks \};\s*\}/), grab(/function syntheticOdds[^\n]*\n/), grab(/function mergeBlocks[\s\S]*?return out;\s*\}/), grab(/const SAMPLES = [^\n]*\n/)].join('\n');
 const F = new Function(code + ';return {autoPlan,mergeBlocks,syntheticOdds,SAMPLES};')();
 // 2026-10-14夜: CEO指示で13点に戻した(PLAN_VARIABLE=false)。おまかせ案は12点(2026-10-18、13点から変更)・6号艇の2/3着も除外しない。可変の規則(variableK)は残してあり、スイッチを true にすれば8〜12点に戻せる。
 ok(/const PLAN_VARIABLE = false;/.test(html), '画面: 点数の可変は止めてある(13点)');
