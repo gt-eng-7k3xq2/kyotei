@@ -1,0 +1,25 @@
+'use strict';
+// 検出器のM買い目(2026-11-08): (1)画面のおまかせ案=card.aiPick.mDet の12点、除外・切替・非Mのレースの挙動 (2)detector_apply の安全な無効化 (3)実カードでの生成(Python)
+const fs = require('fs'), path = require('path'), assert = require('assert');
+const html = fs.readFileSync(path.join(__dirname, '..', 'garon_wild.html'), 'utf8');
+const g = re => { const m = html.match(re); if (!m) throw new Error('抽出失敗 ' + re); return m[0]; };
+const code = [g(/const PLAN_POINTS[^\n]*\n/), g(/const X_ODDS_MIN[^\n]*\n/), g(/const M_UPSET_MIN[^\n]*\n/), g(/const PLAN_MIN_POINTS[\s\S]*?function variableK[\s\S]*?return n;\s*\}/), g(/function planKey[^\n]*\n/), g(/function hasExcluded[^\n]*\n/), g(/function mOfCard[\s\S]*?\n\}\r?\n/), g(/function mDetOn[^\n]*\n/), g(/function autoPlan[\s\S]*?\n\}\r?\n/), g(/function mergeBlocks[\s\S]*?return out;\s*\}/), g(/const SAMPLES = [^\n]*\n/)].join('\n');
+const F = new Function(code + ';let S=null;return {autoPlan,mergeBlocks,mDetOn,SAMPLES,setS:v=>{S=v;}};')();
+let pass = 0, fail = 0; const t = (n, f) => { try { f(); pass++; console.log('PASS  ' + n); } catch (e) { fail++; console.log('FAIL  ' + n + ': ' + e.message.split('\n')[0]); } };
+const s0 = F.SAMPLES[0], base = JSON.parse(JSON.stringify(s0.card));
+const info = base.combos;
+const mk = (extra) => { const c = JSON.parse(JSON.stringify(base)); c.entry = Object.assign({}, c.entry, { rank: null }); c.overview.upset = 0.5; const ls = Object.keys(info).filter(k => info[k].odds).sort((a, b) => info[b].enginePct - info[a].enginePct).slice(0, 12); c.aiPick = Object.assign({}, c.aiPick, { lines: ls.map(k => ({ combo: k, odds: 50, enginePct: 1.5 })) }); Object.assign(c.aiPick, extra || {}); return c; };
+const det = Object.keys(info).filter(k => info[k].odds).sort((a, b) => info[a].odds - info[b].odds).slice(30, 50);
+const mDet = { ranked: det.map(c => ({ combo: c, odds: info[c].odds })), lines: det.slice(0, 12).map(c => ({ combo: c, odds: info[c].odds, enginePct: info[c].enginePct })), gosei: 4 };
+const M = mk({ mDet });
+t('Mでない(S/A/B等)カードでは検出器の買い目を使わない', () => { const c = mk({ mDet }); c.entry.rank = 'S'; F.setS({}); assert.ok(!F.mDetOn(c)); });
+t('Mのレースでは、おまかせ案=検出器のランキング上位12点', () => { F.setS({}); const cs = F.mergeBlocks(F.autoPlan(M, null, []).blocks); assert.deepEqual(cs.slice().sort(), det.slice(0, 12).sort()); });
+t('mDetが無いMのレースは従来どおり', () => { F.setS({}); const c = mk(); assert.ok(!F.mDetOn(c)); });
+t('S.mdetOff=true で従来に戻る', () => { F.setS({ mdetOff: true }); assert.ok(!F.mDetOn(M)); });
+t('X・安定枠の買い方を選んだときは検出器を使わない', () => { F.setS({ xmode: true }); const cs = F.mergeBlocks(F.autoPlan(M, null, []).blocks); assert.notDeepEqual(cs.slice().sort(), det.slice(0, 12).sort()); });
+const D = require('../scripts/lib/detector_apply');
+t('適用開始日(2026-11-09)より前のレースは何もしない', () => { const r = D.applyDetector({ ok: true, card: { raceDate: '2026-11-08', aiPick: {} } }, {}); assert.equal(r.reason, 'before_start'); });
+t('Mでないレースは何もしない', () => { const r = D.applyDetector({ ok: true, card: { raceDate: '2026-11-09', overview: { upset: 0.1 }, aiPick: { lines: [] }, entry: {} } }, {}); assert.equal(r.reason, 'not_M'); });
+t('停止フラグがあると何もしない', () => { const tmp = path.join(require('os').tmpdir(), 'det_disable_test'); fs.writeFileSync(tmp, 'x'); try { const c = JSON.parse(JSON.stringify(M)); c.raceDate = '2026-11-09'; const r = D.applyDetector({ ok: true, card: c }, {}, { disableFile: tmp }); assert.equal(r.reason, 'disabled'); } finally { fs.unlinkSync(tmp); } });
+t('例外が起きてもカード作成を止めない', () => { const r = D.applyDetector({ ok: true, card: { raceDate: '2026-11-09', aiPick: null } }, {}); assert.equal(r.applied, false); });
+console.log(`\n${pass} passed, ${fail} failed`); process.exit(fail ? 1 : 0);
