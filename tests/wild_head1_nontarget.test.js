@@ -26,8 +26,9 @@ t('対象外: 12点・末尾2点が1号艇頭(10倍以上・エンジン確率�
 });
 t('S/A/B・M・Xのカードは従来と同じ買い目', () => {
   NS.setS({}); OS.setS({});
-  for (const c of cards) { if (NS.isNonTarget(c)) continue; other++; assert.deepStrictEqual(all(NS.autoPlan(c, null, [], undefined)), all(OS.autoPlan(c, null, [], undefined))); }
-  assert(other > 5, '対象外以外 ' + other);
+  let mFb = 0, mTwo = 0; for (const c of cards) { if (NS.mOfCard(c) && !NS.isNonTarget(c) && !(c.entry && (c.entry.rank || c.entry.x))) { mFb++; other++; const pl = NS.autoPlan(c, null, [], undefined), aa = all(pl); const n1 = aa.filter(x => x.startsWith('1-')).length; assert.strictEqual(n1, (pl.head1Added || []).length, 'Mで補正できなかったカードの1号艇頭は追加した点だけ'); assert(n1 <= 2); if (n1 === 2) mTwo++; assert(aa.length <= 12); continue; }   // 2026-11-12: Mで直前情報が取れず補正できなかったカードにも、1号艇頭2点を入れる
+    if (NS.isNonTarget(c)) continue; other++; assert.deepStrictEqual(all(NS.autoPlan(c, null, [], undefined)), all(OS.autoPlan(c, null, [], undefined))); }
+  assert(other > 5, '対象外以外 ' + other); assert(mFb > 0, 'Mのカードが見つからない');
 });
 t('狙う艇を指定・点数指定・安定枠/X表示のときは、従来と同じ', () => {
   for (const c of cards.filter(x => NS.isNonTarget(x)).slice(0, 40)) {
@@ -40,5 +41,10 @@ t('狙う艇を指定・点数指定・安定枠/X表示のときは、従来と
 t('消した艇(1号艇を外す)の指定では、1号艇頭を入れず従来と同じ', () => {
   NS.setS({}); OS.setS({});
   for (const c of cards.filter(x => NS.isNonTarget(x)).slice(0, 40)) { const a = all(NS.autoPlan(c, null, [1], undefined)); assert(a.every(x => !x.includes('1')), '1号艇を含む'); assert.deepStrictEqual(a, all(OS.autoPlan(c, null, [1], undefined))); }
+});
+t('Mで補正できなかったカード(宮島4R 2026-11-12)は末尾2点が1号艇頭', () => {
+  const f = path.join(ROOT, 'logs', 'wild', 'cards', '2026-11-12', '宮島_4R.json'); if (!fs.existsSync(f)) return;
+  const c = JSON.parse(fs.readFileSync(f, 'utf8')).card; NS.setS({}); const pl = NS.autoPlan(c, null, [], undefined);
+  assert.strictEqual((pl.head1Added || []).length, 2); assert.strictEqual(all(pl).filter(x => x.startsWith('1-')).length, 2); assert.strictEqual(all(pl).length, 12);
 });
 console.log(`\n合格 ${pass} / 失敗 ${fail}(対象外 ${nt}、それ以外 ${other})`); process.exit(fail ? 1 : 0);

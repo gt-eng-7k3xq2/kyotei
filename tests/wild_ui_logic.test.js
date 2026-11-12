@@ -10,8 +10,8 @@ function expandBets(text) {
   String(text).split('/').filter(Boolean).forEach(tok => {
     const parts = tok.split('-');
     const add = (h, b, c) => { if (h !== b && b !== c && h !== c) out.push(h + '-' + b + '-' + c); };
-    if (parts.length === 2 && parts[0].includes('=')) { const [a, b] = parts[0].split('='); for (const c of parts[1]) { add(a, b, c); add(b, a, c); } }
-    else if (parts.length === 2 && parts[1].includes('=')) { const [b, c] = parts[1].split('='); for (const h of parts[0]) { add(h, b, c); add(h, c, b); } }
+    if (parts.length === 2 && parts[0].includes('=')) { const [A, B] = parts[0].split('='); for (const a of A) for (const b of B) for (const c of parts[1]) { add(a, b, c); add(b, a, c); } }   // 2026-11-12: 入れ替えの両側が複数の艇の集まり(例 3-4=26)にも対応
+    else if (parts.length === 2 && parts[1].includes('=')) { const [B, C] = parts[1].split('='); for (const h of parts[0]) for (const b of B) for (const c of C) { add(h, b, c); add(h, c, b); } }
     else { const [H, B, C] = parts; for (const h of H) for (const b of B) for (const c of C) add(h, b, c); }
   });
   return out.sort();
@@ -41,12 +41,12 @@ let n = 0; const ok = (c, m) => { assert(c, m); n++; };
   const Q = new Function(cutSrc('const GARON_ONE_CHAR_SURNAMES', 'return name.slice(0,2);' + NL + '}') + NL + cutSrc('function garonBoatLabel', NL + '}') + NL + cutSrc('function garonNaturalGroupBets', '.map(r => r.text);' + NL + '}') + NL + cutSrc('function garonGdbHyoka', NL + '}') + NL + 'const GARON_LABEL_CIRCLED=["❶","❷","❸","❹","❺","❻"];return {garonSurname,garonBoatLabel,garonNaturalGroupBets,garonGdbHyoka};')();
   for (const nm of ['石田 政吾', '佐藤 太郎', '濱野谷憲吾', '林 一', '菅章哉', '田村隆信', '']) { ok(L.garonSurname(nm) === Q.garonSurname(nm), '苗字 ' + nm); ok(L.boatLabel(3, nm) === Q.garonBoatLabel(3, nm), 'ラベル ' + nm); }
   const vs = [['1-2-3', '1-2-4', '1-3-2', '4-1-2', '4-1-3', '4-6-1'], ['5-1-2'], [], ['2-1-3', '2-1-4', '2-3-1']];
-  for (const v of vs) { assert.deepStrictEqual(L.compressBets(v), Q.garonNaturalGroupBets(v)); n++; }   // 買い目のまとめ方は、Q本体と同じ(2026-09-26から)
+  for (const v of vs) { assert.deepStrictEqual(L.compressBets(v).slice().sort(), Q.garonNaturalGroupBets(v).slice().sort()); n++; }   // 買い目のまとめ方は、Q本体と同じ(2026-09-26から)。並びだけは、WILDが頭の艇番の小さい順(2026-10-04)なので、並べ替えて比べる
   for (const bw of [[0.5, 0.2, 0.1, 0.1, 0.05, 0.05], [0.3, 0.29, 0.2, 0.1, 0.06, 0.05], [0.7333, 0.0597, 0.0284, 0.0634, 0.1111, 0.0041]]) ok(L.hyokaOrder(bw) === Q.garonGdbHyoka(bw), '評価順');
   // サマリーの書式(Q本体 garonGdbXSummary と同じ並び)
   const inp = { venue: '常滑', race: 4, deadline: '12:02', cumPct: 0.4537, axis: 5, axisLabel: '❺佐藤', hyoka: '1>5>4>2>3>6', tenkai: '❺佐藤のまくり差しが本線。', combos: ['5-1-2', '5-1-3', '5-2-1', '1-5-2'] };
   assert.strictEqual(L.qSummary('x', inp), ['【常滑4R】 締切12:02', '', '軸：❺佐藤', '', '展開：❺佐藤のまくり差しが本線。', '', '最終予想・買い目はプロフィール（note）から。'].join(NL)); n++;
-  assert.strictEqual(L.qSummary('note', inp), ['【常滑4R】 締切12:02', '', '軸：❺佐藤', '評価順：1>5>4>2>3>6', '', '展開：❺佐藤のまくり差しが本線。', '', '本線：5-1=2/5-1-3', '', '抑え：1-5-2'].join(NL)); n++;
+  assert.strictEqual(L.qSummary('note', inp), ['【常滑4R】 締切12:02', '', '軸：❺佐藤', '評価順：1>5>4>2>3>6', '', '展開：❺佐藤のまくり差しが本線。', '', '参考買い目', '1-5-2', '5-1=2 / 5-1-3'].join(NL)); n++;
   ok(L.qSummary('x', Object.assign({}, inp, { tenkai: '' })).includes('展開：─'), '展開が空なら ─');
   // 展開ブロック
   const info = { '1-2-3': { enginePct: 5 }, '1-3-2': { enginePct: 9 }, '4-1-2': { enginePct: 1 } };
@@ -58,8 +58,8 @@ let n = 0; const ok = (c, m) => { assert(c, m); n++; };
   const samples = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scripts', 'wild', 'samples', 'sample_cards.json'), 'utf8'));
   for (const sm of samples) {
     const p = L.autoPlan(sm.card), all = L.mergeBlocks(p.blocks), info = sm.card.combos;
-    ok(all.length === 13, sm.venue + ' 点数 ' + all.length);
-    ok(all.every(c => !c.startsWith('1-') && info[c].odds >= 10), sm.venue + ' 1号艇頭なし・オッズ10倍以上');
+    ok(all.length === 12, sm.venue + ' 点数 ' + all.length);
+    ok(all.every(c => info[c].odds >= 10) && all.filter(c => c.startsWith('1-')).length === (p.head1Added || []).length && (p.head1Added || []).length <= 2, sm.venue + ' 1号艇頭は追加した最大2点だけ・オッズ10倍以上');   // 2026-11-11: 対象外の12点は末尾2点が1号艇頭
     ok(p.blocks.length >= 2 && new Set(p.blocks.map(b => b.winner)).size === p.blocks.length && p.blocks.every(b => b.combos.length <= 8), sm.venue + ' 頭は2艇以上で別々・1つの頭は最大8点 ' + p.blocks.map(b => b.winner + ':' + b.n).join());
     ok(p.attacker === p.blocks[0].winner, sm.venue + ' 先頭の展開が軸');
     // 確率の高い順: 選ばれなかった条件を満たす出目より、選ばれた出目の確率が低いことは、頭の上限による場合を除いてない
@@ -85,7 +85,7 @@ let n = 0; const ok = (c, m) => { assert(c, m); n++; };
   const expand = (strs) => expandBets(strs.join('/'));
   const eq = (v, arr) => { assert.deepStrictEqual(L.compressBets(v), arr); n++; };
   eq(['1-5-2', '1-5-3', '5-1-2', '5-1-3'], ['1=5-23']);
-  eq(['4-1-2', '4-1-5', '4-5-1', '4-5-2'], ['4-15-125']);
+  eq(['4-1-2', '4-1-5', '4-5-1', '4-5-2'], ['4-15-2', '4-1=5']);
   eq(['3-2-5', '3-5-2'], ['3-2=5']);
   eq(['1-2-3'], ['1-2-3']);
   assert.strictEqual(L.compressBets(['5-1-2', '5-1-3', '5-1-4', '5-4-1', '5-2-1']).length, 2); n++;
@@ -104,8 +104,9 @@ let n = 0; const ok = (c, m) => { assert(c, m); n++; };
   for (const sm of samples) {
     const e = sm.card.entry, ck = L.entryChecks(e);
     ok(e && ['strong', 'a', 'none'].includes(e.tier), sm.venue + ' tier');
-    ok(e.condA === (ck[0].ok && ck[1].ok && ck[2].ok), sm.venue + ' 条件Aと確認項目が一致');
-    ok(e.tier === (e.condA ? (ck[3].ok ? 'strong' : 'a') : 'none'), sm.venue + ' 強め=条件A+ST差');
+    // 2026-11-12: 確認項目は5つ(0=荒れスコア、1〜3=条件Aの3項目、4=ST差)。見本のentryには荒れスコアが無いので、条件Aは1〜3で照合する
+    ok(e.condA === (ck[1].ok && ck[2].ok && ck[3].ok), sm.venue + ' 条件Aと確認項目が一致');
+    ok(e.tier === (e.condA ? (ck[4].ok ? 'strong' : 'a') : 'none'), sm.venue + ' 強め=条件A+ST差');
   }
   const srt = L.sortByTier([{ tier: 'none', upset: 0.9 }, { tier: 'a', upset: 0.5 }, { tier: 'strong', upset: 0.4 }, { tier: 'a', upset: 0.7 }]);
   ok(srt.map(x => x.tier + x.upset).join() === 'strong0.4,a0.7,a0.5,none0.9', '一覧は強→候補→対象外、同じなら荒れやすい順');
