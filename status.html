@@ -72,7 +72,7 @@
 <div class="tabs" id="tabs"></div>
 <div class="wrap" id="app"><div class="empty">読み込み中...</div></div>
 <script>
-const GIST_OWNER='gt-eng-7k3xq2', GIST_ID='c95fa9b66b4fb95d42d766a3e140cb0a', REFRESH_MS=60000, STALE_MIN=15;
+const GIST_OWNER='gt-eng-7k3xq2', GIST_ID='c95fa9b66b4fb95d42d766a3e140cb0a', REFRESH_MS=20000, STALE_MIN=15;
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pct=(v,d=1)=>v==null?'—':(v*100).toFixed(d)+'%';
 const fmt=iso=>{try{return new Date(iso).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',hour12:false});}catch(e){return iso||'不明';}};
