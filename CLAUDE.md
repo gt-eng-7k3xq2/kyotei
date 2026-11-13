@@ -440,6 +440,13 @@ GARONは「無人稼働インフラの完成度」と「実際に予想を出す
 - 前向きの安全確認: 11/10以降のMの通知・仮想成績が、研究の見込み(1日約19本・回収約80%)から大きく外れていないかを、2週間程度で確認する。
 
 
+## M(edge)の運用(2026-11-13、CEO決定「もう運用しよう」、案件GARON-20261113-001)
+
+- **M(edge)=Mのうち、判定に使う従来の12点について エンジンの確率計÷市場の確率計(通知時点のオッズ、120通りで正規化)>=1.25 のレース。** Mの内数で、判定・買い目・音・優先度は変えない。通知は【WILD M(edge)】(同じレースで二重通知しない)・本文に「edge1.32。」。画面は一覧・参入の目安・Mカードのタグが「M(edge)」、Mカードに edge の値。
+- 根拠(区間は0をまたぐ=前向きに確認中): 8/21〜9/28(独立・エンジン未学習)でM類似のedge>=1.25が的中21.8%・回収99.0%(その他18.4%・80.4%)、10/21〜11/11(本番カード)で的中29.8%・回収99.6%(その他約17%・約66%)。配当(約40〜54倍)はMと同じ。1日約4〜5件。**回収100%超は謳わない。**
+- 実績の記録: 運用開始日(2026-11-13)以降の前向きの仮想成績(通知が来たレースだけ・12点各点100円)を、M(edge)・それ以外のM・M全体で並べて記録(`computeMEdgePerf`、稼働状況ページ、夜の報告ntfy)。n<30は参考外。再現しなければ表示を止める(M_EDGE_MIN=99)。
+- 実装: scripts/lib/wild_live.js(edgeValue・mInfo・indexRow・通知)、wild_template.html(mOfCard。関数1つに自己完結=試験が丸ごと取り出すため)、wild_tier_perf.js、wild_status.js、status.html、research_digest_ntfy.js、wild_scan.js。試験 tests/wild_m_edge.test.js。判定の合成(従来の12点、3.5〜6倍)と、逃げ込み(1号艇頭2点を入れた後)の合成は別の値。通知・一覧・稼働状況の「合成」は判定の合成で、違うときだけ「(逃げ込み3.0倍)」を併記(2026-11-13)。
+
 ## M・B方式(従来のM判定+V1の補正後12点)の導入準備(2026-11-09、CEO指示「導入準備を進めて。本番のBへの切替とタスク登録は試験結果を見て別途判断」)
 
 - **現状は『C(現行V1)が維持されたまま』。Bは明示的に有効化しない限り動かない。** 方式はカード作成時に `card.aiPick.mCorr.mode` へ保存される(B / C / A)。通知(mInfo)・画面・仮想成績・稼働状況は、カードに保存された方式だけを使い、いまのスイッチで過去のカードを読み替えない。作成済みカードの削除・再作成は通常の戻し方に含めない(切替・停止は以後のカードから)。
@@ -449,3 +456,11 @@ GARONは「無人稼働インフラの完成度」と「実際に予想を出す
 - **変更箇所**: scripts/lib/m_correct_apply.js(mode・linesB・bEnabled・bSource・bFallback・builtAtの保存、B有効化ファイルの読み取り)、scripts/lib/wild_live.js(mInfo・indexRow)、scripts/wild_scan.js(通知の記録)、scripts/wild/wild_template.html→garon_wild.html(mOfCard・mBCard/mBLines/mBOn・autoPlan・mCard)。m_correct.py・係数・rules_m.pyは変更なし(V1は凍結)。試験 `node tests/wild_m_b.test.js`(約15分)。バックアップ `backups/wild_before_B_20261109/`。
 - **根拠(事後選択を含む、同じ44日・同じ10,000回の日単位再標本)**: 従来Mだった678件・同じ投資額で、A 82.6%→B 90.2%、損失が約6.2万円減(B−A +7.57pt[-2.76〜+17.09]、最大寄与の日を外して+5.36pt[-4.56〜+14.00])。B自体は90.16%[76.63〜104.22]で約8万円の赤字。「従来より損失を減らす候補」であり、週・月の黒字化の根拠ではない。詳細 reports/mcorrect_B_vs_A_2026-11-09.md・reports/mcorrect_B_implementation_plan_2026-11-09.md。影の記録 scripts/mcorr_shadow_*.py(仕様固定 scripts/mcorr_shadow_spec.json、タスクは未登録)は導入後の確認に使う。160日の蓄積は切替判断の前提にしない。
 - **戻し方**: (1) BをやめてCに戻す = `logs/.m_buy_b_enable` を消す。(2) 従来方式Aに戻す = 既存の `logs/.m_correct_disable` を作る(V1も止まる)。(3) 実装差分を取り消して導入前の状態に戻す = backups/wild_before_B_20261109/ の4ファイル(m_correct_apply.js・wild_live.js・wild_scan.js・wild_template.html)を戻して `node scripts/wild/build_wild_html.js`。保存済みカードに残る追加項目は旧コードが無視する。
+
+## K(確信度0.40以上)の通知(2026-11-13、CEO指示「確信度0.4に名前をつけて、通知に加えて」)
+
+- **K** = AIおすすめ12点(`card.aiPick.lines`)のエンジン確率の合計(p12)が**0.40以上**のレース。S/A/B・M・M(edge)・Xとは別に、ntfyの【WILD K】(優先度4=音あり、キー`K_会場_R`、1日の上限は無し)で通知する。**既存のS/A/B・M・M(edge)・Xの通知は変えていない**(Kはその追加。実カードではKのほぼ全てがS/A/Bと重なるため、同じレースにS/A/BとKの2通が来る)。本文は「確信度43%。」付き。
+- 根拠(各点100円・12点、確定払戻。直近24日は的中49%・回収88%だったが、**長期は1日約4本・的中44〜45%・的中時約22倍・回収約82%[75〜89]**、評価側 2025-12〜2026-09 の約4.3万レース。閾値0.34〜0.46で回収約80〜87%の緩やかな上りで、0.40は特別な値ではない。平均配当が約22倍と低く、回収は約85%で頭打ち)。**回収100%超は謳わない**。reports/research_pcut_2026-11-13.md。
+- **CEOの運用方針(2026-11-13)**: 今後の参入(CEO自身が記録する予想)は**Kとm(edge)のみ**にする。S/A/B・M・Xの通知は、これまでどおり届く。
+- 実装: scripts/lib/wild_live.js(`kInfo`・`wildKNotificationFor`・`K_P12_MIN`・indexRowの`k/kP12`)、scripts/wild_scan.js(通知ループ)、scripts/wild/wild_template.html(`kOfCard`・一覧とレース画面のKタグ。判定は`wild_live.js`と同じ)、scripts/lib/wild_tier_perf.js(`computeKPerf`、2026-11-13以降の前向き、通知が来たものだけ・各点100円)、scripts/lib/wild_status.js(`kNotified/kCardsToday/kPerf`、行の`k`)、gt-eng-7k3xq2/status.html(Kの行)、scripts/research_digest_ntfy.js(夜の報告にK)。試験 `node tests/wild_k.test.js`(5項目)。バックアップ `backups/wild_before_K_20261113/`。
+- **止める/戻す**: `K_P12_MIN`(scripts/lib/wild_live.js)を99にすれば、Kは一切出ない(通知・タグとも)。画面は`kOfCard`の0.40も99に(同じ値にすること)。完全に戻すときはバックアップの7ファイルを戻して`node scripts/wild/build_wild_html.js`。
