@@ -12,12 +12,12 @@
   :root{--bg:#070d18;--panel:#0d1726;--panel2:#132238;--line:#1f3a5c;--cy:#3ee0ff;--cy2:#8ff0ff;--vi:#8b7bff;--ok:#3ee0a0;--warn:#ffc857;--err:#ff5d73;--tx:#e6f1ff;--mu:#7f9bbd;--font:-apple-system,'Hiragino Sans','Segoe UI',sans-serif;}
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
   body{background:radial-gradient(900px 400px at 80% -10%,#13284a 0,transparent 60%),var(--bg);color:var(--tx);font-family:var(--font);min-height:100vh;padding-bottom:40px;}
-  .header{background:rgba(7,13,24,.92);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;backdrop-filter:blur(6px);}
+  .header{background:rgba(7,13,24,.92);border-bottom:1px solid var(--line);padding:8px 12px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;backdrop-filter:blur(6px);}
   .ht{font-size:15px;font-weight:800;letter-spacing:.14em;color:var(--cy);}
   .hs{font-size:11px;color:var(--mu);margin-top:2px;}
   .rb{background:var(--panel2);border:1px solid var(--line);color:var(--cy2);font-size:11px;padding:6px 12px;border-radius:6px;-webkit-appearance:none;}
-  .wrap{max-width:680px;margin:0 auto;padding:12px 16px;}
-  .card{background:linear-gradient(180deg,var(--panel),#0a1320);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;}
+  .wrap{max-width:680px;margin:0 auto;padding:8px 8px;}
+  .card{background:linear-gradient(180deg,var(--panel),#0a1320);border:1px solid var(--line);border-radius:12px;padding:10px 8px;margin-bottom:8px;}
   .ct{font-size:13px;color:var(--cy);font-weight:800;margin-bottom:10px;letter-spacing:.14em;}
   .card:has(>.hero){padding:10px 14px;margin-bottom:10px;}
   .hero{display:flex;align-items:center;gap:12px;}
@@ -31,8 +31,8 @@
   .sv{font-size:26px;font-weight:800;color:var(--cy2);font-variant-numeric:tabular-nums;} .sl{font-size:12px;color:var(--mu);margin-top:4px;line-height:1.5;}
   .row{display:flex;justify-content:space-between;gap:8px;font-size:14px;padding:9px 0;border-bottom:1px solid var(--line);} .row:last-child{border-bottom:none;}
   .row .k{color:var(--mu);} .row .v{font-weight:700;text-align:right;}
-  table{width:100%;border-collapse:collapse;} th{font-size:12px;color:var(--mu);padding:6px 4px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap;} th:first-child,td:first-child{text-align:left;}
-  td{font-size:14px;padding:9px 4px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;} tr:last-child td{border-bottom:none;}
+  table{width:100%;border-collapse:collapse;} th{font-size:11px;color:var(--mu);padding:5px 3px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap;} th:first-child,td:first-child{text-align:left;}
+  td{font-size:12px;padding:7px 3px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;} tr:last-child td{border-bottom:none;}
   .up{color:var(--ok);} .dn{color:var(--err);} .mu{color:var(--mu);}
   .tg{display:inline-block;min-width:26px;text-align:center;font-weight:800;font-size:13px;border-radius:6px;padding:2px 6px;border:1px solid var(--line)}
   .tg-S{color:#4ade80;border-color:#4ade80}.tg-A{color:#38bdf8;border-color:#38bdf8}.tg-B{color:#fbbf24;border-color:#fbbf24}.tg-M{color:#a5b4fc;border-color:#a5b4fc}.tg-X{color:#f472b6;border-color:#f472b6}
@@ -47,16 +47,17 @@
   .chips{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;} .chips button{background:var(--panel2);border:1px solid var(--line);color:var(--mu);font-size:13px;font-weight:700;padding:7px 12px;border-radius:16px;-webkit-appearance:none;} .chips button.on{color:#06101c;background:var(--cy2);border-color:var(--cy2);}
   tr.mine td{background:rgba(255,138,216,.10);} tr.mine td:first-child{box-shadow:inset 3px 0 0 #ff8ad8;}
   .bar{height:8px;background:var(--panel2);border-radius:4px;overflow:hidden;margin-top:4px;position:relative;} .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--vi),var(--cy));}
-  .tabs{display:flex;gap:6px;max-width:680px;margin:0 auto;padding:10px 16px 0;position:sticky;top:55px;z-index:9;background:linear-gradient(180deg,rgba(7,13,24,.97) 70%,transparent);}
-  .tabs button{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--mu);font-size:14px;font-weight:800;padding:10px 4px;border-radius:10px;-webkit-appearance:none;}
+  .tabs{display:flex;gap:6px;max-width:680px;margin:0 auto;padding:6px 8px 4px;position:sticky;top:46px;z-index:9;background:linear-gradient(180deg,rgba(7,13,24,.97) 70%,transparent);}
+  .tabs button{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--mu);font-size:13px;font-weight:800;padding:8px 4px;border-radius:10px;-webkit-appearance:none;}
   .tabs button.on{color:#06101c;background:var(--cy);border-color:var(--cy);}
+  .pf{table-layout:fixed}.pf th:first-child,.pf td:first-child{width:40px}.pf td,.pf th{padding-left:0;padding-right:0}.pf td:first-child{font-size:11px}
   .spark{width:100%;height:64px;display:block;}
-  .rc{display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;padding:13px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;background:var(--panel2);cursor:pointer;}
+  .rc{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;padding:10px 10px;border:1px solid var(--line);border-radius:12px;margin-bottom:6px;background:var(--panel2);cursor:pointer;}
   .rc.mine{border-color:#ff8ad8;background:rgba(255,138,216,.09);}
-  .rc .tg.big{font-size:20px;min-width:44px;padding:8px 0;border-radius:10px;border-width:2px;}
-  .rn{font-size:17px;font-weight:800;} .rm{font-size:12px;color:var(--mu);margin-top:3px;}
+  .rc .tg.big{font-size:17px;min-width:42px;padding:6px 0;border-radius:10px;border-width:2px;line-height:1.1}.tg small{display:block;font-size:9px;font-weight:700;letter-spacing:.02em;margin-top:1px}
+  .rn{font-size:15px;font-weight:800;} .rm{font-size:11px;color:var(--mu);margin-top:3px;}
   .pill{display:inline-block;margin-left:8px;font-size:11px;font-weight:800;color:#ff8ad8;border:1px solid #ff8ad8;border-radius:9px;padding:1px 7px;vertical-align:2px;}
-  .rr{font-size:22px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums;} .rr small{font-size:12px;margin-left:1px;} .rr.wt{color:var(--warn);font-size:18px;} .rr.ms{color:var(--mu);font-size:16px;}
+  .rr{font-size:18px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums;} .rr small{font-size:11px;margin-left:1px;} .rr.wt{color:var(--warn);font-size:18px;} .rr.ms{color:var(--mu);font-size:16px;}
   .rs{font-size:11px;color:var(--mu);text-align:right;margin-top:2px;}
   .rd{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;margin:-4px 0 10px;}
   .sec{font-size:13px;font-weight:800;color:var(--cy);margin:14px 2px 8px;letter-spacing:.06em;}
@@ -167,7 +168,7 @@ function wildTierPerf(t,xp,mp,ep){
   if(!t||!t.all||!t.all.n)return '';
   xp=xp||{};mp=mp||{};ep=ep||{};const xd={},md={},ed={};((ep.edge||{}).daily||[]).forEach(d=>{ed[d.date]=d});(xp.daily||[]).forEach(d=>{xd[d.date]=d});(mp.daily||[]).forEach(d=>{md[d.date]=d});
   const P=x=>x==null?'—':Math.round(x*100)+'%';
-  const cell=x=>x&&x.n?`<b class="${x.roi!=null&&x.roi>=1?'up':'dn'}" style="font-size:15px">${P(x.roi)}</b><div class="mu" style="font-size:11px">${x.hit}/${x.n}</div>`:'<span class="mu">—</span>';
+  const cell=x=>x&&x.n?`<b class="${x.roi!=null&&x.roi>=1?'up':'dn'}" style="font-size:13px">${P(x.roi)}</b><div class="mu" style="font-size:11px">${x.hit}/${x.n}</div>`:'<span class="mu">—</span>';
   // 2026-10-21(CEO指示): 並びは X・S・A・B・M、いちばん右に、それぞれの総合計(X・S・A・B・Mを合わせた成績)
   const sumS=(list)=>{let n=0,hit=0,inv=0,pay=0;list.forEach(x=>{if(x&&x.n){n+=x.n;hit+=x.hit||0;inv+=x.inv||0;pay+=x.pay||0}});return n?{n,hit,inv,pay,roi:inv?pay/inv:null}:null;};
   const td=(v,left)=>`<td style="text-align:center;padding:4px 1px${left?';border-left:1px solid var(--line)':''}">${cell(v)}</td>`;
@@ -182,8 +183,8 @@ function wildTierPerf(t,xp,mp,ep){
     ${s2.n?`<tr><td>同じレースのAI推奨(仮想)</td><td style="text-align:center">${s2.ai.n}</td><td style="text-align:center">${s2.ai.hit}</td><td style="text-align:center"><b>${P(s2.ai.roi)}</b></td></tr>`:''}</table>
     <div class="note">台帳は、保存していない予想があるため、出した予想の全体ではありません。補助の記録として見てください。</div>`;}
   return `<div style="margin-top:12px"><div class="ct" style="margin-bottom:4px">X・S・A・B・M を全件買っていたら(仮想・基準の成績)</div>
-    <div class="mu" style="font-size:12px;margin-bottom:6px">大きい数字=回収率、小さい数字=的中数/件数。合計=X・S・A・B・Mの総合計。M・Xは、通知が来たレースだけで数えます(12点・各点100円)。</div>
-    <table><tr><th></th><th style="text-align:center">X</th><th style="text-align:center">S</th><th style="text-align:center">A</th><th style="text-align:center">B</th><th style="text-align:center">M</th><th style="text-align:center">M(edge)</th><th style="text-align:center;border-left:1px solid var(--line)">合計</th></tr>${tr('全日',t,true,xp.all,mp.all,(ep.edge||{}).all)}${days}</table>
+    <div class="mu" style="font-size:11px;margin-bottom:4px">大きい数字=回収率、小さい数字=的中数/件数。合計=X・S・A・B・Mの総合計。M・Xは、通知が来たレースだけで数えます(12点・各点100円)。</div>
+    <table class="pf"><tr><th></th><th style="text-align:center">X</th><th style="text-align:center">S</th><th style="text-align:center">A</th><th style="text-align:center">B</th><th style="text-align:center">M</th><th style="text-align:center;line-height:1.1">M<br><small style="font-size:9px">edge</small></th><th style="text-align:center;border-left:1px solid var(--line)">合計</th></tr>${tr('全日',t,true,xp.all,mp.all,(ep.edge||{}).all)}${days}</table>
     <div class="note">基準: S・A・Bが付いたレース<b>全件</b>を、AIおすすめで買ったと<b>仮定</b>した成績です(10/20まではAIおすすめの12〜13点・合計約3,000円の平買い、<b>10/21以降は全点100円</b>〔12点=1,200円〕。回収率は払戻合計÷投資合計なので、混ざっても計算できます)。実際に買ったものではなく、選び方に左右されません。結果が出たレースだけ数えています${t.today&&t.today.pending?`(今日は結果待ち ${t.today.pending}件)`:''}。10/1以降(買い目が13点になってから)の${t.days}日分です。${(t.S&&t.S.n<30)?'Sは件数が少なく(30件未満)、まだ傾向とは言えません。':''}</div>${rec}</div>`;
 }
 // 通知のまとめ(2026-10-21、CEO指示: S・A・B・M・Xの通知の数を1か所で見たい)
@@ -220,6 +221,7 @@ function renderWildSummary(w){
     ['M',w.mNotified||0,'約14',td(t=>t==='M'),(w.mPerf||{}).all],
     ['└ M(edge)',w.mEdgeNotified||0,'約4',tdr(r=>r.tier==='M'&&r.edge),((w.mEdgePerf||{}).edge||{}).all,true],
     ['X',w.xNotified||0,'約3',td(t=>t==='X'),(w.xPerf||{}).all],
+    ['K(確信度0.40以上)',w.kNotified||0,'約4〜5',tdr(r=>!!r.k),((w.kPerf||{}).all)],
   ];
   const tot=rows.filter(r=>!r[5]).reduce((a,r)=>a+r[1],0);
   const tr=r=>{const t=r[3]||{},a=r[4]||{};return `<tr><td><b>${r[0]}</b></td><td style="text-align:center"><b>${r[1]}</b>本</td><td style="text-align:center" class="mu">${r[2]}</td><td style="text-align:center">${t.n!=null?(t.hit||0)+'/'+t.n:'—'}</td><td style="text-align:center">${a.n?(a.n<30?`<span class="mu">${pct(a.roi)}</span>`:pct(a.roi))+`<div class="mu" style="font-size:11px">n=${a.n}${a.n<30?'(参考外)':''}</div>`:'—'}</td></tr>`;};
@@ -279,7 +281,7 @@ function renderRaceCards(w){
     const chips=(r.lines||[]).map(l=>`<span class="bt${o&&o.win===l.c?' bw':''}">${esc(l.c)}${l.o!=null?`<small>${l.o}倍</small>`:''}</span>`).join('');
     const resTxt=o&&o.win?`結果 <b>${esc(o.win)}</b>${o.yen?`(${Number(o.yen).toLocaleString()}円${hit?'・<b class="up">的中 '+o.mult+'倍</b>':''})`:''}`:'結果待ち';
     const g=r.gosei!=null?Number(r.gosei).toFixed(1)+'倍':'—';
-    return `<div class="rc${mine?' mine':''}" onclick="toggleEnt(${i})"><span class="tg tg-${esc(r.tier)} big">${r.tier==='none'?'—':esc(r.tier)}${r.tier==='M'&&r.edge?'(edge)':''}</span><div><div class="rn">${esc(r.venue)} ${r.race}R${mine?'<span class="pill">参入</span>':''}</div><div class="rm">${esc(r.deadline)}締切 ・ ${r.mineOnly?'目安なし ・ '+r.my.lines.length+'点 '+r.my.stake.toLocaleString()+'円':'合成 '+g}${(!r.mineOnly&&r.my)?' ・ <b>俺 '+(r.my.state==='hit'?'的中 +'+(r.my.ret-r.my.stake).toLocaleString()+'円':r.my.state==='miss'?'ハズレ':'結果待ち')+'</b>':''}</div></div><div>${right}</div></div><div class="rd" id="entd${i}" style="display:none">${(!r.mineOnly&&r.my)?`<div class="mu" style="font-size:12px;margin-bottom:6px">俺の買い目 ${r.my.lines.length}点 ${r.my.stake.toLocaleString()}円</div><div class="bts" style="margin-bottom:8px">${r.my.lines.map(l=>`<span class="bt${r.my.win===l.c?' bw':''}">${esc(l.c)}${l.o!=null?`<small>${l.o}倍</small>`:''}</span>`).join('')}</div>`:''}<div class="mu" style="font-size:12px;margin-bottom:6px">${r.mineOnly?'俺の買い目 '+(r.lines||[]).length+'点(記録した時点のオッズ・金額は記録のとおり)':esc(r.tier)+'の買い目 '+(r.lines||[]).length+'点(通知の時点のオッズ・各点100円)'}</div><div class="bts">${chips||'<span class="mu">買い目を取得できませんでした</span>'}</div><div style="font-size:14px;margin-top:8px">${resTxt}</div></div>`;
+    return `<div class="rc${mine?' mine':''}" onclick="toggleEnt(${i})"><span class="tg tg-${esc(r.tier)} big">${r.tier==='none'?'—':esc(r.tier)}${r.tier==='M'&&r.edge?'<small>edge</small>':''}</span><div><div class="rn">${esc(r.venue)} ${r.race}R${mine?'<span class="pill">参入</span>':''}</div><div class="rm">${esc(r.deadline)}締切 ・ ${r.mineOnly?'目安なし ・ '+r.my.lines.length+'点 '+r.my.stake.toLocaleString()+'円':'合成 '+g}${(!r.mineOnly&&r.my)?' ・ <b>俺 '+(r.my.state==='hit'?'的中 +'+(r.my.ret-r.my.stake).toLocaleString()+'円':r.my.state==='miss'?'ハズレ':'結果待ち')+'</b>':''}</div></div><div>${right}</div></div><div class="rd" id="entd${i}" style="display:none">${(!r.mineOnly&&r.my)?`<div class="mu" style="font-size:12px;margin-bottom:6px">俺の買い目 ${r.my.lines.length}点 ${r.my.stake.toLocaleString()}円</div><div class="bts" style="margin-bottom:8px">${r.my.lines.map(l=>`<span class="bt${r.my.win===l.c?' bw':''}">${esc(l.c)}${l.o!=null?`<small>${l.o}倍</small>`:''}</span>`).join('')}</div>`:''}<div class="mu" style="font-size:12px;margin-bottom:6px">${r.mineOnly?'俺の買い目 '+(r.lines||[]).length+'点(記録した時点のオッズ・金額は記録のとおり)':esc(r.tier)+'の買い目 '+(r.lines||[]).length+'点(通知の時点のオッズ・各点100円)'}</div><div class="bts">${chips||'<span class="mu">買い目を取得できませんでした</span>'}</div><div style="font-size:14px;margin-top:8px">${resTxt}</div></div>`;
   };
   const keep=(r)=>entFilter==='bet'?r.state==='bet':entFilter==='hit'?(r.result&&r.result.state==='hit'):true;
   const isPend=r=>!r.result||r.result.state==='pending';
