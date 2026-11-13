@@ -172,7 +172,7 @@ function wildTierPerf(t,xp,mp,ep,kp){
   // 2026-10-21(CEO指示): 並びは X・S・A・B・M、いちばん右に、それぞれの総合計(X・S・A・B・Mを合わせた成績)
   const sumS=(list)=>{let n=0,hit=0,inv=0,pay=0;list.forEach(x=>{if(x&&x.n){n+=x.n;hit+=x.hit||0;inv+=x.inv||0;pay+=x.pay||0}});return n?{n,hit,inv,pay,roi:inv?pay/inv:null}:null;};
   const td=(v,left)=>`<td style="text-align:center;padding:4px 1px${left?';border-left:1px solid var(--line)':''}">${cell(v)}</td>`;
-  const tr=(label,d,bold,x,m,e,k)=>`<tr><td style="${bold?'font-weight:700':''};padding-right:2px">${label}</td>${td(x)}${td(d.S)}${td(d.A)}${td(d.B)}${td(m)}${td(e)}${td(k)}${td(sumS([x,d.S,d.A,d.B,m]),true)}</tr>`;
+  const tr=(label,d,bold,x,m,e,k)=>`<tr><td style="${bold?'font-weight:700':''};padding-right:2px">${label}</td>${td(x)}${td(d.S)}${td(d.A)}${td(d.B)}${td(m)}${td(e)}${td(k)}${td(sumS([x,d.S,d.A,d.B,m,e,k]),true)}</tr>`;
   const dset=[...new Set([...(t.daily||[]).map(d=>d.date),...Object.keys(xd),...Object.keys(md)])].sort().reverse(),tdy={};(t.daily||[]).forEach(d=>{tdy[d.date]=d});
   const days=dset.map(dt=>tr(esc(dt.slice(5).replace('-','/'))+(t.today&&dt===t.today.date?'<div class="mu" style="font-size:11px">今日</div>':''),tdy[dt]||{},false,xd[dt],md[dt],ed[dt],kd[dt])).join('');
   const rc=t.recorded;let rec='';
@@ -183,7 +183,7 @@ function wildTierPerf(t,xp,mp,ep,kp){
     ${s2.n?`<tr><td>同じレースのAI推奨(仮想)</td><td style="text-align:center">${s2.ai.n}</td><td style="text-align:center">${s2.ai.hit}</td><td style="text-align:center"><b>${P(s2.ai.roi)}</b></td></tr>`:''}</table>
     <div class="note">台帳は、保存していない予想があるため、出した予想の全体ではありません。補助の記録として見てください。</div>`;}
   return `<div style="margin-top:12px"><div class="ct" style="margin-bottom:4px">X・S・A・B・M を全件買っていたら(仮想・基準の成績)</div>
-    <div class="mu" style="font-size:11px;margin-bottom:4px">大きい数字=回収率、小さい数字=的中数/件数。合計=X・S・A・B・Mの総合計。M・Xは、通知が来たレースだけで数えます(12点・各点100円)。</div>
+    <div class="mu" style="font-size:11px;margin-bottom:4px">大きい数字=回収率、小さい数字=的中数/件数。合計=X・S・A・B・M・M(edge)・Kの総合計(KはS/A/Bと、M(edge)はMと同じレースを重ねて数えます)。M・Xは、通知が来たレースだけで数えます(12点・各点100円)。</div>
     <table class="pf"><tr><th></th><th style="text-align:center">X</th><th style="text-align:center">S</th><th style="text-align:center">A</th><th style="text-align:center">B</th><th style="text-align:center">M</th><th style="text-align:center;line-height:1.1">M<br><small style="font-size:9px">edge</small></th><th style="text-align:center">K</th><th style="text-align:center;border-left:1px solid var(--line)">合計</th></tr>${tr('全日',t,true,xp.all,mp.all,(ep.edge||{}).all,kp.all)}${days}</table>
     <div class="note">基準: S・A・Bが付いたレース<b>全件</b>を、AIおすすめで買ったと<b>仮定</b>した成績です(10/20まではAIおすすめの12〜13点・合計約3,000円の平買い、<b>10/21以降は全点100円</b>〔12点=1,200円〕。回収率は払戻合計÷投資合計なので、混ざっても計算できます)。実際に買ったものではなく、選び方に左右されません。結果が出たレースだけ数えています${t.today&&t.today.pending?`(今日は結果待ち ${t.today.pending}件)`:''}。10/1以降(買い目が13点になってから)の${t.days}日分です。${(t.S&&t.S.n<30)?'Sは件数が少なく(30件未満)、まだ傾向とは言えません。':''}</div>${rec}</div>`;
 }
