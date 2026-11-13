@@ -164,17 +164,17 @@ function taskTable(tasks){
 
 
 const TIER_JP={S:'S',A:'A',B:'B',M:'M',X:'X'};const STATE_JP={new:'未参入',notified:'未参入',bet:'参入',pass:'未参入',closed:'未参入'};   // 2026-10-22(CEO指示): 状態の表示は『参入』『未参入』の2つだけ(参入=WILD画面で予想を記録した)
-function wildTierPerf(t,xp,mp,ep){
+function wildTierPerf(t,xp,mp,ep,kp){
   if(!t||!t.all||!t.all.n)return '';
-  xp=xp||{};mp=mp||{};ep=ep||{};const xd={},md={},ed={};((ep.edge||{}).daily||[]).forEach(d=>{ed[d.date]=d});(xp.daily||[]).forEach(d=>{xd[d.date]=d});(mp.daily||[]).forEach(d=>{md[d.date]=d});
+  xp=xp||{};mp=mp||{};ep=ep||{};kp=kp||{};const xd={},md={},ed={},kd={};(kp.daily||[]).forEach(d=>{kd[d.date]=d});((ep.edge||{}).daily||[]).forEach(d=>{ed[d.date]=d});(xp.daily||[]).forEach(d=>{xd[d.date]=d});(mp.daily||[]).forEach(d=>{md[d.date]=d});
   const P=x=>x==null?'—':Math.round(x*100)+'%';
   const cell=x=>x&&x.n?`<b class="${x.roi!=null&&x.roi>=1?'up':'dn'}" style="font-size:13px">${P(x.roi)}</b><div class="mu" style="font-size:11px">${x.hit}/${x.n}</div>`:'<span class="mu">—</span>';
   // 2026-10-21(CEO指示): 並びは X・S・A・B・M、いちばん右に、それぞれの総合計(X・S・A・B・Mを合わせた成績)
   const sumS=(list)=>{let n=0,hit=0,inv=0,pay=0;list.forEach(x=>{if(x&&x.n){n+=x.n;hit+=x.hit||0;inv+=x.inv||0;pay+=x.pay||0}});return n?{n,hit,inv,pay,roi:inv?pay/inv:null}:null;};
   const td=(v,left)=>`<td style="text-align:center;padding:4px 1px${left?';border-left:1px solid var(--line)':''}">${cell(v)}</td>`;
-  const tr=(label,d,bold,x,m,e)=>`<tr><td style="${bold?'font-weight:700':''};padding-right:2px">${label}</td>${td(x)}${td(d.S)}${td(d.A)}${td(d.B)}${td(m)}${td(e)}${td(sumS([x,d.S,d.A,d.B,m]),true)}</tr>`;
+  const tr=(label,d,bold,x,m,e,k)=>`<tr><td style="${bold?'font-weight:700':''};padding-right:2px">${label}</td>${td(x)}${td(d.S)}${td(d.A)}${td(d.B)}${td(m)}${td(e)}${td(k)}${td(sumS([x,d.S,d.A,d.B,m]),true)}</tr>`;
   const dset=[...new Set([...(t.daily||[]).map(d=>d.date),...Object.keys(xd),...Object.keys(md)])].sort().reverse(),tdy={};(t.daily||[]).forEach(d=>{tdy[d.date]=d});
-  const days=dset.map(dt=>tr(esc(dt.slice(5).replace('-','/'))+(t.today&&dt===t.today.date?'<div class="mu" style="font-size:11px">今日</div>':''),tdy[dt]||{},false,xd[dt],md[dt],ed[dt])).join('');
+  const days=dset.map(dt=>tr(esc(dt.slice(5).replace('-','/'))+(t.today&&dt===t.today.date?'<div class="mu" style="font-size:11px">今日</div>':''),tdy[dt]||{},false,xd[dt],md[dt],ed[dt],kd[dt])).join('');
   const rc=t.recorded;let rec='';
   if(rc&&rc.all&&rc.all.n){const s2=rc.sameRaces||{};
     rec=`<div class="mu" style="font-size:12px;margin:14px 0 4px"><b>予想の記録(台帳・補助)</b>(10/1以降、結果が出たもの)</div>
@@ -184,7 +184,7 @@ function wildTierPerf(t,xp,mp,ep){
     <div class="note">台帳は、保存していない予想があるため、出した予想の全体ではありません。補助の記録として見てください。</div>`;}
   return `<div style="margin-top:12px"><div class="ct" style="margin-bottom:4px">X・S・A・B・M を全件買っていたら(仮想・基準の成績)</div>
     <div class="mu" style="font-size:11px;margin-bottom:4px">大きい数字=回収率、小さい数字=的中数/件数。合計=X・S・A・B・Mの総合計。M・Xは、通知が来たレースだけで数えます(12点・各点100円)。</div>
-    <table class="pf"><tr><th></th><th style="text-align:center">X</th><th style="text-align:center">S</th><th style="text-align:center">A</th><th style="text-align:center">B</th><th style="text-align:center">M</th><th style="text-align:center;line-height:1.1">M<br><small style="font-size:9px">edge</small></th><th style="text-align:center;border-left:1px solid var(--line)">合計</th></tr>${tr('全日',t,true,xp.all,mp.all,(ep.edge||{}).all)}${days}</table>
+    <table class="pf"><tr><th></th><th style="text-align:center">X</th><th style="text-align:center">S</th><th style="text-align:center">A</th><th style="text-align:center">B</th><th style="text-align:center">M</th><th style="text-align:center;line-height:1.1">M<br><small style="font-size:9px">edge</small></th><th style="text-align:center">K</th><th style="text-align:center;border-left:1px solid var(--line)">合計</th></tr>${tr('全日',t,true,xp.all,mp.all,(ep.edge||{}).all,kp.all)}${days}</table>
     <div class="note">基準: S・A・Bが付いたレース<b>全件</b>を、AIおすすめで買ったと<b>仮定</b>した成績です(10/20まではAIおすすめの12〜13点・合計約3,000円の平買い、<b>10/21以降は全点100円</b>〔12点=1,200円〕。回収率は払戻合計÷投資合計なので、混ざっても計算できます)。実際に買ったものではなく、選び方に左右されません。結果が出たレースだけ数えています${t.today&&t.today.pending?`(今日は結果待ち ${t.today.pending}件)`:''}。10/1以降(買い目が13点になってから)の${t.days}日分です。${(t.S&&t.S.n<30)?'Sは件数が少なく(30件未満)、まだ傾向とは言えません。':''}</div>${rec}</div>`;
 }
 // 通知のまとめ(2026-10-21、CEO指示: S・A・B・M・Xの通知の数を1か所で見たい)
@@ -317,7 +317,7 @@ function renderWild(w){
     ${row('裏方(カード作成・結果取得)',`<span class="${w.inHours&&!ok?'dn':'up'}">${esc(alive)}</span>${w.indexAt?`<span class="mu">(最終 ${esc(fmt(w.indexAt))})</span>`:''}`)}
     ${row('結果の取得',`確定 ${(w.results||{}).confirmed||0}件${(w.results||{}).manual?`(うち手入力 ${w.results.manual}件)`:''}`)}`;
   const headH=h+'</div>'; h='<div class="card"><div class="ct">TODAY 目安が出たレース</div>';
-  const perfH=wildTierPerf(w.tierPerf,w.xPerf,w.mPerf,w.mEdgePerf);
+  const perfH=wildTierPerf(w.tierPerf,w.xPerf,w.mPerf,w.mEdgePerf,w.kPerf);
   h+=renderRaceCards(w);
   h+='</div>';
   return {head:headH,perf:perfH?'<div class="card"><div class="ct">仮想の成績 全件を買っていたら</div>'+perfH+'</div>':'',table:h};
