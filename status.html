@@ -35,7 +35,7 @@
   td{font-size:12px;padding:7px 3px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;} tr:last-child td{border-bottom:none;}
   .up{color:var(--ok);} .dn{color:var(--err);} .mu{color:var(--mu);}
   .tg{display:inline-block;min-width:26px;text-align:center;font-weight:800;font-size:13px;border-radius:6px;padding:2px 6px;border:1px solid var(--line)}
-  .tg-S{color:#4ade80;border-color:#4ade80}.tg-A{color:#38bdf8;border-color:#38bdf8}.tg-B{color:#fbbf24;border-color:#fbbf24}.tg-M{color:#a5b4fc;border-color:#a5b4fc}.tg-X{color:#f472b6;border-color:#f472b6}
+  .tg-S{color:#4ade80;border-color:#4ade80}.tg-A{color:#38bdf8;border-color:#38bdf8}.tg-B{color:#fbbf24;border-color:#fbbf24}.tg-M{color:#a5b4fc;border-color:#a5b4fc}.tg-X{color:#f472b6;border-color:#f472b6}.tg-K{color:#22d3ee;border-color:#22d3ee}
   table.ent td{padding:6px 4px;vertical-align:middle}table.ent th{padding:4px}
   .bts{display:flex;flex-wrap:wrap;gap:5px}.bt{display:inline-flex;flex-direction:column;align-items:center;min-width:52px;padding:3px 6px;border:1px solid var(--line);border-radius:6px;font-weight:700;font-size:14px;line-height:1.15}.bt small{font-weight:400;font-size:10px;color:var(--mu)}.bt.bw{border-color:var(--ok);color:var(--ok);background:rgba(74,222,128,.12)}
   tr.entr:active{background:rgba(255,255,255,.05)}
@@ -221,7 +221,7 @@ function renderWildSummary(w){
     ['M',w.mNotified||0,'約14',td(t=>t==='M'),(w.mPerf||{}).all],
     ['└ M(edge)',w.mEdgeNotified||0,'約4',tdr(r=>r.tier==='M'&&r.edge),((w.mEdgePerf||{}).edge||{}).all,true],
     ['X',w.xNotified||0,'約3',td(t=>t==='X'),(w.xPerf||{}).all],
-    ['K(確信度0.40以上)',w.kNotified||0,'約4〜5',tdr(r=>!!r.k),((w.kPerf||{}).all)],
+    ['K(確信度0.40以上)',w.kNotified||0,'約4〜5',tdr(r=>r.tier==='K'),((w.kPerf||{}).all)],
   ];
   const tot=rows.filter(r=>!r[5]).reduce((a,r)=>a+r[1],0);
   const tr=r=>{const t=r[3]||{},a=r[4]||{};return `<tr><td><b>${r[0]}</b></td><td style="text-align:center"><b>${r[1]}</b>本</td><td style="text-align:center" class="mu">${r[2]}</td><td style="text-align:center">${t.n!=null?(t.hit||0)+'/'+t.n:'—'}</td><td style="text-align:center">${a.n?(a.n<30?`<span class="mu">${pct(a.roi)}</span>`:pct(a.roi))+`<div class="mu" style="font-size:11px">n=${a.n}${a.n<30?'(参考外)':''}</div>`:'—'}</td></tr>`;};
