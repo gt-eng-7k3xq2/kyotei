@@ -464,3 +464,9 @@ GARONは「無人稼働インフラの完成度」と「実際に予想を出す
 - **CEOの運用方針(2026-11-13)**: 今後の参入(CEO自身が記録する予想)は**Kとm(edge)のみ**にする。S/A/B・M・Xの通知は、これまでどおり届く。
 - 実装: scripts/lib/wild_live.js(`kInfo`・`wildKNotificationFor`・`K_P12_MIN`・indexRowの`k/kP12`)、scripts/wild_scan.js(通知ループ)、scripts/wild/wild_template.html(`kOfCard`・一覧とレース画面のKタグ。判定は`wild_live.js`と同じ)、scripts/lib/wild_tier_perf.js(`computeKPerf`、2026-11-13以降の前向き、通知が来たものだけ・各点100円)、scripts/lib/wild_status.js(`kNotified/kCardsToday/kPerf`、行の`k`)、gt-eng-7k3xq2/status.html(Kの行)、scripts/research_digest_ntfy.js(夜の報告にK)。試験 `node tests/wild_k.test.js`(5項目)。バックアップ `backups/wild_before_K_20261113/`。
 - **止める/戻す**: `K_P12_MIN`(scripts/lib/wild_live.js)を99にすれば、Kは一切出ない(通知・タグとも)。画面は`kOfCard`の0.40も99に(同じ値にすること)。完全に戻すときはバックアップの7ファイルを戻して`node scripts/wild/build_wild_html.js`。
+
+## 稼働状況: 1レース5000円の平買い/配分の並列の仮想成績(2026-11-25、CEO指示「しばらく仮想で運用するが、過去分遡って平買い回収と配分回収を並べて掲示して。バグ漏れのないよう徹底的に確認してから実装して」)
+
+- 稼働状況(status.html)の**成績タブ**に、目安(参入対象=KまたはM(edge)・K・M(edge)・M・S・A・B・X・全カード)ごとに、「平買い(**1点100円×12点=1,200円**、いまの運用と同じ)」と「配分(**1レース5000円**)」の仮想の回収率・損益・ガミ件数を、2026-10-01以降の全カードへ**過去にさかのぼって**並べる(2026-11-25夜、CEO指示「平買いは一点100円」)。さらに**今日タブ・成績タブの上段・日別・各レースのカード**で、俺が参入したレースの平買い/配分を並べる(買い目は同じなので1つの一覧に配分額を重ねて表示)。**本番の判定・買い目・通知・画面のおまかせ案・公式の仮想成績は変えていない(表示だけ)。**
+- 配分=各点に「当たれば5000円以上になる最小額」(5000÷オッズ、100円単位)を先に置き、残りをエンジン確率×オッズの2乗に比例して振る(`scripts/lib/wild_alloc_perf.js`)。平買い=1点100円。根拠と限界は `reports/research_log.md` 2026-11-25、`research/alloc5000_20261125/`。**研究では全カードで配分が平買いを約4〜5pt上回ったが、参入対象(K・M(edge))の件数では差が小さい(-0.1pt、n=570)。しばらくこの表で前向きに確認する。100%超は謳わない。**
+- 実装: `scripts/lib/wild_alloc_perf.js`(集計。過去の確定した日は `logs/wild_alloc_perf_cache.json` に日別で保存して使い回す。コード変更・24時間・今日と昨日は作り直す)、`scripts/lib/wild_status.js`(`st.allocPerf`。稼働状況が読まれるたびに計算)、`gt-eng-7k3xq2/status.html`(`renderAlloc`)。試験 `node tests/wild_alloc_perf.test.js`(13項目)。研究側の独立実装(Python)と8,229レースで金額が完全一致することを確認済み。バックアップ `backups/alloc_status_20261125/`。止める: `wild_status.js` の `st.allocPerf` の1行を消す(画面は何も出さない)。
