@@ -213,7 +213,7 @@ function renderMine(w,mode){
     const sm=(l,x)=>x&&x.n?`<div class="h2b"><div class="h2bl">${l}</div><div class="h2bv">${P(x.roi)}</div><div class="h2bs ${x.net>=0?'up':'dn'}">${Y(x.net)}</div></div>`:'';
     const t0=w.date,d7=new Date(new Date(t0+'T00:00:00Z').getTime()-6*86400000).toISOString().slice(0,10),pT=allocDay(w,t0),p7=allocPeriod(w,d=>d.date>=d7&&d.date<=t0),pA=allocPeriod(w,()=>true);
     const sm2=(l,x,p)=>x&&x.n?`<div class="h2b"><div class="h2bl">${l}</div><div class="h2bv">${P(x.roi)}</div><div class="h2bs ${x.net>=0?'up':'dn'}">${Y(x.net)}</div>${p?`<div class="mu" style="font-size:11px;margin-top:3px">平買い ${allocPc(allocRoi(p,'flat'))}<br>配分 ${allocPc(allocRoi(p,'alloc'))}</div>`:''}</div>`:'';
-    return `<div class="card"><div class="ct">今日の俺の成績</div>${big}${pT?`<div class="mu" style="font-size:12px;margin-top:8px">同じ${pT.n}レースを、平買い(1点100円)と配分(5000円)で買っていたら</div>${allocLine(pT)}`:''}<div class="h2row" style="margin-top:10px">${sm2('直近7日',m.last7,p7)}${sm2('全期間',a,pA)}</div></div>`;}
+    return `<div class="card"><div class="ct">今日の俺の成績</div>${big}${pT?`<div class="mu" style="font-size:12px;margin-top:8px">俺が参入した${pT.n}レースを、平買い(1点100円)と配分(5000円)で買っていたら</div>${allocLine(pT)}`:''}<div class="h2row" style="margin-top:10px">${sm2('直近7日',m.last7,p7)}${sm2('全期間',a,pA)}</div></div>`;}
   return `<div class="card"><div class="ct">MY ENTRY 俺が参入したレースの成績(${esc((m.from||'').slice(5).replace('-','/'))}〜)</div>
     <div class="g3">${box('今日',m.today)}${box('直近7日',m.last7)}${box('全期間',a)}</div>
     <details class="nd"><summary>見方・注意</summary><div class="note">全期間 ${a.n}レース・投資 ${Number(a.stake).toLocaleString()}円・払戻 ${Number(a.ret).toLocaleString()}円 ${small}${m.today&&m.today.open?`<br>結果待ち ${m.today.open}件(今日)`:''}${a.noPay?`<br>払戻が不明で除いた的中 ${a.noPay}件`:''}</div></details>
@@ -275,7 +275,7 @@ function renderAlloc(w){
     <table><tr><th></th><th style="text-align:center">平買い</th><th style="text-align:center">配分</th><th style="text-align:center">差(pt)</th></tr>${tiers}</table>
     <details class="nd"><summary>くわしく(損益・ガミ)</summary><table style="margin-top:6px"><tr><th></th><th style="text-align:right">平買い損益</th><th style="text-align:right">配分損益</th><th style="text-align:center">ガミ<br>平買い→配分</th></tr>${detail}</table><div class="note">ガミ=的中したのに払戻が投資額(平買い1,200円・配分5000円)に届かなかった件数。回収率(払戻÷投資)で比べているので、投資額が違っても並べられます。</div></details>
     <details class="nd"><summary>見方・注意</summary><div class="note">実際に買った記録ではなく、<b>仮定</b>した成績です。買い目は同じ12点(Xは80倍以上の12点)で、<b>金額だけ</b>が違います。<br>
-    俺が参入したレースの平買い・配分(今日・成績・日別・各レースのカード)は、同じレースのシステムの12点を、平買い(1点100円=1,200円)・配分(5000円)で買ったと仮定した成績です(俺が編集した買い目ではありません)。<br><b>平買い</b>: 12点を1点100円ずつ(1レース1,200円。いまの運用と同じ)。<br>
+    俺が参入したレースの平買い・配分(今日・成績・日別・各レースのカード)は、<b>俺が記録した買い目</b>を、平買い(1点100円)・配分(5000円)で買ったと仮定した成績です。11月以降は全点100円で記録しているので、平買い=実際の成績です。<br><b>平買い</b>: 12点を1点100円ずつ(1レース1,200円。いまの運用と同じ)。<br>
     <b>配分</b>: 当たれば5000円以上になる最小額を各点に置き、残りを「エンジン確率×オッズ」の2乗に比例して振る。<br>
     <b>K</b>=確信度0.40以上。<b>K+M(edge)</b>=KまたはM(edge)(重複なし)。通知が来なかったレースも含みます。結果が出ていない${ap.pending||0}件と、12点が作れなかったレースは数えません。30件未満は参考外。<br>
     研究では全レースで配分が約4〜5pt上でしたが、K+M(edge)では差がほぼありません。前向きに確認中です。回収率100%超を謳うものではありません。</div></details></div>`;
