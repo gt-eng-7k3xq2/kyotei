@@ -250,23 +250,28 @@ function renderM(w){
     <details class="nd"><summary>見方・注意</summary><div class="note">条件: 荒れ40%超・12点の合成3.5〜6倍・12点の確率合計15%以上(S・A・Bとは別枠、ntfyの【M】)。12点・各点100円で買ったと<b>仮定</b>した、${esc(mp.from||'2026-10-21')}以降の${mp.days||0}日分の成績です。目安は、的中約2割・当たれば約40倍台・回収約8割(参考値、100%には届いていません)。件数が少ない間は、偶然で大きく動きます。</div></details></div>`;
 }
 // 2026-11-25(CEO指示「しばらく仮想で運用するが、過去分遡って平買い回収と配分回収を並べて掲示して」→「死ぬほど見にくい」で作り直し): 1レース5000円の平買いと配分の仮想成績
-function allocBoxes(ap){
-  const m=ap.mine, pc=v=>v==null?'—':(v*100).toFixed(1)+'%', man=v=>(v<0?'-':'+')+(Math.abs(v)/10000).toFixed(1)+'万円';
-  const box=(t,x,hl)=>`<div style="flex:1;text-align:center;padding:10px 2px;border:2px solid ${hl?'#3ee0ff':'var(--line)'};border-radius:10px"><div class="mu" style="font-size:11px">${t}</div><div style="font-size:24px;font-weight:800;line-height:1.25">${pc(x.roi)}</div><div class="mu" style="font-size:11px">${man(x.net)}</div></div>`;
+function allocBoxes(ap,today){
+  const m=ap.mine, pc=v=>v==null?'—':Math.round(v*100)+'%';
   if(m&&m.n){
-    const best=Math.max(m.flat.roi,m.alloc.roi), d=(m.alloc.roi-m.flat.roi)*100, verdict=Math.abs(d)<1?'平買いと配分はほぼ同じ':d>0?'配分のほうが良い':'平買いのほうが良い';
-    return `<div class="mu" style="font-size:12px;margin-bottom:4px">俺が参入した ${m.n}レース(${esc((m.from||'').slice(5).replace('-','/'))}〜)を、5000円で買っていたら</div>
-      <div style="display:flex;gap:8px;margin:6px 0">${box('実際(俺の買い方)',m.act,false)}${box('平買い',m.flat,m.flat.roi===best&&Math.abs(d)>=1)}${box('配分',m.alloc,m.alloc.roi===best&&Math.abs(d)>=1)}</div>
-      <div style="text-align:center;font-size:15px;margin:2px 0"><b>${verdict}</b><span class="mu">(配分−平買い ${(d>=0?'+':'')+d.toFixed(1)}pt)</span></div>`;
+    const dd=m.daily||[], t=today||(dd[0]&&dd[0].date)||'', d7=new Date(new Date(t+'T00:00:00Z').getTime()-6*86400000).toISOString().slice(0,10);
+    const sum=f=>{const a={n:0,act:[0,0],flat:[0,0],alloc:[0,0]};dd.filter(f).forEach(d=>{a.n+=d.n;['act','flat','alloc'].forEach(k=>{a[k][0]+=d[k].inv;a[k][1]+=d[k].pay})});return a};
+    const per=[['今日',sum(d=>d.date===t)],['直近7日',sum(d=>d.date>=d7&&d.date<=t)],['11/13〜(K・M(edge)の運用開始後)',sum(d=>d.date>='2026-11-13')],['全期間('+(m.from||'').slice(5).replace('-','/')+'〜)',sum(()=>true)]];
+    const roi=x=>x[0]?x[1]/x[0]:null;
+    const cell=(r,best)=>`<td style="text-align:center;padding:9px 2px"><span style="font-size:${best?'20':'17'}px;font-weight:${best?'800':'600'};${best?'color:#3ee0ff':''}">${pc(r)}</span></td>`;
+    const rows=per.map(([l,x])=>{ if(!x.n)return `<tr><td style="padding:9px 3px">${l}</td><td colspan="3" class="mu" style="text-align:center">参入なし</td></tr>`;
+      const a=roi(x.act),f=roi(x.flat),g=roi(x.alloc),b=g>f+0.005?'g':f>g+0.005?'f':'';
+      return `<tr><td style="padding:9px 3px">${l}<div class="mu" style="font-size:11px">${x.n}レース</div></td>${cell(a,false)}${cell(f,b==='f')}${cell(g,b==='g')}</tr>`}).join('');
+    const op=per[2][1], d=op.n?(roi(op.alloc)-roi(op.flat))*100:null;
+    return `<div class="mu" style="font-size:12px;margin-bottom:2px">俺が参入したレースを、5000円で買っていたら(回収率)</div>
+      <table><tr><th></th><th style="text-align:center">実際<br><small>俺の買い方</small></th><th style="text-align:center">平買い<br><small>5000円</small></th><th style="text-align:center">配分<br><small>5000円</small></th></tr>${rows}</table>
+      ${d!=null?`<div style="text-align:center;font-size:15px;margin:8px 0 2px"><b>${Math.abs(d)<1?'平買いと配分はほぼ同じ':d>0?'11/13からは、配分のほうが良い':'11/13からは、平買いのほうが良い'}</b><span class="mu">(配分−平買い ${(d>=0?'+':'')+d.toFixed(1)}pt)</span></div>`:''}`;
   }
   const e=ap.tiers['参入対象']; if(!e||!e.n)return '';
-  const d=e.diffRoi*100, best=Math.max(e.flat.roi,e.alloc.roi), verdict=Math.abs(d)<1?'ほぼ同じ':d>0?'配分のほうが良い':'平買いのほうが良い';
-  return `<div class="mu" style="font-size:12px;margin-bottom:4px">KまたはM(edge)の ${e.n}レースを、5000円で買っていたら</div>
-    <div style="display:flex;gap:8px;margin:6px 0">${box('平買い',e.flat,e.flat.roi===best&&Math.abs(d)>=1)}${box('配分',e.alloc,e.alloc.roi===best&&Math.abs(d)>=1)}</div>
-    <div style="text-align:center;font-size:15px;margin:2px 0"><b>${verdict}</b><span class="mu">(差 ${(d>=0?'+':'')+d.toFixed(1)}pt)</span></div>`;
+  const d=e.diffRoi*100;
+  return `<div class="mu" style="font-size:12px;margin-bottom:4px">KまたはM(edge)の ${e.n}レースを、5000円で買っていたら</div><div style="text-align:center;font-size:18px"><b>平買い ${pc(e.flat.roi)} ／ 配分 ${pc(e.alloc.roi)}</b> <span class="mu">(差 ${(d>=0?'+':'')+d.toFixed(1)}pt)</span></div>`;
 }
 function renderAllocMini(w){
-  const ap=w&&w.allocPerf; if(!ap||!ap.tiers)return ''; const b=allocBoxes(ap); if(!b)return '';
+  const ap=w&&w.allocPerf; if(!ap||!ap.tiers)return ''; const b=allocBoxes(ap,w.date); if(!b)return '';
   return `<div class="card"><div class="ct">5000円で買ったら? 平買い と 配分(仮想)</div>${b}<div class="mu" style="text-align:center;font-size:12px;margin-top:6px">目安ごとの内訳・日別は「成績」タブ</div></div>`;
 }
 function renderAlloc(w){
@@ -279,7 +284,7 @@ function renderAlloc(w){
   const detail=['参入対象','K','M(edge)','M','S','A','B','X','全カード'].map(k=>{const x=ap.tiers[k]; if(!x||!x.n)return ''; return `<tr><td>${k==='参入対象'?'K+M(edge)':k}</td><td style="text-align:right">${yen(x.flat.net)}</td><td style="text-align:right">${yen(x.alloc.net)}</td><td style="text-align:center">${x.flat.gami}→${x.alloc.gami}</td></tr>`}).join('');
   const mn=ap.mine&&ap.mine.n?ap.mine:null, rc=v=>v==null?'—':Math.round(v*100)+'%', cc=v=>v!=null&&v>=1?'up':'';
   const daily=mn?(mn.daily||[]).slice(0,14).map(d=>{const mx=Math.max(d.flat.roi,d.alloc.roi); return `<tr><td>${esc(d.date.slice(5).replace('-','/'))}<span class="mu" style="font-size:11px"> ${d.n}R</span></td><td style="text-align:center"><b class="${cc(d.act.roi)}">${rc(d.act.roi)}</b></td><td style="text-align:center"><b class="${cc(d.flat.roi)}">${rc(d.flat.roi)}</b></td><td style="text-align:center"><b class="${cc(d.alloc.roi)}">${rc(d.alloc.roi)}</b>${d.alloc.roi>d.flat.roi+0.005?' <span class="up">▲</span>':d.alloc.roi<d.flat.roi-0.005?' <span class="dn">▼</span>':''}</td></tr>`}).join(''):(ap.daily||[]).slice(0,14).map(d=>{const x=d.entry; if(!x||!x.n)return ''; return `<tr><td>${esc(d.date.slice(5).replace('-','/'))}<span class="mu" style="font-size:11px"> ${x.n}R</span></td><td></td><td style="text-align:center"><b>${rc(x.flat.roi)}</b></td><td style="text-align:center"><b>${rc(x.alloc.roi)}</b></td></tr>`}).join('');
-  return `<div class="card"><div class="ct">5000円で買ったら? 平買い と 配分(仮想)</div>${allocBoxes(ap)}
+  return `<div class="card"><div class="ct">5000円で買ったら? 平買い と 配分(仮想)</div>${allocBoxes(ap,w.date)}
     <div class="mu" style="font-size:12px;margin:14px 0 2px">目安ごとの回収率(いまのルールを${esc((ap.from||'').slice(5).replace('-','/'))}から全レースに当てはめた結果)</div>
     <table><tr><th></th><th style="text-align:center">平買い</th><th style="text-align:center">配分</th><th style="text-align:center">差(pt)</th></tr>${tiers}</table>
     ${daily?`<div class="mu" style="font-size:12px;margin:14px 0 2px">毎日の回収率(${mn?'俺が参入したレース':'K+M(edge)'}・直近14日。▲=配分のほうが上)</div><table><tr><th></th><th style="text-align:center">実際</th><th style="text-align:center">平買い</th><th style="text-align:center">配分</th></tr>${daily}</table>`:''}
