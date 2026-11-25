@@ -249,36 +249,39 @@ function renderM(w){
     ${row('仮想の回収率(確定分)',ma.n?`${pct1(ma.roi)}<span class="mu">(n=${ma.n}${ma.n<30?'、少ないので参考外':''})</span>`:'—')}${renderMEdge(w)}
     <details class="nd"><summary>見方・注意</summary><div class="note">条件: 荒れ40%超・12点の合成3.5〜6倍・12点の確率合計15%以上(S・A・Bとは別枠、ntfyの【M】)。12点・各点100円で買ったと<b>仮定</b>した、${esc(mp.from||'2026-10-21')}以降の${mp.days||0}日分の成績です。目安は、的中約2割・当たれば約40倍台・回収約8割(参考値、100%には届いていません)。件数が少ない間は、偶然で大きく動きます。</div></details></div>`;
 }
-// 2026-11-25(CEO指示「しばらく仮想で運用するが、過去分遡って平買い回収と配分回収を並べて掲示して」): 1レース5000円の平買いと、保証+期待値配分の仮想成績
+// 2026-11-25(CEO指示「しばらく仮想で運用するが、過去分遡って平買い回収と配分回収を並べて掲示して」→「死ぬほど見にくい」で作り直し): 1レース5000円の平買いと配分の仮想成績
+function allocBoxes(ap){
+  const e=ap.tiers['参入対象']; if(!e||!e.n)return '';
+  const pc=v=>v==null?'—':(v*100).toFixed(1)+'%', man=v=>(v<0?'-':'+')+(Math.abs(v)/10000).toFixed(1)+'万円';
+  const fb=e.flat.roi>=e.alloc.roi, box=(t,x,win)=>`<div style="flex:1;text-align:center;padding:12px 6px;border:2px solid ${win?'#3ee0ff':'var(--line)'};border-radius:10px"><div class="mu" style="font-size:12px">${t}</div><div style="font-size:30px;font-weight:800;line-height:1.2">${pc(x.roi)}</div><div class="mu" style="font-size:12px">${man(x.net)}</div></div>`;
+  const d=e.diffRoi*100, verdict=Math.abs(d)<1?'ほぼ同じ':d>0?'配分のほうが良い':'平買いのほうが良い';
+  return `<div style="display:flex;gap:10px;margin:6px 0">${box('平買い(均等)',e.flat,fb&&Math.abs(d)>=1)}${box('配分',e.alloc,!fb&&Math.abs(d)>=1)}</div>
+    <div style="text-align:center;font-size:15px;margin:2px 0 4px"><b>${verdict}</b><span class="mu">(差 ${(d>=0?'+':'')+d.toFixed(1)}pt)</span></div>
+    <div class="mu" style="text-align:center;font-size:12px">KまたはM(edge)の ${e.n}レース ・ 的中 ${e.hit}回 ・ ${esc((ap.from||'').slice(5).replace('-','/'))}から</div>`;
+}
+function renderAllocMini(w){
+  const ap=w&&w.allocPerf; if(!ap||!ap.tiers)return ''; const b=allocBoxes(ap); if(!b)return '';
+  return `<div class="card"><div class="ct">5000円で買ったら? 平買い と 配分(仮想)</div>${b}<div class="mu" style="text-align:center;font-size:12px;margin-top:6px">目安ごとの内訳・日別は「成績」タブ</div></div>`;
+}
 function renderAlloc(w){
   const ap=w&&w.allocPerf; if(!ap||!ap.tiers)return '';
-  const pc=v=>v==null?'—':(v*100).toFixed(1)+'%', Y=v=>(v<0?'-':'+')+Math.abs(Math.round(v)).toLocaleString()+'円', sg=v=>(v>=0?'+':'-')+Math.abs(v*100).toFixed(1)+'pt';
-  const cls=v=>v==null?'':(v>=1?'up':'');
-  const small=x=>x.n<30?'<div class="mu" style="font-size:10px">参考外</div>':'';
-  const rowOf=(label,k,bold)=>{const x=ap.tiers[k]; if(!x||!x.n)return `<tr><td>${label}</td><td colspan="5" class="mu" style="text-align:center">—</td></tr>`;
-    return `<tr><td style="${bold?'font-weight:700':''}">${label}${small(x)}</td><td style="text-align:center">${x.hit}/${x.n}</td>
-    <td style="text-align:center"><b class="${cls(x.flat.roi)}">${pc(x.flat.roi)}</b><div class="mu" style="font-size:10px">${Y(x.flat.net)}</div></td>
-    <td style="text-align:center"><b class="${cls(x.alloc.roi)}">${pc(x.alloc.roi)}</b><div class="mu" style="font-size:10px">${Y(x.alloc.net)}</div></td>
-    <td style="text-align:center"><b class="${x.diffRoi>=0?'up':'dn'}">${sg(x.diffRoi)}</b><div class="mu" style="font-size:10px">${Y(x.diffNet)}</div></td>
-    <td style="text-align:center" class="mu">${x.flat.gami}→${x.alloc.gami}</td></tr>`;};
-  const e=ap.tiers['参入対象']||{};
-  const head=e.n?`<div class="h2s" style="margin:2px 0 6px">参入対象(K・M(edge)) <b>${e.n}</b>レース: 平買い <b class="${cls(e.flat.roi)}">${pc(e.flat.roi)}</b> → 配分 <b class="${cls(e.alloc.roi)}">${pc(e.alloc.roi)}</b>(${sg(e.diffRoi)}・${Y(e.diffNet)})</div>`:'';
-  const daily=(ap.daily||[]).slice(0,14).map(d=>{const x=d.entry; if(!x||!x.n)return ''; return `<tr><td>${esc(d.date.slice(5).replace('-','/'))}</td><td style="text-align:center">${x.hit}/${x.n}</td><td style="text-align:center">${Y(x.flat.net)}</td><td style="text-align:center">${Y(x.alloc.net)}</td><td style="text-align:right"><b class="${x.diffNet>=0?'up':'dn'}">${Y(x.diffNet)}</b></td></tr>`}).join('');
-  const cum=ap.cum||[]; let spark='';
-  if(cum.length>=2){const v=cum.map(c=>c.cum),mn=Math.min(0,...v),mx=Math.max(0,...v),Wd=300,H=50,X=i=>i*(Wd/(v.length-1)),Yp=y=>H-(y-mn)/((mx-mn)||1)*H,pts=v.map((y,i)=>X(i).toFixed(1)+','+Yp(y).toFixed(1)).join(' ');
-    spark=`<div class="mu" style="font-size:12px;margin:10px 0 2px">参入対象で「配分−平買い」の累計(${esc(cum[0].date.slice(5))}〜、いま ${Y(v[v.length-1])})</div><svg class="spark" viewBox="0 0 ${Wd} ${H}" preserveAspectRatio="none"><line x1="0" x2="${Wd}" y1="${Yp(0).toFixed(1)}" y2="${Yp(0).toFixed(1)}" stroke="#1f3a5c" stroke-dasharray="3"/><polyline fill="none" stroke="#3ee0ff" stroke-width="1.6" points="${pts}"/></svg>`;}
-  const fb=Object.values(ap.tiers).reduce((t,x)=>t+(x.fallback||0)+(x.scaled||0),0);
-  return `<div class="card"><div class="ct">ALLOC 1レース5000円: 平買い と 配分(仮想・${esc((ap.from||'').slice(5).replace('-','/'))}〜、過去にさかのぼって)</div>${head}
-    <table><tr><th></th><th style="text-align:center">的中/件数</th><th style="text-align:center">平買い<br>回収・損益</th><th style="text-align:center">配分<br>回収・損益</th><th style="text-align:center">差</th><th style="text-align:center">ガミ<br>平→配</th></tr>
-    ${rowOf('参入対象','参入対象',true)}${rowOf('K','K')}${rowOf('M(edge)','M(edge)')}${rowOf('M','M')}${rowOf('S','S')}${rowOf('A','A')}${rowOf('B','B')}${rowOf('X','X')}${rowOf('全カード','全カード')}</table>
-    ${daily?`<div class="mu" style="font-size:12px;margin:10px 0 4px">日別(参入対象・直近14日)</div><table><tr><th></th><th style="text-align:center">的中/件数</th><th style="text-align:center">平買い損益</th><th style="text-align:center">配分損益</th><th style="text-align:right">差</th></tr>${daily}</table>`:''}
-    ${spark}
-    <details class="nd"><summary>見方・注意</summary><div class="note">1レースに<b>5000円</b>を使ったと<b>仮定</b>した仮想成績です(実際に買った記録ではありません)。買い目は、各目安のレースで使っている12点そのまま(Xは80倍以上の12点)。違いは<b>金額の割り振りだけ</b>です。<br>
-    <b>平買い</b>=12点を均等に(5000÷12、100円単位。先頭2点が500円、残りが400円)。<br>
-    <b>配分</b>=まず各点に「当たれば5000円以上になる最小額」(5000÷オッズ、100円単位)を置き、残りをエンジン確率×オッズ(期待値)の2乗に比例して12点へ振る(通知時点のオッズ・エンジン確率)。<br>
-    <b>ガミ</b>=的中したのに払戻が5000円に届かなかった件数。配分は当たれば5000円以上になるよう作っていますが、通知から確定までにオッズが動くため0にはなりません。<br>
-    目安の判定は、いまのルールを${esc(ap.from||'')}以降の全カードへ当てはめた結果です(通知が来なかったレースも含む)。S・A・B・Xは当時のカードの判定どおり。K=確信度0.40以上。参入対象=KまたはM(edge)(重複なし)。全カード=カードを作ったレースすべて。<br>
-    結果が確定していないレース(${ap.pending||0}件)と、12点が作れなかったレースは数えません。30件未満は参考外。研究では、全カードでは配分が平買いを約4〜5pt上回りましたが、参入対象の件数では差が小さく、前向きに確認する段階です。回収率100%超を謳うものではありません。${fb?`<br>確率・オッズが使えず平買いに戻したレース: ${fb}件`:''}</div></details></div>`;
+  const pc=v=>v==null?'—':(v*100).toFixed(1)+'%', yen=v=>(v<0?'-':'+')+Math.abs(Math.round(v)).toLocaleString()+'円', sg=v=>(v>=0?'+':'')+(v*100).toFixed(1);
+  const names={'K':'K','M(edge)':'M(edge)','M':'M','S':'S','A':'A','B':'B','X':'X'};
+  const line=(label,k,sub)=>{const x=ap.tiers[k]; if(!x||!x.n)return '';
+    return `<tr><td style="padding:9px 3px"><b>${label}</b><div class="mu" style="font-size:11px">${x.n}レース${x.n<30?'・参考外':''}</div></td><td style="text-align:center;font-size:16px"><b>${pc(x.flat.roi)}</b></td><td style="text-align:center;font-size:16px"><b>${pc(x.alloc.roi)}</b></td><td style="text-align:center"><b class="${x.diffRoi>=0.005?'up':x.diffRoi<=-0.005?'dn':'mu'}">${sg(x.diffRoi)}</b></td></tr>`;};
+  const tiers=Object.keys(names).map(k=>line(names[k],k)).join('')+line('全レース','全カード');
+  const detail=['参入対象','K','M(edge)','M','S','A','B','X','全カード'].map(k=>{const x=ap.tiers[k]; if(!x||!x.n)return ''; return `<tr><td>${k==='参入対象'?'K+M(edge)':k}</td><td style="text-align:right">${yen(x.flat.net)}</td><td style="text-align:right">${yen(x.alloc.net)}</td><td style="text-align:center">${x.flat.gami}→${x.alloc.gami}</td></tr>`}).join('');
+  const daily=(ap.daily||[]).slice(0,14).map(d=>{const x=d.entry; if(!x||!x.n)return ''; const b=x.alloc.net>x.flat.net+99?'alloc':x.flat.net>x.alloc.net+99?'flat':''; return `<tr><td>${esc(d.date.slice(5).replace('-','/'))}<span class="mu" style="font-size:11px"> ${x.hit}/${x.n}</span></td><td style="text-align:right;${b==='flat'?'font-weight:700':''}">${yen(x.flat.net)}</td><td style="text-align:right;${b==='alloc'?'font-weight:700':''}">${yen(x.alloc.net)}</td></tr>`}).join('');
+  return `<div class="card"><div class="ct">5000円で買ったら? 平買い と 配分(仮想)</div>${allocBoxes(ap)}
+    <div class="mu" style="font-size:12px;margin:14px 0 2px">目安ごとの回収率(いまのルールを${esc((ap.from||'').slice(5).replace('-','/'))}から全レースに当てはめた結果)</div>
+    <table><tr><th></th><th style="text-align:center">平買い</th><th style="text-align:center">配分</th><th style="text-align:center">差(pt)</th></tr>${tiers}</table>
+    ${daily?`<div class="mu" style="font-size:12px;margin:14px 0 2px">日別の損益(K+M(edge)・直近14日)</div><table><tr><th>日 的中/件数</th><th style="text-align:right">平買い</th><th style="text-align:right">配分</th></tr>${daily}</table>`:''}
+    <details class="nd"><summary>くわしく(損益・ガミ)</summary><table style="margin-top:6px"><tr><th></th><th style="text-align:right">平買い損益</th><th style="text-align:right">配分損益</th><th style="text-align:center">ガミ<br>平買い→配分</th></tr>${detail}</table><div class="note">ガミ=的中したのに払戻が5000円に届かなかった件数。</div></details>
+    <details class="nd"><summary>見方・注意</summary><div class="note">実際に買った記録ではなく、<b>1レース5000円を使ったと仮定</b>した成績です。買い目は同じ12点(Xは80倍以上の12点)で、<b>金額の割り振りだけ</b>が違います。<br>
+    <b>平買い</b>: 12点をほぼ均等に(先頭2点500円・残り400円)。<br>
+    <b>配分</b>: 当たれば5000円以上になる最小額を各点に置き、残りを「エンジン確率×オッズ」の2乗に比例して振る。<br>
+    <b>K</b>=確信度0.40以上。<b>K+M(edge)</b>=KまたはM(edge)(重複なし)。通知が来なかったレースも含みます。結果が出ていない${ap.pending||0}件と、12点が作れなかったレースは数えません。30件未満は参考外。<br>
+    研究では全レースで配分が約4〜5pt上でしたが、K+M(edge)では差がほぼありません。前向きに確認中です。回収率100%超を謳うものではありません。</div></details></div>`;
 }
 function renderPeakX(p,w){
   w=w||{};const xp=w.xPerf||{},xa=xp.all||{},xt=xp.today||{};
@@ -371,8 +374,8 @@ function render(s){
     `<div class="card"><div class="ct">ENGINE エンジンの状態</div>${row('エンジン',esc(e.name||'—'))}${row('予測に使う統計の日付',esc(e.stateDay||'—')+(e.stateLagDays!=null?`<span class="mu">(${e.stateLagDays}日前)</span>`:''))}${row('データバンクの最新日',esc(e.dbLastRaceDate||'—'))}${row('モデルの学習データ',esc(e.modelTrainedThrough||'—')+(e.modelRaces?`<span class="mu">(${Number(e.modelRaces).toLocaleString()}レース)</span>`:''))}${row('通知の方針',esc((s.notifications||{}).policy||'—'))}${row('通知',(s.notifications||{}).paused?'<span class="bd warn">一時停止中</span>':'<span class="bd ok">送信中</span>')}</div>`+
     `<div class="card"><div class="ct">TASKS 自動処理</div>${taskTable(s.tasks)}</div>`;
   const tabsHtml={
-    today: hero+renderMine(s.wild,'today')+renderWildSummary(s.wild)+W.table+'<div class="card" id="disp-card"></div>',
-    perf: renderMine(s.wild,'full')+W.perf+renderAlloc(s.wild)+renderPeakX(s.peakSlot,s.wild)+renderM(s.wild),
+    today: hero+renderMine(s.wild,'today')+renderAllocMini(s.wild)+renderWildSummary(s.wild)+W.table+'<div class="card" id="disp-card"></div>',
+    perf: renderAlloc(s.wild)+renderMine(s.wild,'full')+W.perf+renderPeakX(s.peakSlot,s.wild)+renderM(s.wild),
     ops: hero+W.head+opsH
   };
   window.__tabsHtml=tabsHtml;
