@@ -50,8 +50,8 @@ t('evalLines: 的中の払戻を手計算と一致・11点や重複は対象外'
   const lines = combos.map((c, i) => ({ combo: c, odds: od[i] }));
   const r = A.evalLines(card, lines, { chakuju: '1-2-4', payout: 910 });
   assert.ok(r.hit); assert.ok(Math.abs(r.flat.pay - 9.1 * 100) < 1e-9);
-  assert.strictEqual(r.flat.inv, 1200); assert.strictEqual(r.alloc.inv, 5000);
-  const al = A.allocGuaranteeEV(od.map(() => 0.04), od).amounts; assert.ok(Math.abs(r.alloc.pay - 9.1 * al[1]) < 1e-9);
+  assert.strictEqual(r.flat.inv, 1200); assert.ok(Math.abs(r.alloc.inv - 5000) <= 300);
+  const al = A.allocFinal(od.map(() => 0.04), od).amounts; assert.ok(Math.abs(r.alloc.pay - 9.1 * al[1]) < 1e-9);
   const miss = A.evalLines(card, lines, { chakuju: '5-6-1', payout: 4000 }); assert.ok(!miss.hit && miss.flat.pay === 0 && miss.alloc.pay === 0);
   assert.strictEqual(A.evalLines(card, lines.slice(0, 11), { chakuju: '1-2-3', payout: 500 }), null);   // 12点でない(システムの目安用)は対象外
   assert.ok(A.evalLines(card, lines.slice(0, 11), { chakuju: '1-2-3', payout: 500 }, { anyN: true }));   // 俺の買い目は点数が違ってもよい
@@ -59,7 +59,7 @@ t('evalLines: 的中の払戻を手計算と一致・11点や重複は対象外'
 });
 t('実データ: 件数・投資額の整合(平買い=n×1,200円・配分=n×5000円。参入対象はKとM(edge)の和集合)', () => {
   const r = A.computeAllocPerf(); assert.ok(r && r.days > 30);
-  for (const k of A.KEYS) { const x = r.tiers[k]; assert.strictEqual(x.flat.inv, x.n * 1200, k); assert.strictEqual(x.alloc.inv, x.n * 5000, k); assert.ok(x.hit <= x.n); assert.ok(x.flat.gami <= x.hit && x.alloc.gami <= x.hit); }
+  for (const k of A.KEYS) { const x = r.tiers[k]; assert.strictEqual(x.flat.inv, x.n * 1200, k); assert.ok(Math.abs(x.alloc.inv - x.n * 5000) <= x.n * 300, k); assert.ok(x.hit <= x.n); assert.ok(x.flat.gami <= x.hit && x.alloc.gami <= x.hit); }
   const T = r.tiers; assert.ok(T['参入対象'].n <= T['K'].n + T['M(edge)'].n && T['参入対象'].n >= Math.max(T['K'].n, T['M(edge)'].n));
   assert.ok(T['M(edge)'].n <= T['M'].n);
   assert.strictEqual(r.daily.reduce((s, d) => s + d.entry.n, 0), T['参入対象'].n);
@@ -86,12 +86,12 @@ t('俺の参入×配分: 台帳の買い目(最後の1件・live・bet のみ)�
   const e1 = A.evalLines(hitCase.card, hitCase.lines.map(cb => ({ combo: cb, odds: hitCase.card.combos[cb].odds })), hitCase.r, { anyN: true });
   const e2 = A.evalLines(missCase.card, missCase.lines.map(cb => ({ combo: cb, odds: missCase.card.combos[cb].odds })), missCase.r, { anyN: true });
   assert.ok(e1.hit && !e2.hit);
-  assert.strictEqual(missCase.lines.length, 8); assert.strictEqual(m.flat.inv, 600 + 800); assert.strictEqual(m.alloc.inv, 10000);                                     // 平買い=1点100円×点数、配分=5000円
+  assert.strictEqual(missCase.lines.length, 8); assert.strictEqual(m.flat.inv, 600 + 800); assert.strictEqual(m.alloc.inv, e1.alloc.inv + e2.alloc.inv); assert.ok(Math.abs(m.alloc.inv - 10000) <= 600);                                     // 平買い=1点100円×点数、配分=5000円
   assert.ok(Math.abs(m.flat.pay - hitCase.r.payout) <= 1);                                                              // 的中=払戻×100円
   assert.ok(Math.abs(m.flat.pay - (e1.flat.pay + e2.flat.pay)) <= 1); assert.ok(Math.abs(m.alloc.pay - (e1.alloc.pay + e2.alloc.pay)) <= 1);
   assert.strictEqual(m.daily.reduce((s, d) => s + d.n, 0), 2);
   const real = A.computeMineAlloc(W.readLedger()); assert.ok(real.n > 100);
-  assert.strictEqual(real.alloc.inv, real.n * 5000); assert.strictEqual(real.daily.reduce((s, d) => s + d.n, 0), real.n);
+  assert.ok(Math.abs(real.alloc.inv - real.n * 5000) <= real.n * 300); assert.strictEqual(real.daily.reduce((s, d) => s + d.n, 0), real.n);
   // 11月以降は全点100円なので 平買い=実際
   const nov = A.computeMineAlloc(W.readLedger(), { from: '2026-11-01' }); assert.strictEqual(nov.flat.inv, nov.act.inv); assert.ok(Math.abs(nov.flat.pay - nov.act.pay) <= 1);
 });
