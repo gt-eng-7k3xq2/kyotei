@@ -25,8 +25,12 @@ test('ties not high side',()=>assert(!ids(withC({snapshot})).includes('higher'))
 test('unique high side',()=>assert(ids(withC({snapshot:{...snapshot,odds:{...odds,'2-1-6':50}}})).includes('higher')));
 test('same race stable',()=>assert.equal(E.word(r),E.word(r)));
 test('variations across races',()=>assert(new Set(Array.from({length:24},(_,i)=>E.word({...r,racenum:i+1}))).size>=3));
-test('no repeated hit word',()=>assert.equal((E.post(r).match(/的中/g)||[]).length,1));
-test('layout unchanged',()=>assert.equal(E.post(r),`宮島4R\n\n${E.word(r)}\n\n2-1-6 / 9.6倍\n\n的中🎯`));
+test('layout (2026-11-27)',()=>assert.equal(E.post(r),`宮島4R⭕️ 2-1-6 / 9.6倍🎯\n\n${E.word(r)}`));
+test('layout with money',()=>{const rr={...r,tekichuContext:{...r.tekichuContext,alloc:{allocInvest:5000,allocPayout:15750}}};assert.equal(E.post(rr),`宮島4R⭕️ 2-1-6 / 9.6倍🎯\n\n${E.word(rr)}\n\n投資5,000円 → 回収15,750円(回収率315%)`);assert(!E.post({...rr,moneyMode:'none'}).includes('投資'));});
+test('no flat line',()=>assert(!E.post({...r,moneyMode:'flat',tekichuContext:{...r.tekichuContext,alloc:{allocInvest:5000,allocPayout:15750,flatInvest:1200,flatPayout:3000}}}).includes('平買い')));
+test('fire boundary 25x',()=>{const f=p=>E.post({...r,payout:p,tekichuContext:null}).split('\n')[0];assert(!f(2490).includes('🔥'));assert(f(2500).endsWith('🎯🔥'));assert(f(3150).endsWith('🎯🔥'));assert(f(990).endsWith('🎯'));});
+test('no money line without alloc',()=>assert(!E.post({...r}).includes('投資')));
+test('money rate rounding',()=>{const m=(i,p)=>E.money({...r,tekichuContext:{...r.tekichuContext,alloc:{allocInvest:i,allocPayout:p}}});assert(m(5000,31430).endsWith('回収率629%)'));assert(m(5000,2500).endsWith('回収率50%)'));assert(m(5000,4975).endsWith('回収率99.5%)'));});
 test('one digit only',()=>{assert(E.candidates({...r,tekichuContext:null,payout:990})[0].phrases.includes('本命サイド決着。'));assert(!E.candidates({...r,tekichuContext:null,payout:1000})[0].phrases.includes('本命サイド決着。'));});
 test('no scenario reuse',()=>assert(!E.word({...r,tenkaiLine:'読み通り 狙い通り'}).includes('読み通り')));
 test('invalid input no comment',()=>assert.equal(E.word({...r,payout:0}),''));

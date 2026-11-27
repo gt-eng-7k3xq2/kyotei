@@ -43,6 +43,37 @@ t('サマリー: 配分つきは金額と合計が入り、全買い目が入っ
   assert.ok(s.includes('参考買い目') && !s.includes('（配分）') && !s.includes('合計') && /\d円/.test(s) && rowsOf(s) === rowsOf(plain)); console.log(s.split('\n').slice(-5).join('\n'));
   const body = s.split('参考買い目')[1]; cs.forEach(c => { const [a, b, d] = c.split('-'); assert.ok(body.includes(a)); });
 });
+
+// 2026-11-27(丸亀7Rで、頭が複数の行の頭が抜けて買い目が減った事故の再発防止): サマリー文を買い目に展開し直して、元の買い目と完全に一致するか(通常・配分つきの両方、ランダム3000組)。金額は、配分つきでは各買い目の表示額が groupByAmount と一致するか。
+const expandTok = (tok) => {
+  const perms = a => a.length <= 1 ? [a] : a.flatMap((x, i) => perms(a.slice(0, i).concat(a.slice(i + 1))).map(r => [x].concat(r)));
+  if (/box$/.test(tok)) return perms(tok.replace('box', '').split('')).map(x => x.join('-'));
+  const parts = tok.split('-'), out = [], ds = x => x.split(''), ok = (a, b, c) => a !== b && b !== c && a !== c;
+  const okp = (a, b, c) => a !== b && b !== c && a !== c;
+  if (parts.length === 2 && parts[0].includes('=') && !parts[1].includes('=')) { const [A, B] = parts[0].split('=').map(ds); A.forEach(a => B.forEach(b => ds(parts[1]).forEach(c => { if (okp(a, b, c)) { out.push(a + '-' + b + '-' + c); out.push(b + '-' + a + '-' + c); } }))); return out; }
+  if (parts.length === 2 && parts[1].includes('=') && !parts[0].includes('=')) { const [A, B] = parts[1].split('=').map(ds); ds(parts[0]).forEach(h => A.forEach(a => B.forEach(b => { if (okp(h, a, b)) { out.push(h + '-' + a + '-' + b); out.push(h + '-' + b + '-' + a); } }))); return out; }
+  if (parts.length !== 3) throw new Error('形式不明 ' + tok);
+  const eq = parts.map(x => x.includes('='));
+  if (!eq[0] && !eq[1] && !eq[2]) { ds(parts[0]).forEach(a => ds(parts[1]).forEach(b => ds(parts[2]).forEach(c => { if (ok(a, b, c)) out.push(a + '-' + b + '-' + c); }))); return out; }
+  if (eq[0]) { const [A, B] = parts[0].split('=').map(ds); A.forEach(a => B.forEach(b => ds(parts[2]).forEach(c => { if (ok(a, b, c)) { out.push(a + '-' + b + '-' + c); out.push(b + '-' + a + '-' + c); } }))); return out; }
+  if (eq[1]) { const [A, B] = parts[1].split('=').map(ds); ds(parts[0]).forEach(h => A.forEach(a => B.forEach(b => { if (ok(h, a, b)) { out.push(h + '-' + a + '-' + b); out.push(h + '-' + b + '-' + a); } }))); return out; }
+  throw new Error('形式不明 ' + tok);
+};
+const parseSummary = (s) => { const got = {}; (s.split('参考買い目')[1] || '').split('\n').filter(l => /^\d/.test(l.trim())).forEach(line => line.split(' / ').forEach(seg => { const m = seg.trim().match(/^(\S+?)(?: ([\d,]+)円)?$/); if (!m) throw new Error('読めない ' + seg); expandTok(m[1]).forEach(c => { if (c in got) throw new Error('重複 ' + c); got[c] = m[2] ? Number(m[2].replace(/,/g, '')) : null; }); })); return got; };
+t('サマリー: 文を展開すると元の買い目と完全一致(通常・配分つき、ランダム3000組)', () => {
+  let bad = 0;
+  for (let k = 0; k < 3000; k++) {
+    const n = 6 + Math.floor(rnd() * 7), pool = combosAll.slice().sort(() => rnd() - 0.5);
+    let cs = pool.slice(0, n);
+    if (k % 3 === 0) { const h = 1 + Math.floor(rnd() * 6); cs = combosAll.filter(c => c[0] == h).sort(() => rnd() - 0.5).slice(0, n).concat(pool.slice(0, 3)).filter((c, i, a) => a.indexOf(c) === i); }   // 頭の偏り・複数頭にまたがる形を多めに
+    const o = cs.map(() => 10 + rnd() * 250), p = cs.map(() => 0.005 + rnd() * 0.07), am = F.allocGuaranteeEV(p, o, 5000, 2).amounts, base = { venue: 'テスト', race: 1, deadline: '10:00', axisLabel: '1号艇', hyoka: '1', tenkai: 'x', combos: cs, axis: 1 };
+    const plain = parseSummary(F.qSummary('note', base)), withAmt = parseSummary(F.qSummary('note', Object.assign({ amts: am }, base))), want = cs.slice().sort().join(',');
+    if (Object.keys(plain).sort().join(',') !== want || Object.keys(withAmt).sort().join(',') !== want) { bad++; if (bad <= 3) console.log('  不一致 元:' + want + '\n   通常:' + Object.keys(plain).sort() + '\n   配分:' + Object.keys(withAmt).sort()); continue; }
+    const gs = F.groupByAmount(cs, am), amt = {}; gs.forEach(g => g.combos.forEach(c => { amt[c] = g.amt; }));
+    cs.forEach(c => { if (withAmt[c] !== amt[c]) { bad++; } });
+  }
+  assert.equal(bad, 0, '不一致 ' + bad + '件');
+});
 t('サマリー: Xの型(x)は買い目なしのまま(配分の影響を受けない)', () => {
   const cs = combosAll.slice(0, 12), s = F.qSummary('x', { venue: '多摩川', race: 7, deadline: '15:00', axisLabel: '2号艇', hyoka: '', tenkai: 'テスト', combos: cs, axis: 2, amts: cs.map(() => 400) });
   assert.ok(!s.includes('円') && s.includes('プロフィール'));
